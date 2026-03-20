@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { TConnectionStatus } from '@/types/terminal';
+import type { TConnectionStatus, TDisconnectReason } from '@/types/terminal';
 import {
   MSG_STDOUT,
   MSG_HEARTBEAT,
@@ -26,6 +26,8 @@ const useTerminalWebSocket = ({
 }: IUseTerminalWebSocketOptions = {}) => {
   const [status, setStatus] = useState<TConnectionStatus>('connecting');
   const [retryCount, setRetryCount] = useState(0);
+  const [disconnectReason, setDisconnectReason] =
+    useState<TDisconnectReason>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,6 +59,7 @@ const useTerminalWebSocket = ({
       wsRef.current = null;
     }
 
+    setDisconnectReason(null);
     setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
     try {
@@ -119,6 +122,13 @@ const useTerminalWebSocket = ({
       }
 
       if (event.code === 1013) {
+        setDisconnectReason('max-connections');
+        setStatus('disconnected');
+        return;
+      }
+
+      if (event.code === 1011) {
+        setDisconnectReason('pty-error');
         setStatus('disconnected');
         return;
       }
@@ -177,7 +187,7 @@ const useTerminalWebSocket = ({
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return { status, retryCount, sendStdin, sendResize, reconnect };
+  return { status, retryCount, disconnectReason, sendStdin, sendResize, reconnect };
 };
 
 export default useTerminalWebSocket;

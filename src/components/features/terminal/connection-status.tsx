@@ -1,16 +1,18 @@
 import { Loader2, WifiOff, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { TConnectionStatus } from '@/types/terminal';
+import type { TConnectionStatus, TDisconnectReason } from '@/types/terminal';
 
 interface IConnectionStatusProps {
   status: TConnectionStatus;
   retryCount: number;
+  disconnectReason: TDisconnectReason;
   onReconnect: () => void;
 }
 
 const ConnectionStatus = ({
   status,
   retryCount,
+  disconnectReason,
   onReconnect,
 }: IConnectionStatusProps) => {
   if (status === 'connected') return null;
@@ -38,7 +40,13 @@ const ConnectionStatus = ({
       {status === 'disconnected' && (
         <>
           <WifiOff className="h-4 w-4 text-zinc-500" />
-          <span className="text-zinc-400">연결 끊김</span>
+          <span className="text-zinc-400">
+            {disconnectReason === 'max-connections'
+              ? '동시 접속 초과'
+              : disconnectReason === 'pty-error'
+                ? '터미널 시작 실패'
+                : '연결 끊김'}
+          </span>
           <Button
             variant="ghost"
             size="sm"

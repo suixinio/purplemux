@@ -32,7 +32,7 @@ const meslo = localFont({
 
 export default function App({ Component, pageProps }: AppProps) {
   return (
-    <main className={meslo.variable}>
+    <main className={`${meslo.variable} font-sans antialiased`}>
       <Component {...pageProps} />
     </main>
   );

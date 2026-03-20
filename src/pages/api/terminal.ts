@@ -25,17 +25,24 @@ const handleConnection = (ws: WebSocket) => {
   activeConnections++;
 
   const shell = process.env.SHELL || '/bin/zsh';
-  const ptyProcess = pty.spawn(shell, [], {
-    name: 'xterm-256color',
-    cols: 80,
-    rows: 24,
-    cwd: process.env.HOME || '/',
-    env: {
-      ...process.env,
-      TERM: 'xterm-256color',
-      COLORTERM: 'truecolor',
-    } as Record<string, string>,
-  });
+  let ptyProcess: pty.IPty;
+  try {
+    ptyProcess = pty.spawn(shell, [], {
+      name: 'xterm-256color',
+      cols: 80,
+      rows: 24,
+      cwd: process.env.HOME || '/',
+      env: {
+        ...process.env,
+        TERM: 'xterm-256color',
+        COLORTERM: 'truecolor',
+      } as Record<string, string>,
+    });
+  } catch {
+    activeConnections--;
+    ws.close(1011, 'PTY creation failed');
+    return;
+  }
 
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let lastHeartbeat = Date.now();

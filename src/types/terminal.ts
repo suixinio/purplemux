@@ -4,3 +4,5 @@ export type TConnectionStatus =
   | 'reconnecting'
   | 'disconnected'
   | 'session-ended';
+
+export type TDisconnectReason = 'max-connections' | 'pty-error' | null;
