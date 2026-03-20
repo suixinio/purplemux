@@ -15,7 +15,7 @@ const ConnectionStatus = ({
   disconnectReason,
   onReconnect,
 }: IConnectionStatusProps) => {
-  if (status === 'connected') return null;
+  if (status === 'connected' || status === 'session-ended') return null;
 
   return (
     <div

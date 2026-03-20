@@ -117,13 +117,15 @@ const TerminalPage = () => {
       </div>
 
       {hasConnected && status === 'connected' && (
-        <button
-          className="absolute top-3 right-3 z-10 rounded-md p-1.5 text-zinc-600 opacity-0 transition-opacity hover:bg-zinc-800 hover:text-zinc-300 hover:opacity-100 focus:opacity-100"
+        <Button
+          variant="ghost"
+          size="icon"
+          className="absolute top-3 right-3 z-10 h-auto w-auto p-1.5 text-zinc-600 opacity-0 transition-opacity hover:bg-zinc-800 hover:text-zinc-300 hover:opacity-100 focus:opacity-100"
           onClick={sendKillSession}
-          title="세션 종료"
+          aria-label="세션 종료"
         >
           <Power className="h-4 w-4" />
-        </button>
+        </Button>
       )}
 
       {hasConnected && (
