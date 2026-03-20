@@ -3,9 +3,11 @@ import { useTheme } from 'next-themes';
 import { Monitor, Moon, Settings, Sun, Terminal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
+import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 
 type TSettingsTab = 'general' | 'terminal';
@@ -63,44 +65,70 @@ const previewColors = (colors: ITerminalThemeColors) => [
   colors.magenta, colors.cyan, colors.white,
 ];
 
+const ThemeGrid = ({
+  list,
+  selectedId,
+  onSelect,
+}: {
+  list: typeof TERMINAL_THEMES;
+  selectedId: string;
+  onSelect: (id: string) => void;
+}) => (
+  <div className="grid grid-cols-3 gap-2">
+    {list.map((t) => (
+      <button
+        key={t.id}
+        type="button"
+        onClick={() => onSelect(t.id)}
+        className={cn(
+          'flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors',
+          selectedId === t.id
+            ? 'border-primary bg-accent'
+            : 'border-border hover:border-muted-foreground/50',
+        )}
+      >
+        <span className="text-xs font-medium">{t.name}</span>
+        <div
+          className="flex h-5 items-center gap-1 rounded px-2"
+          style={{ backgroundColor: t.colors.background }}
+        >
+          {previewColors(t.colors).map((color, i) => (
+            <div
+              key={i}
+              className="h-2.5 w-2.5 rounded-full"
+              style={{ backgroundColor: color }}
+            />
+          ))}
+        </div>
+      </button>
+    ))}
+  </div>
+);
+
 const TerminalTab = () => {
-  const { themeId, setTerminalTheme, themes } = useTerminalTheme();
+  const { mode, themeIds, setTerminalTheme, themes } = useTerminalTheme();
+
+  const darkThemes = themes.filter((t) => t.variant === 'dark');
+  const lightThemes = themes.filter((t) => t.variant === 'light');
 
   return (
     <div className="space-y-4">
       <div>
         <p className="text-sm font-medium">터미널 테마</p>
-        <p className="text-sm text-muted-foreground">터미널 색상 테마를 선택합니다.</p>
+        <p className="text-sm text-muted-foreground">모드별 터미널 색상 테마를 선택합니다.</p>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {themes.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => setTerminalTheme(t.id)}
-            className={cn(
-              'flex flex-col gap-2 rounded-lg border p-3 text-left transition-colors',
-              themeId === t.id
-                ? 'border-primary bg-accent'
-                : 'border-border hover:border-muted-foreground/50',
-            )}
-          >
-            <span className="text-xs font-medium">{t.name}</span>
-            <div
-              className="flex h-5 items-center gap-1 rounded px-2"
-              style={{ backgroundColor: t.colors.background }}
-            >
-              {previewColors(t.colors).map((color, i) => (
-                <div
-                  key={i}
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-              ))}
-            </div>
-          </button>
-        ))}
-      </div>
+      <Tabs defaultValue={mode}>
+        <TabsList>
+          <TabsTrigger value="dark">다크</TabsTrigger>
+          <TabsTrigger value="light">라이트</TabsTrigger>
+        </TabsList>
+        <TabsContent value="dark" className="mt-3">
+          <ThemeGrid list={darkThemes} selectedId={themeIds.dark} onSelect={(id) => setTerminalTheme('dark', id)} />
+        </TabsContent>
+        <TabsContent value="light" className="mt-3">
+          <ThemeGrid list={lightThemes} selectedId={themeIds.light} onSelect={(id) => setTerminalTheme('light', id)} />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
