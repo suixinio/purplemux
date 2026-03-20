@@ -100,7 +100,7 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
 
     const terminal = new Terminal({
       fontFamily:
-        "var(--font-meslo), 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
+        "'MesloLGLDZ', 'JetBrains Mono', 'Menlo', 'Monaco', 'Courier New', monospace",
       fontSize: 14,
       lineHeight: 1.2,
       scrollback: 5000,

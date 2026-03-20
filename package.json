@@ -3,11 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "tsx watch server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "ralph": "node ralph-loop.js"
+    "ralph": "node ralph-loop.js",
+    "postinstall": "chmod +x node_modules/.pnpm/node-pty@*/node_modules/node-pty/prebuilds/darwin-*/spawn-helper 2>/dev/null; exit 0"
   },
   "dependencies": {
     "@base-ui/react": "^1.3.0",
@@ -39,6 +40,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   },
   "pnpm": {

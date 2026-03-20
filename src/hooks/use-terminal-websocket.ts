@@ -52,7 +52,7 @@ const useTerminalWebSocket = ({
     }
   }, []);
 
-  const connect = useCallback(async () => {
+  const connect = useCallback(() => {
     clearTimers();
     if (wsRef.current) {
       wsRef.current.close();
@@ -61,23 +61,6 @@ const useTerminalWebSocket = ({
 
     setDisconnectReason(null);
     setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
-
-    try {
-      await fetch('/api/terminal');
-    } catch {
-      if (retryCountRef.current < MAX_RETRIES) {
-        const delay = RECONNECT_DELAYS[retryCountRef.current] ?? 16000;
-        retryCountRef.current++;
-        setRetryCount(retryCountRef.current);
-        retryTimerRef.current = setTimeout(
-          () => connectRef.current(),
-          delay,
-        );
-      } else {
-        setStatus('disconnected');
-      }
-      return;
-    }
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${protocol}//${location.host}/api/terminal`);

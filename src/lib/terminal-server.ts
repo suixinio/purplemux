@@ -1,7 +1,4 @@
-import type { NextApiRequest, NextApiResponse } from 'next';
-import type { IncomingMessage } from 'http';
-import type { Duplex } from 'stream';
-import { WebSocketServer, WebSocket } from 'ws';
+import { WebSocket } from 'ws';
 import * as pty from 'node-pty';
 
 const MSG_STDIN = 0x00;
@@ -12,8 +9,8 @@ const MSG_HEARTBEAT = 0x03;
 const MAX_CONNECTIONS = 10;
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 90_000;
-const BACKPRESSURE_HIGH = 1024 * 1024; // 1MB
-const BACKPRESSURE_LOW = 256 * 1024; // 256KB
+const BACKPRESSURE_HIGH = 1024 * 1024;
+const BACKPRESSURE_LOW = 256 * 1024;
 
 interface IActiveConnection {
   ws: WebSocket;
@@ -22,29 +19,7 @@ interface IActiveConnection {
   cleaned: boolean;
 }
 
-interface IExtendedServer {
-  _terminalWss?: WebSocketServer;
-  _terminalUpgradeRegistered?: boolean;
-  _terminalShutdownRegistered?: boolean;
-}
-
-const globalForTerminal = globalThis as typeof globalThis & {
-  _terminalConnections?: Map<WebSocket, IActiveConnection>;
-};
-
-if (!globalForTerminal._terminalConnections) {
-  globalForTerminal._terminalConnections = new Map();
-}
-
-const connections = globalForTerminal._terminalConnections;
-
-const purgeStaleConnections = () => {
-  connections.forEach((conn, ws) => {
-    if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
-      cleanup(conn);
-    }
-  });
-};
+const connections = new Map<WebSocket, IActiveConnection>();
 
 const cleanup = (conn: IActiveConnection) => {
   if (conn.cleaned) return;
@@ -66,7 +41,7 @@ const cleanup = (conn: IActiveConnection) => {
   console.log(`[terminal] client disconnected (active: ${connections.size})`);
 };
 
-const gracefulShutdown = () => {
+export const gracefulShutdown = () => {
   connections.forEach((conn) => {
     if (conn.ws.readyState === WebSocket.OPEN) {
       conn.ws.close(1001, 'Server shutting down');
@@ -75,8 +50,12 @@ const gracefulShutdown = () => {
   });
 };
 
-const handleConnection = (ws: WebSocket) => {
-  purgeStaleConnections();
+export const handleConnection = (ws: WebSocket) => {
+  connections.forEach((conn, key) => {
+    if (key.readyState === WebSocket.CLOSED || key.readyState === WebSocket.CLOSING) {
+      cleanup(conn);
+    }
+  });
 
   if (connections.size >= MAX_CONNECTIONS) {
     console.log(`[terminal] connection rejected: max connections (${MAX_CONNECTIONS}) reached`);
@@ -190,10 +169,6 @@ const handleConnection = (ws: WebSocket) => {
         ws.send(new Uint8Array([MSG_HEARTBEAT]));
         break;
       }
-      default: {
-        console.log(`[terminal] unknown message type: 0x${type.toString(16).padStart(2, '0')}`);
-        break;
-      }
     }
   });
 
@@ -206,59 +181,3 @@ const handleConnection = (ws: WebSocket) => {
     cleanup(conn);
   });
 };
-
-const handler = (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method !== 'GET') {
-    res.status(405).json({ error: 'Method not allowed' });
-    return;
-  }
-
-  const server = (res.socket as unknown as { server: IExtendedServer })?.server;
-
-  if (!server) {
-    res.status(500).end();
-    return;
-  }
-
-  if (!server._terminalWss) {
-    server._terminalWss = new WebSocketServer({ noServer: true });
-    server._terminalWss.on('connection', handleConnection);
-  }
-
-  if (!server._terminalUpgradeRegistered) {
-    (server as unknown as import('http').Server).on(
-      'upgrade',
-      (request: IncomingMessage, socket: Duplex, head: Buffer) => {
-        if (request.url === '/api/terminal') {
-          server._terminalWss!.handleUpgrade(request, socket, head, (ws) => {
-            server._terminalWss!.emit('connection', ws, request);
-          });
-        }
-      },
-    );
-    server._terminalUpgradeRegistered = true;
-  }
-
-  if (!server._terminalShutdownRegistered) {
-    process.on('SIGTERM', gracefulShutdown);
-    process.on('SIGINT', gracefulShutdown);
-    process.on('exit', gracefulShutdown);
-    server._terminalShutdownRegistered = true;
-  }
-
-  if (!req.headers.upgrade || req.headers.upgrade.toLowerCase() !== 'websocket') {
-    res.status(426).json({ error: 'WebSocket connection required' });
-    return;
-  }
-
-  res.end();
-};
-
-export const config = {
-  api: {
-    bodyParser: false,
-    externalResolver: true,
-  },
-};
-
-export default handler;
