@@ -10,8 +10,10 @@ const secondaryMod = isMac ? 'ctrl' : 'alt';
 export const KEY_MAP = {
   SPLIT_VERTICAL: `${mod}+d`,
   SPLIT_HORIZONTAL: `${mod}+shift+d`,
-  FOCUS_PREV: `${mod}+alt+ArrowLeft, ${mod}+alt+ArrowUp`,
-  FOCUS_NEXT: `${mod}+alt+ArrowRight, ${mod}+alt+ArrowDown`,
+  FOCUS_LEFT: `${mod}+alt+ArrowLeft`,
+  FOCUS_RIGHT: `${mod}+alt+ArrowRight`,
+  FOCUS_UP: `${mod}+alt+ArrowUp`,
+  FOCUS_DOWN: `${mod}+alt+ArrowDown`,
   NEW_TAB: `${mod}+t`,
   CLOSE_TAB: `${mod}+w`,
   PREV_TAB: `${mod}+shift+BracketLeft`,

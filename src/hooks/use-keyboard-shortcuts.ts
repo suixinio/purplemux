@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { collectPanes } from '@/hooks/use-layout';
+import { collectPanes, findAdjacentPaneInDirection } from '@/hooks/use-layout';
+import type { TDirection } from '@/hooks/use-layout';
 import {
   KEY_MAP,
   TAB_NUMBER_KEYS,
@@ -82,35 +83,25 @@ const useKeyboardShortcuts = ({
     HOTKEY_OPTIONS,
   );
 
-  // ⌘⌥← / ⌘⌥↑ — 이전 Pane으로 포커스
-  useHotkeys(
-    KEY_MAP.FOCUS_PREV,
-    () => {
+  // ⌥⌘ + 방향키 — 방향별 Pane 포커스 이동
+  const focusDirection = useCallback(
+    (direction: TDirection) => {
       const l = layoutRef.current;
-      if (!l.layout) return;
-      const panes = collectPanes(l.layout.root);
-      if (panes.length <= 1) return;
-      const idx = panes.findIndex((p) => p.id === l.layout!.focusedPaneId);
-      const prev = idx <= 0 ? panes[panes.length - 1] : panes[idx - 1];
-      l.focusPane(prev.id);
+      if (!l.layout?.focusedPaneId) return;
+      const targetId = findAdjacentPaneInDirection(
+        l.layout.root,
+        l.layout.focusedPaneId,
+        direction,
+      );
+      if (targetId) l.focusPane(targetId);
     },
-    HOTKEY_OPTIONS,
+    [],
   );
 
-  // ⌘⌥→ / ⌘⌥↓ — 다음 Pane으로 포커스
-  useHotkeys(
-    KEY_MAP.FOCUS_NEXT,
-    () => {
-      const l = layoutRef.current;
-      if (!l.layout) return;
-      const panes = collectPanes(l.layout.root);
-      if (panes.length <= 1) return;
-      const idx = panes.findIndex((p) => p.id === l.layout!.focusedPaneId);
-      const next = idx >= panes.length - 1 ? panes[0] : panes[idx + 1];
-      l.focusPane(next.id);
-    },
-    HOTKEY_OPTIONS,
-  );
+  useHotkeys(KEY_MAP.FOCUS_LEFT, () => focusDirection('left'), HOTKEY_OPTIONS);
+  useHotkeys(KEY_MAP.FOCUS_RIGHT, () => focusDirection('right'), HOTKEY_OPTIONS);
+  useHotkeys(KEY_MAP.FOCUS_UP, () => focusDirection('up'), HOTKEY_OPTIONS);
+  useHotkeys(KEY_MAP.FOCUS_DOWN, () => focusDirection('down'), HOTKEY_OPTIONS);
 
   // ⌘T / Ctrl+T — 새 탭
   useHotkeys(

@@ -1,8 +1,8 @@
-import { useRef, useLayoutEffect, useState, useCallback } from 'react';
+import { useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { Group, Panel, Separator } from 'react-resizable-panels';
+import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import type { TLayoutNode, ITab } from '@/types/terminal';
-import { collectPanes, getFirstPaneId } from '@/hooks/use-layout';
+import { collectPanes, getFirstPaneId, equalizeNode } from '@/hooks/use-layout';
 import PaneContainer from '@/components/features/terminal/pane-container';
 
 interface IPaneLayoutProps {
@@ -51,28 +51,32 @@ const PaneLayout = (props: IPaneLayoutProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const stableContainersRef = useRef(new Map<string, HTMLDivElement>());
 
-  const [closingPaneIds, setClosingPaneIds] = useState<Set<string>>(new Set());
-  const [layoutVersion, setLayoutVersion] = useState(0);
+  const groupRefsMap = useRef(new Map<string, React.RefObject<GroupImperativeHandle | null>>());
+
+  const getGroupRef = (pathKey: string) => {
+    let ref = groupRefsMap.current.get(pathKey);
+    if (!ref) {
+      ref = { current: null };
+      groupRefsMap.current.set(pathKey, ref);
+    }
+    return ref;
+  };
 
   const handleEqualizeRatios = useCallback(() => {
+    const equalized = equalizeNode(root);
+    const walk = (node: TLayoutNode, path: number[]) => {
+      if (node.type === 'pane') return;
+      const pathKey = path.join('-') || 'root';
+      const ref = groupRefsMap.current.get(pathKey);
+      if (ref?.current) {
+        ref.current.setLayout({ left: node.ratio, right: 100 - node.ratio });
+      }
+      walk(node.children[0], [...path, 0]);
+      walk(node.children[1], [...path, 1]);
+    };
+    walk(equalized, []);
     onEqualizeRatios();
-    setLayoutVersion((v) => v + 1);
-  }, [onEqualizeRatios]);
-
-  const handleClosePane = useCallback(
-    (paneId: string) => {
-      setClosingPaneIds((prev) => new Set(prev).add(paneId));
-      setTimeout(() => {
-        setClosingPaneIds((prev) => {
-          const next = new Set(prev);
-          next.delete(paneId);
-          return next;
-        });
-        onClosePane(paneId);
-      }, 150);
-    },
-    [onClosePane],
-  );
+  }, [root, onEqualizeRatios]);
 
   const panes = collectPanes(root);
 
@@ -107,9 +111,12 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     const rightId = getFirstPaneId(node.children[1]);
     const isHorizontal = node.orientation === 'horizontal';
 
+    const pathKey = path.join('-') || 'root';
+
     return (
       <Group
-        key={`group-${leftId}-${rightId}-v${layoutVersion}`}
+        key={`group-${leftId}-${rightId}`}
+        groupRef={getGroupRef(pathKey)}
         orientation={node.orientation}
         defaultLayout={{ left: node.ratio, right: 100 - node.ratio }}
         onLayoutChanged={(layout) => {
@@ -181,9 +188,8 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             paneCount={paneCount}
             canSplit={canSplit}
             isSplitting={isSplitting}
-            isClosing={closingPaneIds.has(pane.id)}
             onSplitPane={onSplitPane}
-            onClosePane={handleClosePane}
+            onClosePane={onClosePane}
             onFocusPane={onFocusPane}
             onMoveTab={onMoveTab}
             onCreateTab={onCreateTab}

@@ -38,6 +38,45 @@ const getLastPaneId = (node: TLayoutNode): string => {
   return getLastPaneId(node.children[1]);
 };
 
+export type TDirection = 'left' | 'right' | 'up' | 'down';
+
+export const findAdjacentPaneInDirection = (
+  root: TLayoutNode,
+  currentPaneId: string,
+  direction: TDirection,
+): string | null => {
+  const path: { node: TLayoutNode; childIndex: number }[] = [];
+
+  const buildPath = (node: TLayoutNode): boolean => {
+    if (node.type === 'pane') return node.id === currentPaneId;
+    for (let i = 0; i < 2; i++) {
+      path.push({ node, childIndex: i });
+      if (buildPath(node.children[i as 0 | 1])) return true;
+      path.pop();
+    }
+    return false;
+  };
+
+  if (!buildPath(root)) return null;
+
+  const targetOrientation =
+    direction === 'left' || direction === 'right' ? 'vertical' : 'horizontal';
+  const fromChildIndex = direction === 'left' || direction === 'up' ? 1 : 0;
+
+  for (let i = path.length - 1; i >= 0; i--) {
+    const { node, childIndex } = path[i];
+    if (node.type !== 'split') continue;
+    if (node.orientation === targetOrientation && childIndex === fromChildIndex) {
+      const targetChild = node.children[(1 - fromChildIndex) as 0 | 1];
+      return direction === 'left' || direction === 'up'
+        ? getLastPaneId(targetChild)
+        : getFirstPaneId(targetChild);
+    }
+  }
+
+  return null;
+};
+
 const findAdjacentPaneId = (node: TLayoutNode, paneId: string): string | null => {
   if (node.type === 'pane') return null;
   const [left, right] = node.children;
@@ -80,15 +119,16 @@ const updateRatioAtPath = (
   return { ...node, children };
 };
 
-const countLeaves = (node: TLayoutNode): number => {
+const countUnits = (node: TLayoutNode, orientation: string): number => {
   if (node.type === 'pane') return 1;
-  return countLeaves(node.children[0]) + countLeaves(node.children[1]);
+  if (node.orientation !== orientation) return 1;
+  return countUnits(node.children[0], orientation) + countUnits(node.children[1], orientation);
 };
 
-const equalizeNode = (node: TLayoutNode): TLayoutNode => {
+export const equalizeNode = (node: TLayoutNode): TLayoutNode => {
   if (node.type === 'pane') return node;
-  const leftCount = countLeaves(node.children[0]);
-  const rightCount = countLeaves(node.children[1]);
+  const leftCount = countUnits(node.children[0], node.orientation);
+  const rightCount = countUnits(node.children[1], node.orientation);
   const ratio = Math.round((leftCount / (leftCount + rightCount)) * 10000) / 100;
   return {
     ...node,

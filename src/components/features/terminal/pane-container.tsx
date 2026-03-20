@@ -50,7 +50,6 @@ interface IPaneContainerProps {
   paneCount: number;
   canSplit: boolean;
   isSplitting: boolean;
-  isClosing?: boolean;
   onSplitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => void;
   onClosePane: (paneId: string) => void;
   onFocusPane: (paneId: string) => void;
@@ -76,7 +75,6 @@ const PaneContainer = ({
   paneCount,
   canSplit,
   isSplitting,
-  isClosing,
   onSplitPane,
   onClosePane,
   onFocusPane,
@@ -216,6 +214,13 @@ const PaneContainer = ({
     wsActionsRef.current = { sendStdin, sendResize };
   });
 
+  // HMR 등으로 터미널이 재초기화되면 연결 추적 리셋
+  useEffect(() => {
+    if (!isReady) {
+      connectedSessionRef.current = null;
+    }
+  }, [isReady]);
+
   // Connect to active tab's session
   useEffect(() => {
     if (!isReady || !activeTabId) return;
@@ -255,9 +260,21 @@ const PaneContainer = ({
     return () => clearTimeout(timer);
   }, [paneCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-focus xterm when pane gets focus
+  // 연결 후 레이아웃 안정화 대기 후 resize 재전송
+  useEffect(() => {
+    if (!isReady || status !== 'connected') return;
+    const timer = setTimeout(() => {
+      const { cols, rows } = fit();
+      wsActionsRef.current.sendResize(cols, rows);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // 포커스 시 resize 동기화 + xterm 포커스
   useEffect(() => {
     if (isFocused && isReady && status === 'connected') {
+      const { cols, rows } = fit();
+      wsActionsRef.current.sendResize(cols, rows);
       focus();
     }
   }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -344,7 +361,7 @@ const PaneContainer = ({
         paneCount > 1 && isFocused ? 'border-ui-purple' : 'border-transparent',
       )}
       style={{
-        opacity: isClosing ? 0 : !mounted ? 0 : undefined,
+        opacity: !mounted ? 0 : undefined,
         transition: 'opacity 200ms ease-out, border-color 150ms',
       }}
       role="region"

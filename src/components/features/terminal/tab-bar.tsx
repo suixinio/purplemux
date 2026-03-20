@@ -66,7 +66,7 @@ const TabBar = ({
     const activeEl = scrollRef.current.querySelector(
       `[data-tab-id="${activeTabId}"]`,
     );
-    activeEl?.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    activeEl?.scrollIntoView({ behavior: 'instant', inline: 'nearest', block: 'nearest' });
   }, [activeTabId]);
 
   useEffect(() => {
@@ -208,7 +208,7 @@ const TabBar = ({
               aria-selected={isActive}
               tabIndex={isActive ? 0 : -1}
               className={cn(
-                'group relative flex min-w-[80px] max-w-[180px] cursor-pointer items-center gap-1 border-b-2 px-3 text-xs transition-colors duration-150 select-none',
+                'group relative flex min-w-[80px] max-w-[180px] cursor-pointer items-center gap-1 border-b-2 px-3 text-xs select-none',
                 isActive
                   ? 'border-b-accent-color bg-secondary text-foreground'
                   : 'border-b-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
