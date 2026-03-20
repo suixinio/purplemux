@@ -65,6 +65,7 @@ const Sidebar = ({
   onRetry,
 }: ISidebarProps) => {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IWorkspace | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
 
@@ -104,10 +105,15 @@ const Sidebar = ({
 
   const handleCreateSubmit = useCallback(
     async (directory: string) => {
-      const ws = await onCreateWorkspace(directory);
-      if (ws) {
-        setCreateDialogOpen(false);
-        onSelectWorkspace(ws.id);
+      setIsCreating(true);
+      try {
+        const ws = await onCreateWorkspace(directory);
+        if (ws) {
+          setCreateDialogOpen(false);
+          onSelectWorkspace(ws.id);
+        }
+      } finally {
+        setIsCreating(false);
       }
     },
     [onCreateWorkspace, onSelectWorkspace],
@@ -146,8 +152,6 @@ const Sidebar = ({
     });
 
     if (success && workspaces.length <= 1) {
-      // Last workspace deleted — server will create a default one,
-      // or we let terminal-page handle the empty state
       onRetry();
     }
   }, [deleteTarget, activeWorkspaceId, workspaces, onSelectWorkspace, onDeleteWorkspace, onRetry]);
@@ -262,15 +266,21 @@ const Sidebar = ({
           {/* Add button */}
           <button
             className="flex h-9 w-full items-center gap-2 px-3 text-sm text-zinc-400"
-            style={{ transition: 'background-color 100ms' }}
+            style={{
+              transition: 'background-color 100ms, opacity 100ms',
+              opacity: isCreating ? 0.5 : 1,
+            }}
             onMouseEnter={(e) => {
-              (e.currentTarget as HTMLElement).style.backgroundColor =
-                'oklch(0.20 0.006 286)';
+              if (!isCreating) {
+                (e.currentTarget as HTMLElement).style.backgroundColor =
+                  'oklch(0.20 0.006 286)';
+              }
             }}
             onMouseLeave={(e) => {
               (e.currentTarget as HTMLElement).style.backgroundColor = '';
             }}
-            onClick={() => setCreateDialogOpen(true)}
+            onClick={() => !isCreating && setCreateDialogOpen(true)}
+            disabled={isCreating}
             aria-label="Workspace 추가"
           >
             <Plus className="h-3.5 w-3.5" />
@@ -316,7 +326,7 @@ const Sidebar = ({
       {/* Resize handle */}
       {!collapsed && (
         <div
-          className="relative shrink-0"
+          className="group relative shrink-0"
           style={{
             width: '6px',
             marginLeft: '-3px',
@@ -325,11 +335,25 @@ const Sidebar = ({
             zIndex: 10,
           }}
           onMouseDown={handleResizeStart}
+          onKeyDown={(e) => {
+            const step = e.shiftKey ? 20 : 4;
+            if (e.key === 'ArrowLeft') {
+              e.preventDefault();
+              onWidthChange(Math.max(MIN_WIDTH, width - step));
+            } else if (e.key === 'ArrowRight') {
+              e.preventDefault();
+              onWidthChange(Math.min(MAX_WIDTH, width + step));
+            }
+          }}
           role="separator"
           aria-orientation="vertical"
+          aria-valuenow={width}
+          aria-valuemin={MIN_WIDTH}
+          aria-valuemax={MAX_WIDTH}
+          tabIndex={0}
         >
           <div
-            className="absolute left-1/2 top-0 h-full -translate-x-1/2"
+            className="absolute left-1/2 top-0 h-full -translate-x-1/2 group-hover:!bg-[oklch(0.40_0.006_286)] group-active:!bg-[oklch(0.50_0.010_286)]"
             style={{
               width: '1px',
               backgroundColor: 'oklch(0.25 0.006 286)',

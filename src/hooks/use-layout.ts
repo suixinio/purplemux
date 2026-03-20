@@ -85,9 +85,10 @@ const cloneLayout = (data: ILayoutData): ILayoutData =>
 
 interface IUseLayoutOptions {
   workspaceId: string | null;
+  onFetchError?: () => void;
 }
 
-const useLayout = ({ workspaceId }: IUseLayoutOptions) => {
+const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
   const [layout, setLayout] = useState<ILayoutData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,6 +97,12 @@ const useLayout = ({ workspaceId }: IUseLayoutOptions) => {
   const layoutRef = useRef<ILayoutData | null>(null);
   const retryCountRef = useRef(0);
   const workspaceIdRef = useRef(workspaceId);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const onFetchErrorRef = useRef(onFetchError);
+
+  useEffect(() => {
+    onFetchErrorRef.current = onFetchError;
+  }, [onFetchError]);
 
   useEffect(() => {
     layoutRef.current = layout;
@@ -182,24 +189,33 @@ const useLayout = ({ workspaceId }: IUseLayoutOptions) => {
     const targetWsId = wsId ?? workspaceIdRef.current;
     if (!targetWsId) return;
 
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     setIsLoading(true);
     setError(null);
     try {
       const url = `/api/layout?workspace=${targetWsId}`;
-      const res = await fetch(url);
+      const res = await fetch(url, { signal: controller.signal });
       if (!res.ok) throw new Error();
       const data: ILayoutData = await res.json();
+      if (controller.signal.aborted) return;
       setLayout(data);
       retryCountRef.current = 0;
-    } catch {
+    } catch (err) {
+      if (err instanceof DOMException && err.name === 'AbortError') return;
       retryCountRef.current += 1;
       if (retryCountRef.current >= 3) {
         const ok = await createFallbackLayout();
         if (ok) return;
       }
       setError('레이아웃을 불러올 수 없습니다');
+      onFetchErrorRef.current?.();
     } finally {
-      setIsLoading(false);
+      if (!controller.signal.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [createFallbackLayout]);
 

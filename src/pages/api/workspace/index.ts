@@ -1,9 +1,18 @@
+import os from 'os';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getWorkspaces, createWorkspace } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    const data = getWorkspaces();
+    let data = getWorkspaces();
+    if (data.workspaces.length === 0) {
+      try {
+        await createWorkspace(os.homedir());
+        data = getWorkspaces();
+      } catch {
+        // 자동 생성 실패 시 빈 목록 반환
+      }
+    }
     return res.status(200).json(data);
   }
 

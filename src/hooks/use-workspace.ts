@@ -131,8 +131,15 @@ const useWorkspace = (): IUseWorkspace => {
 
   const renameWorkspaceAction = useCallback(
     async (workspaceId: string, name: string): Promise<boolean> => {
+      let previousName = '';
       setWorkspaces((prev) =>
-        prev.map((w) => (w.id === workspaceId ? { ...w, name } : w)),
+        prev.map((w) => {
+          if (w.id === workspaceId) {
+            previousName = w.name;
+            return { ...w, name };
+          }
+          return w;
+        }),
       );
       try {
         const res = await fetch(`/api/workspace/${workspaceId}`, {
@@ -143,6 +150,9 @@ const useWorkspace = (): IUseWorkspace => {
         if (!res.ok) throw new Error();
         return true;
       } catch {
+        setWorkspaces((prev) =>
+          prev.map((w) => (w.id === workspaceId ? { ...w, name: previousName } : w)),
+        );
         toast.error('이름 변경에 실패했습니다');
         return false;
       }

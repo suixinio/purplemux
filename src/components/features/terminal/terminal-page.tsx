@@ -1,5 +1,6 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import useLayout from '@/hooks/use-layout';
 import useWorkspace from '@/hooks/use-workspace';
@@ -8,19 +9,29 @@ import Sidebar from '@/components/features/terminal/sidebar';
 
 const TerminalPage = () => {
   const ws = useWorkspace();
-  const layout = useLayout({ workspaceId: ws.activeWorkspaceId });
+  const prevWorkspaceIdRef = useRef<string | null>(null);
+
+  const handleFetchError = useCallback(() => {
+    const prevId = prevWorkspaceIdRef.current;
+    if (prevId) {
+      ws.switchWorkspace(prevId);
+      toast.error('전환할 수 없습니다');
+    }
+  }, [ws]);
+
+  const layout = useLayout({
+    workspaceId: ws.activeWorkspaceId,
+    onFetchError: handleFetchError,
+  });
 
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {
       if (workspaceId === ws.activeWorkspaceId) return;
 
-      // 1. Save current layout (fire-and-forget)
+      prevWorkspaceIdRef.current = ws.activeWorkspaceId;
+
       layout.saveCurrentLayout();
-
-      // 2. Clear current layout (triggers dispose in PaneLayout)
       layout.clearLayout();
-
-      // 3. Optimistic: switch sidebar + trigger layout re-fetch
       ws.switchWorkspace(workspaceId);
     },
     [ws, layout],
