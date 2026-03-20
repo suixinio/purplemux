@@ -7,13 +7,16 @@ import type { ITerminalThemeColors } from "@/lib/terminal-themes";
 
 interface IUseTerminalOptions {
   theme?: ITerminalThemeColors;
+  fontSize?: number;
   onInput?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
   onTitleChange?: (title: string) => void;
   customKeyEventHandler?: (event: KeyboardEvent) => boolean;
 }
 
-const useTerminal = ({ theme, onInput, onResize, onTitleChange, customKeyEventHandler }: IUseTerminalOptions = {}) => {
+const DEFAULT_FONT_SIZE = 12;
+
+const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, onTitleChange, customKeyEventHandler }: IUseTerminalOptions = {}) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -21,10 +24,10 @@ const useTerminal = ({ theme, onInput, onResize, onTitleChange, customKeyEventHa
   const isWritingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
 
-  const callbacksRef = useRef({ theme, onInput, onResize, onTitleChange, customKeyEventHandler });
+  const callbacksRef = useRef({ theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler });
 
   useEffect(() => {
-    callbacksRef.current = { theme, onInput, onResize, onTitleChange, customKeyEventHandler };
+    callbacksRef.current = { theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler };
   });
 
   const write = useCallback((data: Uint8Array) => {
@@ -121,7 +124,7 @@ const useTerminal = ({ theme, onInput, onResize, onTitleChange, customKeyEventHa
         fontFamily: FONT_FAMILY,
         fontWeight: "400",
         fontWeightBold: "600",
-        fontSize: 12,
+        fontSize: callbacksRef.current.fontSize,
         lineHeight: 1.1,
         letterSpacing: 0,
         scrollback: 5000,
@@ -205,6 +208,15 @@ const useTerminal = ({ theme, onInput, onResize, onTitleChange, customKeyEventHa
       terminalInstance.current.options.theme = theme;
     }
   }, [theme]);
+
+  useEffect(() => {
+    const terminal = terminalInstance.current;
+    if (terminal && fontSize) {
+      terminal.options.fontSize = fontSize;
+      fitAddonRef.current?.fit();
+      callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
+    }
+  }, [fontSize]);
 
   return { terminalRef, write, clear, reset, fit, focus, isReady };
 };

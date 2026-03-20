@@ -68,7 +68,7 @@ interface IPaneContainerProps {
   onEqualizeRatios: () => void;
 }
 
-const TERMINAL_SCALE = 0.5;
+const CLAUDE_CODE_FONT_SIZE = 8;
 const TITLE_DEBOUNCE_MS = 3000;
 
 const PaneContainer = ({
@@ -94,6 +94,10 @@ const PaneContainer = ({
   onUpdateTabPanelType,
   onEqualizeRatios,
 }: IPaneContainerProps) => {
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
+  const isClaudeCode = activePanelType === 'claude-code';
+
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -157,6 +161,7 @@ const PaneContainer = ({
 
   const { terminalRef, write, clear, reset, fit, focus, isReady } = useTerminal({
     theme: terminalTheme.colors,
+    fontSize: isClaudeCode ? CLAUDE_CODE_FONT_SIZE : undefined,
     onInput: (data) => wsActionsRef.current.sendStdin(data),
     onResize: (cols, rows) => wsActionsRef.current.sendResize(cols, rows),
     onTitleChange: (title) => {
@@ -362,10 +367,6 @@ const PaneContainer = ({
     onUpdateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, tabs, onUpdateTabPanelType]);
 
-  const activeTab = tabs.find((t) => t.id === activeTabId);
-  const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
-  const isClaudeCode = activePanelType === 'claude-code';
-
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
 
   useEffect(() => {
@@ -466,15 +467,7 @@ const PaneContainer = ({
           </Separator>
 
           <Panel id="terminal-area" minSize={10}>
-            <div
-              className="h-full w-full"
-              style={isClaudeCode ? {
-                transform: `scale(${TERMINAL_SCALE})`,
-                transformOrigin: 'top left',
-                width: `${100 / TERMINAL_SCALE}%`,
-                height: `${100 / TERMINAL_SCALE}%`,
-              } : undefined}
-            >
+            <div className="h-full w-full">
               <TerminalContainer
                 ref={terminalRef}
                 className={cn(
