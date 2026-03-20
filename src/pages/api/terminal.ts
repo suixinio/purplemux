@@ -28,7 +28,23 @@ interface IExtendedServer {
   _terminalShutdownRegistered?: boolean;
 }
 
-const connections = new Map<WebSocket, IActiveConnection>();
+const globalForTerminal = globalThis as typeof globalThis & {
+  _terminalConnections?: Map<WebSocket, IActiveConnection>;
+};
+
+if (!globalForTerminal._terminalConnections) {
+  globalForTerminal._terminalConnections = new Map();
+}
+
+const connections = globalForTerminal._terminalConnections;
+
+const purgeStaleConnections = () => {
+  connections.forEach((conn, ws) => {
+    if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+      cleanup(conn);
+    }
+  });
+};
 
 const cleanup = (conn: IActiveConnection) => {
   if (conn.cleaned) return;
@@ -60,6 +76,8 @@ const gracefulShutdown = () => {
 };
 
 const handleConnection = (ws: WebSocket) => {
+  purgeStaleConnections();
+
   if (connections.size >= MAX_CONNECTIONS) {
     console.log(`[terminal] connection rejected: max connections (${MAX_CONNECTIONS}) reached`);
     ws.close(1013, 'Max connections exceeded');
@@ -191,11 +209,6 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
     return;
   }
 
-  if (!req.headers.upgrade || req.headers.upgrade.toLowerCase() !== 'websocket') {
-    res.status(426).json({ error: 'WebSocket connection required' });
-    return;
-  }
-
   const server = (res.socket as unknown as { server: IExtendedServer })?.server;
 
   if (!server) {
@@ -225,7 +238,13 @@ const handler = (req: NextApiRequest, res: NextApiResponse) => {
   if (!server._terminalShutdownRegistered) {
     process.on('SIGTERM', gracefulShutdown);
     process.on('SIGINT', gracefulShutdown);
+    process.on('exit', gracefulShutdown);
     server._terminalShutdownRegistered = true;
+  }
+
+  if (!req.headers.upgrade || req.headers.upgrade.toLowerCase() !== 'websocket') {
+    res.status(426).json({ error: 'WebSocket connection required' });
+    return;
   }
 
   res.end();
