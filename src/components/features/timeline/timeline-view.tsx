@@ -79,8 +79,8 @@ const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
       <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
         <MessageSquare size={32} className="opacity-40" />
         <div className="text-center">
-          <p className="text-sm font-medium">Claude Code 미설치</p>
-          <p className="mt-1 text-xs">Claude Code를 설치하세요.</p>
+          <p className="text-sm font-medium">Claude Code를 설치하세요</p>
+          <p className="mt-1 text-xs">~/.claude 디렉토리를 찾을 수 없습니다.</p>
         </div>
       </div>
     );
