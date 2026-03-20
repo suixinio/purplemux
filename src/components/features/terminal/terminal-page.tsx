@@ -61,7 +61,7 @@ const TerminalPage = () => {
       onSessionEnded: () => setSessionEnded(true),
     });
 
-  const { terminalRef, write, clear, fit, focus } = useTerminal({
+  const { terminalRef, write, clear, fit, focus, isReady } = useTerminal({
     onInput: sendStdin,
     onResize: (cols, rows) => wsActionsRef.current.sendResize(cols, rows),
   });
@@ -70,6 +70,13 @@ const TerminalPage = () => {
     termActionsRef.current = { write, clear, fit, focus };
     wsActionsRef.current = { sendResize };
   });
+
+  useEffect(() => {
+    if (isReady && status === 'connected') {
+      const { cols, rows } = fit();
+      sendResize(cols, rows);
+    }
+  }, [isReady, status, fit, sendResize]);
 
   const handleNewSession = useCallback(() => {
     newSessionRef.current = true;
