@@ -7,8 +7,8 @@ import {
   AlertTriangle,
   Loader2,
   Equal,
-  SquareTerminal,
-  Bot,
+  Terminal,
+  BotMessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -26,6 +26,7 @@ const SplitHorizontalIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ITab, TPanelType } from '@/types/terminal';
 import { isAutoTabName } from '@/lib/tab-title';
 
@@ -93,6 +94,7 @@ const PaneTabBar = ({
     side: 'left' | 'right';
   } | null>(null);
   const [isDragOverFromOther, setIsDragOverFromOther] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
   const dragEnterCountRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -240,6 +242,13 @@ const PaneTabBar = ({
     }
   };
 
+  const handleToggle = useCallback(() => {
+    if (isToggling) return;
+    setIsToggling(true);
+    onTogglePanelType();
+    setTimeout(() => setIsToggling(false), 150);
+  }, [isToggling, onTogglePanelType]);
+
   const handleTabBarDragLeave = () => {
     dragEnterCountRef.current--;
     if (dragEnterCountRef.current <= 0) {
@@ -381,14 +390,19 @@ const PaneTabBar = ({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span
-                  className={cn(
-                    'truncate',
-                    displayName ? 'opacity-100' : 'opacity-0',
+                <>
+                  <span
+                    className={cn(
+                      'truncate',
+                      displayName ? 'opacity-100' : 'opacity-0',
+                    )}
+                  >
+                    {displayName}
+                  </span>
+                  {tab.panelType === 'claude-code' && (
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-ui-purple" />
                   )}
-                >
-                  {displayName}
-                </span>
+                </>
               )}
 
               <button
@@ -442,21 +456,29 @@ const PaneTabBar = ({
         </button>
 
         {/* Panel type toggle */}
-        <button
-          className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground',
-            activePanelType === 'claude-code' && 'text-ui-purple',
-          )}
-          onClick={onTogglePanelType}
-          aria-label={activePanelType === 'terminal' ? 'Claude Code 모드로 전환' : '터미널 모드로 전환'}
-          title={activePanelType === 'terminal' ? 'Claude Code 모드' : '터미널 모드'}
-        >
-          {activePanelType === 'terminal' ? (
-            <Bot className="h-3 w-3" />
-          ) : (
-            <SquareTerminal className="h-3 w-3" />
-          )}
-        </button>
+        <TooltipProvider delay={500}>
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground',
+                activePanelType === 'claude-code' && 'text-ui-purple',
+                isToggling && 'pointer-events-none opacity-80',
+              )}
+              onClick={handleToggle}
+              disabled={isToggling}
+              aria-label={activePanelType === 'terminal' ? 'Claude Code 모드로 전환' : '터미널 모드로 전환'}
+            >
+              {activePanelType === 'terminal' ? (
+                <BotMessageSquare className="h-3 w-3" />
+              ) : (
+                <Terminal className="h-3 w-3" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              {activePanelType === 'terminal' ? 'Claude Code 패널' : '터미널'}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
 
         {/* Split horizontal */}
         <button
