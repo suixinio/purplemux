@@ -49,11 +49,26 @@ const createDefaultPaneNode = (tab: ITab): IPaneNode => ({
   activeTabId: tab.id,
 });
 
+const BACKUP_FILE = path.join(LAYOUT_DIR, '.layout.json.bak');
+
 const readLayoutFile = async (): Promise<ILayoutData | null> => {
+  let raw: string;
   try {
-    const raw = await fs.readFile(LAYOUT_FILE, 'utf-8');
+    raw = await fs.readFile(LAYOUT_FILE, 'utf-8');
+  } catch {
+    return null;
+  }
+
+  try {
     return JSON.parse(raw) as ILayoutData;
   } catch {
+    console.log('[layout] layout.json 파싱 실패, 빈 상태로 시작합니다');
+    try {
+      await fs.copyFile(LAYOUT_FILE, BACKUP_FILE);
+      console.log(`[layout] 손상된 파일을 ${BACKUP_FILE}으로 백업했습니다`);
+    } catch (backupErr) {
+      console.log(`[layout] 백업 실패: ${backupErr instanceof Error ? backupErr.message : backupErr}`);
+    }
     return null;
   }
 };
@@ -297,6 +312,7 @@ const validateTree = (root: TLayoutNode, focusedPaneId: string | null): ILayoutV
       paneIds.add(node.id);
 
       if (!Array.isArray(node.tabs)) return 'pane 노드에 tabs 필드 필수';
+      if (node.tabs.length === 0) return 'pane 노드는 최소 1개 탭 필수';
 
       for (const tab of node.tabs) {
         if (tabIds.has(tab.id)) return '중복 탭 ID';
