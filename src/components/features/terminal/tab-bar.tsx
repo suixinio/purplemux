@@ -41,7 +41,6 @@ const TabBar = ({
     id: string;
     side: 'left' | 'right';
   } | null>(null);
-  const [closingTabId, setClosingTabId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const sortedTabs = [...tabs].sort((a, b) => a.order - b.order);
@@ -214,7 +213,6 @@ const TabBar = ({
                   ? 'border-b-accent-color bg-secondary text-foreground'
                   : 'border-b-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
                 isDragging && 'opacity-70',
-                tab.id === closingTabId && 'pointer-events-none opacity-0',
               )}
               onClick={() => {
                 if (!isEditing && !isActive) onSwitchTab(tab.id);
@@ -263,12 +261,7 @@ const TabBar = ({
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (closingTabId) return;
-                  setClosingTabId(tab.id);
-                  setTimeout(() => {
-                    setClosingTabId(null);
-                    onDeleteTab(tab.id);
-                  }, 150);
+                  onDeleteTab(tab.id);
                 }}
                 aria-label="탭 닫기"
               >

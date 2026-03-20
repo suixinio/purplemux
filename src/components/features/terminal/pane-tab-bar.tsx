@@ -6,10 +6,22 @@ import {
   ChevronRight,
   AlertTriangle,
   Loader2,
-  PanelRight,
-  PanelBottom,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+const SplitVerticalIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="12" y1="3" x2="12" y2="21" />
+  </svg>
+);
+
+const SplitHorizontalIcon = ({ className }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+  </svg>
+);
 import { Button } from '@/components/ui/button';
 import type { ITab } from '@/types/terminal';
 
@@ -68,7 +80,6 @@ const PaneTabBar = ({
     id: string;
     side: 'left' | 'right';
   } | null>(null);
-  const [closingTabId, setClosingTabId] = useState<string | null>(null);
   const [isDragOverFromOther, setIsDragOverFromOther] = useState(false);
   const dragEnterCountRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -304,7 +315,6 @@ const PaneTabBar = ({
                   ? 'border-b-accent-color bg-secondary text-foreground'
                   : 'border-b-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
                 isDragging && 'opacity-30',
-                tab.id === closingTabId && 'pointer-events-none opacity-0',
               )}
               onClick={() => {
                 if (!isEditing && !isActive) onSwitchTab(tab.id);
@@ -365,12 +375,7 @@ const PaneTabBar = ({
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (closingTabId) return;
-                  setClosingTabId(tab.id);
-                  setTimeout(() => {
-                    setClosingTabId(null);
-                    onDeleteTab(tab.id);
-                  }, 150);
+                  onDeleteTab(tab.id);
                 }}
                 aria-label="탭 닫기"
               >
@@ -430,7 +435,7 @@ const PaneTabBar = ({
           {isSplitting ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <PanelRight className="h-3 w-3" />
+            <SplitVerticalIcon className="h-3 w-3" />
           )}
         </button>
 
@@ -451,7 +456,7 @@ const PaneTabBar = ({
           {isSplitting ? (
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
-            <PanelBottom className="h-3 w-3" />
+            <SplitHorizontalIcon className="h-3 w-3" />
           )}
         </button>
 

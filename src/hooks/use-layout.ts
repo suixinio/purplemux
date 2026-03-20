@@ -122,9 +122,11 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     [],
   );
 
+  const pendingSaveRef = useRef<Promise<void> | null>(null);
+
   const saveToServer = useCallback(async (data: ILayoutData) => {
     try {
-      await fetch(wsQuery('/api/layout'), {
+      const res = await fetch(wsQuery('/api/layout'), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -132,13 +134,17 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
           focusedPaneId: data.focusedPaneId,
         }),
       });
-    } catch {
-      // silently retry on next change
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        console.error('[layout] 저장 실패:', res.status, body);
+      }
+    } catch (err) {
+      console.error('[layout] 저장 중 네트워크 오류:', err);
     }
   }, [wsQuery]);
 
   const updateAndSave = useCallback(
-    (updater: (data: ILayoutData) => ILayoutData) => {
+    (updater: (data: ILayoutData) => ILayoutData): Promise<void> => {
       let saved: ILayoutData | null = null;
       setLayout((prev) => {
         if (!prev) return prev;
@@ -147,7 +153,17 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
         saved = next;
         return next;
       });
-      if (saved) saveToServer(saved);
+      if (saved) {
+        const promise = saveToServer(saved);
+        pendingSaveRef.current = promise;
+        promise.finally(() => {
+          if (pendingSaveRef.current === promise) {
+            pendingSaveRef.current = null;
+          }
+        });
+        return promise;
+      }
+      return Promise.resolve();
     },
     [saveToServer],
   );
@@ -226,6 +242,20 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     }
   }, [workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const current = layoutRef.current;
+      if (!current) return;
+      const blob = new Blob(
+        [JSON.stringify({ root: current.root, focusedPaneId: current.focusedPaneId })],
+        { type: 'application/json' },
+      );
+      navigator.sendBeacon(wsQuery('/api/layout/beacon'), blob);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [wsQuery]);
+
 
   const paneCount = layout ? collectPanes(layout.root).length : 0;
   const canSplit = paneCount < 10 && !isSplitting;
@@ -265,7 +295,7 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
           activeTabId: tab.id,
         };
 
-        updateAndSave((data) => {
+        await updateAndSave((data) => {
           const existingPane = findPane(data.root, paneId);
           if (!existingPane) return data;
           const splitNode: TLayoutNode = {
