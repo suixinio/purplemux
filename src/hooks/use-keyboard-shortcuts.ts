@@ -132,7 +132,7 @@ const useKeyboardShortcuts = ({
     HOTKEY_OPTIONS,
   );
 
-  // ⌘⇧[ — 이전 탭
+  // ⌘⇧[ — 이전 탭 (끝에서 멈춤, 순환 없음)
   useHotkeys(
     KEY_MAP.PREV_TAB,
     () => {
@@ -142,13 +142,13 @@ const useKeyboardShortcuts = ({
       if (!pane || pane.tabs.length <= 1) return;
       const sorted = getSortedTabs(pane);
       const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
-      const prev = idx <= 0 ? sorted[sorted.length - 1] : sorted[idx - 1];
-      l.switchTabInPane(pane.id, prev.id);
+      if (idx <= 0) return;
+      l.switchTabInPane(pane.id, sorted[idx - 1].id);
     },
     HOTKEY_OPTIONS,
   );
 
-  // ⌘⇧] — 다음 탭
+  // ⌘⇧] — 다음 탭 (끝에서 멈춤, 순환 없음)
   useHotkeys(
     KEY_MAP.NEXT_TAB,
     () => {
@@ -158,8 +158,8 @@ const useKeyboardShortcuts = ({
       if (!pane || pane.tabs.length <= 1) return;
       const sorted = getSortedTabs(pane);
       const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
-      const next = idx >= sorted.length - 1 ? sorted[0] : sorted[idx + 1];
-      l.switchTabInPane(pane.id, next.id);
+      if (idx >= sorted.length - 1) return;
+      l.switchTabInPane(pane.id, sorted[idx + 1].id);
     },
     HOTKEY_OPTIONS,
   );
@@ -167,7 +167,7 @@ const useKeyboardShortcuts = ({
   // ⌘K / Ctrl+K — 터미널 클리어 (preventDefault만 담당, 실제 clear는 xterm handler에서 처리)
   useHotkeys(KEY_MAP.CLEAR_TERMINAL, () => {}, HOTKEY_OPTIONS);
 
-  // ⌃1~9 / Alt+1~9 — 탭 번호로 전환
+  // ⌃1~8 / Alt+1~8 — N번째 탭, ⌃9 / Alt+9 — 마지막 탭
   useHotkeys(
     TAB_NUMBER_KEYS,
     (event) => {
@@ -180,8 +180,9 @@ const useKeyboardShortcuts = ({
       if (isNaN(digit) || digit < 1 || digit > 9) return;
 
       const sorted = getSortedTabs(pane);
-      const tab = sorted[digit - 1];
-      if (tab) l.switchTabInPane(pane.id, tab.id);
+      const tab = digit === 9 ? sorted[sorted.length - 1] : sorted[digit - 1];
+      if (!tab || tab.id === pane.activeTabId) return;
+      l.switchTabInPane(pane.id, tab.id);
     },
     HOTKEY_OPTIONS,
   );
