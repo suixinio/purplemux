@@ -191,7 +191,7 @@ const useTerminalWebSocket = ({
 
   useEffect(() => {
     return () => {
-      connectIdRef.current++;
+      connectIdRef.current++; // eslint-disable-line react-hooks/exhaustive-deps -- intentional mutation to invalidate pending callbacks
       clearTimers();
       if (wsRef.current) {
         wsRef.current.close(1000);

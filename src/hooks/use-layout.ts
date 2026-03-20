@@ -28,15 +28,6 @@ const replacePane = (
   };
 };
 
-export const collectTabCwds = (node: TLayoutNode): string[] => [
-  ...new Set(
-    collectPanes(node)
-      .flatMap((p) => p.tabs)
-      .map((t) => t.cwd)
-      .filter((c): c is string => !!c),
-  ),
-];
-
 export const getFirstPaneId = (node: TLayoutNode): string => {
   if (node.type === 'pane') return node.id;
   return getFirstPaneId(node.children[0]);
@@ -632,34 +623,6 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     [updateAndSave],
   );
 
-  const updateTabTitlesInPane = useCallback(
-    (paneId: string, titles: Record<string, string>) => {
-      updateAndSave((data) => {
-        const pane = findPane(data.root, paneId);
-        if (!pane) return data;
-        for (const tab of pane.tabs) {
-          const newTitle = titles[tab.id];
-          if (newTitle !== undefined) tab.title = newTitle;
-        }
-        return data;
-      });
-    },
-    [updateAndSave],
-  );
-
-  const updateTabCwdInPane = useCallback(
-    (paneId: string, tabId: string, cwd: string) => {
-      updateAndSave((data) => {
-        const pane = findPane(data.root, paneId);
-        if (!pane) return data;
-        const tab = pane.tabs.find((t) => t.id === tabId);
-        if (tab && tab.cwd !== cwd) tab.cwd = cwd;
-        return data;
-      });
-    },
-    [updateAndSave],
-  );
-
   const equalizeRatios = useCallback(() => {
     updateAndSave((data) => {
       data.root = equalizeNode(data.root);
@@ -715,10 +678,9 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     renameTabInPane,
     reorderTabsInPane,
     removeTabLocally,
-    updateTabTitlesInPane,
-    updateTabCwdInPane,
     equalizeRatios,
     updateTabPanelType,
+    updateAndSave,
     saveCurrentLayout,
     clearLayout,
     retry: fetchLayout,

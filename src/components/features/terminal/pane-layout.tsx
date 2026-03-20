@@ -22,8 +22,6 @@ interface IPaneLayoutProps {
   onRenameTab: (paneId: string, tabId: string, name: string) => Promise<void>;
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
-  onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
-  onUpdateTabCwd: (paneId: string, tabId: string, cwd: string) => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   onEqualizeRatios: () => void;
 }
@@ -46,8 +44,6 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     onRenameTab,
     onReorderTabs,
     onRemoveTabLocally,
-    onUpdateTabTitles,
-    onUpdateTabCwd,
     onUpdateTabPanelType,
     onEqualizeRatios,
   } = props;
@@ -179,6 +175,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
 
   return (
     <div ref={rootRef} className="h-full w-full bg-terminal-bg">
+      {/* eslint-disable-next-line react-hooks/refs -- groupRefsMap is a stable cache for imperative handles, never drives re-renders */}
       {renderNode(root, [])}
       {/* eslint-disable-next-line react-hooks/refs -- stable container cache for portals, value never changes reactively */}
       {panes.map((pane) =>
@@ -202,8 +199,6 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             onRenameTab={onRenameTab}
             onReorderTabs={onReorderTabs}
             onRemoveTabLocally={onRemoveTabLocally}
-            onUpdateTabTitles={onUpdateTabTitles}
-            onUpdateTabCwd={onUpdateTabCwd}
             onUpdateTabPanelType={onUpdateTabPanelType}
             onEqualizeRatios={handleEqualizeRatios}
           />,

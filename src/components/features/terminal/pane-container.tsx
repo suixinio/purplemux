@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import { Loader2, Plus, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import type { ITab, TDisconnectReason, TPanelType } from '@/types/terminal';
 import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
+import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import { useShallow } from 'zustand/react/shallow';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
@@ -63,14 +65,11 @@ interface IPaneContainerProps {
   onRenameTab: (paneId: string, tabId: string, name: string) => Promise<void>;
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
-  onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
-  onUpdateTabCwd: (paneId: string, tabId: string, cwd: string) => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   onEqualizeRatios: () => void;
 }
 
 const CLAUDE_CODE_FONT_SIZE = 8;
-const TITLE_DEBOUNCE_MS = 3000;
 
 const PaneContainer = ({
   paneId,
@@ -91,8 +90,6 @@ const PaneContainer = ({
   onRenameTab,
   onReorderTabs,
   onRemoveTabLocally,
-  onUpdateTabTitles,
-  onUpdateTabCwd,
   onUpdateTabPanelType,
   onEqualizeRatios,
 }: IPaneContainerProps) => {
@@ -105,14 +102,18 @@ const PaneContainer = ({
   const [isCreating, setIsCreating] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isPanelTransitioning, setIsPanelTransitioning] = useState(false);
-  const [tabTitles, setTabTitles] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    for (const tab of tabs) {
-      if (tab.title) initial[tab.id] = tab.title;
-    }
-    return initial;
-  });
-  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const tabIds = useMemo(() => tabs.map((t) => t.id), [tabs]);
+  const tabTitles = useTabMetadataStore(
+    useShallow((state) => {
+      const result: Record<string, string> = {};
+      for (const id of tabIds) {
+        const t = state.metadata[id]?.title;
+        if (t) result[id] = t;
+      }
+      return result;
+    }),
+  );
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
@@ -126,13 +127,11 @@ const PaneContainer = ({
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const paneCountRef = useRef(paneCount);
-  const tabTitlesRef = useRef(tabTitles);
 
   useEffect(() => {
     tabsRef.current = tabs;
     activeTabIdRef.current = activeTabId;
     paneCountRef.current = paneCount;
-    tabTitlesRef.current = tabTitles;
   });
 
   const fetchAndUpdateCwd = useCallback(async () => {
@@ -143,26 +142,10 @@ const PaneContainer = ({
       const res = await fetch(`/api/layout/cwd?session=${tab.sessionName}`);
       if (!res.ok) return;
       const { cwd } = await res.json();
-      if (cwd) onUpdateTabCwd(paneId, tab.id, cwd);
+      if (cwd) useTabMetadataStore.getState().setCwd(tab.id, cwd);
     } catch {
       /* ignore */
     }
-  }, [paneId, onUpdateTabCwd]);
-
-  const scheduleTitleSave = useCallback(() => {
-    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
-    titleDebounceRef.current = setTimeout(() => {
-      titleDebounceRef.current = null;
-      fetchAndUpdateCwd().then(() => {
-        onUpdateTabTitles(paneId, tabTitlesRef.current);
-      });
-    }, TITLE_DEBOUNCE_MS);
-  }, [paneId, onUpdateTabTitles, fetchAndUpdateCwd]);
-
-  useEffect(() => {
-    return () => {
-      if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
-    };
   }, []);
 
   const clearRef = useRef<() => void>(() => {});
@@ -186,11 +169,8 @@ const PaneContainer = ({
       const tabId = activeTabIdRef.current;
       if (!tabId) return;
       const formatted = formatTabTitle(title);
-      setTabTitles((prev) => {
-        if (prev[tabId] === formatted) return prev;
-        return { ...prev, [tabId]: formatted };
-      });
-      scheduleTitleSave();
+      useTabMetadataStore.getState().setTitle(tabId, formatted);
+      fetchAndUpdateCwd();
 
       if (isClaudeProcess(title)) {
         const cooldownTime = manualToggleCooldownRef.current[tabId];
@@ -258,14 +238,12 @@ const PaneContainer = ({
     wsActionsRef.current = { sendStdin, sendResize };
   });
 
-  // HMR 등으로 터미널이 재초기화되면 연결 추적 리셋
   useEffect(() => {
     if (!isReady) {
       connectedSessionRef.current = null;
     }
   }, [isReady]);
 
-  // Connect to active tab's session
   useEffect(() => {
     if (!isReady || !activeTabId) return;
     const tab = tabs.find((t) => t.id === activeTabId);
@@ -280,7 +258,6 @@ const PaneContainer = ({
     connect(tab.sessionName);
   }, [isReady, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Rollback on connection failure
   useEffect(() => {
     if (
       status === 'disconnected' &&
@@ -294,7 +271,6 @@ const PaneContainer = ({
     }
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Re-fit terminal when pane count changes (split/close)
   useEffect(() => {
     if (!isReady || status !== 'connected') return;
     const timer = setTimeout(() => {
@@ -304,7 +280,6 @@ const PaneContainer = ({
     return () => clearTimeout(timer);
   }, [paneCount]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 연결 후 레이아웃 안정화 대기 후 resize 재전송
   useEffect(() => {
     if (!isReady || status !== 'connected') return;
     const timer = setTimeout(() => {
@@ -314,7 +289,6 @@ const PaneContainer = ({
     return () => clearTimeout(timer);
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // 포커스 시 resize 동기화 + xterm 포커스
   useEffect(() => {
     if (isFocused && isReady && status === 'connected') {
       const { cols, rows } = fit();
@@ -336,9 +310,11 @@ const PaneContainer = ({
     const newTab = await onCreateTab(paneId);
     if (newTab) {
       const currentTabId = activeTabIdRef.current;
-      const inheritedTitle = currentTabId ? tabTitlesRef.current[currentTabId] : null;
-      if (inheritedTitle) {
-        setTabTitles((prev) => ({ ...prev, [newTab.id]: inheritedTitle }));
+      const currentTitle = currentTabId
+        ? useTabMetadataStore.getState().metadata[currentTabId]?.title
+        : null;
+      if (currentTitle) {
+        useTabMetadataStore.getState().setTitle(newTab.id, currentTitle);
       }
     }
     setIsCreating(false);

@@ -1,10 +1,12 @@
-import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import useLayout, { collectPanes, collectTabCwds } from '@/hooks/use-layout';
+import useLayout, { collectPanes } from '@/hooks/use-layout';
 import useWorkspace, { type IWorkspaceInitialData } from '@/hooks/use-workspace';
 import useKeyboardShortcuts from '@/hooks/use-keyboard-shortcuts';
+import useTabMetadataStore, { setLayoutSyncCallback, setDirectorySyncCallback } from '@/hooks/use-tab-metadata-store';
+import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
 
@@ -42,6 +44,72 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
     wsRef.current = ws;
   });
 
+  // Hydrate store from layout data
+  const layoutUpdatedAt = layout.layout?.updatedAt;
+  const hydratedRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!layout.layout || !layoutUpdatedAt) return;
+    if (hydratedRef.current === layoutUpdatedAt) return;
+    hydratedRef.current = layoutUpdatedAt;
+    const metadata: Record<string, ITabMetadata> = {};
+    for (const pane of collectPanes(layout.layout.root)) {
+      for (const tab of pane.tabs) {
+        if (tab.title || tab.cwd) {
+          metadata[tab.id] = { title: tab.title, cwd: tab.cwd };
+        }
+      }
+    }
+    useTabMetadataStore.getState().hydrate(metadata);
+  }, [layout.layout, layoutUpdatedAt]);
+
+  // Sync store → layout.json (debounced by store)
+  const updateAndSaveRef = useRef(layout.updateAndSave);
+  useEffect(() => {
+    updateAndSaveRef.current = layout.updateAndSave;
+  });
+
+  useEffect(() => {
+    setLayoutSyncCallback((allMetadata: Record<string, ITabMetadata>) => {
+      updateAndSaveRef.current((data) => {
+        for (const pane of collectPanes(data.root)) {
+          for (const tab of pane.tabs) {
+            const meta = allMetadata[tab.id];
+            if (!meta) continue;
+            if (meta.title !== undefined) tab.title = meta.title;
+            if (meta.cwd !== undefined) tab.cwd = meta.cwd;
+          }
+        }
+        return data;
+      });
+    });
+    return () => setLayoutSyncCallback(null);
+  }, []);
+
+  // Sync store cwds → workspace directories
+  const wsActiveIdRef = useRef(ws.activeWorkspaceId);
+  useEffect(() => {
+    wsActiveIdRef.current = ws.activeWorkspaceId;
+  });
+
+  useEffect(() => {
+    setDirectorySyncCallback((cwds) => {
+      const wsId = wsActiveIdRef.current;
+      if (wsId && cwds.length > 0) {
+        wsRef.current.updateDirectories(wsId, cwds);
+      }
+    });
+    return () => setDirectorySyncCallback(null);
+  }, []);
+
+  // Cleanup stale tab metadata
+  useEffect(() => {
+    if (!layout.layout) return;
+    const allTabIds = new Set(
+      collectPanes(layout.layout.root).flatMap((p) => p.tabs.map((t) => t.id)),
+    );
+    useTabMetadataStore.getState().retainOnly(allTabIds);
+  }, [layout.layout]);
+
   useEffect(() => {
     if (!allTabsEmpty) return;
 
@@ -71,6 +139,7 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
       if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
       setFadeOut(true);
       switchTimeoutRef.current = setTimeout(() => {
+        useTabMetadataStore.getState().reset();
         layout.clearLayout();
         ws.switchWorkspace(workspaceId);
         setFadeOut(false);
@@ -79,24 +148,11 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
     [ws, layout],
   );
 
-  const layoutCwds = useMemo(
-    () => layout.layout ? collectTabCwds(layout.layout.root) : [],
-    [layout.layout],
-  );
-  const cwdsKey = layoutCwds.join('\0');
-
-  useEffect(() => {
-    if (!ws.activeWorkspaceId || layoutCwds.length === 0) return;
-    ws.updateDirectories(ws.activeWorkspaceId, layoutCwds);
-  }, [cwdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
-
   useKeyboardShortcuts({ layout, ws, onSelectWorkspace: handleSelectWorkspace });
 
-  // Loading: workspace list not loaded yet
   if (ws.isLoading) {
     return (
       <div className="flex h-screen w-screen overflow-hidden bg-terminal-bg">
-        {/* Sidebar skeleton */}
         <div className="flex w-[200px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
           <div className="flex h-9 shrink-0 items-center justify-end border-b border-sidebar-border px-2" />
           <div className="flex flex-col gap-0.5 p-2">
@@ -109,7 +165,6 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
           </div>
         </div>
 
-        {/* Main area loading */}
         <div className="flex flex-1 flex-col">
           <div className="flex h-[30px] shrink-0 items-center gap-1.5 border-b border-border bg-card px-2">
             {[1, 2, 3].map((i) => (
@@ -130,7 +185,6 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
     );
   }
 
-  // Error: workspace list failed
   if (ws.error && !ws.workspaces.length) {
     return (
       <div className="flex h-screen w-screen flex-col items-center justify-center gap-3 overflow-hidden bg-terminal-bg">
@@ -166,9 +220,7 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
         onRetry={ws.retry}
       />
 
-      {/* Main area */}
       <div className="relative min-w-0 flex-1">
-        {/* Switching / loading overlay */}
         {showSwitching && (
           <div className="absolute inset-0 z-30 flex items-center justify-center bg-terminal-bg">
             <div className="flex flex-col items-center gap-3">
@@ -177,7 +229,6 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
           </div>
         )}
 
-        {/* Layout error */}
         {layout.error && !layout.isLoading && (
           <div className="flex h-full flex-col items-center justify-center gap-3">
             <AlertTriangle className="h-5 w-5 text-ui-amber" />
@@ -189,7 +240,6 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
           </div>
         )}
 
-        {/* Layout ready */}
         {layout.layout && !layout.isLoading && (
           <div
             key={ws.activeWorkspaceId}
@@ -213,15 +263,12 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
               onRenameTab={layout.renameTabInPane}
               onReorderTabs={layout.reorderTabsInPane}
               onRemoveTabLocally={layout.removeTabLocally}
-              onUpdateTabTitles={layout.updateTabTitlesInPane}
-              onUpdateTabCwd={layout.updateTabCwdInPane}
               onUpdateTabPanelType={layout.updateTabPanelType}
               onEqualizeRatios={layout.equalizeRatios}
             />
           </div>
         )}
 
-        {/* No workspace */}
         {!ws.activeWorkspaceId && !ws.isLoading && !ws.error && (
           <div className="flex h-full items-center justify-center">
             <Button

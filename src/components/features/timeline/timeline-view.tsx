@@ -130,6 +130,7 @@ const TimelineView = ({
 
   const displayEntries = entries.filter((e) => e.type !== 'tool-result');
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- virtualizer is consumed locally, not passed to memoized children
   const virtualizer = useVirtualizer({
     count: displayEntries.length,
     getScrollElement: () => parentRef.current,
