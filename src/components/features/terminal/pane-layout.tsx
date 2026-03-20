@@ -52,6 +52,12 @@ const PaneLayout = (props: IPaneLayoutProps) => {
   const stableContainersRef = useRef(new Map<string, HTMLDivElement>());
 
   const [closingPaneIds, setClosingPaneIds] = useState<Set<string>>(new Set());
+  const [layoutVersion, setLayoutVersion] = useState(0);
+
+  const handleEqualizeRatios = useCallback(() => {
+    onEqualizeRatios();
+    setLayoutVersion((v) => v + 1);
+  }, [onEqualizeRatios]);
 
   const handleClosePane = useCallback(
     (paneId: string) => {
@@ -103,7 +109,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
 
     return (
       <Group
-        key={`group-${leftId}-${rightId}`}
+        key={`group-${leftId}-${rightId}-v${layoutVersion}`}
         orientation={node.orientation}
         defaultLayout={{ left: node.ratio, right: 100 - node.ratio }}
         onLayoutChanged={(layout) => {
@@ -187,7 +193,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             onReorderTabs={onReorderTabs}
             onRemoveTabLocally={onRemoveTabLocally}
             onUpdateTabTitles={onUpdateTabTitles}
-            onEqualizeRatios={onEqualizeRatios}
+            onEqualizeRatios={handleEqualizeRatios}
           />,
           getStableContainer(pane.id),
         ),
