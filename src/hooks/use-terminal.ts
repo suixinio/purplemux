@@ -107,6 +107,7 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
 
     let disposed = false;
     let resizeTimer: number;
+    let stableFitTimer: number;
     let resizeObserver: ResizeObserver | null = null;
 
     const FONT_FAMILY =
@@ -179,6 +180,13 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
       callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
       setIsReady(true);
 
+      // Re-fit after layout fully settles (handles remount during pane changes)
+      stableFitTimer = window.setTimeout(() => {
+        if (disposed) return;
+        fitAddon.fit();
+        callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
+      }, 200);
+
       resizeObserver = new ResizeObserver(() => {
         clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(() => {
@@ -195,6 +203,7 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
       setIsReady(false);
       resizeObserver?.disconnect();
       clearTimeout(resizeTimer);
+      clearTimeout(stableFitTimer!);
       terminalInstance.current?.dispose();
       terminalInstance.current = null;
       fitAddonRef.current = null;
