@@ -107,8 +107,8 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
     if (!container) return;
 
     let disposed = false;
-    let resizeTimer: number;
-    let reFitFrame = 0;
+    let resizeRaf = 0;
+    let reFitTimer = 0;
     let resizeObserver: ResizeObserver | null = null;
 
     const FONT_FAMILY =
@@ -181,24 +181,26 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
         callbacksRef.current.onTitleChange?.(title);
       });
 
-      fitAddon.fit();
-      callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
-      setIsReady(true);
-
-      // HMR 등으로 레이아웃이 아직 안정화되지 않은 상태에서 fit이 호출될 수 있으므로
-      // 다음 프레임에 한 번 더 fit 수행
-      reFitFrame = requestAnimationFrame(() => {
-        if (disposed) return;
+      const doFit = () => {
         fitAddon.fit();
         callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
-      });
+      };
+
+      doFit();
+      setIsReady(true);
+
+      // 비동기 레이아웃 안정화 대기 (HMR, 패널 초기화 등)
+      reFitTimer = window.setTimeout(() => {
+        if (disposed) return;
+        doFit();
+      }, 500);
 
       resizeObserver = new ResizeObserver(() => {
-        clearTimeout(resizeTimer);
-        resizeTimer = window.setTimeout(() => {
-          fitAddon.fit();
-          callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
-        }, 100);
+        cancelAnimationFrame(resizeRaf);
+        resizeRaf = requestAnimationFrame(() => {
+          if (disposed) return;
+          doFit();
+        });
       });
 
       resizeObserver.observe(container);
@@ -207,9 +209,9 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
     return () => {
       disposed = true;
       setIsReady(false);
-      cancelAnimationFrame(reFitFrame);
+      cancelAnimationFrame(resizeRaf);
+      clearTimeout(reFitTimer);
       resizeObserver?.disconnect();
-      clearTimeout(resizeTimer);
       terminalInstance.current?.dispose();
       terminalInstance.current = null;
       fitAddonRef.current = null;
