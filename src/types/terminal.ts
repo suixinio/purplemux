@@ -12,6 +12,7 @@ export interface ITab {
   sessionName: string;
   name: string;
   order: number;
+  title?: string;
 }
 
 export interface ISplitNode {

@@ -32,9 +32,10 @@ const XTERM_THEME = {
 interface IUseTerminalOptions {
   onInput?: (data: string) => void;
   onResize?: (cols: number, rows: number) => void;
+  onTitleChange?: (title: string) => void;
 }
 
-const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
+const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions = {}) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -42,10 +43,10 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
   const isWritingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
 
-  const callbacksRef = useRef({ onInput, onResize });
+  const callbacksRef = useRef({ onInput, onResize, onTitleChange });
 
   useEffect(() => {
-    callbacksRef.current = { onInput, onResize };
+    callbacksRef.current = { onInput, onResize, onTitleChange };
   });
 
   const write = useCallback((data: Uint8Array) => {
@@ -173,6 +174,10 @@ const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
 
       terminal.onData((data) => {
         callbacksRef.current.onInput?.(data);
+      });
+
+      terminal.onTitleChange((title) => {
+        callbacksRef.current.onTitleChange?.(title);
       });
 
       fitAddon.fit();

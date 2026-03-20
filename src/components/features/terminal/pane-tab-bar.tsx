@@ -24,11 +24,13 @@ const SplitHorizontalIcon = ({ className }: { className?: string }) => (
 );
 import { Button } from '@/components/ui/button';
 import type { ITab } from '@/types/terminal';
+import { isAutoTabName } from '@/lib/tab-title';
 
 interface IPaneTabBarProps {
   paneId: string;
   tabs: ITab[];
   activeTabId: string | null;
+  tabTitles?: Record<string, string>;
   isLoading: boolean;
   error: string | null;
   isCreating: boolean;
@@ -52,6 +54,7 @@ const PaneTabBar = ({
   paneId,
   tabs,
   activeTabId,
+  tabTitles,
   isLoading,
   error,
   isCreating,
@@ -301,6 +304,10 @@ const PaneTabBar = ({
           const isEditing = tab.id === editingTabId;
           const isDropLeft = dropTarget?.id === tab.id && dropTarget.side === 'left';
           const isDropRight = dropTarget?.id === tab.id && dropTarget.side === 'right';
+          const dynamicTitle = tabTitles?.[tab.id];
+          const displayName = isAutoTabName(tab.name)
+            ? (dynamicTitle || '')
+            : tab.name;
 
           return (
             <div
@@ -329,7 +336,7 @@ const PaneTabBar = ({
                 e.dataTransfer.setData(`application/x-pane/${paneId}`, '');
 
                 const ghost = document.createElement('div');
-                ghost.textContent = tab.name;
+                ghost.textContent = displayName;
                 ghost.style.cssText =
                   'position:fixed;left:-9999px;padding:4px 12px;background:var(--card);color:var(--foreground);border-radius:4px;font-size:12px;opacity:0.6;transform:scale(0.9);white-space:nowrap;';
                 document.body.appendChild(ghost);
@@ -365,7 +372,14 @@ const PaneTabBar = ({
                   onClick={(e) => e.stopPropagation()}
                 />
               ) : (
-                <span className="truncate">{tab.name}</span>
+                <span
+                  className={cn(
+                    'truncate transition-opacity duration-200',
+                    displayName ? 'opacity-100' : 'opacity-0',
+                  )}
+                >
+                  {displayName}
+                </span>
               )}
 
               <button

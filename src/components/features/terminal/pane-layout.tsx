@@ -22,6 +22,7 @@ interface IPaneLayoutProps {
   onRenameTab: (paneId: string, tabId: string, name: string) => Promise<void>;
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
+  onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
 }
 
 const PaneLayout = (props: IPaneLayoutProps) => {
@@ -42,6 +43,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     onRenameTab,
     onReorderTabs,
     onRemoveTabLocally,
+    onUpdateTabTitles,
   } = props;
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -182,6 +184,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             onRenameTab={onRenameTab}
             onReorderTabs={onReorderTabs}
             onRemoveTabLocally={onRemoveTabLocally}
+            onUpdateTabTitles={onUpdateTabTitles}
           />,
           getStableContainer(pane.id),
         ),

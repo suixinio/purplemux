@@ -1,8 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import useLayout from '@/hooks/use-layout';
+import useLayout, { collectPanes } from '@/hooks/use-layout';
 import useWorkspace from '@/hooks/use-workspace';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
@@ -25,6 +25,42 @@ const TerminalPage = () => {
     workspaceId: ws.activeWorkspaceId,
     onFetchError: handleFetchError,
   });
+
+  const allTabsEmpty = !!(
+    layout.layout &&
+    !layout.isLoading &&
+    collectPanes(layout.layout.root).every((p) => p.tabs.length === 0)
+  );
+
+  const wsRef = useRef(ws);
+  useEffect(() => {
+    wsRef.current = ws;
+  });
+
+  useEffect(() => {
+    if (!allTabsEmpty) return;
+
+    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace, retry } = wsRef.current;
+    if (!activeWorkspaceId) return;
+
+    const idx = workspaces.findIndex((w) => w.id === activeWorkspaceId);
+    const adjacent = workspaces[idx + 1] || workspaces[idx - 1];
+
+    layout.clearLayout();
+
+    if (adjacent) {
+      switchWorkspace(adjacent.id);
+    }
+
+    deleteWorkspace(activeWorkspaceId).then((success) => {
+      if (success) {
+        removeWorkspace(activeWorkspaceId);
+        if (!adjacent) {
+          retry();
+        }
+      }
+    });
+  }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {
@@ -165,6 +201,7 @@ const TerminalPage = () => {
               onRenameTab={layout.renameTabInPane}
               onReorderTabs={layout.reorderTabsInPane}
               onRemoveTabLocally={layout.removeTabLocally}
+              onUpdateTabTitles={layout.updateTabTitlesInPane}
             />
           </div>
         )}

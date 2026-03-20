@@ -556,6 +556,21 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     [updateAndSave],
   );
 
+  const updateTabTitlesInPane = useCallback(
+    (paneId: string, titles: Record<string, string>) => {
+      updateAndSave((data) => {
+        const pane = findPane(data.root, paneId);
+        if (!pane) return data;
+        for (const tab of pane.tabs) {
+          const newTitle = titles[tab.id];
+          if (newTitle !== undefined) tab.title = newTitle;
+        }
+        return data;
+      });
+    },
+    [updateAndSave],
+  );
+
   const saveCurrentLayout = useCallback(() => {
     const current = layoutRef.current;
     if (!current) return;
@@ -591,6 +606,7 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     renameTabInPane,
     reorderTabsInPane,
     removeTabLocally,
+    updateTabTitlesInPane,
     saveCurrentLayout,
     clearLayout,
     retry: fetchLayout,

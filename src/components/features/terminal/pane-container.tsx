@@ -8,6 +8,7 @@ import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
+import { formatTabTitle } from '@/lib/tab-title';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
   'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
@@ -59,7 +60,10 @@ interface IPaneContainerProps {
   onRenameTab: (paneId: string, tabId: string, name: string) => Promise<void>;
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
+  onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
 }
+
+const TITLE_DEBOUNCE_MS = 3000;
 
 const PaneContainer = ({
   paneId,
@@ -81,10 +85,19 @@ const PaneContainer = ({
   onRenameTab,
   onReorderTabs,
   onRemoveTabLocally,
+  onUpdateTabTitles,
 }: IPaneContainerProps) => {
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [tabTitles, setTabTitles] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    for (const tab of tabs) {
+      if (tab.title) initial[tab.id] = tab.title;
+    }
+    return initial;
+  });
+  const titleDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
@@ -98,16 +111,44 @@ const PaneContainer = ({
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const paneCountRef = useRef(paneCount);
+  const tabTitlesRef = useRef(tabTitles);
 
   useEffect(() => {
     tabsRef.current = tabs;
     activeTabIdRef.current = activeTabId;
     paneCountRef.current = paneCount;
+    tabTitlesRef.current = tabTitles;
   });
+
+  const scheduleTitleSave = useCallback(() => {
+    if (titleDebounceRef.current) clearTimeout(titleDebounceRef.current);
+    titleDebounceRef.current = setTimeout(() => {
+      titleDebounceRef.current = null;
+      onUpdateTabTitles(paneId, tabTitlesRef.current);
+    }, TITLE_DEBOUNCE_MS);
+  }, [paneId, onUpdateTabTitles]);
+
+  useEffect(() => {
+    return () => {
+      if (titleDebounceRef.current) {
+        clearTimeout(titleDebounceRef.current);
+      }
+    };
+  }, []);
 
   const { terminalRef, write, reset, fit, focus, isReady } = useTerminal({
     onInput: (data) => wsActionsRef.current.sendStdin(data),
     onResize: (cols, rows) => wsActionsRef.current.sendResize(cols, rows),
+    onTitleChange: (title) => {
+      const tabId = activeTabIdRef.current;
+      if (!tabId) return;
+      const formatted = formatTabTitle(title);
+      setTabTitles((prev) => {
+        if (prev[tabId] === formatted) return prev;
+        return { ...prev, [tabId]: formatted };
+      });
+      scheduleTitleSave();
+    },
   });
 
   const handleSessionEnded = useCallback(async () => {
@@ -212,7 +253,14 @@ const PaneContainer = ({
 
   const handleCreateTab = useCallback(async () => {
     setIsCreating(true);
-    await onCreateTab(paneId);
+    const newTab = await onCreateTab(paneId);
+    if (newTab) {
+      const currentTabId = activeTabIdRef.current;
+      const inheritedTitle = currentTabId ? tabTitlesRef.current[currentTabId] : null;
+      if (inheritedTitle) {
+        setTabTitles((prev) => ({ ...prev, [newTab.id]: inheritedTitle }));
+      }
+    }
     setIsCreating(false);
   }, [paneId, onCreateTab]);
 
@@ -289,6 +337,7 @@ const PaneContainer = ({
         paneId={paneId}
         tabs={tabs}
         activeTabId={activeTabId}
+        tabTitles={tabTitles}
         isLoading={false}
         error={null}
         isCreating={isCreating}

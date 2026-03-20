@@ -2,7 +2,7 @@ import { createServer } from 'http';
 import next from 'next';
 import { WebSocketServer } from 'ws';
 import { handleConnection, gracefulShutdown } from './src/lib/terminal-server';
-import { checkTmux, scanSessions } from './src/lib/tmux';
+import { checkTmux, scanSessions, applyConfig } from './src/lib/tmux';
 import { initWorkspaceStore } from './src/lib/workspace-store';
 
 const port = parseInt(process.env.PORT || '3000', 10);
@@ -13,6 +13,7 @@ const handle = app.getRequestHandler();
 const start = async () => {
   await checkTmux();
   await scanSessions();
+  await applyConfig();
   await initWorkspaceStore();
   await app.prepare();
 

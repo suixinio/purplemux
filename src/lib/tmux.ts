@@ -137,6 +137,18 @@ export const getSessionCwd = async (sessionName: string): Promise<string | null>
   }
 };
 
+export const applyConfig = async (): Promise<void> => {
+  try {
+    await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'source-file', TMUX_CONFIG_PATH],
+      { timeout: CMD_TIMEOUT },
+    );
+  } catch {
+    // Server not running yet, config will be applied on first session
+  }
+};
+
 export const defaultSessionName = (): string =>
   `pt-${nanoid(6)}-${nanoid(6)}-${nanoid(6)}`;
 
