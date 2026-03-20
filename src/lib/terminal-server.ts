@@ -7,6 +7,7 @@ import {
   killSession,
   defaultSessionName,
 } from './tmux';
+import { removeTabBySession } from './tab-store';
 
 const MSG_STDIN = 0x00;
 const MSG_STDOUT = 0x01;
@@ -57,6 +58,7 @@ const cleanup = (conn: IActiveConnection) => {
     if (conn.ws.readyState === WebSocket.OPEN) {
       conn.ws.close(1000, 'Session exited');
     }
+    removeTabBySession(conn.sessionName);
     console.log(`[terminal] tmux session ended: ${conn.sessionName}`);
   } else {
     console.log(`[terminal] detached from tmux session: ${conn.sessionName}`);

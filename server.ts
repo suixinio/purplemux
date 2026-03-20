@@ -3,6 +3,7 @@ import next from 'next';
 import { WebSocketServer } from 'ws';
 import { handleConnection, gracefulShutdown } from './src/lib/terminal-server';
 import { checkTmux, scanSessions } from './src/lib/tmux';
+import { initTabStore, flushToDisk } from './src/lib/tab-store';
 
 const port = parseInt(process.env.PORT || '3000', 10);
 const dev = process.env.NODE_ENV !== 'production';
@@ -12,6 +13,7 @@ const handle = app.getRequestHandler();
 const start = async () => {
   await checkTmux();
   await scanSessions();
+  await initTabStore();
   await app.prepare();
 
   const upgrade = app.getUpgradeHandler();
@@ -32,8 +34,14 @@ const start = async () => {
     }
   });
 
-  process.on('SIGTERM', gracefulShutdown);
-  process.on('SIGINT', gracefulShutdown);
+  const shutdown = async () => {
+    gracefulShutdown();
+    await flushToDisk();
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 
   server.listen(port, () => {
     console.log(`> Server listening at http://localhost:${port} as ${dev ? 'development' : process.env.NODE_ENV}`);
