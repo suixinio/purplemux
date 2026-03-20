@@ -123,6 +123,7 @@ const useWorkspace = (): IUseWorkspace => {
   const removeWorkspace = useCallback(
     (workspaceId: string) => {
       setWorkspaces((prev) => prev.filter((w) => w.id !== workspaceId));
+      setActiveWorkspaceId((prev) => (prev === workspaceId ? null : prev));
     },
     [],
   );

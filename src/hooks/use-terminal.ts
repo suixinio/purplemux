@@ -108,6 +108,7 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
 
     let disposed = false;
     let resizeTimer: number;
+    let reFitFrame = 0;
     let resizeObserver: ResizeObserver | null = null;
 
     const FONT_FAMILY =
@@ -184,6 +185,14 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
       callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
       setIsReady(true);
 
+      // HMR 등으로 레이아웃이 아직 안정화되지 않은 상태에서 fit이 호출될 수 있으므로
+      // 다음 프레임에 한 번 더 fit 수행
+      reFitFrame = requestAnimationFrame(() => {
+        if (disposed) return;
+        fitAddon.fit();
+        callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
+      });
+
       resizeObserver = new ResizeObserver(() => {
         clearTimeout(resizeTimer);
         resizeTimer = window.setTimeout(() => {
@@ -198,6 +207,7 @@ const useTerminal = ({ onInput, onResize, onTitleChange }: IUseTerminalOptions =
     return () => {
       disposed = true;
       setIsReady(false);
+      cancelAnimationFrame(reFitFrame);
       resizeObserver?.disconnect();
       clearTimeout(resizeTimer);
       terminalInstance.current?.dispose();

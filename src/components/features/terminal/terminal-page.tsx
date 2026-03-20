@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
+import { Loader2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import useLayout, { collectPanes } from '@/hooks/use-layout';
@@ -40,7 +40,7 @@ const TerminalPage = () => {
   useEffect(() => {
     if (!allTabsEmpty) return;
 
-    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace, retry } = wsRef.current;
+    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace } = wsRef.current;
     if (!activeWorkspaceId) return;
 
     const idx = workspaces.findIndex((w) => w.id === activeWorkspaceId);
@@ -55,9 +55,6 @@ const TerminalPage = () => {
     deleteWorkspace(activeWorkspaceId).then((success) => {
       if (success) {
         removeWorkspace(activeWorkspaceId);
-        if (!adjacent) {
-          retry();
-        }
       }
     });
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -206,12 +203,21 @@ const TerminalPage = () => {
           </div>
         )}
 
-        {/* No workspace selected */}
+        {/* No workspace */}
         {!ws.activeWorkspaceId && !ws.isLoading && !ws.error && (
           <div className="flex h-full items-center justify-center">
-            <span className="text-sm text-muted-foreground">
-              Workspace를 선택하거나 새로 추가하세요
-            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={async () => {
+                const created = await ws.createWorkspace('');
+                if (created) ws.switchWorkspace(created.id);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              새 Workspace 만들기
+            </Button>
           </div>
         )}
       </div>
