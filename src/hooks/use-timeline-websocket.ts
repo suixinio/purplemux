@@ -14,7 +14,7 @@ interface IUseTimelineWebSocketOptions {
   enabled: boolean;
   onInit: (entries: ITimelineEntry[], totalEntries: number) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
-  onSessionChanged: () => void;
+  onSessionChanged: (newSessionId: string) => void;
   onError?: (error: { code: string; message: string }) => void;
 }
 
@@ -88,7 +88,7 @@ const useTimelineWebSocket = ({
               callbacksRef.current.onAppend(msg.entries);
               break;
             case 'timeline:session-changed':
-              callbacksRef.current.onSessionChanged();
+              callbacksRef.current.onSessionChanged(msg.newSessionId);
               break;
             case 'timeline:error':
               callbacksRef.current.onError?.({ code: msg.code, message: msg.message });

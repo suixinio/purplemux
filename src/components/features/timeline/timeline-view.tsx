@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { MessageSquare, RefreshCw, Loader2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import type { ITimelineEntry, TSessionStatus, TTimelineConnectionStatus } from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
 import AssistantMessageItem from '@/components/features/timeline/assistant-message-item';
@@ -58,14 +59,10 @@ const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) 
       <p className="text-sm font-medium">연결 오류</p>
       <p className="mt-1 text-xs">{error}</p>
     </div>
-    <button
-      type="button"
-      className="mt-2 flex items-center gap-1.5 rounded-md border bg-background px-3 py-1.5 text-xs transition-colors hover:bg-muted"
-      onClick={onRetry}
-    >
+    <Button variant="outline" size="xs" onClick={onRetry}>
       <RefreshCw size={12} />
       다시 시도
-    </button>
+    </Button>
   </div>
 );
 

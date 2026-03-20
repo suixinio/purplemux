@@ -95,7 +95,7 @@ const useTimeline = ({
     });
   }, []);
 
-  const handleSessionChanged = useCallback(() => {
+  const handleSessionChanged = useCallback((_newSessionId: string) => {
     setEntries([]);
     setHasMore(false);
     setIsLoading(true);

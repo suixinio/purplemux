@@ -10,6 +10,7 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { ITimelineToolCall, TToolName } from '@/types/timeline';
 
 interface IToolCallItemProps {
@@ -78,19 +79,14 @@ const ToolCallItem = ({ entry }: IToolCallItemProps) => {
           <span className="text-sm font-mono truncate">{entry.summary}</span>
         </div>
         {hasDiff && (
-          <button
-            type="button"
-            className="mt-1 text-xs text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+          <Button
+            variant="ghost"
+            size="xs"
+            className="mt-1 h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
             onClick={() => setIsDiffOpen((prev) => !prev)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setIsDiffOpen((prev) => !prev);
-              }
-            }}
           >
             {isDiffOpen ? '▾ diff 숨기기' : '▸ diff 보기'}
-          </button>
+          </Button>
         )}
         {isDiffOpen && entry.diff && (
           <DiffView oldString={entry.diff.oldString} newString={entry.diff.newString} />

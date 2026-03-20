@@ -1,4 +1,5 @@
 import { ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface IScrollToBottomButtonProps {
   visible: boolean;
@@ -10,14 +11,15 @@ const ScrollToBottomButton = ({ visible, onClick }: IScrollToBottomButtonProps) 
 
   return (
     <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
-      <button
-        type="button"
-        className="flex items-center gap-1.5 rounded-full border bg-background px-3 py-1 text-xs shadow-sm transition-colors hover:bg-muted"
+      <Button
+        variant="outline"
+        size="xs"
+        className="rounded-full"
         onClick={onClick}
       >
         <ArrowDown size={12} />
         최신으로 이동
-      </button>
+      </Button>
     </div>
   );
 };

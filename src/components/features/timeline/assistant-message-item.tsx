@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import dayjs from 'dayjs';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import { Button } from '@/components/ui/button';
 import type { ITimelineAssistantMessage } from '@/types/timeline';
 
 interface IAssistantMessageItemProps {
@@ -26,24 +28,19 @@ const AssistantMessageItem = ({ entry }: IAssistantMessageItemProps) => {
       </span>
       <div className="mt-1 border-l-2 border-ui-purple bg-ui-purple/5 px-4 py-3">
         <div className="prose prose-sm dark:prose-invert max-w-none text-sm [&_pre]:bg-muted [&_pre]:rounded-md [&_pre]:p-3 [&_code]:text-xs [&_code]:font-mono">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeHighlight]}>
             {displayText}
           </ReactMarkdown>
         </div>
         {isLong && (
-          <button
-            type="button"
-            className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          <Button
+            variant="ghost"
+            size="xs"
+            className="mt-2 h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
             onClick={() => setIsExpanded((prev) => !prev)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                setIsExpanded((prev) => !prev);
-              }
-            }}
           >
             {isExpanded ? '접기' : '더 보기'}
-          </button>
+          </Button>
         )}
       </div>
     </div>

@@ -6,7 +6,7 @@ import TimelineView from '@/components/features/timeline/timeline-view';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import useTerminal from '@/hooks/use-terminal';
 
-const TERMINAL_SCALE = 0.5;
+const TERMINAL_SCALE = 0.7;
 
 interface IClaudeCodePanelProps {
   sessionName: string;
@@ -108,15 +108,17 @@ const ClaudeCodePanel = ({
             onClick={handleTerminalClick}
             role="presentation"
           >
-            <div
-              style={{
-                transform: `scale(${TERMINAL_SCALE})`,
-                transformOrigin: 'top left',
-                width: `${100 / TERMINAL_SCALE}%`,
-                height: `${100 / TERMINAL_SCALE}%`,
-              }}
-            >
-              <TerminalContainer ref={terminalRef} />
+            <div className="h-full overflow-hidden rounded-lg">
+              <div
+                style={{
+                  transform: `scale(${TERMINAL_SCALE})`,
+                  transformOrigin: 'top left',
+                  width: `${100 / TERMINAL_SCALE}%`,
+                  height: `${100 / TERMINAL_SCALE}%`,
+                }}
+              >
+                <TerminalContainer ref={terminalRef} />
+              </div>
             </div>
           </div>
         </Panel>

@@ -220,3 +220,45 @@ body {
     cursor: pointer;
   }
 }
+
+/* highlight.js syntax highlighting — muted palette */
+.hljs {
+  color: var(--foreground);
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in {
+  color: var(--ui-purple);
+}
+.hljs-string,
+.hljs-attr {
+  color: var(--ui-teal);
+}
+.hljs-number,
+.hljs-literal {
+  color: var(--ui-coral);
+}
+.hljs-comment,
+.hljs-doctag {
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.hljs-function .hljs-title,
+.hljs-title.function_ {
+  color: var(--ui-blue);
+}
+.hljs-type,
+.hljs-title.class_ {
+  color: var(--ui-amber);
+}
+.hljs-variable,
+.hljs-template-variable {
+  color: var(--ui-red);
+}
+.hljs-regexp {
+  color: var(--ui-pink);
+}
+.hljs-meta,
+.hljs-tag {
+  color: var(--ui-gray);
+}
