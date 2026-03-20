@@ -1,6 +1,7 @@
 import { IncomingMessage } from 'http';
 import { WebSocket } from 'ws';
 import { watch, type FSWatcher } from 'fs';
+import { existsSync } from 'fs';
 import { detectActiveSession, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { parseSessionFile, parseIncremental } from './session-parser';
 import { getWorkspaceById } from './workspace-store';
@@ -97,6 +98,11 @@ const removeFileWatcher = (jsonlPath: string) => {
 };
 
 const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: string): Promise<void> => {
+  if (!existsSync(jsonlPath)) {
+    sendJson(ws, { type: 'timeline:error', code: 'file-not-found', message: 'JSONL 파일을 찾을 수 없습니다' });
+    return;
+  }
+
   let fw = fileWatchers.get(jsonlPath);
   const isNewWatcher = !fw;
 
@@ -120,6 +126,14 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
   fw.connections.add(ws);
 
   const result = await parseSessionFile(jsonlPath);
+
+  if (result.errorCount > 0) {
+    sendJson(ws, {
+      type: 'timeline:error',
+      code: 'parse-error',
+      message: `JSONL 파싱 중 ${result.errorCount}건의 오류 발생 (해당 줄 무시됨)`,
+    });
+  }
 
   // Only set offset and start watcher for new file watchers — avoids
   // overwriting the offset when a second client subscribes to the same file

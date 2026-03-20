@@ -20,6 +20,7 @@ interface IUseTimelineReturn {
   isAutoScrollEnabled: boolean;
   setAutoScrollEnabled: (enabled: boolean) => void;
   isLoading: boolean;
+  isSessionTransitioning: boolean;
   error: string | null;
   loadMore: () => Promise<void>;
   hasMore: boolean;
@@ -95,11 +96,17 @@ const useTimeline = ({
     });
   }, []);
 
+  const [isSessionTransitioning, setIsSessionTransitioning] = useState(false);
+
   const handleSessionChanged = useCallback(() => {
-    setEntries([]);
-    setHasMore(false);
-    setIsLoading(true);
-    setAutoScrollEnabled(true);
+    setIsSessionTransitioning(true);
+    setTimeout(() => {
+      setEntries([]);
+      setHasMore(false);
+      setIsLoading(true);
+      setAutoScrollEnabled(true);
+      setIsSessionTransitioning(false);
+    }, 100);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -154,6 +161,7 @@ const useTimeline = ({
     isAutoScrollEnabled,
     setAutoScrollEnabled,
     isLoading,
+    isSessionTransitioning,
     error,
     loadMore,
     hasMore,

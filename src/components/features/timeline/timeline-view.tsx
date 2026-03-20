@@ -14,6 +14,7 @@ interface ITimelineViewProps {
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
+  isSessionTransitioning: boolean;
   error: string | null;
   isAutoScrollEnabled: boolean;
   onAutoScrollChange: (enabled: boolean) => void;
@@ -43,7 +44,7 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
 
 const SkeletonLoader = () => (
   <div className="flex flex-col gap-4 p-4">
-    {[48, 36, 40, 32, 44].map((w, i) => (
+    {[48, 36, 40].map((w, i) => (
       <div key={i} className="flex flex-col gap-2">
         <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${w}%` }} />
         <div className="h-4 animate-pulse rounded bg-muted" style={{ width: `${w - 10}%` }} />
@@ -70,6 +71,15 @@ const ReconnectBanner = () => (
   <div className="flex items-center justify-center gap-2 border-b bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
     <Loader2 size={12} className="animate-spin" />
     연결이 끊어졌습니다. 재연결 중...
+  </div>
+);
+
+const DisconnectedBanner = ({ onRetry }: { onRetry: () => void }) => (
+  <div className="flex items-center justify-center gap-2 border-b bg-muted/50 px-3 py-1.5 text-xs text-muted-foreground">
+    <span>연결 실패</span>
+    <Button variant="outline" size="xs" className="h-5 px-2 text-xs" onClick={onRetry}>
+      다시 시도
+    </Button>
   </div>
 );
 
@@ -104,6 +114,7 @@ const TimelineView = ({
   sessionStatus,
   wsStatus,
   isLoading,
+  isSessionTransitioning,
   error,
   isAutoScrollEnabled,
   onAutoScrollChange,
@@ -211,13 +222,16 @@ const TimelineView = ({
   }
 
   const isReconnecting = wsStatus === 'reconnecting';
+  const isDisconnected = wsStatus === 'disconnected';
 
   return (
     <div className="relative flex h-full flex-col">
       {isReconnecting && <ReconnectBanner />}
+      {isDisconnected && <DisconnectedBanner onRetry={onRetry} />}
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto"
+        className="flex-1 overflow-y-auto transition-opacity duration-100"
+        style={{ opacity: isSessionTransitioning ? 0 : 1 }}
         onScroll={(e) => {
           handleScroll();
           handleScrollForLoadMore();

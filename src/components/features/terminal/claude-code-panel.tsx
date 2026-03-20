@@ -30,6 +30,7 @@ const ClaudeCodePanel = ({ sessionName, className }: IClaudeCodePanelProps) => {
     isAutoScrollEnabled,
     setAutoScrollEnabled,
     isLoading,
+    isSessionTransitioning,
     error,
     loadMore,
     hasMore,
@@ -47,6 +48,7 @@ const ClaudeCodePanel = ({ sessionName, className }: IClaudeCodePanelProps) => {
         sessionStatus={sessionStatus}
         wsStatus={wsStatus}
         isLoading={isLoading}
+        isSessionTransitioning={isSessionTransitioning}
         error={error}
         isAutoScrollEnabled={isAutoScrollEnabled}
         onAutoScrollChange={setAutoScrollEnabled}
