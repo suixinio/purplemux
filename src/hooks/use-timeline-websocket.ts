@@ -22,6 +22,7 @@ interface IUseTimelineWebSocketReturn {
   status: TTimelineConnectionStatus;
   subscribe: (jsonlPath: string) => void;
   unsubscribe: () => void;
+  reconnect: () => void;
 }
 
 const useTimelineWebSocket = ({
@@ -34,6 +35,7 @@ const useTimelineWebSocket = ({
   onError,
 }: IUseTimelineWebSocketOptions): IUseTimelineWebSocketReturn => {
   const [status, setStatus] = useState<TTimelineConnectionStatus>('disconnected');
+  const [connectTrigger, setConnectTrigger] = useState(0);
 
   const wsRef = useRef<WebSocket | null>(null);
   const retryCountRef = useRef(0);
@@ -139,14 +141,17 @@ const useTimelineWebSocket = ({
     doConnect(id);
 
     return () => {
-      connectIdRef.current++;
+      // Invalidate this connection generation so stale handlers are ignored.
+      // We use the captured `id` instead of reading connectIdRef.current
+      // to avoid accessing a ref value that may have changed by cleanup time.
+      connectIdRef.current = id + 1;
       clearTimers();
       if (wsRef.current) {
         wsRef.current.close(1000);
         wsRef.current = null;
       }
     };
-  }, [enabled, sessionName, workspaceId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, sessionName, workspaceId, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subscribe = useCallback((jsonlPath: string) => {
     const ws = wsRef.current;
@@ -162,7 +167,11 @@ const useTimelineWebSocket = ({
     }
   }, []);
 
-  return { status, subscribe, unsubscribe };
+  const reconnect = useCallback(() => {
+    setConnectTrigger((prev) => prev + 1);
+  }, []);
+
+  return { status, subscribe, unsubscribe, reconnect };
 };
 
 export default useTimelineWebSocket;

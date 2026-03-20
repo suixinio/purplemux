@@ -10,7 +10,9 @@ const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 90_000;
 const DEBOUNCE_MS = 50;
 const MAX_WATCHERS = 10;
+const MAX_CONNECTIONS = 30;
 const MAX_WATCHER_RETRIES = 3;
+const MAX_INIT_ENTRIES = 200;
 
 interface ITimelineConnection {
   ws: WebSocket;
@@ -19,6 +21,7 @@ interface ITimelineConnection {
   workspaceDir: string;
   heartbeatTimer: ReturnType<typeof setInterval>;
   lastHeartbeat: number;
+  currentJsonlPath: string | null;
   cleaned: boolean;
 }
 
@@ -50,46 +53,39 @@ const broadcastToWatcher = (watcherKey: string, msg: TTimelineServerMessage) => 
   }
 };
 
-const createFileWatcher = (jsonlPath: string): IFileWatcher => {
-  const fw: IFileWatcher = {
-    watcher: null,
-    jsonlPath,
-    offset: 0,
-    pendingBuffer: '',
-    connections: new Set(),
-    debounceTimer: null,
-    retryCount: 0,
-  };
-
-  const startWatch = () => {
-    try {
-      fw.watcher = watch(jsonlPath, () => {
-        if (fw.debounceTimer) clearTimeout(fw.debounceTimer);
-        fw.debounceTimer = setTimeout(async () => {
-          const { newEntries, newOffset, pendingBuffer } = await parseIncremental(jsonlPath, fw.offset, fw.pendingBuffer);
-          fw.pendingBuffer = pendingBuffer;
-          if (newEntries.length > 0) {
-            fw.offset = newOffset;
-            broadcastToWatcher(jsonlPath, { type: 'timeline:append', entries: newEntries });
-          }
-        }, DEBOUNCE_MS);
-      });
-
-      fw.watcher.on('error', () => {
-        if (fw.retryCount < MAX_WATCHER_RETRIES) {
-          fw.retryCount++;
-          if (fw.watcher) fw.watcher.close();
-          fw.watcher = null;
-          setTimeout(startWatch, 1000);
+const startFileWatch = (fw: IFileWatcher) => {
+  try {
+    fw.watcher = watch(fw.jsonlPath, () => {
+      if (fw.debounceTimer) clearTimeout(fw.debounceTimer);
+      fw.debounceTimer = setTimeout(async () => {
+        const { newEntries, newOffset, pendingBuffer } = await parseIncremental(
+          fw.jsonlPath, fw.offset, fw.pendingBuffer,
+        );
+        fw.pendingBuffer = pendingBuffer;
+        if (newEntries.length > 0) {
+          fw.offset = newOffset;
+          broadcastToWatcher(fw.jsonlPath, { type: 'timeline:append', entries: newEntries });
         }
-      });
-    } catch {
-      // File might not exist yet
-    }
-  };
+      }, DEBOUNCE_MS);
+    });
 
-  startWatch();
-  return fw;
+    fw.watcher.on('error', () => {
+      if (fw.retryCount < MAX_WATCHER_RETRIES) {
+        fw.retryCount++;
+        if (fw.watcher) fw.watcher.close();
+        fw.watcher = null;
+        setTimeout(() => startFileWatch(fw), 1000);
+      } else {
+        broadcastToWatcher(fw.jsonlPath, {
+          type: 'timeline:error',
+          code: 'watcher-failed',
+          message: '파일 감시 실패 (재시도 초과)',
+        });
+      }
+    });
+  } catch {
+    // File might not exist yet
+  }
 };
 
 const removeFileWatcher = (jsonlPath: string) => {
@@ -100,26 +96,47 @@ const removeFileWatcher = (jsonlPath: string) => {
   fileWatchers.delete(jsonlPath);
 };
 
-const subscribeToFile = async (ws: WebSocket, jsonlPath: string): Promise<void> => {
+const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: string): Promise<void> => {
   let fw = fileWatchers.get(jsonlPath);
+  const isNewWatcher = !fw;
+
   if (!fw) {
     if (fileWatchers.size >= MAX_WATCHERS) {
       sendJson(ws, { type: 'timeline:error', code: 'max-watchers', message: 'Too many active watchers' });
       return;
     }
-    fw = createFileWatcher(jsonlPath);
+    fw = {
+      watcher: null,
+      jsonlPath,
+      offset: 0,
+      pendingBuffer: '',
+      connections: new Set(),
+      debounceTimer: null,
+      retryCount: 0,
+    };
     fileWatchers.set(jsonlPath, fw);
   }
 
   fw.connections.add(ws);
 
   const result = await parseSessionFile(jsonlPath);
-  fw.offset = result.lastOffset;
+
+  // Only set offset and start watcher for new file watchers — avoids
+  // overwriting the offset when a second client subscribes to the same file
+  if (isNewWatcher) {
+    fw.offset = result.lastOffset;
+    startFileWatch(fw);
+  }
+
+  // Limit init entries for large files (spec: 200 max for 1MB+ files)
+  const entries = result.entries.length > MAX_INIT_ENTRIES
+    ? result.entries.slice(-MAX_INIT_ENTRIES)
+    : result.entries;
 
   sendJson(ws, {
     type: 'timeline:init',
-    entries: result.entries,
-    sessionId: '',
+    entries,
+    sessionId: sessionId ?? '',
     totalEntries: result.entries.length,
   });
 };
@@ -133,6 +150,16 @@ const unsubscribeFromFile = (ws: WebSocket, jsonlPath: string) => {
   }
 };
 
+const getWorkspaceConnections = (workspaceId: string, sessionName: string): ITimelineConnection[] => {
+  const result: ITimelineConnection[] = [];
+  for (const [, conn] of connections) {
+    if (conn.workspaceId === workspaceId && conn.sessionName === sessionName) {
+      result.push(conn);
+    }
+  }
+  return result;
+};
+
 const cleanup = (conn: ITimelineConnection) => {
   if (conn.cleaned) return;
   conn.cleaned = true;
@@ -140,26 +167,15 @@ const cleanup = (conn: ITimelineConnection) => {
   clearInterval(conn.heartbeatTimer);
   connections.delete(conn.ws);
 
-  for (const [jsonlPath, fw] of fileWatchers) {
-    if (fw.connections.has(conn.ws)) {
-      fw.connections.delete(conn.ws);
-      if (fw.connections.size === 0) {
-        removeFileWatcher(jsonlPath);
-      }
-    }
+  if (conn.currentJsonlPath) {
+    unsubscribeFromFile(conn.ws, conn.currentJsonlPath);
   }
 
   const wsKey = `${conn.workspaceId}:${conn.sessionName}`;
-  const sw = sessionWatchers.get(wsKey);
-  if (sw) {
-    let hasOtherConn = false;
-    for (const [, c] of connections) {
-      if (c.workspaceId === conn.workspaceId && c.sessionName === conn.sessionName) {
-        hasOtherConn = true;
-        break;
-      }
-    }
-    if (!hasOtherConn) {
+  const hasOtherConn = getWorkspaceConnections(conn.workspaceId, conn.sessionName).length > 0;
+  if (!hasOtherConn) {
+    const sw = sessionWatchers.get(wsKey);
+    if (sw) {
       sw.stop();
       sessionWatchers.delete(wsKey);
     }
@@ -167,6 +183,11 @@ const cleanup = (conn: ITimelineConnection) => {
 };
 
 export const handleTimelineConnection = async (ws: WebSocket, request: IncomingMessage) => {
+  if (connections.size >= MAX_CONNECTIONS) {
+    ws.close(1013, 'Too many connections');
+    return;
+  }
+
   const url = new URL(request.url || '', 'http://localhost');
   const sessionName = url.searchParams.get('session') ?? '';
   const workspaceId = url.searchParams.get('workspace') ?? '';
@@ -190,7 +211,6 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   const workspaceDir = workspace.directories[0];
   let lastHeartbeat = Date.now();
-  let currentJsonlPath: string | null = null;
 
   const heartbeatTimer = setInterval(() => {
     if (Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
@@ -209,6 +229,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     workspaceDir,
     heartbeatTimer,
     lastHeartbeat,
+    currentJsonlPath: null,
     cleaned: false,
   };
 
@@ -223,15 +244,15 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     try {
       const msg = JSON.parse(raw.toString());
       if (msg.type === 'timeline:subscribe' && msg.jsonlPath) {
-        if (currentJsonlPath) {
-          unsubscribeFromFile(ws, currentJsonlPath);
+        if (conn.currentJsonlPath) {
+          unsubscribeFromFile(ws, conn.currentJsonlPath);
         }
-        currentJsonlPath = msg.jsonlPath;
+        conn.currentJsonlPath = msg.jsonlPath;
         await subscribeToFile(ws, msg.jsonlPath);
       } else if (msg.type === 'timeline:unsubscribe') {
-        if (currentJsonlPath) {
-          unsubscribeFromFile(ws, currentJsonlPath);
-          currentJsonlPath = null;
+        if (conn.currentJsonlPath) {
+          unsubscribeFromFile(ws, conn.currentJsonlPath);
+          conn.currentJsonlPath = null;
         }
       }
     } catch {}
@@ -243,8 +264,8 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   const sessionInfo = await detectActiveSession(workspaceDir);
 
   if (sessionInfo.jsonlPath) {
-    currentJsonlPath = sessionInfo.jsonlPath;
-    await subscribeToFile(ws, sessionInfo.jsonlPath);
+    conn.currentJsonlPath = sessionInfo.jsonlPath;
+    await subscribeToFile(ws, sessionInfo.jsonlPath, sessionInfo.sessionId ?? undefined);
   } else {
     sendJson(ws, {
       type: 'timeline:init',
@@ -254,22 +275,27 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     });
   }
 
+  // Watch for new sessions — shared per workspace:session key
   const wsKey = `${workspaceId}:${sessionName}`;
   if (!sessionWatchers.has(wsKey)) {
     const sw = watchSessionsDir(workspaceDir, async (newInfo) => {
-      if (newInfo.jsonlPath && newInfo.jsonlPath !== currentJsonlPath) {
-        if (currentJsonlPath) {
-          unsubscribeFromFile(ws, currentJsonlPath);
+      // Broadcast session change to ALL connections for this workspace
+      const wsConns = getWorkspaceConnections(workspaceId, sessionName);
+      for (const c of wsConns) {
+        if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
+          if (c.currentJsonlPath) {
+            unsubscribeFromFile(c.ws, c.currentJsonlPath);
+          }
+          c.currentJsonlPath = newInfo.jsonlPath;
+
+          sendJson(c.ws, {
+            type: 'timeline:session-changed',
+            newSessionId: newInfo.sessionId ?? '',
+            reason: 'new-session-started',
+          });
+
+          await subscribeToFile(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
         }
-        currentJsonlPath = newInfo.jsonlPath;
-
-        sendJson(ws, {
-          type: 'timeline:session-changed',
-          newSessionId: newInfo.sessionId ?? '',
-          reason: 'new-session-started',
-        });
-
-        await subscribeToFile(ws, newInfo.jsonlPath);
       }
     });
     sessionWatchers.set(wsKey, sw);
@@ -287,4 +313,7 @@ export const gracefulTimelineShutdown = () => {
     sw.stop();
   }
   sessionWatchers.clear();
+  for (const [jsonlPath] of fileWatchers) {
+    removeFileWatcher(jsonlPath);
+  }
 };

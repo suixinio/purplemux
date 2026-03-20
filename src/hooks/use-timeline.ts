@@ -95,7 +95,7 @@ const useTimeline = ({
     });
   }, []);
 
-  const handleSessionChanged = useCallback((_newSessionId: string) => {
+  const handleSessionChanged = useCallback(() => {
     setEntries([]);
     setHasMore(false);
     setIsLoading(true);
@@ -131,7 +131,7 @@ const useTimeline = ({
 
   const shouldConnect = enabled && (sessionStatus === 'active' || sessionStatus === 'inactive');
 
-  const { status: wsStatus } = useTimelineWebSocket({
+  const { status: wsStatus, reconnect } = useTimelineWebSocket({
     sessionName,
     workspaceId,
     enabled: shouldConnect,
@@ -140,6 +140,12 @@ const useTimeline = ({
     onSessionChanged: handleSessionChanged,
     onError: handleError,
   });
+
+  const retrySession = useCallback(async () => {
+    setError(null);
+    await fetchSession();
+    reconnect();
+  }, [fetchSession, reconnect]);
 
   return {
     entries,
@@ -151,7 +157,7 @@ const useTimeline = ({
     error,
     loadMore,
     hasMore,
-    retrySession: fetchSession,
+    retrySession,
   };
 };
 
