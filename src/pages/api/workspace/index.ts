@@ -4,15 +4,7 @@ import { getWorkspaces, createWorkspace } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    let data = await getWorkspaces();
-    if (data.workspaces.length === 0) {
-      try {
-        await createWorkspace(os.homedir());
-        data = await getWorkspaces();
-      } catch {
-        // 자동 생성 실패 시 빈 목록 반환
-      }
-    }
+    const data = await getWorkspaces();
     return res.status(200).json(data);
   }
 

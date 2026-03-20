@@ -47,16 +47,13 @@ const TerminalPage = () => {
     const adjacent = workspaces[idx + 1] || workspaces[idx - 1];
 
     layout.clearLayout();
+    removeWorkspace(activeWorkspaceId);
 
     if (adjacent) {
       switchWorkspace(adjacent.id);
     }
 
-    deleteWorkspace(activeWorkspaceId).then((success) => {
-      if (success) {
-        removeWorkspace(activeWorkspaceId);
-      }
-    });
+    deleteWorkspace(activeWorkspaceId);
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSelectWorkspace = useCallback(
