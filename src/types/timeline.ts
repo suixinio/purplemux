@@ -1,4 +1,4 @@
-export type TSessionStatus = 'active' | 'inactive' | 'none' | 'not-installed';
+export type TSessionStatus = 'active' | 'none' | 'not-installed';
 
 export type TTimelineConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 

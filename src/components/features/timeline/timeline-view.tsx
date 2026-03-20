@@ -1,6 +1,6 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { MessageSquare, RefreshCw, Loader2 } from 'lucide-react';
+import { Terminal, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ITimelineEntry, TSessionStatus, TTimelineConnectionStatus } from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
@@ -54,8 +54,8 @@ const SkeletonLoader = () => (
 );
 
 const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => (
-  <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
-    <MessageSquare size={32} className="opacity-40" />
+  <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+    <Terminal size={32} className="opacity-40" />
     <div className="text-center">
       <p className="text-sm font-medium">연결 오류</p>
       <p className="mt-1 text-xs">{error}</p>
@@ -86,8 +86,8 @@ const DisconnectedBanner = ({ onRetry }: { onRetry: () => void }) => (
 const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
   if (sessionStatus === 'not-installed') {
     return (
-      <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
-        <MessageSquare size={32} className="opacity-40" />
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+        <Terminal size={32} className="opacity-40" />
         <div className="text-center">
           <p className="text-sm font-medium">Claude Code를 설치하세요</p>
           <p className="mt-1 text-xs">~/.claude 디렉토리를 찾을 수 없습니다.</p>
@@ -97,12 +97,12 @@ const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 text-muted-foreground">
-      <MessageSquare size={32} className="opacity-40" />
+    <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+      <Terminal size={32} className="opacity-40" />
       <div className="text-center">
-        <p className="text-sm font-medium">Claude Code 세션 없음</p>
+        <p className="text-sm font-medium">Claude Code가 실행 중이지 않습니다</p>
         <p className="mt-1 text-xs">
-          이 프로젝트에서 Claude Code<br />세션이 아직 없습니다.
+          현재 터미널에서 Claude Code를<br />실행하면 타임라인이 표시됩니다.
         </p>
       </div>
     </div>

@@ -9,7 +9,6 @@ import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
 
 interface IUseTimelineOptions {
   sessionName: string;
-  workspaceId: string;
   enabled: boolean;
 }
 
@@ -29,7 +28,6 @@ interface IUseTimelineReturn {
 
 const useTimeline = ({
   sessionName,
-  workspaceId,
   enabled,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
@@ -49,21 +47,24 @@ const useTimeline = ({
   const isLoadingMoreRef = useRef(false);
 
   const fetchSession = useCallback(async () => {
-    if (!enabled || !workspaceId) return;
+    if (!enabled || !sessionName) return;
     try {
       const res = await fetch(
-        `/api/timeline/session?workspace=${encodeURIComponent(workspaceId)}`,
+        `/api/timeline/session?session=${encodeURIComponent(sessionName)}`,
       );
       if (!res.ok) throw new Error('세션 정보를 불러올 수 없습니다');
       const info: ISessionInfo = await res.json();
       setSessionStatus(info.status);
       jsonlPathRef.current = info.jsonlPath;
+      if (info.status !== 'active') {
+        setIsLoading(false);
+      }
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : '세션 정보를 불러올 수 없습니다');
       setSessionStatus('none');
     }
-  }, [enabled, workspaceId]);
+  }, [enabled, sessionName]);
 
   useEffect(() => {
     fetchSession();
@@ -136,11 +137,10 @@ const useTimeline = ({
     console.warn(`[timeline] WebSocket error: ${err.code} — ${err.message}`);
   }, []);
 
-  const shouldConnect = enabled && (sessionStatus === 'active' || sessionStatus === 'inactive');
+  const shouldConnect = enabled && sessionStatus === 'active';
 
   const { status: wsStatus, reconnect } = useTimelineWebSocket({
     sessionName,
-    workspaceId,
     enabled: shouldConnect,
     onInit: handleInit,
     onAppend: handleAppend,

@@ -15,11 +15,11 @@ const MAX_COLLAPSED_LINES = 10;
 const AssistantMessageItem = ({ entry }: IAssistantMessageItemProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const lines = useMemo(() => entry.markdown.split('\n'), [entry.markdown]);
+  const lines = useMemo(() => (entry.markdown ?? '').split('\n'), [entry.markdown]);
   const isLong = lines.length > MAX_COLLAPSED_LINES;
   const displayText = isLong && !isExpanded
     ? lines.slice(0, MAX_COLLAPSED_LINES).join('\n')
-    : entry.markdown;
+    : entry.markdown ?? '';
 
   return (
     <div className="animate-in fade-in duration-150">

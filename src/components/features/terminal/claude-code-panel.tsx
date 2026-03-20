@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import TimelineView from '@/components/features/timeline/timeline-view';
@@ -9,20 +8,6 @@ interface IClaudeCodePanelProps {
 }
 
 const ClaudeCodePanel = ({ sessionName, className }: IClaudeCodePanelProps) => {
-  const [workspaceId, setWorkspaceId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchWorkspace = async () => {
-      try {
-        const res = await fetch('/api/workspace');
-        if (!res.ok) return;
-        const data = await res.json();
-        setWorkspaceId(data.activeWorkspaceId);
-      } catch {}
-    };
-    fetchWorkspace();
-  }, []);
-
   const {
     entries,
     sessionStatus,
@@ -37,8 +22,7 @@ const ClaudeCodePanel = ({ sessionName, className }: IClaudeCodePanelProps) => {
     retrySession,
   } = useTimeline({
     sessionName,
-    workspaceId: workspaceId ?? '',
-    enabled: !!workspaceId,
+    enabled: !!sessionName,
   });
 
   return (

@@ -2,8 +2,11 @@ import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
 import path from 'path';
 import os from 'os';
-import { execFile } from 'child_process';
+import { execFile as execFileCb } from 'child_process';
+import { promisify } from 'util';
 import type { ISessionInfo } from '@/types/timeline';
+
+const execFile = promisify(execFileCb);
 
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
 const SESSIONS_DIR = path.join(CLAUDE_DIR, 'sessions');
@@ -24,10 +27,19 @@ export const toClaudeProjectName = (dirPath: string): string =>
 
 export const isProcessRunning = (pid: number): Promise<boolean> =>
   new Promise((resolve) => {
-    execFile('ps', ['-p', String(pid)], (err) => {
+    execFileCb('ps', ['-p', String(pid)], (err) => {
       resolve(!err);
     });
   });
+
+const getChildPids = async (parentPid: number): Promise<number[]> => {
+  try {
+    const { stdout } = await execFile('pgrep', ['-P', String(parentPid)]);
+    return stdout.trim().split('\n').map((s) => parseInt(s, 10)).filter((n) => !Number.isNaN(n));
+  } catch {
+    return [];
+  }
+};
 
 const readPidFile = async (filePath: string): Promise<IPidFileData | null> => {
   try {
@@ -50,41 +62,20 @@ const findJsonlPath = async (projectDir: string, sessionId: string): Promise<str
   }
 };
 
-const findLatestJsonl = async (projectDir: string): Promise<{ sessionId: string; jsonlPath: string } | null> => {
-  try {
-    const files = await fs.readdir(projectDir);
-    const jsonlFiles = files.filter(
-      (f) => f.endsWith('.jsonl') && !f.startsWith('agent-'),
-    );
-    if (jsonlFiles.length === 0) return null;
-
-    let latest: { file: string; mtime: number } | null = null;
-    for (const file of jsonlFiles) {
-      const stat = await fs.stat(path.join(projectDir, file));
-      if (!latest || stat.mtimeMs > latest.mtime) {
-        latest = { file, mtime: stat.mtimeMs };
-      }
-    }
-    if (!latest) return null;
-
-    const sessionId = latest.file.replace('.jsonl', '');
-    return { sessionId, jsonlPath: path.join(projectDir, latest.file) };
-  } catch {
-    return null;
-  }
-};
-
-export const detectActiveSession = async (workspaceDir: string): Promise<ISessionInfo> => {
+export const detectActiveSession = async (panePid: number): Promise<ISessionInfo> => {
   try {
     await fs.access(CLAUDE_DIR);
   } catch {
     return { status: 'not-installed', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
   }
 
-  const projectName = toClaudeProjectName(workspaceDir);
-  const projectDir = path.join(PROJECTS_DIR, projectName);
+  const childPids = await getChildPids(panePid);
 
-  const activeSessions: (IPidFileData & { pidFile: string })[] = [];
+  if (childPids.length === 0) {
+    return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
+  }
+
+  const childPidSet = new Set(childPids);
 
   try {
     const pidFiles = await fs.readdir(SESSIONS_DIR);
@@ -93,45 +84,28 @@ export const detectActiveSession = async (workspaceDir: string): Promise<ISessio
     for (const file of jsonFiles) {
       const data = await readPidFile(path.join(SESSIONS_DIR, file));
       if (!data) continue;
-      if (data.cwd !== workspaceDir) continue;
+      if (!childPidSet.has(data.pid)) continue;
 
       const running = await isProcessRunning(data.pid);
       if (!running) {
-        try {
-          await fs.unlink(path.join(SESSIONS_DIR, file));
-        } catch {}
+        try { await fs.unlink(path.join(SESSIONS_DIR, file)); } catch {}
         continue;
       }
 
-      activeSessions.push({ ...data, pidFile: file });
+      const projectName = toClaudeProjectName(data.cwd);
+      const projectDir = path.join(PROJECTS_DIR, projectName);
+      const jsonlPath = await findJsonlPath(projectDir, data.sessionId);
+
+      return {
+        status: 'active',
+        sessionId: data.sessionId,
+        jsonlPath,
+        pid: data.pid,
+        startedAt: data.startedAt,
+      };
     }
   } catch {
     // sessions dir doesn't exist yet
-  }
-
-  if (activeSessions.length > 0) {
-    activeSessions.sort((a, b) => b.startedAt - a.startedAt);
-    const session = activeSessions[0];
-    const jsonlPath = await findJsonlPath(projectDir, session.sessionId);
-
-    return {
-      status: 'active',
-      sessionId: session.sessionId,
-      jsonlPath,
-      pid: session.pid,
-      startedAt: session.startedAt,
-    };
-  }
-
-  const fallback = await findLatestJsonl(projectDir);
-  if (fallback) {
-    return {
-      status: 'inactive',
-      sessionId: fallback.sessionId,
-      jsonlPath: fallback.jsonlPath,
-      pid: null,
-      startedAt: null,
-    };
   }
 
   return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
@@ -152,7 +126,7 @@ export interface ISessionWatcher {
 }
 
 export const watchSessionsDir = (
-  workspaceDir: string,
+  panePid: number,
   onChange: (info: ISessionInfo) => void,
 ): ISessionWatcher => {
   let watcher: FSWatcher | null = null;
@@ -167,7 +141,7 @@ export const watchSessionsDir = (
     const running = await isProcessRunning(currentPid);
     if (!running && !stopped) {
       currentPid = null;
-      const info = await detectActiveSession(workspaceDir);
+      const info = await detectActiveSession(panePid);
       onChange(info);
     }
   };
@@ -177,7 +151,7 @@ export const watchSessionsDir = (
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(async () => {
       if (stopped) return;
-      const info = await detectActiveSession(workspaceDir);
+      const info = await detectActiveSession(panePid);
       if (info.pid) currentPid = info.pid;
       onChange(info);
     }, SESSION_DIR_DEBOUNCE);
@@ -193,14 +167,13 @@ export const watchSessionsDir = (
         installCheckTimer = null;
       }
     } catch {
-      // sessions dir doesn't exist — retry periodically
       if (!installCheckTimer) {
         installCheckTimer = setInterval(async () => {
           if (stopped) return;
           try {
             await fs.access(SESSIONS_DIR);
             tryWatch();
-            const info = await detectActiveSession(workspaceDir);
+            const info = await detectActiveSession(panePid);
             if (info.pid) currentPid = info.pid;
             onChange(info);
           } catch {}
@@ -212,7 +185,7 @@ export const watchSessionsDir = (
   tryWatch();
   pidPollTimer = setInterval(pollPid, PID_POLL_INTERVAL);
 
-  detectActiveSession(workspaceDir).then((info) => {
+  detectActiveSession(panePid).then((info) => {
     if (stopped) return;
     if (info.pid) currentPid = info.pid;
     onChange(info);

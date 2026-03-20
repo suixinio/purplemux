@@ -137,6 +137,20 @@ export const getSessionCwd = async (sessionName: string): Promise<string | null>
   }
 };
 
+export const getSessionPanePid = async (sessionName: string): Promise<number | null> => {
+  try {
+    const { stdout } = await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'display-message', '-p', '-t', sessionName, '#{pane_pid}'],
+      { timeout: CMD_TIMEOUT },
+    );
+    const pid = parseInt(stdout.trim(), 10);
+    return Number.isNaN(pid) ? null : pid;
+  } catch {
+    return null;
+  }
+};
+
 export const applyConfig = async (): Promise<void> => {
   try {
     await execFile(

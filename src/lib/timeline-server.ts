@@ -4,7 +4,7 @@ import { watch, type FSWatcher } from 'fs';
 import { existsSync } from 'fs';
 import { detectActiveSession, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { parseSessionFile, parseIncremental } from './session-parser';
-import { getWorkspaceById } from './workspace-store';
+import { getSessionPanePid } from './tmux';
 import type { TTimelineServerMessage } from '@/types/timeline';
 
 const HEARTBEAT_INTERVAL = 30_000;
@@ -18,8 +18,7 @@ const MAX_INIT_ENTRIES = 200;
 interface ITimelineConnection {
   ws: WebSocket;
   sessionName: string;
-  workspaceId: string;
-  workspaceDir: string;
+  panePid: number;
   heartbeatTimer: ReturnType<typeof setInterval>;
   lastHeartbeat: number;
   currentJsonlPath: string | null;
@@ -164,10 +163,10 @@ const unsubscribeFromFile = (ws: WebSocket, jsonlPath: string) => {
   }
 };
 
-const getWorkspaceConnections = (workspaceId: string, sessionName: string): ITimelineConnection[] => {
+const getSessionConnections = (sessionName: string): ITimelineConnection[] => {
   const result: ITimelineConnection[] = [];
   for (const [, conn] of connections) {
-    if (conn.workspaceId === workspaceId && conn.sessionName === sessionName) {
+    if (conn.sessionName === sessionName) {
       result.push(conn);
     }
   }
@@ -185,8 +184,8 @@ const cleanup = (conn: ITimelineConnection) => {
     unsubscribeFromFile(conn.ws, conn.currentJsonlPath);
   }
 
-  const wsKey = `${conn.workspaceId}:${conn.sessionName}`;
-  const hasOtherConn = getWorkspaceConnections(conn.workspaceId, conn.sessionName).length > 0;
+  const wsKey = conn.sessionName;
+  const hasOtherConn = getSessionConnections(conn.sessionName).length > 0;
   if (!hasOtherConn) {
     const sw = sessionWatchers.get(wsKey);
     if (sw) {
@@ -204,26 +203,19 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   const url = new URL(request.url || '', 'http://localhost');
   const sessionName = url.searchParams.get('session') ?? '';
-  const workspaceId = url.searchParams.get('workspace') ?? '';
 
-  if (!workspaceId) {
-    ws.close(1008, 'Missing workspace parameter');
+  if (!sessionName) {
+    ws.close(1008, 'Missing session parameter');
     return;
   }
 
-  const workspace = await getWorkspaceById(workspaceId);
-  if (!workspace) {
-    ws.close(1008, 'Workspace not found');
-    return;
-  }
-
-  if (!workspace.directories.length) {
+  const panePid = await getSessionPanePid(sessionName);
+  if (!panePid) {
     sendJson(ws, { type: 'timeline:init', entries: [], sessionId: '', totalEntries: 0 });
-    ws.close(1000, 'No workspace directories');
+    ws.close(1000, 'Cannot resolve pane pid');
     return;
   }
 
-  const workspaceDir = workspace.directories[0];
   let lastHeartbeat = Date.now();
 
   const heartbeatTimer = setInterval(() => {
@@ -239,8 +231,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   const conn: ITimelineConnection = {
     ws,
     sessionName,
-    workspaceId,
-    workspaceDir,
+    panePid,
     heartbeatTimer,
     lastHeartbeat,
     currentJsonlPath: null,
@@ -275,7 +266,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   ws.on('close', () => cleanup(conn));
   ws.on('error', () => cleanup(conn));
 
-  const sessionInfo = await detectActiveSession(workspaceDir);
+  const sessionInfo = await detectActiveSession(panePid);
 
   if (sessionInfo.jsonlPath) {
     conn.currentJsonlPath = sessionInfo.jsonlPath;
@@ -289,12 +280,11 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     });
   }
 
-  // Watch for new sessions — shared per workspace:session key
-  const wsKey = `${workspaceId}:${sessionName}`;
+  // Watch for new sessions — shared per session key
+  const wsKey = sessionName;
   if (!sessionWatchers.has(wsKey)) {
-    const sw = watchSessionsDir(workspaceDir, async (newInfo) => {
-      // Broadcast session change to ALL connections for this workspace
-      const wsConns = getWorkspaceConnections(workspaceId, sessionName);
+    const sw = watchSessionsDir(panePid, async (newInfo) => {
+      const wsConns = getSessionConnections(sessionName);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
           if (c.currentJsonlPath) {

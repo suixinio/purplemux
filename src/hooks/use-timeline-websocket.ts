@@ -10,7 +10,6 @@ const MAX_RETRIES = 5;
 
 interface IUseTimelineWebSocketOptions {
   sessionName: string;
-  workspaceId: string;
   enabled: boolean;
   onInit: (entries: ITimelineEntry[], totalEntries: number) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
@@ -27,7 +26,6 @@ interface IUseTimelineWebSocketReturn {
 
 const useTimelineWebSocket = ({
   sessionName,
-  workspaceId,
   enabled,
   onInit,
   onAppend,
@@ -68,7 +66,7 @@ const useTimelineWebSocket = ({
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(
-        `${protocol}//${location.host}/api/timeline?session=${sessionName}&workspace=${workspaceId}`,
+        `${protocol}//${location.host}/api/timeline?session=${sessionName}`,
       );
       wsRef.current = ws;
 
@@ -118,7 +116,7 @@ const useTimelineWebSocket = ({
 
       ws.onerror = () => {};
     },
-    [sessionName, workspaceId, clearTimers],
+    [sessionName, clearTimers],
   );
 
   useEffect(() => {
@@ -151,7 +149,7 @@ const useTimelineWebSocket = ({
         wsRef.current = null;
       }
     };
-  }, [enabled, sessionName, workspaceId, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, sessionName, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const subscribe = useCallback((jsonlPath: string) => {
     const ws = wsRef.current;
