@@ -1,6 +1,11 @@
 import { WebSocket } from 'ws';
 import * as pty from 'node-pty';
-import { spawnSync } from 'child_process';
+import {
+  listSessions,
+  createSession,
+  killSession,
+  defaultSessionName,
+} from './tmux';
 
 const MSG_STDIN = 0x00;
 const MSG_STDOUT = 0x01;
@@ -15,11 +20,11 @@ const BACKPRESSURE_HIGH = 1024 * 1024;
 const BACKPRESSURE_LOW = 256 * 1024;
 
 const TMUX_SOCKET = 'purple';
-const SESSION_NAME = 'pt';
 
 interface IActiveConnection {
   ws: WebSocket;
   pty: pty.IPty;
+  sessionName: string;
   heartbeatTimer: ReturnType<typeof setInterval>;
   cleaned: boolean;
   detaching: boolean;
@@ -27,47 +32,8 @@ interface IActiveConnection {
 
 const connections = new Map<WebSocket, IActiveConnection>();
 
-const hasExistingSession = (): boolean => {
-  const result = spawnSync('tmux', ['-L', TMUX_SOCKET, 'has-session', '-t', SESSION_NAME], {
-    timeout: 3000,
-  });
-  return result.status === 0;
-};
-
-const createTmuxSession = (cols: number, rows: number): boolean => {
-  const shell = process.env.SHELL || '/bin/zsh';
-  const result = spawnSync(
-    'tmux',
-    [
-      '-L', TMUX_SOCKET,
-      'new-session', '-d', '-s', SESSION_NAME,
-      '-x', String(cols), '-y', String(rows),
-      shell,
-      ';', 'set-option', '-g', 'status', 'off',
-      ';', 'set-option', '-g', 'prefix', 'C-]',
-      ';', 'unbind-key', 'C-b',
-    ],
-    {
-      timeout: 5000,
-      cwd: process.env.HOME || '/',
-      env: {
-        ...process.env,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-      },
-    },
-  );
-
-  if (result.status !== 0) {
-    const stderr = result.stderr?.toString() || '';
-    console.log(`[terminal] tmux session creation failed: ${stderr}`);
-  }
-
-  return result.status === 0;
-};
-
-const attachToSession = (cols: number, rows: number): pty.IPty =>
-  pty.spawn('tmux', ['-L', TMUX_SOCKET, 'attach-session', '-t', SESSION_NAME], {
+const attachToSession = (sessionName: string, cols: number, rows: number): pty.IPty =>
+  pty.spawn('tmux', ['-L', TMUX_SOCKET, 'attach-session', '-t', sessionName], {
     name: 'xterm-256color',
     cols,
     rows,
@@ -79,26 +45,25 @@ const attachToSession = (cols: number, rows: number): pty.IPty =>
     } as Record<string, string>,
   });
 
-const killTmuxSession = () => {
-  spawnSync('tmux', ['-L', TMUX_SOCKET, 'kill-session', '-t', SESSION_NAME], {
-    timeout: 3000,
-  });
-};
-
 const cleanup = (conn: IActiveConnection) => {
   if (conn.cleaned) return;
   conn.cleaned = true;
 
   clearInterval(conn.heartbeatTimer);
 
+  if (!conn.detaching) {
+    if (conn.ws.readyState === WebSocket.OPEN) {
+      conn.ws.close(1000, 'Session exited');
+    }
+    console.log(`[terminal] tmux session ended: ${conn.sessionName}`);
+  } else {
+    console.log(`[terminal] detached from tmux session: ${conn.sessionName}`);
+  }
+
   try {
     conn.pty.kill();
   } catch {
     // PTY already exited
-  }
-
-  if (conn.ws.readyState === WebSocket.OPEN) {
-    conn.ws.close();
   }
 
   connections.delete(conn.ws);
@@ -107,15 +72,15 @@ const cleanup = (conn: IActiveConnection) => {
 
 export const gracefulShutdown = () => {
   connections.forEach((conn) => {
-    conn.detaching = true;
     if (conn.ws.readyState === WebSocket.OPEN) {
       conn.ws.close(1001, 'Server shutting down');
     }
+    conn.detaching = true;
     cleanup(conn);
   });
 };
 
-export const handleConnection = (ws: WebSocket) => {
+export const handleConnection = async (ws: WebSocket) => {
   connections.forEach((conn, key) => {
     if (key.readyState === WebSocket.CLOSED || key.readyState === WebSocket.CLOSING) {
       cleanup(conn);
@@ -130,33 +95,41 @@ export const handleConnection = (ws: WebSocket) => {
 
   const cols = 80;
   const rows = 24;
-  const sessionExists = hasExistingSession();
 
-  if (!sessionExists) {
-    const created = createTmuxSession(cols, rows);
-    if (!created) {
-      if (!hasExistingSession()) {
-        console.log('[terminal] failed to create tmux session');
-        ws.close(1011, 'Session creation failed');
-        return;
-      }
-    } else {
-      console.log(`[terminal] created new tmux session: ${SESSION_NAME}`);
-    }
+  let sessionName: string;
+  const sessions = await listSessions();
+
+  if (sessions.length > 0) {
+    sessionName = sessions[0];
+    console.log(`[terminal] existing tmux session found: ${sessionName}`);
   } else {
-    console.log(`[terminal] found existing tmux session: ${SESSION_NAME}`);
+    sessionName = defaultSessionName();
+    try {
+      await createSession(sessionName, cols, rows);
+    } catch (err) {
+      console.log(`[terminal] tmux session creation failed: ${err instanceof Error ? err.message : err}`);
+      ws.close(1011, 'Session create failed');
+      return;
+    }
   }
 
   let ptyProcess: pty.IPty;
   try {
-    ptyProcess = attachToSession(cols, rows);
+    ptyProcess = attachToSession(sessionName, cols, rows);
   } catch (err) {
-    console.log(`[terminal] tmux attach failed: ${err instanceof Error ? err.message : err}`);
-    ws.close(1011, 'Session attach failed');
-    return;
+    console.log(`[terminal] tmux attach failed, creating new session: ${err instanceof Error ? err.message : err}`);
+    sessionName = defaultSessionName();
+    try {
+      await createSession(sessionName, cols, rows);
+      ptyProcess = attachToSession(sessionName, cols, rows);
+    } catch (retryErr) {
+      console.log(`[terminal] tmux retry failed: ${retryErr instanceof Error ? retryErr.message : retryErr}`);
+      ws.close(1011, 'Session create failed');
+      return;
+    }
   }
 
-  console.log(`[terminal] attached to session: ${SESSION_NAME} (pid: ${ptyProcess.pid})`);
+  console.log(`[terminal] attached to tmux session: ${sessionName} (pid: ${ptyProcess.pid})`);
 
   let lastHeartbeat = Date.now();
   let paused = false;
@@ -175,6 +148,7 @@ export const handleConnection = (ws: WebSocket) => {
   const conn: IActiveConnection = {
     ws,
     pty: ptyProcess,
+    sessionName,
     heartbeatTimer,
     cleaned: false,
     detaching: false,
@@ -206,9 +180,6 @@ export const handleConnection = (ws: WebSocket) => {
     console.log(
       `[terminal] pty exited (pid: ${ptyProcess.pid}, code: ${exitCode}, signal: ${signal}, detaching: ${conn.detaching})`,
     );
-    if (!conn.detaching && ws.readyState === WebSocket.OPEN) {
-      ws.close(1000, 'Session ended');
-    }
     cleanup(conn);
   });
 
@@ -244,8 +215,10 @@ export const handleConnection = (ws: WebSocket) => {
         break;
       }
       case MSG_KILL_SESSION: {
-        console.log(`[terminal] kill session requested: ${SESSION_NAME}`);
-        killTmuxSession();
+        console.log(`[terminal] kill session requested: ${sessionName}`);
+        killSession(sessionName).catch((err) => {
+          console.log(`[terminal] kill session failed: ${err instanceof Error ? err.message : err}`);
+        });
         break;
       }
     }
@@ -258,6 +231,7 @@ export const handleConnection = (ws: WebSocket) => {
 
   ws.on('error', (err) => {
     console.log(`[terminal] websocket error (pid: ${ptyProcess.pid}): ${err.message}`);
+    conn.detaching = true;
     cleanup(conn);
   });
 };

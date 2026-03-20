@@ -10,7 +10,7 @@ import ConnectionStatus from '@/components/features/terminal/connection-status';
 import SessionEndedOverlay from '@/components/features/terminal/session-ended-overlay';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
-  'max-connections': '동시 접속 수를 초과했습니다',
+  'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
   'pty-error': '터미널을 시작할 수 없습니다',
 };
 
