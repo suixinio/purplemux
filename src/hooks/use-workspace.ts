@@ -8,6 +8,13 @@ interface IValidateResponse {
   suggestedName?: string;
 }
 
+export interface IWorkspaceInitialData {
+  workspaces: IWorkspace[];
+  activeWorkspaceId: string | null;
+  sidebarCollapsed: boolean;
+  sidebarWidth: number;
+}
+
 interface IUseWorkspace {
   workspaces: IWorkspace[];
   activeWorkspaceId: string | null;
@@ -27,12 +34,12 @@ interface IUseWorkspace {
   retry: () => void;
 }
 
-const useWorkspace = (): IUseWorkspace => {
-  const [workspaces, setWorkspaces] = useState<IWorkspace[]>([]);
-  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [sidebarWidth, setSidebarWidthState] = useState(200);
-  const [isLoading, setIsLoading] = useState(true);
+const useWorkspace = (initialData?: IWorkspaceInitialData): IUseWorkspace => {
+  const [workspaces, setWorkspaces] = useState<IWorkspace[]>(initialData?.workspaces ?? []);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(initialData?.activeWorkspaceId ?? null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(initialData?.sidebarCollapsed ?? false);
+  const [sidebarWidth, setSidebarWidthState] = useState(initialData?.sidebarWidth ?? 200);
+  const [isLoading, setIsLoading] = useState(!initialData);
   const [error, setError] = useState<string | null>(null);
 
   const saveActive = useCallback(
@@ -69,8 +76,8 @@ const useWorkspace = (): IUseWorkspace => {
   }, []);
 
   useEffect(() => {
-    fetchWorkspaces();
-  }, [fetchWorkspaces]);
+    if (!initialData) fetchWorkspaces();
+  }, [fetchWorkspaces]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const switchWorkspace = useCallback(
     (workspaceId: string) => {

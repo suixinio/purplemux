@@ -3,12 +3,16 @@ import { Loader2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import useLayout, { collectPanes } from '@/hooks/use-layout';
-import useWorkspace from '@/hooks/use-workspace';
+import useWorkspace, { type IWorkspaceInitialData } from '@/hooks/use-workspace';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
 
-const TerminalPage = () => {
-  const ws = useWorkspace();
+interface ITerminalPageProps {
+  initialWorkspace?: IWorkspaceInitialData;
+}
+
+const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
+  const ws = useWorkspace(initialWorkspace);
   const prevWorkspaceIdRef = useRef<string | null>(null);
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [fadeOut, setFadeOut] = useState(false);
