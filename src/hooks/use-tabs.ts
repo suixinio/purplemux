@@ -56,20 +56,8 @@ const useTabs = (): IUseTabs => {
       if (!res.ok) throw new Error();
       const data = await res.json();
 
-      let tabList: ITab[] = data.tabs;
-      let active: string | null = data.activeTabId;
-
-      if (tabList.length === 0) {
-        const createRes = await fetch('/api/tabs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        });
-        if (!createRes.ok) throw new Error();
-        const newTab: ITab = await createRes.json();
-        tabList = [newTab];
-        active = newTab.id;
-        saveActiveTab(newTab.id);
-      }
+      const tabList: ITab[] = data.tabs;
+      const active: string | null = data.activeTabId;
 
       setTabs(tabList);
       setActiveTabId(active || tabList[0]?.id || null);

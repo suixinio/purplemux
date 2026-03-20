@@ -61,7 +61,7 @@ const cleanup = (conn: IActiveConnection) => {
     removeTabBySession(conn.sessionName);
     console.log(`[terminal] tmux session ended: ${conn.sessionName}`);
   } else {
-    console.log(`[terminal] detached from tmux session: ${conn.sessionName}`);
+    console.log(`[terminal] tab switch detach: ${conn.sessionName}`);
   }
 
   try {
@@ -191,6 +191,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
     const exists = await hasSession(sessionId);
     if (!exists) {
       console.log(`[terminal] session not found: ${sessionName}`);
+      removeTabBySession(sessionName);
       ws.close(1011, 'Session not found');
       return;
     }

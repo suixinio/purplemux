@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { Loader2, WifiOff } from 'lucide-react';
+import { Loader2, Plus, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { TDisconnectReason } from '@/types/terminal';
@@ -99,8 +99,6 @@ const TerminalPage = () => {
 
     if (adjacent) {
       current.switchTab(adjacent.id);
-    } else {
-      current.createTab();
     }
   }, []);
 
@@ -181,15 +179,12 @@ const TerminalPage = () => {
 
         if (adjacent) {
           switchTab(adjacent.id);
-        } else {
-          const newTab = await createTab();
-          if (!newTab) return;
         }
       }
 
       await deleteTab(tabId);
     },
-    [activeTabId, tabs, switchTab, createTab, deleteTab],
+    [activeTabId, tabs, switchTab, deleteTab],
   );
 
   const handleRenameTab = useCallback(
@@ -206,11 +201,13 @@ const TerminalPage = () => {
     [reorderTabs],
   );
 
-  const ready = isReady && !tabsLoading && status === 'connected';
+  const noTabs = !tabsLoading && !tabsError && tabs.length === 0;
+  const ready = isReady && !tabsLoading && status === 'connected' && !noTabs;
   const showInitialLoading =
-    !isReady ||
-    (tabsLoading && tabs.length === 0) ||
-    (isReady && !tabsLoading && !tabsError && status === 'connecting' && !hasEverConnected);
+    !noTabs &&
+    (!isReady ||
+      (tabsLoading && tabs.length === 0) ||
+      (isReady && !tabsLoading && !tabsError && status === 'connecting' && !hasEverConnected));
 
   return (
     <div
@@ -240,6 +237,25 @@ const TerminalPage = () => {
           )}
         />
 
+        {noTabs && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              onClick={handleCreateTab}
+              disabled={isCreating}
+            >
+              {isCreating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Plus className="h-3.5 w-3.5" />
+              )}
+              새 탭 열기
+            </Button>
+          </div>
+        )}
+
         {showInitialLoading && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-zinc-500" />
@@ -247,7 +263,7 @@ const TerminalPage = () => {
           </div>
         )}
 
-        {!tabsLoading && !tabsError && status === 'disconnected' && (
+        {!tabsLoading && !tabsError && !noTabs && status === 'disconnected' && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
             <WifiOff className="h-5 w-5 text-zinc-500" />
             <span className="text-sm text-zinc-400">
@@ -260,7 +276,7 @@ const TerminalPage = () => {
           </div>
         )}
 
-        {!tabsLoading && !tabsError && (
+        {!tabsLoading && !tabsError && !noTabs && (
           <ConnectionStatus
             status={status}
             retryCount={retryCount}
