@@ -30,9 +30,10 @@ const XTERM_THEME = {
 
 interface IUseTerminalOptions {
   onInput?: (data: string) => void;
+  onResize?: (cols: number, rows: number) => void;
 }
 
-const useTerminal = ({ onInput }: IUseTerminalOptions = {}) => {
+const useTerminal = ({ onInput, onResize }: IUseTerminalOptions = {}) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -40,39 +41,41 @@ const useTerminal = ({ onInput }: IUseTerminalOptions = {}) => {
   const isWritingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
 
-  const processWriteQueue = useCallback(() => {
-    requestAnimationFrame(() => {
-      const terminal = terminalInstance.current;
-      const queue = writeQueueRef.current;
-      if (!terminal || queue.length === 0) {
-        isWritingRef.current = false;
-        return;
-      }
+  const callbacksRef = useRef({ onInput, onResize });
 
-      const startTime = performance.now();
-      while (queue.length > 0 && performance.now() - startTime < 12) {
-        const chunk = queue.shift()!;
-        terminal.write(chunk);
-      }
+  useEffect(() => {
+    callbacksRef.current = { onInput, onResize };
+  });
 
-      if (queue.length > 0) {
-        processWriteQueue();
-      } else {
-        isWritingRef.current = false;
-      }
-    });
+  const write = useCallback((data: Uint8Array) => {
+    writeQueueRef.current.push(data);
+    if (!isWritingRef.current) {
+      isWritingRef.current = true;
+      const flush = () => {
+        requestAnimationFrame(() => {
+          const terminal = terminalInstance.current;
+          const queue = writeQueueRef.current;
+          if (!terminal || queue.length === 0) {
+            isWritingRef.current = false;
+            return;
+          }
+
+          const startTime = performance.now();
+          while (queue.length > 0 && performance.now() - startTime < 12) {
+            const chunk = queue.shift()!;
+            terminal.write(chunk);
+          }
+
+          if (queue.length > 0) {
+            flush();
+          } else {
+            isWritingRef.current = false;
+          }
+        });
+      };
+      flush();
+    }
   }, []);
-
-  const write = useCallback(
-    (data: Uint8Array) => {
-      writeQueueRef.current.push(data);
-      if (!isWritingRef.current) {
-        isWritingRef.current = true;
-        processWriteQueue();
-      }
-    },
-    [processWriteQueue],
-  );
 
   const clear = useCallback(() => {
     terminalInstance.current?.clear();
@@ -128,23 +131,24 @@ const useTerminal = ({ onInput }: IUseTerminalOptions = {}) => {
     terminalInstance.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // 폰트 로드 후 fit 재계산
+    terminal.onData((data) => {
+      callbacksRef.current.onInput?.(data);
+    });
+
     document.fonts.ready.then(() => {
       fitAddon.fit();
+      callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
       setIsReady(true);
     });
 
-    if (onInput) {
-      terminal.onData(onInput);
-    }
-
+    let resizeTimer: number;
     const resizeObserver = new ResizeObserver(() => {
       clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
         fitAddon.fit();
+        callbacksRef.current.onResize?.(terminal.cols, terminal.rows);
       }, 100);
     });
-    let resizeTimer: number;
 
     resizeObserver.observe(container);
 
@@ -155,7 +159,7 @@ const useTerminal = ({ onInput }: IUseTerminalOptions = {}) => {
       terminalInstance.current = null;
       fitAddonRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return { terminalRef, write, clear, fit, focus, isReady };
 };

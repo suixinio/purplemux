@@ -33,8 +33,11 @@ const useTerminalWebSocket = ({
   const retryCountRef = useRef(0);
   const isNormalCloseRef = useRef(false);
   const callbacksRef = useRef({ onData, onConnected, onSessionEnded });
+  const connectRef = useRef<() => void>(() => {});
 
-  callbacksRef.current = { onData, onConnected, onSessionEnded };
+  useEffect(() => {
+    callbacksRef.current = { onData, onConnected, onSessionEnded };
+  });
 
   const clearTimers = useCallback(() => {
     if (heartbeatRef.current) {
@@ -59,12 +62,14 @@ const useTerminalWebSocket = ({
     try {
       await fetch('/api/terminal');
     } catch {
-      // WSS 초기화 실패 시 재연결 시도
       if (retryCountRef.current < MAX_RETRIES) {
         const delay = RECONNECT_DELAYS[retryCountRef.current] ?? 16000;
         retryCountRef.current++;
         setRetryCount(retryCountRef.current);
-        retryTimerRef.current = setTimeout(connect, delay);
+        retryTimerRef.current = setTimeout(
+          () => connectRef.current(),
+          delay,
+        );
       } else {
         setStatus('disconnected');
       }
@@ -123,7 +128,10 @@ const useTerminalWebSocket = ({
         retryCountRef.current++;
         setRetryCount(retryCountRef.current);
         setStatus('reconnecting');
-        retryTimerRef.current = setTimeout(connect, delay);
+        retryTimerRef.current = setTimeout(
+          () => connectRef.current(),
+          delay,
+        );
       } else {
         setStatus('disconnected');
       }
@@ -133,6 +141,10 @@ const useTerminalWebSocket = ({
       // onclose will handle reconnection
     };
   }, [clearTimers]);
+
+  useEffect(() => {
+    connectRef.current = connect;
+  });
 
   const sendStdin = useCallback((data: string) => {
     const ws = wsRef.current;
@@ -151,11 +163,11 @@ const useTerminalWebSocket = ({
   const reconnect = useCallback(() => {
     retryCountRef.current = 0;
     setRetryCount(0);
-    connect();
-  }, [connect]);
+    connectRef.current();
+  }, []);
 
   useEffect(() => {
-    connect();
+    connectRef.current();
     return () => {
       clearTimers();
       if (wsRef.current) {

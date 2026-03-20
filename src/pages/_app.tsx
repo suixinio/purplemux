@@ -1,5 +1,6 @@
 import "@/styles/globals.css";
 import "pretendard/dist/web/static/pretendard.css";
+import "@xterm/xterm/css/xterm.css";
 import type { AppProps } from "next/app";
 import localFont from "next/font/local";
 
