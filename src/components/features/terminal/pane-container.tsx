@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import { Loader2, Plus, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,7 @@ interface IPaneContainerProps {
   onEqualizeRatios: () => void;
 }
 
+const TERMINAL_SCALE = 0.5;
 const TITLE_DEBOUNCE_MS = 3000;
 
 const PaneContainer = ({
@@ -362,6 +364,24 @@ const PaneContainer = ({
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
+  const isClaudeCode = activePanelType === 'claude-code';
+
+  const splitGroupRef = useRef<GroupImperativeHandle>(null);
+
+  useEffect(() => {
+    if (!splitGroupRef.current) return;
+    if (isClaudeCode) {
+      splitGroupRef.current.setLayout({ timeline: 70, 'terminal-area': 30 });
+    } else {
+      splitGroupRef.current.setLayout({ timeline: 0, 'terminal-area': 100 });
+    }
+    const timer = setTimeout(() => {
+      if (!isReady || status !== 'connected') return;
+      const { cols, rows } = fit();
+      wsActionsRef.current.sendResize(cols, rows);
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const noTabs = tabs.length === 0;
   const ready = isReady && status === 'connected' && !noTabs;
@@ -413,36 +433,58 @@ const PaneContainer = ({
         onTogglePanelType={handleTogglePanelType}
       />
 
-      <div role="tabpanel" className="relative min-h-0 flex-1 flex flex-col" style={{ backgroundColor: terminalTheme.colors.background }}>
-        {activePanelType === 'claude-code' && activeTab && (
-          <ClaudeCodePanel
-            sessionName={activeTab.sessionName}
-            className="min-h-0 flex-[7]"
-          />
-        )}
-
-        <div className={cn(
-          'min-h-0',
-          activePanelType === 'terminal' ? 'flex-1' : 'flex-[3]',
-        )}>
-          <div
-            className="h-full w-full"
-            style={activePanelType === 'claude-code' ? {
-              transform: 'scale(0.7)',
-              transformOrigin: 'top left',
-              width: `${100 / 0.7}%`,
-              height: `${100 / 0.7}%`,
-            } : undefined}
+      <div role="tabpanel" className="relative min-h-0 flex-1" style={{ backgroundColor: terminalTheme.colors.background }}>
+        <Group
+          groupRef={splitGroupRef}
+          orientation="vertical"
+          defaultLayout={isClaudeCode
+            ? { timeline: 70, 'terminal-area': 30 }
+            : { timeline: 0, 'terminal-area': 100 }
+          }
+          className="h-full"
+        >
+          <Panel
+            id="timeline"
+            minSize={0}
+            collapsible
+            collapsedSize={0}
+            disabled={!isClaudeCode}
           >
-            <TerminalContainer
-              ref={terminalRef}
-              className={cn(
-                'transition-opacity duration-150',
-                ready ? 'opacity-100' : 'opacity-0',
-              )}
-            />
-          </div>
-        </div>
+            {isClaudeCode && activeTab && (
+              <ClaudeCodePanel sessionName={activeTab.sessionName} />
+            )}
+          </Panel>
+
+          <Separator
+            className={cn(
+              'group flex items-center justify-center',
+              isClaudeCode ? 'h-2' : 'h-0',
+            )}
+            disabled={!isClaudeCode}
+          >
+            <div className="h-px w-16 rounded-full bg-border transition-colors group-hover:bg-muted-foreground group-data-[resize-handle-active]:bg-muted-foreground" />
+          </Separator>
+
+          <Panel id="terminal-area" minSize={10}>
+            <div
+              className="h-full w-full"
+              style={isClaudeCode ? {
+                transform: `scale(${TERMINAL_SCALE})`,
+                transformOrigin: 'top left',
+                width: `${100 / TERMINAL_SCALE}%`,
+                height: `${100 / TERMINAL_SCALE}%`,
+              } : undefined}
+            >
+              <TerminalContainer
+                ref={terminalRef}
+                className={cn(
+                  'transition-opacity duration-150',
+                  ready ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+            </div>
+          </Panel>
+        </Group>
 
         {noTabs && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
