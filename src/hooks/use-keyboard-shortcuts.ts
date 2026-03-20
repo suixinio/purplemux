@@ -195,7 +195,10 @@ const useKeyboardShortcuts = ({
       const digit = parseInt(event.code.replace('Digit', ''), 10);
       if (isNaN(digit) || digit < 1 || digit > 9) return;
 
-      const workspace = w.workspaces[digit - 1];
+      const workspace =
+        digit === 9
+          ? w.workspaces[w.workspaces.length - 1]
+          : w.workspaces[digit - 1];
       if (workspace && workspace.id !== w.activeWorkspaceId) {
         onSelectWorkspaceRef.current(workspace.id);
       }
