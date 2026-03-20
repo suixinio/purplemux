@@ -2,10 +2,11 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { Loader2, Plus, WifiOff } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { ITab, TDisconnectReason } from '@/types/terminal';
+import type { ITab, TDisconnectReason, TPanelType } from '@/types/terminal';
 import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
+import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle } from '@/lib/tab-title';
@@ -61,6 +62,7 @@ interface IPaneContainerProps {
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
   onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
+  onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   onEqualizeRatios: () => void;
 }
 
@@ -86,6 +88,7 @@ const PaneContainer = ({
   onReorderTabs,
   onRemoveTabLocally,
   onUpdateTabTitles,
+  onUpdateTabPanelType,
   onEqualizeRatios,
 }: IPaneContainerProps) => {
   const [hasEverConnected, setHasEverConnected] = useState(false);
@@ -346,6 +349,17 @@ const PaneContainer = ({
     onFocusPane(paneId);
   }, [paneId, onFocusPane]);
 
+  const handleTogglePanelType = useCallback(() => {
+    if (!activeTabId) return;
+    const activeTab = tabs.find((t) => t.id === activeTabId);
+    const current = activeTab?.panelType ?? 'terminal';
+    const next: TPanelType = current === 'terminal' ? 'claude-code' : 'terminal';
+    onUpdateTabPanelType(paneId, activeTabId, next);
+  }, [paneId, activeTabId, tabs, onUpdateTabPanelType]);
+
+  const activeTab = tabs.find((t) => t.id === activeTabId);
+  const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
+
   const noTabs = tabs.length === 0;
   const ready = isReady && status === 'connected' && !noTabs;
   const showInitialLoading =
@@ -392,6 +406,8 @@ const PaneContainer = ({
         onFocusPane={handleFocusPane}
         onRetry={() => {}}
         onEqualizeRatios={onEqualizeRatios}
+        activePanelType={activePanelType}
+        onTogglePanelType={handleTogglePanelType}
       />
 
       <div role="tabpanel" className="relative min-h-0 flex-1" style={{ backgroundColor: '#1e1f29' }}>
@@ -399,9 +415,17 @@ const PaneContainer = ({
           ref={terminalRef}
           className={cn(
             'transition-opacity duration-150',
+            activePanelType !== 'terminal' && 'hidden',
             ready ? 'opacity-100' : 'opacity-0',
           )}
         />
+
+        {activePanelType === 'claude-code' && activeTab && (
+          <ClaudeCodePanel
+            sessionName={activeTab.sessionName}
+            className="transition-opacity duration-150 opacity-100"
+          />
+        )}
 
         {noTabs && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">

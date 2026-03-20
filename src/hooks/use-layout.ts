@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
-import type { ILayoutData, TLayoutNode, IPaneNode, ITab } from '@/types/terminal';
+import type { ILayoutData, TLayoutNode, IPaneNode, ITab, TPanelType } from '@/types/terminal';
 
 
 export const collectPanes = (node: TLayoutNode): IPaneNode[] => {
@@ -635,6 +635,19 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     });
   }, [updateAndSave]);
 
+  const updateTabPanelType = useCallback(
+    (paneId: string, tabId: string, panelType: TPanelType) => {
+      updateAndSave((data) => {
+        const pane = findPane(data.root, paneId);
+        if (!pane) return data;
+        const tab = pane.tabs.find((t) => t.id === tabId);
+        if (tab) tab.panelType = panelType;
+        return data;
+      });
+    },
+    [updateAndSave],
+  );
+
   const saveCurrentLayout = useCallback(() => {
     const current = layoutRef.current;
     if (!current) return;
@@ -672,6 +685,7 @@ const useLayout = ({ workspaceId, onFetchError }: IUseLayoutOptions) => {
     removeTabLocally,
     updateTabTitlesInPane,
     equalizeRatios,
+    updateTabPanelType,
     saveCurrentLayout,
     clearLayout,
     retry: fetchLayout,

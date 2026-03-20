@@ -7,12 +7,15 @@ export type TConnectionStatus =
 
 export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-found' | null;
 
+export type TPanelType = 'terminal' | 'claude-code';
+
 export interface ITab {
   id: string;
   sessionName: string;
   name: string;
   order: number;
   title?: string;
+  panelType?: TPanelType;
 }
 
 export interface ISplitNode {

@@ -1,0 +1,11 @@
+# v8 Task
+
+| feature | phase | priority | build | verify | updated |
+|---|---|---|---|---|---|
+| panel-type-system | Phase 1 | P0 | ✅ | ⬜ | 2026-03-20 01:48 |
+| claude-code-panel | Phase 1 | P0 | ⬜ | ⬜ | |
+| session-parser | Phase 1 | P0 | ⬜ | ⬜ | |
+| session-detection | Phase 1 | P0 | ⬜ | ⬜ | |
+| realtime-watch | Phase 1 | P0 | ⬜ | ⬜ | |
+| claude-detection | Phase 1 | P1 | ⬜ | ⬜ | |
+| panel-toggle | Phase 1 | P1 | ⬜ | ⬜ | |

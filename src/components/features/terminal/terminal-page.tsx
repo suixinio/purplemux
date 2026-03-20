@@ -203,6 +203,7 @@ const TerminalPage = ({ initialWorkspace }: ITerminalPageProps) => {
               onReorderTabs={layout.reorderTabsInPane}
               onRemoveTabLocally={layout.removeTabLocally}
               onUpdateTabTitles={layout.updateTabTitlesInPane}
+              onUpdateTabPanelType={layout.updateTabPanelType}
               onEqualizeRatios={layout.equalizeRatios}
             />
           </div>

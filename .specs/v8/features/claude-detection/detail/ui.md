@@ -2,7 +2,7 @@
 
 ## 개요
 
-claude 명령어 감지는 서버 측 폴링 로직이므로 직접적인 UI 요소가 없다. 감지 결과에 따른 Panel 타입 자동 전환의 시각적 효과를 정의한다.
+claude 명령어 감지는 클라이언트 xterm `onTitleChange` 이벤트 기반이므로 별도 UI 요소가 없다. 감지 결과에 따른 Panel 타입 자동 전환의 시각적 효과를 정의한다.
 
 ## 자동 전환 시 시각 효과
 
@@ -20,7 +20,7 @@ BEFORE (Terminal 모드):
 │                                          │
 └──────────────────────────────────────────┘
 
-    ↓ claude 명령어 감지 → panelType 자동 전환
+    ↓ onTitleChange → isClaudeProcess → panelType 자동 전환
 
 AFTER (Claude Code 모드):
 ┌──────────────────────────────────────────┐
@@ -49,12 +49,14 @@ AFTER (Claude Code 모드):
 
 ## 감지 상태 표시
 
-감지 동작 자체는 백그라운드에서 이루어지며, 사용자에게 폴링 상태를 표시하지 않는다. 전환 결과만 시각적으로 반영된다.
+감지 동작은 xterm 이벤트 기반으로 백그라운드에서 이루어지며, 사용자에게 감지 상태를 별도 표시하지 않는다. 전환 결과만 시각적으로 반영된다.
 
 ## 파일 구조
 
 ```
 src/
-└── lib/
-    └── claude-detection.ts   ← tmux 프로세스 폴링 로직
+├── lib/
+│   └── tab-title.ts          ← parseCurrentCommand, isClaudeProcess 추가
+└── components/features/terminal/
+    └── pane-container.tsx     ← onTitleChange 콜백에 감지 로직 추가
 ```

@@ -1,7 +1,7 @@
 import { useRef, useLayoutEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
-import type { TLayoutNode, ITab } from '@/types/terminal';
+import type { TLayoutNode, ITab, TPanelType } from '@/types/terminal';
 import { collectPanes, getFirstPaneId, equalizeNode } from '@/hooks/use-layout';
 import PaneContainer from '@/components/features/terminal/pane-container';
 
@@ -23,6 +23,7 @@ interface IPaneLayoutProps {
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
   onUpdateTabTitles: (paneId: string, titles: Record<string, string>) => void;
+  onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   onEqualizeRatios: () => void;
 }
 
@@ -45,6 +46,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     onReorderTabs,
     onRemoveTabLocally,
     onUpdateTabTitles,
+    onUpdateTabPanelType,
     onEqualizeRatios,
   } = props;
 
@@ -199,6 +201,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             onReorderTabs={onReorderTabs}
             onRemoveTabLocally={onRemoveTabLocally}
             onUpdateTabTitles={onUpdateTabTitles}
+            onUpdateTabPanelType={onUpdateTabPanelType}
             onEqualizeRatios={handleEqualizeRatios}
           />,
           getStableContainer(pane.id),

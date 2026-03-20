@@ -7,6 +7,8 @@ import {
   AlertTriangle,
   Loader2,
   Equal,
+  SquareTerminal,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,7 +26,7 @@ const SplitHorizontalIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 import { Button } from '@/components/ui/button';
-import type { ITab } from '@/types/terminal';
+import type { ITab, TPanelType } from '@/types/terminal';
 import { isAutoTabName } from '@/lib/tab-title';
 
 interface IPaneTabBarProps {
@@ -50,6 +52,8 @@ interface IPaneTabBarProps {
   onFocusPane: () => void;
   onRetry: () => void;
   onEqualizeRatios: () => void;
+  activePanelType: TPanelType;
+  onTogglePanelType: () => void;
 }
 
 const PaneTabBar = ({
@@ -75,6 +79,8 @@ const PaneTabBar = ({
   onFocusPane,
   onRetry,
   onEqualizeRatios,
+  activePanelType,
+  onTogglePanelType,
 }: IPaneTabBarProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -432,6 +438,23 @@ const PaneTabBar = ({
             <Loader2 className="h-3 w-3 animate-spin" />
           ) : (
             <Plus className="h-3 w-3" />
+          )}
+        </button>
+
+        {/* Panel type toggle */}
+        <button
+          className={cn(
+            'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground',
+            activePanelType === 'claude-code' && 'text-ui-purple',
+          )}
+          onClick={onTogglePanelType}
+          aria-label={activePanelType === 'terminal' ? 'Claude Code 모드로 전환' : '터미널 모드로 전환'}
+          title={activePanelType === 'terminal' ? 'Claude Code 모드' : '터미널 모드'}
+        >
+          {activePanelType === 'terminal' ? (
+            <Bot className="h-3 w-3" />
+          ) : (
+            <SquareTerminal className="h-3 w-3" />
           )}
         </button>
 
