@@ -10,6 +10,7 @@ const SESSIONS_DIR = path.join(CLAUDE_DIR, 'sessions');
 const PROJECTS_DIR = path.join(CLAUDE_DIR, 'projects');
 const PID_POLL_INTERVAL = 10_000;
 const SESSION_DIR_DEBOUNCE = 200;
+const INSTALL_CHECK_INTERVAL = 60_000;
 
 interface IPidFileData {
   pid: number;
@@ -18,10 +19,10 @@ interface IPidFileData {
   startedAt: number;
 }
 
-const dirToProjectName = (dir: string): string =>
-  dir.replace(/\//g, '-');
+export const toClaudeProjectName = (dirPath: string): string =>
+  dirPath.replace(/\//g, '-');
 
-const isProcessRunning = (pid: number): Promise<boolean> =>
+export const isProcessRunning = (pid: number): Promise<boolean> =>
   new Promise((resolve) => {
     execFile('ps', ['-p', String(pid)], (err) => {
       resolve(!err);
@@ -73,14 +74,14 @@ const findLatestJsonl = async (projectDir: string): Promise<{ sessionId: string;
   }
 };
 
-export const detectSession = async (workspaceDir: string): Promise<ISessionInfo> => {
+export const detectActiveSession = async (workspaceDir: string): Promise<ISessionInfo> => {
   try {
     await fs.access(CLAUDE_DIR);
   } catch {
     return { status: 'not-installed', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
   }
 
-  const projectName = dirToProjectName(workspaceDir);
+  const projectName = toClaudeProjectName(workspaceDir);
   const projectDir = path.join(PROJECTS_DIR, projectName);
 
   const activeSessions: (IPidFileData & { pidFile: string })[] = [];
@@ -136,17 +137,28 @@ export const detectSession = async (workspaceDir: string): Promise<ISessionInfo>
   return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
 };
 
+export const startEndDetectionPolling = (
+  pid: number,
+  onEnd: () => void,
+  intervalMs: number = PID_POLL_INTERVAL,
+): NodeJS.Timeout =>
+  setInterval(async () => {
+    const running = await isProcessRunning(pid);
+    if (!running) onEnd();
+  }, intervalMs);
+
 export interface ISessionWatcher {
   stop: () => void;
 }
 
-export const watchSessionDir = (
+export const watchSessionsDir = (
   workspaceDir: string,
   onChange: (info: ISessionInfo) => void,
 ): ISessionWatcher => {
   let watcher: FSWatcher | null = null;
   let pidPollTimer: ReturnType<typeof setInterval> | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let installCheckTimer: ReturnType<typeof setInterval> | null = null;
   let currentPid: number | null = null;
   let stopped = false;
 
@@ -155,7 +167,7 @@ export const watchSessionDir = (
     const running = await isProcessRunning(currentPid);
     if (!running && !stopped) {
       currentPid = null;
-      const info = await detectSession(workspaceDir);
+      const info = await detectActiveSession(workspaceDir);
       onChange(info);
     }
   };
@@ -165,20 +177,42 @@ export const watchSessionDir = (
     if (debounceTimer) clearTimeout(debounceTimer);
     debounceTimer = setTimeout(async () => {
       if (stopped) return;
-      const info = await detectSession(workspaceDir);
+      const info = await detectActiveSession(workspaceDir);
       if (info.pid) currentPid = info.pid;
       onChange(info);
     }, SESSION_DIR_DEBOUNCE);
   };
 
-  try {
-    watcher = watch(SESSIONS_DIR, handleSessionDirChange);
-    watcher.on('error', () => {});
-  } catch {}
+  const tryWatch = () => {
+    if (stopped) return;
+    try {
+      watcher = watch(SESSIONS_DIR, handleSessionDirChange);
+      watcher.on('error', () => {});
+      if (installCheckTimer) {
+        clearInterval(installCheckTimer);
+        installCheckTimer = null;
+      }
+    } catch {
+      // sessions dir doesn't exist — retry periodically
+      if (!installCheckTimer) {
+        installCheckTimer = setInterval(async () => {
+          if (stopped) return;
+          try {
+            await fs.access(SESSIONS_DIR);
+            tryWatch();
+            const info = await detectActiveSession(workspaceDir);
+            if (info.pid) currentPid = info.pid;
+            onChange(info);
+          } catch {}
+        }, INSTALL_CHECK_INTERVAL);
+      }
+    }
+  };
 
+  tryWatch();
   pidPollTimer = setInterval(pollPid, PID_POLL_INTERVAL);
 
-  detectSession(workspaceDir).then((info) => {
+  detectActiveSession(workspaceDir).then((info) => {
     if (stopped) return;
     if (info.pid) currentPid = info.pid;
     onChange(info);
@@ -190,6 +224,7 @@ export const watchSessionDir = (
       if (watcher) watcher.close();
       if (pidPollTimer) clearInterval(pidPollTimer);
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (installCheckTimer) clearInterval(installCheckTimer);
     },
   };
 };

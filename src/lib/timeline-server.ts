@@ -1,7 +1,7 @@
 import { IncomingMessage } from 'http';
 import { WebSocket } from 'ws';
 import { watch, type FSWatcher } from 'fs';
-import { detectSession, watchSessionDir, type ISessionWatcher } from './session-detection';
+import { detectActiveSession, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { parseSessionFile, parseIncremental } from './session-parser';
 import { getWorkspaceById } from './workspace-store';
 import type { TTimelineServerMessage } from '@/types/timeline';
@@ -182,6 +182,12 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     return;
   }
 
+  if (!workspace.directories.length) {
+    sendJson(ws, { type: 'timeline:init', entries: [], sessionId: '', totalEntries: 0 });
+    ws.close(1000, 'No workspace directories');
+    return;
+  }
+
   const workspaceDir = workspace.directories[0];
   let lastHeartbeat = Date.now();
   let currentJsonlPath: string | null = null;
@@ -234,7 +240,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   ws.on('close', () => cleanup(conn));
   ws.on('error', () => cleanup(conn));
 
-  const sessionInfo = await detectSession(workspaceDir);
+  const sessionInfo = await detectActiveSession(workspaceDir);
 
   if (sessionInfo.jsonlPath) {
     currentJsonlPath = sessionInfo.jsonlPath;
@@ -250,7 +256,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   const wsKey = `${workspaceId}:${sessionName}`;
   if (!sessionWatchers.has(wsKey)) {
-    const sw = watchSessionDir(workspaceDir, async (newInfo) => {
+    const sw = watchSessionsDir(workspaceDir, async (newInfo) => {
       if (newInfo.jsonlPath && newInfo.jsonlPath !== currentJsonlPath) {
         if (currentJsonlPath) {
           unsubscribeFromFile(ws, currentJsonlPath);
