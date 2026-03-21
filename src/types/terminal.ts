@@ -55,5 +55,6 @@ export interface IWorkspacesData {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   terminalTheme?: { light: string; dark: string };
+  dangerouslySkipPermissions?: boolean;
   updatedAt: string;
 }

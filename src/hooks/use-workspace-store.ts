@@ -14,6 +14,7 @@ export interface IWorkspaceInitialData {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   terminalTheme: { light: string; dark: string } | null;
+  dangerouslySkipPermissions: boolean;
 }
 
 interface IWorkspaceState {
@@ -21,6 +22,7 @@ interface IWorkspaceState {
   activeWorkspaceId: string | null;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
+  dangerouslySkipPermissions: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -35,6 +37,7 @@ interface IWorkspaceState {
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
+  setDangerouslySkipPermissions: (enabled: boolean) => void;
   validateDirectory: (directory: string) => Promise<IValidateResponse>;
 }
 
@@ -42,6 +45,7 @@ const saveActive = (updates: {
   activeWorkspaceId?: string;
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
+  dangerouslySkipPermissions?: boolean;
 }) => {
   fetch('/api/workspace/active', {
     method: 'PATCH',
@@ -55,6 +59,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   activeWorkspaceId: null,
   sidebarCollapsed: false,
   sidebarWidth: 200,
+  dangerouslySkipPermissions: false,
   isLoading: true,
   error: null,
 
@@ -64,6 +69,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       activeWorkspaceId: data.activeWorkspaceId,
       sidebarCollapsed: data.sidebarCollapsed,
       sidebarWidth: data.sidebarWidth,
+      dangerouslySkipPermissions: data.dangerouslySkipPermissions,
       isLoading: false,
       error: null,
     });
@@ -80,6 +86,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         activeWorkspaceId: data.activeWorkspaceId,
         sidebarCollapsed: data.sidebarCollapsed ?? false,
         sidebarWidth: data.sidebarWidth ?? 200,
+        dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
         isLoading: false,
       });
     } catch {
@@ -180,6 +187,11 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
 
   saveSidebarWidth: (width) => {
     saveActive({ sidebarWidth: width });
+  },
+
+  setDangerouslySkipPermissions: (enabled) => {
+    set({ dangerouslySkipPermissions: enabled });
+    saveActive({ dangerouslySkipPermissions: enabled });
   },
 
   validateDirectory: async (directory) => {

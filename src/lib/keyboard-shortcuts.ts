@@ -19,6 +19,7 @@ export const KEY_MAP = {
   PREV_TAB: `${mod}+shift+BracketLeft`,
   NEXT_TAB: `${mod}+shift+BracketRight`,
   CLEAR_TERMINAL: `${mod}+k`,
+  FOCUS_INPUT: `${mod}+i`,
 } as const;
 
 export const TAB_NUMBER_KEYS = Array.from(
@@ -63,6 +64,7 @@ const buildShortcutSet = (): Set<string> => {
     add(true, false, false, true, 'BracketLeft');
     add(true, false, false, true, 'BracketRight');
     add(true, false, false, false, 'KeyK');
+    add(true, false, false, false, 'KeyI');
     for (let i = 1; i <= 9; i++) add(false, true, false, false, `Digit${i}`);
     for (let i = 1; i <= 9; i++) add(true, false, false, false, `Digit${i}`);
   } else {
@@ -77,6 +79,7 @@ const buildShortcutSet = (): Set<string> => {
     add(false, true, false, true, 'BracketLeft');
     add(false, true, false, true, 'BracketRight');
     add(false, true, false, false, 'KeyK');
+    add(false, true, false, false, 'KeyI');
     for (let i = 1; i <= 9; i++) add(false, false, true, false, `Digit${i}`);
     for (let i = 1; i <= 9; i++) add(false, true, false, false, `Digit${i}`);
   }
@@ -109,4 +112,9 @@ export const isAppShortcut = (event: KeyboardEvent): boolean => {
 export const isClearShortcut = (event: KeyboardEvent): boolean => {
   const modKey = isMac ? event.metaKey : event.ctrlKey;
   return modKey && !event.shiftKey && !event.altKey && event.code === 'KeyK';
+};
+
+export const isFocusInputShortcut = (event: KeyboardEvent): boolean => {
+  const modKey = isMac ? event.metaKey : event.ctrlKey;
+  return modKey && !event.shiftKey && !event.altKey && event.code === 'KeyI';
 };

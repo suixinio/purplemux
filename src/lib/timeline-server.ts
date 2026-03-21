@@ -7,6 +7,7 @@ import { parseSessionFile, parseIncremental } from './session-parser';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd } from './tmux';
 import { cwdToProjectPath } from './session-list';
 import { updateTabClaudeSessionId } from './layout-store';
+import { getDangerouslySkipPermissions } from './workspace-store';
 import type { TTimelineServerMessage } from '@/types/timeline';
 import path from 'path';
 
@@ -228,7 +229,11 @@ const handleResumeMessage = async (
       return;
     }
 
-    await sendKeys(tmuxSession, `claude --resume ${sessionId}`);
+    const skipPerms = await getDangerouslySkipPermissions();
+    const resumeCmd = skipPerms
+      ? `claude --resume ${sessionId} --dangerously-skip-permissions`
+      : `claude --resume ${sessionId}`;
+    await sendKeys(tmuxSession, resumeCmd);
 
     await updateTabClaudeSessionId(conn.sessionName, sessionId).catch(() => {});
 

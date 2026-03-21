@@ -223,9 +223,10 @@ export const getWorkspaces = async (): Promise<{
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   terminalTheme: { light: string; dark: string } | null;
+  dangerouslySkipPermissions: boolean;
 }> => {
   const data = await readWorkspacesFile();
-  if (!data) return { workspaces: [], activeWorkspaceId: null, sidebarCollapsed: false, sidebarWidth: 200, terminalTheme: null };
+  if (!data) return { workspaces: [], activeWorkspaceId: null, sidebarCollapsed: false, sidebarWidth: 200, terminalTheme: null, dangerouslySkipPermissions: false };
 
   let theme = data.terminalTheme ?? null;
 
@@ -244,6 +245,7 @@ export const getWorkspaces = async (): Promise<{
     sidebarCollapsed: data.sidebarCollapsed,
     sidebarWidth: data.sidebarWidth,
     terminalTheme: theme,
+    dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
   };
 };
 
@@ -342,6 +344,7 @@ export const updateActive = async (updates: {
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
   terminalTheme?: { light: string; dark: string };
+  dangerouslySkipPermissions?: boolean;
 }): Promise<void> =>
   withLock(async () => {
     const data = (await readWorkspacesFile()) ?? emptyState();
@@ -349,6 +352,7 @@ export const updateActive = async (updates: {
     if (updates.sidebarCollapsed !== undefined) data.sidebarCollapsed = updates.sidebarCollapsed;
     if (updates.sidebarWidth !== undefined) data.sidebarWidth = updates.sidebarWidth;
     if (updates.terminalTheme !== undefined) data.terminalTheme = updates.terminalTheme;
+    if (updates.dangerouslySkipPermissions !== undefined) data.dangerouslySkipPermissions = updates.dangerouslySkipPermissions;
     await writeWorkspacesFile(data);
   });
 
@@ -363,6 +367,11 @@ export const updateWorkspaceDirectories = async (workspaceId: string, directorie
     ws.directories = directories;
     await writeWorkspacesFile(data);
   });
+
+export const getDangerouslySkipPermissions = async (): Promise<boolean> => {
+  const data = await readWorkspacesFile();
+  return data?.dangerouslySkipPermissions ?? false;
+};
 
 export const validateDirectory = async (directory: string): Promise<{
   valid: boolean;

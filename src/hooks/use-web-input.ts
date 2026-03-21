@@ -1,0 +1,94 @@
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { toast } from 'sonner';
+import type { TCliState } from '@/types/timeline';
+
+type TWebInputMode = 'input' | 'interrupt' | 'disabled';
+
+interface IUseWebInputReturn {
+  value: string;
+  setValue: (v: string) => void;
+  mode: TWebInputMode;
+  send: () => void;
+  interrupt: () => void;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
+  focusInput: () => void;
+}
+
+const useWebInput = (
+  cliState: TCliState,
+  sendStdin: (data: string) => void,
+  terminalWsConnected: boolean,
+): IUseWebInputReturn => {
+  const [value, setValue] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const savedValueRef = useRef('');
+
+  const mode: TWebInputMode = useMemo(() => {
+    if (cliState === 'idle') return 'input';
+    if (cliState === 'busy') return 'interrupt';
+    return 'disabled';
+  }, [cliState]);
+
+  const send = useCallback(() => {
+    if (mode !== 'input') {
+      if (mode === 'disabled') {
+        toast.error('Claude Code가 실행 중이 아닙니다');
+      }
+      return;
+    }
+
+    if (!terminalWsConnected) {
+      toast.error('터미널 연결이 끊어졌습니다');
+      return;
+    }
+
+    if (value.trim() === '') return;
+
+    sendStdin(value + '\r');
+    setValue('');
+  }, [mode, value, sendStdin, terminalWsConnected]);
+
+  const interrupt = useCallback(() => {
+    if (!terminalWsConnected) {
+      toast.error('터미널 연결이 끊어졌습니다');
+      return;
+    }
+    sendStdin('\x1b\x1b');
+  }, [sendStdin, terminalWsConnected]);
+
+  const focusInput = useCallback(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    const prevMode = prevModeRef.current;
+    if (prevMode === mode) return;
+
+    if (mode === 'interrupt' && prevMode === 'input') {
+      savedValueRef.current = value;
+    } else if (mode === 'input' && prevMode === 'interrupt') {
+      if (savedValueRef.current) {
+        setValue(savedValueRef.current);
+        savedValueRef.current = '';
+      }
+    } else if (mode === 'disabled') {
+      setValue('');
+      savedValueRef.current = '';
+    }
+    prevModeRef.current = mode;
+  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return {
+    value,
+    setValue,
+    mode,
+    send,
+    interrupt,
+    textareaRef,
+    focusInput,
+  };
+};
+
+export default useWebInput;
+export type { TWebInputMode };

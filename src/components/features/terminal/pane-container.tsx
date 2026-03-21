@@ -13,7 +13,7 @@ import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
-import { isAppShortcut, isClearShortcut } from '@/lib/keyboard-shortcuts';
+import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
@@ -153,12 +153,14 @@ const PaneContainer = ({
   }, []);
 
   const clearRef = useRef<() => void>(() => {});
+  const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const manualToggleCooldownRef = useRef<Record<string, number>>({});
 
   const handleCustomKeyEvent = useCallback((event: KeyboardEvent): boolean => {
     if (isAppShortcut(event)) {
       event.preventDefault();
       if (isClearShortcut(event)) clearRef.current();
+      if (isFocusInputShortcut(event)) focusInputRef.current?.();
       return false;
     }
     return true;
@@ -194,6 +196,17 @@ const PaneContainer = ({
   useEffect(() => {
     clearRef.current = clear;
   });
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      if (isFocusInputShortcut(e) && isFocused) {
+        e.preventDefault();
+        focusInputRef.current?.();
+      }
+    };
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+  }, [isFocused]);
 
   const handleSessionEnded = useCallback(async () => {
     const currentTabs = tabsRef.current;
@@ -493,6 +506,10 @@ const PaneContainer = ({
               <ClaudeCodePanel
                 sessionName={activeTab.sessionName}
                 claudeSessionId={activeTab.claudeSessionId}
+                sendStdin={sendStdin}
+                terminalWsConnected={status === 'connected'}
+                focusInputRef={focusInputRef}
+                focusTerminal={focus}
               />
             )}
           </Panel>

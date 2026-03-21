@@ -9,6 +9,7 @@ import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import SessionNavBar from '@/components/features/terminal/session-nav-bar';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import WebInputBar from '@/components/features/terminal/web-input-bar';
 
 const AUTO_RESUME_TIMEOUT_MS = 10_000;
 
@@ -16,9 +17,21 @@ interface IClaudeCodePanelProps {
   sessionName: string;
   claudeSessionId?: string | null;
   className?: string;
+  sendStdin: (data: string) => void;
+  terminalWsConnected: boolean;
+  focusInputRef: React.MutableRefObject<(() => void) | undefined>;
+  focusTerminal: () => void;
 }
 
-const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCodePanelProps) => {
+const ClaudeCodePanel = ({
+  sessionName,
+  claudeSessionId,
+  className,
+  sendStdin,
+  terminalWsConnected,
+  focusInputRef,
+  focusTerminal,
+}: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const [isAutoResuming, setIsAutoResuming] = useState(!!claudeSessionId);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -50,6 +63,7 @@ const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCod
 
   const {
     entries,
+    cliState,
     sessionStatus,
     wsStatus,
     isAutoScrollEnabled,
@@ -159,6 +173,8 @@ const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCod
     );
   }
 
+  const isInputVisible = view === 'timeline';
+
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
       <SessionNavBar onNavigateToList={handleNavigateToList} />
@@ -177,6 +193,14 @@ const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCod
           hasMore={timelineHasMore}
         />
       </div>
+      <WebInputBar
+        cliState={cliState}
+        sendStdin={sendStdin}
+        terminalWsConnected={terminalWsConnected}
+        visible={isInputVisible}
+        focusTerminal={focusTerminal}
+        focusInputRef={focusInputRef}
+      />
     </div>
   );
 };
