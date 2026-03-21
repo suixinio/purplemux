@@ -425,9 +425,9 @@ const PaneTabBar = ({
                 aria-label="새 탭"
               >
                 {isCreating ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Plus className="h-3 w-3" />
+                  <Plus className="h-3.5 w-3.5" />
                 )}
               </TooltipTrigger>
               <TooltipContent side="bottom">새 탭</TooltipContent>
@@ -439,19 +439,19 @@ const PaneTabBar = ({
               <Tooltip>
                 <TooltipTrigger
                   className={cn(
-                    'flex h-full w-[28px] items-center justify-center rounded-none text-muted-foreground',
-                    isSplitting ? 'pointer-events-none opacity-30' : 'hover:bg-destructive/20 hover:text-foreground',
+                    'flex h-7 w-7 items-center justify-center text-muted-foreground',
+                    isSplitting ? 'pointer-events-none opacity-30' : 'hover:text-foreground',
                   )}
                   disabled={isSplitting}
                   onClick={(e) => {
                     e.stopPropagation();
                     onClosePane();
                   }}
-                  aria-label="Pane 닫기"
+                  aria-label="닫기"
                 >
                   <X className="h-3.5 w-3.5" />
                 </TooltipTrigger>
-                <TooltipContent side="bottom">Pane 닫기</TooltipContent>
+                <TooltipContent side="bottom">닫기</TooltipContent>
               </Tooltip>
             </div>
           )}
