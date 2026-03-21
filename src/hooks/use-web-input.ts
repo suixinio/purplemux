@@ -68,16 +68,8 @@ const useWebInput = (
     const prevMode = prevModeRef.current;
     if (prevMode === mode) return;
 
-    if (mode === 'interrupt' && prevMode === 'input') {
-      savedValueRef.current = value;
-    } else if (mode === 'input' && prevMode === 'interrupt') {
-      if (savedValueRef.current) {
-        setValue(savedValueRef.current);
-        savedValueRef.current = '';
-      }
-    } else if (mode === 'disabled') {
+    if (mode === 'disabled') {
       setValue('');
-      savedValueRef.current = '';
     }
     prevModeRef.current = mode;
   }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps

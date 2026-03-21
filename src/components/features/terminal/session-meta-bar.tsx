@@ -100,7 +100,7 @@ const MetaBarDetail = ({
 
   return (
     <div className="flex flex-col gap-1">
-      <span className="text-sm font-medium text-foreground">{title}</span>
+      <span className="max-h-20 overflow-y-auto text-sm font-medium text-foreground">{title}</span>
 
       <div className="mt-1 flex flex-col gap-1">
         {createdAt && (

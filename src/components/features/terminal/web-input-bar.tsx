@@ -50,14 +50,6 @@ const WebInputBar = ({
     }
   }, [visible, setValue]);
 
-  const prevModeRef = useRef(mode);
-  useEffect(() => {
-    if (prevModeRef.current !== mode && mode === 'interrupt') {
-      textareaRef.current?.blur();
-      focusTerminal();
-    }
-    prevModeRef.current = mode;
-  }, [mode, textareaRef, focusTerminal]);
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -102,7 +94,7 @@ const WebInputBar = ({
   const handleFocusIn = () => setIsFocused(true);
   const handleFocusOut = () => setIsFocused(false);
 
-  const isDisabled = mode !== 'input';
+  const isDisabled = mode === 'disabled';
   const hasValue = value.trim().length > 0;
 
   return (
@@ -119,7 +111,7 @@ const WebInputBar = ({
             ref={containerRef}
             className={cn(
               'relative z-10 flex items-end gap-2 rounded-lg border px-3 py-2',
-              isFocused && mode === 'input'
+              isFocused && !isDisabled
                 ? 'border-ring bg-background'
                 : 'border-border bg-black/5 dark:bg-white/5',
               mode === 'disabled' && 'opacity-50',
@@ -134,11 +126,9 @@ const WebInputBar = ({
               onKeyDown={handleKeyDown}
               disabled={isDisabled}
               placeholder={
-                mode === 'interrupt'
-                  ? 'Claude가 응답 중...'
-                  : mode === 'disabled'
-                    ? 'Claude Code가 실행 중이 아닙니다'
-                    : '메시지를 입력하세요...'
+                mode === 'disabled'
+                  ? 'Claude Code가 실행 중이 아닙니다'
+                  : '메시지를 입력하세요...'
               }
               aria-label="Claude Code 메시지 입력"
               className={cn(
@@ -153,7 +143,7 @@ const WebInputBar = ({
               }}
             />
 
-            {mode === 'interrupt' ? (
+            {mode === 'interrupt' && !hasValue ? (
               <Button
                 variant="ghost"
                 size="sm"
@@ -169,11 +159,11 @@ const WebInputBar = ({
                 size="sm"
                 className={cn(
                   'h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground',
-                  hasValue && mode === 'input' && 'text-ui-purple',
-                  mode === 'disabled' && 'opacity-30',
+                  hasValue && !isDisabled && 'text-ui-purple',
+                  isDisabled && 'opacity-30',
                 )}
                 onClick={handleSendClick}
-                disabled={mode === 'disabled'}
+                disabled={isDisabled}
                 aria-label="메시지 전송"
               >
                 <SendHorizontal size={16} />
