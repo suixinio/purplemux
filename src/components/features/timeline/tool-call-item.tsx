@@ -68,15 +68,13 @@ const ToolCallItem = ({ entry }: IToolCallItemProps) => {
 
   return (
     <div className="animate-in fade-in duration-150">
-      <span className="text-xs text-muted-foreground">
-        {dayjs(entry.timestamp).format('HH:mm')}
-      </span>
-      <div className="mt-1 rounded-md bg-muted/50 px-3 py-2">
-        <div className="flex items-center gap-2">
-          <span className={cn(statusColor, statusPulse)}>
-            {renderToolIcon(entry.toolName, 14)}
+      <div className="rounded-md bg-muted/50 px-2.5 py-1.5">
+        <div className="flex items-center gap-1.5">
+          <span className="shrink-0 text-[10px] text-muted-foreground/60">{dayjs(entry.timestamp).format('HH:mm')}</span>
+          <span className={cn('shrink-0', statusColor, statusPulse)}>
+            {renderToolIcon(entry.toolName, 12)}
           </span>
-          <span className="text-sm font-mono truncate">{entry.summary}</span>
+          <span className="text-xs font-mono truncate">{entry.summary}</span>
         </div>
         {hasDiff && (
           <Button

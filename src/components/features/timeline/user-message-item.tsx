@@ -7,11 +7,9 @@ interface IUserMessageItemProps {
 
 const UserMessageItem = ({ entry }: IUserMessageItemProps) => (
   <div className="animate-in fade-in duration-150">
-    <span className="text-xs text-muted-foreground">
-      {dayjs(entry.timestamp).format('HH:mm')}
-    </span>
-    <div className="mt-1 border-l-2 border-ui-blue bg-ui-blue/10 px-4 py-3">
-      <p className="text-sm whitespace-pre-wrap break-words">{entry.text}</p>
+    <div className="border-l-2 border-ui-blue bg-ui-blue/10 px-3 py-2">
+      <span className="text-[10px] text-muted-foreground/60">{dayjs(entry.timestamp).format('HH:mm')}</span>
+      <p className="mt-0.5 text-xs whitespace-pre-wrap break-words">{entry.text}</p>
     </div>
   </div>
 );
