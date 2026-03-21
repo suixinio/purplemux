@@ -54,7 +54,7 @@ const extractFirstHumanMessage = async (filePath: string): Promise<string> => {
       if (!line.trim()) continue;
       try {
         const entry = JSON.parse(line);
-        if (entry.type === 'human') {
+        if ((entry.type === 'human' || entry.type === 'user') && !entry.isMeta) {
           const msg = entry.message;
           if (!msg) continue;
           if (typeof msg === 'string') return msg;
@@ -85,7 +85,12 @@ const countHumanTurns = async (filePath: string): Promise<number> => {
 
   try {
     for await (const line of rl) {
-      if (line.includes('"type":"human"') || line.includes('"type": "human"')) {
+      const isHumanOrUser =
+        line.includes('"type":"human"') ||
+        line.includes('"type": "human"') ||
+        line.includes('"type":"user"') ||
+        line.includes('"type": "user"');
+      if (isHumanOrUser && !line.includes('"isMeta":true') && !line.includes('"isMeta": true')) {
         count++;
       }
     }
