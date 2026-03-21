@@ -207,6 +207,7 @@ const MobileTerminalPage = () => {
     return (
       <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-terminal-bg px-6 text-center">
         <Monitor className="h-8 w-8 text-muted-foreground" />
+        <span className="text-sm font-medium text-muted-foreground">Workspace 없음</span>
         <span className="text-sm text-muted-foreground">
           데스크톱에서 Workspace를 생성하세요
         </span>

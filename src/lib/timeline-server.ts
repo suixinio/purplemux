@@ -208,6 +208,10 @@ const scheduleJsonlRetry = (
       return;
     }
 
+    if (info.sessionId) {
+      await updateTabClaudeSessionId(sessionName, info.sessionId).catch(() => {});
+    }
+
     const wsConns = getSessionConnections(sessionName);
     for (const c of wsConns) {
       if (info.jsonlPath !== c.currentJsonlPath) {
@@ -395,6 +399,9 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
             unsubscribeFromFile(ws, conn.currentJsonlPath);
           }
           conn.currentJsonlPath = newInfo.jsonlPath;
+          if (newInfo.sessionId) {
+            await updateTabClaudeSessionId(conn.sessionName, newInfo.sessionId).catch(() => {});
+          }
           sendJson(ws, {
             type: 'timeline:session-changed',
             newSessionId: newInfo.sessionId ?? '',
@@ -464,6 +471,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
             unsubscribeFromFile(c.ws, c.currentJsonlPath);
           }
           c.currentJsonlPath = newInfo.jsonlPath;
+
+          if (newInfo.sessionId) {
+            await updateTabClaudeSessionId(sessionName, newInfo.sessionId).catch(() => {});
+          }
 
           sendJson(c.ws, {
             type: 'timeline:session-changed',

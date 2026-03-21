@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { readStatsCache, buildOverview } from '@/lib/stats/stats-cache-parser';
+import { getStatsCache } from '@/lib/stats/pt-stats-cache';
+import { buildOverview } from '@/lib/stats/stats-cache-parser';
 import { parsePeriod } from '@/lib/stats/period-filter';
 import { getCached, setCached } from '@/lib/stats/cache';
 import type { IOverviewResponse } from '@/types/stats';
@@ -16,7 +17,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const cached = getCached<IOverviewResponse>(cacheKey);
   if (cached) return res.status(200).json(cached);
 
-  const statsCache = await readStatsCache();
+  const statsCache = await getStatsCache();
   const overview = buildOverview(statsCache, period);
 
   setCached(cacheKey, overview);

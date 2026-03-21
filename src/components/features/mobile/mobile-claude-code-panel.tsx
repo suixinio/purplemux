@@ -40,10 +40,7 @@ const MobileClaudeCodePanel = ({
         processHintRef={processHintRef}
       />
 
-      <div
-        className="shrink-0"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-      >
+      <div className="shrink-0">
         <WebInputBar
           cliState={cliState}
           sendStdin={sendStdin}
