@@ -1,5 +1,14 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { ITimelineEntry } from '@/types/timeline';
+import { calculateCost } from '@/lib/format-tokens';
+
+interface IModelTokens {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  cost: number | null;
+}
 
 interface ISessionMetaData {
   title: string;
@@ -10,6 +19,8 @@ interface ISessionMetaData {
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  totalCost: number | null;
+  tokensByModel: IModelTokens[];
 }
 
 interface IUseSessionMetaReturn {
@@ -28,6 +39,8 @@ const EMPTY_META: ISessionMetaData = {
   inputTokens: 0,
   outputTokens: 0,
   totalTokens: 0,
+  totalCost: null,
+  tokensByModel: [],
 };
 
 const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => {
@@ -40,6 +53,12 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
   let assistantCount = 0;
   let inputTokens = 0;
   let outputTokens = 0;
+  const modelMap = new Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+  }>();
 
   for (const entry of entries) {
     if (!createdAt && entry.timestamp) {
@@ -55,11 +74,38 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
     } else if (entry.type === 'assistant-message') {
       assistantCount++;
       if (entry.usage) {
-        inputTokens += entry.usage.input_tokens;
+        const cacheCreation = entry.usage.cache_creation_input_tokens ?? 0;
+        const cacheRead = entry.usage.cache_read_input_tokens ?? 0;
+        inputTokens += entry.usage.input_tokens + cacheCreation + cacheRead;
         outputTokens += entry.usage.output_tokens;
+
+        const model = entry.model ?? 'unknown';
+        const existing = modelMap.get(model) ?? {
+          inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
+        };
+        existing.inputTokens += entry.usage.input_tokens;
+        existing.outputTokens += entry.usage.output_tokens;
+        existing.cacheCreationTokens += cacheCreation;
+        existing.cacheReadTokens += cacheRead;
+        modelMap.set(model, existing);
       }
     }
   }
+
+  const tokensByModel: IModelTokens[] = Array.from(modelMap.entries())
+    .map(([model, tokens]) => ({
+      model,
+      inputTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
+      outputTokens: tokens.outputTokens,
+      totalTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens + tokens.outputTokens,
+      cost: calculateCost(model, tokens.inputTokens, tokens.outputTokens, tokens.cacheCreationTokens, tokens.cacheReadTokens),
+    }))
+    .sort((a, b) => b.totalTokens - a.totalTokens);
+
+  const totalCost = tokensByModel.reduce<number | null>((sum, m) => {
+    if (m.cost === null) return sum;
+    return (sum ?? 0) + m.cost;
+  }, null);
 
   return {
     title,
@@ -70,6 +116,8 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
     inputTokens,
     outputTokens,
     totalTokens: inputTokens + outputTokens,
+    totalCost,
+    tokensByModel,
   };
 };
 

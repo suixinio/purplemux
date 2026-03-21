@@ -71,7 +71,7 @@ interface IPaneContainerProps {
   onEqualizeRatios: () => void;
 }
 
-const CLAUDE_CODE_FONT_SIZE = 8;
+const CLAUDE_CODE_FONT_SIZE = 10;
 
 const PaneContainer = ({
   paneId,
@@ -490,6 +490,7 @@ const PaneContainer = ({
         tabs={tabs}
         activeTabId={activeTabId}
         tabTitles={tabTitles}
+        activeTabCwd={activeTabCwd}
         isLoading={false}
         error={null}
         isCreating={isCreating}
@@ -529,7 +530,7 @@ const PaneContainer = ({
             collapsedSize={0}
             disabled={!isClaudeCode}
           >
-            <div className="flex h-full flex-col">
+            <div className="flex h-full flex-col bg-muted">
               {isClaudeCode && activeTab && (
                 <ClaudeCodePanel
                   sessionName={activeTab.sessionName}

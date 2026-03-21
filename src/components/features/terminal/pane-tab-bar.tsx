@@ -9,6 +9,7 @@ import {
   Equal,
   Terminal,
   BotMessageSquare,
+  CodeXml,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,6 +54,7 @@ interface IPaneTabBarProps {
   onFocusPane: () => void;
   onRetry: () => void;
   onEqualizeRatios: () => void;
+  activeTabCwd?: string;
   activePanelType: TPanelType;
   onTogglePanelType: () => void;
 }
@@ -62,6 +64,7 @@ const PaneTabBar = ({
   tabs,
   activeTabId,
   tabTitles,
+  activeTabCwd,
   isLoading,
   error,
   isCreating,
@@ -436,27 +439,29 @@ const PaneTabBar = ({
         </button>
       )}
 
-      <div className="flex shrink-0 items-center border-l border-border">
-        {/* Add tab */}
-        <button
-          className={cn(
-            'flex h-full w-[28px] items-center justify-center text-muted-foreground hover:text-foreground',
-            isCreating && 'pointer-events-none opacity-50',
-          )}
-          onClick={onCreateTab}
-          disabled={isCreating}
-          aria-label="새 탭"
-          title="새 탭"
-        >
-          {isCreating ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <Plus className="h-3 w-3" />
-          )}
-        </button>
+      <TooltipProvider>
+        <div className="flex shrink-0 items-center border-l border-border">
+          {/* Add tab */}
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'flex h-full w-[28px] items-center justify-center text-muted-foreground hover:text-foreground',
+                isCreating && 'pointer-events-none opacity-50',
+              )}
+              onClick={onCreateTab}
+              disabled={isCreating}
+              aria-label="새 탭"
+            >
+              {isCreating ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Plus className="h-3 w-3" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">새 탭</TooltipContent>
+          </Tooltip>
 
-        {/* Panel type toggle */}
-        <TooltipProvider delay={500}>
+          {/* Panel type toggle */}
           <Tooltip>
             <TooltipTrigger
               className={cn(
@@ -478,81 +483,103 @@ const PaneTabBar = ({
               {activePanelType === 'terminal' ? 'Claude Code 패널' : '터미널'}
             </TooltipContent>
           </Tooltip>
-        </TooltipProvider>
 
-        {/* Split horizontal */}
-        <button
-          className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
-            canSplit
-              ? 'hover:bg-accent hover:text-foreground'
-              : 'cursor-not-allowed opacity-30',
-          )}
-          onClick={canSplit ? onSplitHorizontal : undefined}
-          disabled={!canSplit}
-          aria-label="수직 분할"
-          aria-disabled={!canSplit}
-          title="수직 분할"
-        >
-          {isSplitting ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <SplitVerticalIcon className="h-3 w-3" />
-          )}
-        </button>
+          {/* Open in code-server */}
+          <Tooltip>
+            <TooltipTrigger
+              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+              onClick={() => {
+                const folder = activeTabCwd || '/';
+                const url = `${window.location.protocol}//${window.location.hostname}:8080/?folder=${encodeURIComponent(folder)}`;
+                window.open(url, '_blank');
+              }}
+              aria-label="code-server 열기"
+            >
+              <CodeXml className="h-3 w-3" />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">에디터</TooltipContent>
+          </Tooltip>
 
-        {/* Split vertical */}
-        <button
-          className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
-            canSplit
-              ? 'hover:bg-accent hover:text-foreground'
-              : 'cursor-not-allowed opacity-30',
-          )}
-          onClick={canSplit ? onSplitVertical : undefined}
-          disabled={!canSplit}
-          aria-label="수평 분할"
-          aria-disabled={!canSplit}
-          title="수평 분할"
-        >
-          {isSplitting ? (
-            <Loader2 className="h-3 w-3 animate-spin" />
-          ) : (
-            <SplitHorizontalIcon className="h-3 w-3" />
-          )}
-        </button>
+          {/* Split horizontal */}
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
+                canSplit
+                  ? 'hover:bg-accent hover:text-foreground'
+                  : 'cursor-not-allowed opacity-30',
+              )}
+              onClick={canSplit ? onSplitHorizontal : undefined}
+              disabled={!canSplit}
+              aria-label="수직 분할"
+            >
+              {isSplitting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <SplitVerticalIcon className="h-3 w-3" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">수직 분할</TooltipContent>
+          </Tooltip>
 
-        {/* Equalize panes */}
-        {paneCount >= 2 && (
-          <button
-            className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-            onClick={onEqualizeRatios}
-            aria-label="균등 분할"
-            title="균등 분할"
-          >
-            <Equal className="h-3 w-3" />
-          </button>
-        )}
+          {/* Split vertical */}
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
+                canSplit
+                  ? 'hover:bg-accent hover:text-foreground'
+                  : 'cursor-not-allowed opacity-30',
+              )}
+              onClick={canSplit ? onSplitVertical : undefined}
+              disabled={!canSplit}
+              aria-label="수평 분할"
+            >
+              {isSplitting ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <SplitHorizontalIcon className="h-3 w-3" />
+              )}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">수평 분할</TooltipContent>
+          </Tooltip>
 
-        {/* Close pane */}
-        {paneCount >= 2 && (
-          <button
-            className={cn(
-              'flex h-full w-[24px] items-center justify-center rounded-none text-muted-foreground',
-              isSplitting ? 'pointer-events-none opacity-30' : 'hover:bg-destructive/20 hover:text-foreground',
-            )}
-            disabled={isSplitting}
-            onClick={(e) => {
-              e.stopPropagation();
-              onClosePane();
-            }}
-            aria-label="Pane 닫기"
-            title="Pane 닫기"
-          >
-            <X className="h-3 w-3" />
-          </button>
-        )}
-      </div>
+          {/* Equalize panes */}
+          {paneCount >= 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={onEqualizeRatios}
+                aria-label="균등 분할"
+              >
+                <Equal className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">균등 분할</TooltipContent>
+            </Tooltip>
+          )}
+
+          {/* Close pane */}
+          {paneCount >= 2 && (
+            <Tooltip>
+              <TooltipTrigger
+                className={cn(
+                  'flex h-full w-[24px] items-center justify-center rounded-none text-muted-foreground',
+                  isSplitting ? 'pointer-events-none opacity-30' : 'hover:bg-destructive/20 hover:text-foreground',
+                )}
+                disabled={isSplitting}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClosePane();
+                }}
+                aria-label="Pane 닫기"
+              >
+                <X className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Pane 닫기</TooltipContent>
+            </Tooltip>
+          )}
+        </div>
+      </TooltipProvider>
     </div>
   );
 };

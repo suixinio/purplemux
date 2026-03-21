@@ -24,6 +24,7 @@ interface IResumeErrorPayload {
 
 interface IUseTimelineWebSocketOptions {
   sessionName: string;
+  claudeSessionId?: string | null;
   enabled: boolean;
   onInit: (entries: ITimelineEntry[], totalEntries: number, summary?: string) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
@@ -45,6 +46,7 @@ interface IUseTimelineWebSocketReturn {
 
 const useTimelineWebSocket = ({
   sessionName,
+  claudeSessionId,
   enabled,
   onInit,
   onAppend,
@@ -93,8 +95,10 @@ const useTimelineWebSocket = ({
       setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const params = new URLSearchParams({ session: sessionName });
+      if (claudeSessionId) params.set('claudeSessionId', claudeSessionId);
       const ws = new WebSocket(
-        `${protocol}//${location.host}/api/timeline?session=${sessionName}`,
+        `${protocol}//${location.host}/api/timeline?${params}`,
       );
       wsRef.current = ws;
 
@@ -159,7 +163,7 @@ const useTimelineWebSocket = ({
 
       ws.onerror = () => {};
     },
-    [sessionName, clearTimers],
+    [sessionName, claudeSessionId, clearTimers],
   );
 
   useEffect(() => {

@@ -82,6 +82,8 @@ const AssistantEntrySchema = BaseEntrySchema.extend({
     usage: z.object({
       input_tokens: z.number(),
       output_tokens: z.number(),
+      cache_creation_input_tokens: z.number().optional(),
+      cache_read_input_tokens: z.number().optional(),
     }).passthrough().optional(),
   }),
 });
@@ -209,6 +211,7 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
     if (!parsed.success) return [];
 
     const usage = parsed.data.message.usage;
+    const model = parsed.data.message.model;
     let usageAttached = false;
     const entries: ITimelineEntry[] = [];
     for (const content of parsed.data.message.content) {
@@ -221,6 +224,7 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
         };
         if (usage && !usageAttached) {
           entry.usage = usage;
+          entry.model = model;
           usageAttached = true;
         }
         entries.push(entry);

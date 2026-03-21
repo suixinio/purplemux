@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
@@ -10,8 +9,6 @@ import SessionEmptyView from '@/components/features/terminal/session-empty-view'
 import TimelineView from '@/components/features/timeline/timeline-view';
 import SessionMetaBar from '@/components/features/terminal/session-meta-bar';
 import type { TCliState } from '@/types/timeline';
-
-const AUTO_RESUME_TIMEOUT_MS = 10_000;
 
 interface IClaudeCodePanelProps {
   sessionName: string;
@@ -31,7 +28,6 @@ const ClaudeCodePanel = ({
   processHintRef,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
-  const [isAutoResuming, setIsAutoResuming] = useState(!!claudeSessionId);
   const navigateToTimelineRef = useRef<() => void>(() => {});
 
   const handleResumeStarted = useCallback(
@@ -78,6 +74,7 @@ const ClaudeCodePanel = ({
     sendProcessHint,
   } = useTimeline({
     sessionName,
+    claudeSessionId,
     enabled: !!sessionName,
     resumeCallbacks: {
       onResumeStarted: handleResumeStarted,
@@ -96,7 +93,7 @@ const ClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && sessionStatus !== 'active' && !isAutoResuming,
+    enabled: !!sessionName && sessionStatus !== 'active',
   });
 
   const { view, navigateToTimeline } = useSessionView(
@@ -104,6 +101,8 @@ const ClaudeCodePanel = ({
     sessions,
     isSessionListLoading,
     sessionListError,
+    claudeSessionId,
+    isTimelineLoading,
   );
 
   useEffect(() => {
@@ -117,7 +116,7 @@ const ClaudeCodePanel = ({
     }
   }, [processHintRef, sendProcessHint]);
 
-  const isInputVisible = view === 'timeline' && !isAutoResuming;
+  const isInputVisible = view === 'timeline';
 
   useEffect(() => {
     onCliStateChange?.(cliState);
@@ -127,17 +126,6 @@ const ClaudeCodePanel = ({
     onInputVisibleChange?.(isInputVisible);
   }, [isInputVisible, onInputVisibleChange]);
 
-  useEffect(() => {
-    if (!isAutoResuming) return;
-
-    const delay = sessionStatus === 'active' ? 0 : AUTO_RESUME_TIMEOUT_MS;
-    const timer = setTimeout(() => {
-      setIsAutoResuming(false);
-    }, delay);
-
-    return () => clearTimeout(timer);
-  }, [isAutoResuming, sessionStatus]);
-
   const handleSelectSession = useCallback(
     (sessionId: string) => {
       if (resumingSessionId) return;
@@ -146,17 +134,6 @@ const ClaudeCodePanel = ({
     },
     [resumingSessionId, sendResume, sessionName],
   );
-
-  if (isAutoResuming) {
-    return (
-      <div className={cn('flex h-full w-full items-center justify-center', className)}>
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">이전 세션을 복원하는 중...</span>
-        </div>
-      </div>
-    );
-  }
 
   if (view === 'empty') {
     return (
@@ -186,7 +163,7 @@ const ClaudeCodePanel = ({
   }
 
   return (
-    <div className={cn('flex min-h-0 w-full flex-1 flex-col bg-muted', className)}>
+    <div className={cn('flex min-h-0 w-full flex-1 flex-col', className)}>
       <SessionMetaBar entries={entries} sessionName={sessionName} sessionSummary={sessionSummary} />
       <div className="min-h-0 flex-1">
         <TimelineView

@@ -36,6 +36,7 @@ interface IResumeCallbacks {
 
 interface IUseTimelineOptions {
   sessionName: string;
+  claudeSessionId?: string | null;
   enabled: boolean;
   resumeCallbacks?: IResumeCallbacks;
 }
@@ -61,6 +62,7 @@ interface IUseTimelineReturn {
 
 const useTimeline = ({
   sessionName,
+  claudeSessionId,
   enabled,
   resumeCallbacks,
 }: IUseTimelineOptions): IUseTimelineReturn => {
@@ -93,7 +95,7 @@ const useTimeline = ({
       setSessionStatus(info.status);
       setSessionId(info.sessionId);
       jsonlPathRef.current = info.jsonlPath;
-      if (info.status !== 'active') {
+      if (info.status !== 'active' && !claudeSessionId) {
         setIsLoading(false);
       }
       setError(null);
@@ -101,7 +103,7 @@ const useTimeline = ({
       setError(err instanceof Error ? err.message : '세션 정보를 불러올 수 없습니다');
       setSessionStatus('none');
     }
-  }, [enabled, sessionName]);
+  }, [enabled, sessionName, claudeSessionId]);
 
   useEffect(() => {
     fetchSession();
@@ -213,6 +215,7 @@ const useTimeline = ({
 
   const { status: wsStatus, reconnect, sendResume, sendProcessHint } = useTimelineWebSocket({
     sessionName,
+    claudeSessionId,
     enabled: shouldConnect,
     onInit: handleInit,
     onAppend: handleAppend,

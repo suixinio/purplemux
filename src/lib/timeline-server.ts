@@ -208,10 +208,6 @@ const scheduleJsonlRetry = (
       return;
     }
 
-    if (info.sessionId) {
-      await updateTabClaudeSessionId(sessionName, info.sessionId).catch(() => {});
-    }
-
     const wsConns = getSessionConnections(sessionName);
     for (const c of wsConns) {
       if (info.jsonlPath !== c.currentJsonlPath) {
@@ -406,6 +402,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           });
           await subscribeToFile(ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
         } else if (!newInfo.jsonlPath && newInfo.status === 'none' && conn.currentJsonlPath) {
+          await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});
           sendJson(ws, {
             type: 'timeline:session-changed',
             newSessionId: '',
@@ -421,20 +418,36 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   ws.on('close', () => cleanup(conn));
   ws.on('error', () => cleanup(conn));
 
+  const claudeSessionId = url.searchParams.get('claudeSessionId');
   const sessionInfo = await detectActiveSession(panePid);
+
+  if (claudeSessionId && sessionInfo.status === 'none') {
+    await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});
+  }
+
+  const effectiveSessionId = sessionInfo.jsonlPath
+    ? sessionInfo.sessionId
+    : (claudeSessionId ?? sessionInfo.sessionId);
 
   if (sessionInfo.jsonlPath) {
     conn.currentJsonlPath = sessionInfo.jsonlPath;
     await subscribeToFile(ws, sessionInfo.jsonlPath, sessionInfo.sessionId ?? undefined);
-
     if (sessionInfo.sessionId) {
       await updateTabClaudeSessionId(conn.sessionName, sessionInfo.sessionId).catch(() => {});
+    }
+  } else if (effectiveSessionId) {
+    const jsonlPath = await resolveJsonlPath(sessionName, effectiveSessionId);
+    if (jsonlPath) {
+      conn.currentJsonlPath = jsonlPath;
+      await subscribeToFile(ws, jsonlPath, effectiveSessionId);
+    } else {
+      sendJson(ws, { type: 'timeline:init', entries: [], sessionId: effectiveSessionId, totalEntries: 0 });
     }
   } else {
     sendJson(ws, {
       type: 'timeline:init',
       entries: [],
-      sessionId: sessionInfo.sessionId ?? '',
+      sessionId: '',
       totalEntries: 0,
     });
   }
@@ -443,10 +456,6 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   const wsKey = sessionName;
   if (!sessionWatchers.has(wsKey)) {
     const sw = watchSessionsDir(panePid, async (newInfo) => {
-      if (newInfo.sessionId) {
-        await updateTabClaudeSessionId(sessionName, newInfo.sessionId).catch(() => {});
-      }
-
       const wsConns = getSessionConnections(sessionName);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
@@ -464,6 +473,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
           await subscribeToFile(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
         } else if (!newInfo.jsonlPath && newInfo.status === 'none') {
+          await updateTabClaudeSessionId(sessionName, null).catch(() => {});
           sendJson(c.ws, {
             type: 'timeline:session-changed',
             newSessionId: '',

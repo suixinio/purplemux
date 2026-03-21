@@ -17,7 +17,10 @@ export const parseCurrentCommand = (raw: string): string | null => {
 
 export const isClaudeProcess = (raw: string): boolean => {
   const cmd = parseCurrentCommand(raw);
-  return cmd === 'claude';
+  if (cmd === 'claude') return true;
+  // Claude Code sets terminal title to its version (e.g., "2.1.81")
+  if (/^\d+\.\d+\.\d+$/.test(raw.trim())) return true;
+  return false;
 };
 
 export const isShellProcess = (raw: string): boolean => {

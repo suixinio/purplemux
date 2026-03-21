@@ -64,6 +64,8 @@ const WebInputBar = ({
   }, [value, adjustHeight]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.nativeEvent.isComposing || e.keyCode === 229) return;
+
     if (e.key === 'Escape') {
       e.preventDefault();
       textareaRef.current?.blur();
@@ -71,7 +73,7 @@ const WebInputBar = ({
       return;
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && e.metaKey) {
       e.preventDefault();
       send();
       return;
@@ -110,7 +112,7 @@ const WebInputBar = ({
           <div
             ref={containerRef}
             className={cn(
-              'relative z-10 flex items-end gap-2 rounded-lg border px-3 py-2',
+              'relative z-10 flex items-end gap-2 rounded-lg border px-3 py-2 transition-colors duration-150',
               isFocused && !isDisabled
                 ? 'border-ring bg-background'
                 : 'border-border bg-black/5 dark:bg-white/5',
@@ -128,7 +130,7 @@ const WebInputBar = ({
               placeholder={
                 mode === 'disabled'
                   ? 'Claude Code가 실행 중이 아닙니다'
-                  : '메시지를 입력하세요...'
+                  : '메시지를 입력하세요... (⌘+Enter 전송)'
               }
               aria-label="Claude Code 메시지 입력"
               className={cn(

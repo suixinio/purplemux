@@ -23,7 +23,7 @@ interface IPidFileData {
 }
 
 export const toClaudeProjectName = (dirPath: string): string =>
-  dirPath.replace(/\//g, '-');
+  dirPath.replace(/[/.]/g, '-');
 
 export const isProcessRunning = (pid: number): Promise<boolean> =>
   new Promise((resolve) => {
@@ -102,7 +102,6 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
 
   const childPids = await getChildPids(panePid);
 
-
   if (childPids.length === 0) {
     return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
   }
@@ -112,7 +111,6 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
   try {
     const pidFiles = await fs.readdir(SESSIONS_DIR);
     const jsonFiles = pidFiles.filter((f) => f.endsWith('.json'));
-
 
     for (const file of jsonFiles) {
       const data = await readPidFile(path.join(SESSIONS_DIR, file));

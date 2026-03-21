@@ -265,12 +265,25 @@ export const updateLayout = async (
     if (validationError) return validationError;
 
     const normalized = normalizeTree(root);
+    const filePath = resolveLayoutFile(wsId);
+    const existing = await readLayoutFile(filePath);
+    if (existing) {
+      const prevTabs = new Map(
+        collectAllTabs(existing.root).map((t) => [t.sessionName, t]),
+      );
+      for (const tab of collectAllTabs(normalized)) {
+        const prev = prevTabs.get(tab.sessionName);
+        if (prev) {
+          tab.claudeSessionId = prev.claudeSessionId;
+        }
+      }
+    }
     const layout: ILayoutData = {
       root: normalized,
       focusedPaneId,
       updatedAt: new Date().toISOString(),
     };
-    await writeLayoutFile(layout, resolveLayoutFile(wsId));
+    await writeLayoutFile(layout, filePath);
     syncWorkspaceDirectories(wsId,normalized);
     return layout;
   });
@@ -405,9 +418,9 @@ export const getFirstPaneTabs = async (wsId: string): Promise<{ tabs: ITab[]; ac
   });
 
 export const parseSessionName = (sessionName: string): { wsId: string; paneId: string; tabId: string } | null => {
-  const parts = sessionName.split('-');
-  if (parts.length < 4 || parts[0] !== 'pt') return null;
-  return { wsId: parts[1], paneId: `pane-${parts[2]}`, tabId: `tab-${parts[3]}` };
+  const match = sessionName.match(/^pt-(ws-.*?)-(pane-.*?)-(tab-.+)$/);
+  if (!match) return null;
+  return { wsId: match[1], paneId: match[2], tabId: match[3] };
 };
 
 export const updateTabClaudeSessionId = async (
