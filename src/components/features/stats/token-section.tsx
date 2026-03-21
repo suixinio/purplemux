@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -9,11 +11,12 @@ import {
   Pie,
   PieChart,
 } from 'recharts';
+import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import type { IOverviewResponse } from '@/types/stats';
-import { formatNumber } from '@/components/features/stats/stats-utils';
+import { formatNumber, formatDate } from '@/components/features/stats/stats-utils';
 
 interface ITokenSectionProps {
   data: IOverviewResponse;
@@ -44,6 +47,12 @@ const getModelLabel = (model: string): string => {
 const barChartConfig: ChartConfig = {
   input: { label: '입력', color: 'var(--ui-blue)' },
   output: { label: '출력', color: 'var(--ui-teal)' },
+  cache: { label: '캐시', color: 'var(--ui-amber)' },
+};
+
+const trendChartConfig: ChartConfig = {
+  input: { label: '입력', color: 'var(--ui-blue)' },
+  output: { label: '출력', color: 'var(--ui-teal)' },
 };
 
 const TokenSection = ({ data }: ITokenSectionProps) => {
@@ -53,7 +62,8 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
         model: getModelLabel(model),
         input: tokens.input,
         output: tokens.output,
-        total: tokens.input + tokens.output,
+        cache: tokens.cache,
+        total: tokens.input + tokens.output + tokens.cache,
         color: getModelColor(model),
       }))
       .sort((a, b) => b.total - a.total);
@@ -107,6 +117,7 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                     formatter={(value: number) => formatNumber(value)}
                   />
                   <Bar dataKey="input" stackId="a" fill="var(--ui-blue)" radius={[0, 0, 0, 0]} />
+                  <Bar dataKey="cache" stackId="a" fill="var(--ui-amber)" radius={[0, 0, 0, 0]} />
                   <Bar dataKey="output" stackId="a" fill="var(--ui-teal)" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ChartContainer>
@@ -163,6 +174,66 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
           </Card>
         )}
       </div>
+
+      {data.dailyTokens.length > 0 && (
+        <Card size="sm">
+          <CardHeader>
+            <CardTitle className="text-sm font-medium text-muted-foreground">일별 토큰 추이</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer config={trendChartConfig} className="aspect-auto h-48 w-full">
+              <AreaChart data={data.dailyTokens} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="fillInput" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--ui-blue)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--ui-blue)" stopOpacity={0.02} />
+                  </linearGradient>
+                  <linearGradient id="fillOutput" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--ui-teal)" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="var(--ui-teal)" stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="date"
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={formatDate}
+                  tick={{ fontSize: 11 }}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11 }}
+                  width={40}
+                  tickFormatter={(v: number) => formatNumber(v)}
+                />
+                <ChartTooltip
+                  content={<ChartTooltipContent />}
+                  labelFormatter={(v) => dayjs(v).format('YYYY-MM-DD')}
+                />
+                <Area
+                  dataKey="input"
+                  type="monotone"
+                  fill="url(#fillInput)"
+                  stroke="var(--ui-blue)"
+                  strokeWidth={1.5}
+                  stackId="1"
+                />
+                <Area
+                  dataKey="output"
+                  type="monotone"
+                  fill="url(#fillOutput)"
+                  stroke="var(--ui-teal)"
+                  strokeWidth={1.5}
+                  stackId="1"
+                />
+              </AreaChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
     </section>
   );
 };

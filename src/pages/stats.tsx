@@ -98,6 +98,7 @@ const StatsPage = () => {
                     history={history}
                     facetsLoading={facetsLoading}
                     historyLoading={historyLoading}
+                    totalToolCalls={overview?.totalToolCalls ?? 0}
                   />
                 ) : null}
               </SectionErrorBoundary>

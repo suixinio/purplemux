@@ -9,7 +9,7 @@ import {
   Pie,
   PieChart,
 } from 'recharts';
-import { Clock, Maximize2, Terminal } from 'lucide-react';
+import { Clock, Maximize2, Wrench } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
@@ -23,6 +23,7 @@ interface ISessionSectionProps {
   history: IHistoryResponse | null;
   facetsLoading: boolean;
   historyLoading: boolean;
+  totalToolCalls: number;
 }
 
 const CATEGORY_COLORS = [
@@ -42,7 +43,7 @@ const OUTCOME_COLORS: Record<string, string> = {
   failure: 'var(--ui-red)',
 };
 
-const SessionSection = ({ sessions, facets, history, facetsLoading, historyLoading }: ISessionSectionProps) => {
+const SessionSection = ({ sessions, facets, history, facetsLoading, historyLoading, totalToolCalls }: ISessionSectionProps) => {
   const cards = [
     {
       label: '평균 세션 길이',
@@ -57,9 +58,9 @@ const SessionSection = ({ sessions, facets, history, facetsLoading, historyLoadi
       icon: Maximize2,
     },
     {
-      label: '총 세션 수',
-      value: formatNumber(sessions.totalSessions),
-      icon: Terminal,
+      label: '총 도구 호출 수',
+      value: formatNumber(totalToolCalls),
+      icon: Wrench,
     },
   ];
 

@@ -51,8 +51,12 @@ export interface IStatsCache {
 export interface IOverviewResponse {
   totalSessions: number;
   totalMessages: number;
+  previousSessions: number;
+  previousMessages: number;
+  totalToolCalls: number;
   dailyActivity: IStatsCacheDailyActivity[];
-  modelTokens: Record<string, { input: number; output: number; cost: number }>;
+  modelTokens: Record<string, { input: number; output: number; cache: number; cost: number }>;
+  dailyTokens: { date: string; input: number; output: number }[];
   hourlyDistribution: Record<string, number>;
   firstSessionDate: string;
   lastComputedDate: string;

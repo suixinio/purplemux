@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import dayjs from 'dayjs';
 import type {
   IStatsCache,
   IStatsCacheDailyActivity,
@@ -128,31 +129,63 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
     ? cache.totalMessages
     : filteredDaily.reduce((sum, d) => sum + d.messageCount, 0);
 
-  const modelTokens: Record<string, { input: number; output: number; cost: number }> = {};
+  const totalToolCalls = filteredDaily.reduce((sum, d) => sum + d.toolCallCount, 0);
+
+  const previousDaily = getPreviousPeriodDaily(cache.dailyActivity, period);
+  const previousSessions = previousDaily.reduce((sum, d) => sum + d.sessionCount, 0);
+  const previousMessages = previousDaily.reduce((sum, d) => sum + d.messageCount, 0);
+
+  const modelTokens: Record<string, { input: number; output: number; cache: number; cost: number }> = {};
   if (period === 'all') {
     for (const [model, usage] of Object.entries(cache.modelUsage)) {
       modelTokens[model] = {
-        input: usage.inputTokens + usage.cacheReadInputTokens + usage.cacheCreationInputTokens,
+        input: usage.inputTokens,
         output: usage.outputTokens,
+        cache: usage.cacheReadInputTokens + usage.cacheCreationInputTokens,
         cost: usage.costUSD,
       };
     }
   } else {
     for (const day of filteredTokens) {
       for (const [model, tokens] of Object.entries(day.tokensByModel)) {
-        if (!modelTokens[model]) modelTokens[model] = { input: 0, output: 0, cost: 0 };
+        if (!modelTokens[model]) modelTokens[model] = { input: 0, output: 0, cache: 0, cost: 0 };
         modelTokens[model].input += tokens;
       }
     }
   }
 
+  const dailyTokens = filteredTokens.map((d) => {
+    const total = Object.values(d.tokensByModel).reduce((sum, t) => sum + t, 0);
+    return { date: d.date, input: total, output: 0 };
+  });
+
   return {
     totalSessions,
     totalMessages,
+    previousSessions,
+    previousMessages,
+    totalToolCalls,
     dailyActivity: filteredDaily,
     modelTokens,
+    dailyTokens,
     hourlyDistribution: cache.hourCounts,
     firstSessionDate: cache.firstSessionDate,
     lastComputedDate: cache.lastComputedDate,
   };
+};
+
+const getPreviousPeriodDaily = (
+  allDaily: IStatsCacheDailyActivity[],
+  period: TPeriod,
+): IStatsCacheDailyActivity[] => {
+  if (period === 'all' || period === 'today') return [];
+
+  const days = period === '7d' ? 7 : 30;
+  const prevStart = dayjs().subtract(days * 2, 'day').startOf('day');
+  const prevEnd = dayjs().subtract(days, 'day').startOf('day');
+
+  return allDaily.filter((d) => {
+    const date = dayjs(d.date);
+    return (date.isAfter(prevStart) || date.isSame(prevStart)) && date.isBefore(prevEnd);
+  });
 };

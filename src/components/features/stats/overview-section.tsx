@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import type { IOverviewResponse } from '@/types/stats';
-import { formatNumber, formatDate } from '@/components/features/stats/stats-utils';
+import { formatNumber, formatDate, getChangeRate } from '@/components/features/stats/stats-utils';
 
 interface IOverviewSectionProps {
   data: IOverviewResponse;
@@ -41,11 +41,14 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
       }));
   }, [data.dailyActivity]);
 
+  const sessionChange = getChangeRate(data.totalSessions, data.previousSessions);
+  const messageChange = getChangeRate(data.totalMessages, data.previousMessages);
+
   const cards = [
-    { label: '총 세션 수', value: formatNumber(data.totalSessions), icon: Activity },
-    { label: '총 메시지 수', value: formatNumber(data.totalMessages), icon: MessageSquare },
-    { label: '오늘 사용량', value: formatNumber(todayActivity), icon: CalendarDays },
-    { label: '이번 달 사용량', value: formatNumber(thisMonthActivity), icon: TrendingUp },
+    { label: '총 세션 수', value: formatNumber(data.totalSessions), icon: Activity, change: sessionChange },
+    { label: '총 메시지 수', value: formatNumber(data.totalMessages), icon: MessageSquare, change: messageChange },
+    { label: '오늘 사용량', value: formatNumber(todayActivity), icon: CalendarDays, change: null },
+    { label: '이번 달 사용량', value: formatNumber(thisMonthActivity), icon: TrendingUp, change: null },
   ];
 
   return (
@@ -62,6 +65,11 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
               <div>
                 <p className="text-xs text-muted-foreground">{card.label}</p>
                 <p className="text-2xl font-semibold tabular-nums">{card.value}</p>
+                {card.change && (
+                  <p className={`text-xs tabular-nums ${card.change.startsWith('+') ? 'text-ui-teal' : 'text-ui-coral'}`}>
+                    {card.change} vs 이전 기간
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
