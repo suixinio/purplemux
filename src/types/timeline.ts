@@ -133,3 +133,11 @@ export interface IIncrementalResult {
   newOffset: number;
   pendingBuffer: string;
 }
+
+export interface ISessionMeta {
+  sessionId: string;
+  startedAt: string;
+  lastActivityAt: string;
+  firstMessage: string;
+  turnCount: number;
+}
