@@ -191,6 +191,7 @@ const TimelineView = ({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const isUserScrollingRef = useRef(false);
   const prevEntryCountRef = useRef(entries.length);
+  const isInitialLoadRef = useRef(true);
 
   const groupedItems = groupTimelineEntries(entries);
   const hasDisplayItems = groupedItems.length > 0;
@@ -245,7 +246,9 @@ const TimelineView = ({
     const prevCount = prevEntryCountRef.current;
     if (entries.length > prevCount) {
       if (isAutoScrollEnabled) {
-        requestAnimationFrame(() => scrollToBottom('smooth'));
+        const behavior = isInitialLoadRef.current ? 'instant' : 'smooth';
+        isInitialLoadRef.current = false;
+        requestAnimationFrame(() => scrollToBottom(behavior));
       }
     }
     prevEntryCountRef.current = entries.length;
@@ -253,6 +256,7 @@ const TimelineView = ({
 
   useEffect(() => {
     if (entries.length > 0 && isAutoScrollEnabled) {
+      isInitialLoadRef.current = false;
       requestAnimationFrame(() => scrollToBottom('instant'));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Bot, Monitor, Moon, Settings, Sun, Terminal, X } from 'lucide-react';
+import { Bot, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Switch } from '@/components/ui/switch';
@@ -12,8 +12,9 @@ import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
+import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
 
-type TSettingsTab = 'general' | 'terminal' | 'claude';
+type TSettingsTab = 'general' | 'terminal' | 'claude' | 'quick-prompts';
 
 interface ISettingsItem {
   id: TSettingsTab;
@@ -36,6 +37,11 @@ const settingsItems: ISettingsItem[] = [
     id: 'claude',
     label: 'Claude',
     icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    id: 'quick-prompts',
+    label: '빠른 프롬프트',
+    icon: <Zap className="h-4 w-4" />,
   },
 ];
 
@@ -220,6 +226,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'terminal' && <TerminalTab />}
             {activeTab === 'claude' && <ClaudeTab />}
+            {activeTab === 'quick-prompts' && <QuickPromptsSettings />}
           </div>
         </div>
       </DialogContent>

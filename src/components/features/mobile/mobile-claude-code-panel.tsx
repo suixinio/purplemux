@@ -12,7 +12,9 @@ import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
+import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
 import MobileMetaSheet from './mobile-meta-sheet';
+import useQuickPrompts from '@/hooks/use-quick-prompts';
 import type { TCliState } from '@/types/timeline';
 
 dayjs.extend(relativeTime);
@@ -25,6 +27,7 @@ interface IMobileClaudeCodePanelProps {
   terminalWsConnected: boolean;
   focusTerminal: () => void;
   focusInputRef: React.MutableRefObject<(() => void) | undefined>;
+  setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   onCliStateChange: (state: TCliState) => void;
   onInputVisibleChange: (visible: boolean) => void;
 }
@@ -38,9 +41,11 @@ const MobileClaudeCodePanel = ({
   terminalWsConnected,
   focusTerminal,
   focusInputRef,
+  setInputValueRef,
   onCliStateChange,
   onInputVisibleChange,
 }: IMobileClaudeCodePanelProps) => {
+  const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -139,6 +144,11 @@ const MobileClaudeCodePanel = ({
     onInputVisibleChange(isInputVisible);
   }, [isInputVisible, onInputVisibleChange]);
 
+  const handleSelectQuickPrompt = useCallback((prompt: string) => {
+    setInputValueRef.current?.(prompt);
+    focusInputRef.current?.();
+  }, [setInputValueRef, focusInputRef]);
+
   const handleSelectSession = useCallback(
     (sid: string) => {
       if (resumingSessionId) return;
@@ -216,6 +226,12 @@ const MobileClaudeCodePanel = ({
       </div>
 
       <div className="shrink-0 pb-3">
+        <QuickPromptBar
+          prompts={quickPrompts}
+          cliState={cliState}
+          visible={isInputVisible}
+          onSelect={handleSelectQuickPrompt}
+        />
         <WebInputBar
           cliState={cliState}
           sendStdin={sendStdin}
@@ -223,6 +239,7 @@ const MobileClaudeCodePanel = ({
           visible={isInputVisible}
           focusTerminal={focusTerminal}
           focusInputRef={focusInputRef}
+          setInputValueRef={setInputValueRef}
           maxRows={3}
         />
       </div>

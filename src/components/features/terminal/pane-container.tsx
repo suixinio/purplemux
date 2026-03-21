@@ -12,7 +12,9 @@ import { useShallow } from 'zustand/react/shallow';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
+import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
+import useQuickPrompts from '@/hooks/use-quick-prompts';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
@@ -156,9 +158,17 @@ const PaneContainer = ({
 
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
+  const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
+
+  const { prompts: quickPrompts } = useQuickPrompts();
+
+  const handleSelectQuickPrompt = useCallback((prompt: string) => {
+    setInputValueRef.current?.(prompt);
+    focusInputRef.current?.();
+  }, []);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     setClaudeCliState(state);
@@ -529,6 +539,14 @@ const PaneContainer = ({
                 />
               )}
               {isClaudeCode && (
+                <QuickPromptBar
+                  prompts={quickPrompts}
+                  cliState={claudeCliState}
+                  visible={claudeInputVisible}
+                  onSelect={handleSelectQuickPrompt}
+                />
+              )}
+              {isClaudeCode && (
                 <WebInputBar
                   cliState={claudeCliState}
                   sendStdin={sendStdin}
@@ -536,6 +554,7 @@ const PaneContainer = ({
                   visible={claudeInputVisible}
                   focusTerminal={focus}
                   focusInputRef={focusInputRef}
+                  setInputValueRef={setInputValueRef}
                 />
               )}
             </div>

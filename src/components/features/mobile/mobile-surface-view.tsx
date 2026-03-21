@@ -105,6 +105,7 @@ const MobileSurfaceView = ({
 
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
+  const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
@@ -259,6 +260,7 @@ const MobileSurfaceView = ({
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
           focusInputRef={focusInputRef}
+          setInputValueRef={setInputValueRef}
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
         />

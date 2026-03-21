@@ -369,6 +369,10 @@ const handleResumeMessage = async (
         sessionId,
         totalEntries: 0,
       });
+      const cwd = await getSessionCwd(tmuxSession);
+      if (cwd) {
+        watchForJsonlFile(conn.sessionName, sessionId, cwd);
+      }
     }
   } catch (err) {
     sendJson(ws, {
@@ -493,6 +497,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   if (!sessionWatchers.has(wsKey)) {
     const sw = watchSessionsDir(panePid, async (newInfo) => {
       const wsConns = getSessionConnections(sessionName);
+      console.log(`[timeline-server] watcher-callback sessionName=${sessionName} status=${newInfo.status} jsonlPath=${newInfo.jsonlPath ?? 'null'} connections=${wsConns.length}`);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
           cancelJsonlWatcher(sessionName);
@@ -514,6 +519,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           await subscribeToFile(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
         } else if (!newInfo.jsonlPath && newInfo.status === 'none') {
           cancelJsonlWatcher(sessionName);
+          if (c.currentJsonlPath) {
+            unsubscribeFromFile(c.ws, c.currentJsonlPath);
+            c.currentJsonlPath = null;
+          }
           await updateTabClaudeSessionId(sessionName, null).catch(() => {});
           sendJson(c.ws, {
             type: 'timeline:session-changed',

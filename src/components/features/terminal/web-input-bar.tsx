@@ -18,6 +18,7 @@ interface IWebInputBarProps {
   visible: boolean;
   focusTerminal: () => void;
   focusInputRef: React.MutableRefObject<(() => void) | undefined>;
+  setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   maxRows?: number;
 }
 
@@ -28,6 +29,7 @@ const WebInputBar = ({
   visible,
   focusTerminal,
   focusInputRef,
+  setInputValueRef,
   maxRows = DEFAULT_MAX_ROWS,
 }: IWebInputBarProps) => {
   const { value, setValue, mode, send, interrupt, textareaRef, focusInput } = useWebInput(
@@ -43,10 +45,12 @@ const WebInputBar = ({
 
   useEffect(() => {
     focusInputRef.current = focusInput;
+    setInputValueRef.current = setValue;
     return () => {
       focusInputRef.current = undefined;
+      setInputValueRef.current = undefined;
     };
-  }, [focusInput, focusInputRef]);
+  }, [focusInput, focusInputRef, setValue, setInputValueRef]);
 
   useEffect(() => {
     if (!visible) {
