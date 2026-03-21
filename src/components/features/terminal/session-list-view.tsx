@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Loader2, RefreshCw, X } from 'lucide-react';
+import { Loader2, Plus, RefreshCw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SessionListItem from '@/components/features/terminal/session-list-item';
@@ -17,6 +17,7 @@ interface ISessionListViewProps {
   onRefresh: () => Promise<void>;
   onLoadMore: () => Promise<void>;
   onClose?: () => void;
+  onNewSession?: () => void;
 }
 
 const SessionListSkeleton = () => (
@@ -63,6 +64,7 @@ const SessionListView = ({
   onRefresh,
   onLoadMore,
   onClose,
+  onNewSession,
 }: ISessionListViewProps) => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -89,7 +91,20 @@ const SessionListView = ({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-2">
-        <span className="text-sm font-medium">Claude Code 세션</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium">세션</span>
+          {onNewSession && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 gap-1 px-1.5 text-sm text-muted-foreground"
+              onClick={onNewSession}
+            >
+              <Plus size={12} />
+              새 대화
+            </Button>
+          )}
+        </div>
         <div className="flex items-center gap-0.5">
           <Button
             variant="ghost"

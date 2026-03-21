@@ -9,6 +9,7 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
+import ContentHeader from '@/components/features/terminal/content-header';
 import useSync from '@/hooks/use-sync';
 
 const TerminalPage = () => {
@@ -19,6 +20,7 @@ const TerminalPage = () => {
   const workspaceCount = useWorkspaceStore((s) => s.workspaces.length);
   const prevWorkspaceIdRef = useRef<string | null>(null);
   const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const equalizeRef = useRef<(() => void) | null>(null);
   const [fadeOut, setFadeOut] = useState(false);
 
   const handleFetchError = useCallback(() => {
@@ -162,37 +164,50 @@ const TerminalPage = () => {
     <div className="relative flex h-full w-full overflow-hidden bg-terminal-bg">
       <Sidebar onSelectWorkspace={handleSelectWorkspace} />
 
-      <div className="relative min-w-0 flex-1">
-        {showSwitching && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center bg-terminal-bg">
-            <div className="flex flex-col items-center gap-3">
-              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            </div>
-          </div>
-        )}
-
-        {layout.error && !layout.isLoading && (
-          <div className="flex h-full flex-col items-center justify-center gap-3">
-            <AlertTriangle className="h-5 w-5 text-ui-amber" />
-            <span className="text-sm text-muted-foreground">{layout.error}</span>
-            <Button variant="outline" size="sm" className="gap-1.5" onClick={() => layout.fetchLayout()}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              재시도
-            </Button>
-          </div>
-        )}
-
+      <div className="relative flex min-w-0 flex-1 flex-col">
         {layout.layout && !layout.isLoading && (
-          <div
-            key={activeWorkspaceId}
-            className={`h-full ${fadeOut ? '' : 'animate-in fade-in-0 duration-100'}`}
-            style={fadeOut ? { opacity: 0, transition: 'opacity 100ms ease-out' } : undefined}
-          >
-            <PaneLayout
+          <ContentHeader
+            focusedPaneId={layout.layout.focusedPaneId}
+            root={layout.layout.root}
+            paneCount={layout.paneCount}
+            canSplit={layout.canSplit}
+            isSplitting={layout.isSplitting}
+            onSplitPane={layout.splitPane}
+            onEqualizeRatios={() => equalizeRef.current?.()}
+            onUpdateTabPanelType={layout.updateTabPanelType}
+          />
+        )}
+
+        <div className="relative min-h-0 flex-1">
+          {showSwitching && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-terminal-bg">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+              </div>
+            </div>
+          )}
+
+          {layout.error && !layout.isLoading && (
+            <div className="flex h-full flex-col items-center justify-center gap-3">
+              <AlertTriangle className="h-5 w-5 text-ui-amber" />
+              <span className="text-sm text-muted-foreground">{layout.error}</span>
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={() => layout.fetchLayout()}>
+                <RefreshCw className="h-3.5 w-3.5" />
+                재시도
+              </Button>
+            </div>
+          )}
+
+          {layout.layout && !layout.isLoading && (
+            <div
+              key={activeWorkspaceId}
+              className={`h-full ${fadeOut ? '' : 'animate-in fade-in-0 duration-100'}`}
+              style={fadeOut ? { opacity: 0, transition: 'opacity 100ms ease-out' } : undefined}
+            >
+              <PaneLayout
               root={layout.layout.root}
               focusedPaneId={layout.layout.focusedPaneId}
               paneCount={layout.paneCount}
-              canSplit={layout.canSplit}
               isSplitting={layout.isSplitting}
               onSplitPane={layout.splitPane}
               onClosePane={layout.closePane}
@@ -207,26 +222,28 @@ const TerminalPage = () => {
               onRemoveTabLocally={layout.removeTabLocally}
               onUpdateTabPanelType={layout.updateTabPanelType}
               onEqualizeRatios={layout.equalizeRatios}
+              equalizeRef={equalizeRef}
             />
           </div>
         )}
 
-        {!activeWorkspaceId && !isLoading && !error && (
-          <div className="flex h-full items-center justify-center">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5"
-              onClick={async () => {
-                const created = await useWorkspaceStore.getState().createWorkspace('');
-                if (created) useWorkspaceStore.getState().switchWorkspace(created.id);
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              새 Workspace 만들기
-            </Button>
-          </div>
-        )}
+          {!activeWorkspaceId && !isLoading && !error && (
+            <div className="flex h-full items-center justify-center">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                onClick={async () => {
+                  const created = await useWorkspaceStore.getState().createWorkspace('');
+                  if (created) useWorkspaceStore.getState().switchWorkspace(created.id);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                새 Workspace 만들기
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

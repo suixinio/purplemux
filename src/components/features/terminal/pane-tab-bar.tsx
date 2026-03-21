@@ -6,29 +6,13 @@ import {
   ChevronRight,
   AlertTriangle,
   Loader2,
-  Equal,
   Terminal,
   BotMessageSquare,
-  CodeXml,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const SplitVerticalIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <line x1="12" y1="3" x2="12" y2="21" />
-  </svg>
-);
-
-const SplitHorizontalIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="3" width="18" height="18" rx="2" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-  </svg>
-);
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ITab, TPanelType } from '@/types/terminal';
+import type { ITab } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 import { isAutoTabName } from '@/lib/tab-title';
 
@@ -41,24 +25,17 @@ interface IPaneTabBarProps {
   error: string | null;
   isCreating: boolean;
   paneCount: number;
-  canSplit: boolean;
   isSplitting: boolean;
   onSwitchTab: (tabId: string) => void;
   onCreateTab: () => void;
   onDeleteTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
   onReorderTabs: (tabIds: string[]) => void;
-  onSplitHorizontal: () => void;
-  onSplitVertical: () => void;
   onClosePane: () => void;
   onMoveTab: (tabId: string, fromPaneId: string, toIndex: number) => void;
   onFocusPane: () => void;
   onRetry: () => void;
-  onEqualizeRatios: () => void;
-  activeTabCwd?: string;
-  activePanelType: TPanelType;
   activeTabCliState?: TCliState;
-  onTogglePanelType: () => void;
 }
 
 const PaneTabBar = ({
@@ -66,28 +43,21 @@ const PaneTabBar = ({
   tabs,
   activeTabId,
   tabTitles,
-  activeTabCwd,
   isLoading,
   error,
   isCreating,
   paneCount,
-  canSplit,
   isSplitting,
   onSwitchTab,
   onCreateTab,
   onDeleteTab,
   onRenameTab,
   onReorderTabs,
-  onSplitHorizontal,
-  onSplitVertical,
   onClosePane,
   onMoveTab,
   onFocusPane,
   onRetry,
-  onEqualizeRatios,
-  activePanelType,
   activeTabCliState,
-  onTogglePanelType,
 }: IPaneTabBarProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -100,7 +70,6 @@ const PaneTabBar = ({
     side: 'left' | 'right';
   } | null>(null);
   const [isDragOverFromOther, setIsDragOverFromOther] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
   const dragEnterCountRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -248,13 +217,6 @@ const PaneTabBar = ({
     }
   };
 
-  const handleToggle = useCallback(() => {
-    if (isToggling) return;
-    setIsToggling(true);
-    onTogglePanelType();
-    setTimeout(() => setIsToggling(false), 150);
-  }, [isToggling, onTogglePanelType]);
-
   const handleTabBarDragLeave = () => {
     dragEnterCountRef.current--;
     if (dragEnterCountRef.current <= 0) {
@@ -266,7 +228,7 @@ const PaneTabBar = ({
 
   if (error) {
     return (
-      <div className="flex h-[30px] shrink-0 items-center gap-2 bg-card px-3">
+      <div className="flex h-[36px] shrink-0 items-center gap-2 bg-card px-3">
         <AlertTriangle className="h-3.5 w-3.5 text-ui-amber" />
         <span className="text-xs text-muted-foreground">{error}</span>
         <Button
@@ -283,7 +245,7 @@ const PaneTabBar = ({
 
   if (isLoading) {
     return (
-      <div className="flex h-[30px] shrink-0 items-center gap-1.5 bg-card px-2">
+      <div className="flex h-[36px] shrink-0 items-center gap-1.5 bg-card px-2">
         {[1, 2, 3].map((i) => (
           <div
             key={i}
@@ -297,7 +259,7 @@ const PaneTabBar = ({
   return (
     <div
       className={cn(
-        'flex h-[30px] shrink-0 items-stretch border-b border-border transition-colors',
+        'flex h-[36px] shrink-0 items-stretch border-b border-border transition-colors',
         isDragOverFromOther ? 'bg-accent-color/10' : 'bg-card',
       )}
       onDragEnter={handleTabBarDragEnter}
@@ -449,143 +411,49 @@ const PaneTabBar = ({
       )}
 
       <TooltipProvider>
-        <div className="flex shrink-0 items-center border-l border-border">
-          {/* Add tab */}
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-full w-[28px] items-center justify-center text-muted-foreground hover:text-foreground',
-                isCreating && 'pointer-events-none opacity-50',
-              )}
-              onClick={onCreateTab}
-              disabled={isCreating}
-              aria-label="새 탭"
-            >
-              {isCreating ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Plus className="h-3 w-3" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">새 탭</TooltipContent>
-          </Tooltip>
-
-          {/* Panel type toggle */}
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground',
-                activePanelType === 'claude-code' && 'text-ui-purple',
-                isToggling && 'pointer-events-none opacity-80',
-              )}
-              onClick={handleToggle}
-              disabled={isToggling}
-              aria-label={activePanelType === 'terminal' ? 'Claude Code 모드로 전환' : '터미널 모드로 전환'}
-            >
-              {activePanelType === 'terminal' ? (
-                <BotMessageSquare className="h-3 w-3" />
-              ) : (
-                <Terminal className="h-3 w-3" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              {activePanelType === 'terminal' ? 'Claude Code 패널' : '터미널'}
-            </TooltipContent>
-          </Tooltip>
-
-          {/* Open in code-server */}
-          <Tooltip>
-            <TooltipTrigger
-              className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-              onClick={() => {
-                const folder = activeTabCwd || '/';
-                const url = `${window.location.protocol}//${window.location.hostname}:8080/?folder=${encodeURIComponent(folder)}`;
-                window.open(url, '_blank');
-              }}
-              aria-label="code-server 열기"
-            >
-              <CodeXml className="h-3 w-3" />
-            </TooltipTrigger>
-            <TooltipContent side="bottom">에디터</TooltipContent>
-          </Tooltip>
-
-          {/* Split horizontal */}
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
-                canSplit
-                  ? 'hover:bg-accent hover:text-foreground'
-                  : 'cursor-not-allowed opacity-30',
-              )}
-              onClick={canSplit ? onSplitHorizontal : undefined}
-              disabled={!canSplit}
-              aria-label="수직 분할"
-            >
-              {isSplitting ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <SplitVerticalIcon className="h-3 w-3" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">수직 분할</TooltipContent>
-          </Tooltip>
-
-          {/* Split vertical */}
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground',
-                canSplit
-                  ? 'hover:bg-accent hover:text-foreground'
-                  : 'cursor-not-allowed opacity-30',
-              )}
-              onClick={canSplit ? onSplitVertical : undefined}
-              disabled={!canSplit}
-              aria-label="수평 분할"
-            >
-              {isSplitting ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <SplitHorizontalIcon className="h-3 w-3" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">수평 분할</TooltipContent>
-          </Tooltip>
-
-          {/* Equalize panes */}
-          {paneCount >= 2 && (
-            <Tooltip>
-              <TooltipTrigger
-                className="flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground"
-                onClick={onEqualizeRatios}
-                aria-label="균등 분할"
-              >
-                <Equal className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">균등 분할</TooltipContent>
-            </Tooltip>
-          )}
-
-          {/* Close pane */}
-          {paneCount >= 2 && (
+        <div className="flex shrink-0 items-stretch">
+          {/* 탭 추가 */}
+          <div className="flex items-center border-l border-r border-border px-0.5">
             <Tooltip>
               <TooltipTrigger
                 className={cn(
-                  'flex h-full w-[24px] items-center justify-center rounded-none text-muted-foreground',
-                  isSplitting ? 'pointer-events-none opacity-30' : 'hover:bg-destructive/20 hover:text-foreground',
+                  'flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground',
+                  isCreating && 'pointer-events-none opacity-50',
                 )}
-                disabled={isSplitting}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClosePane();
-                }}
-                aria-label="Pane 닫기"
+                onClick={onCreateTab}
+                disabled={isCreating}
+                aria-label="새 탭"
               >
-                <X className="h-3 w-3" />
+                {isCreating ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Plus className="h-3 w-3" />
+                )}
               </TooltipTrigger>
-              <TooltipContent side="bottom">Pane 닫기</TooltipContent>
+              <TooltipContent side="bottom">새 탭</TooltipContent>
             </Tooltip>
+          </div>
+
+          {paneCount >= 2 && (
+            <div className="flex items-center pl-0.5">
+              <Tooltip>
+                <TooltipTrigger
+                  className={cn(
+                    'flex h-full w-[28px] items-center justify-center rounded-none text-muted-foreground',
+                    isSplitting ? 'pointer-events-none opacity-30' : 'hover:bg-destructive/20 hover:text-foreground',
+                  )}
+                  disabled={isSplitting}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onClosePane();
+                  }}
+                  aria-label="Pane 닫기"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">Pane 닫기</TooltipContent>
+              </Tooltip>
+            </div>
           )}
         </div>
       </TooltipProvider>

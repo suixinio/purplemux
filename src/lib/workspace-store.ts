@@ -12,6 +12,7 @@ import {
   crossCheckLayout,
   collectAllTabs,
   createDefaultLayout,
+  clearLayoutCache,
 } from '@/lib/layout-store';
 import type { IWorkspace, IWorkspacesData, ILayoutData } from '@/types/terminal';
 
@@ -323,6 +324,7 @@ export const deleteWorkspace = async (workspaceId: string): Promise<boolean> =>
     try {
       await fs.rm(resolveLayoutDir(workspaceId), { recursive: true, force: true });
     } catch {}
+    clearLayoutCache(workspaceId);
 
     data.workspaces.splice(idx, 1);
     data.workspaces.forEach((w, i) => { w.order = i; });

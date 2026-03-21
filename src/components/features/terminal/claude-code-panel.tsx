@@ -17,7 +17,7 @@ interface IClaudeCodePanelProps {
   onCliStateChange?: (state: TCliState) => void;
   onInputVisibleChange?: (visible: boolean) => void;
   onClose?: () => void;
-  processHintRef?: React.MutableRefObject<((isClaudeRunning: boolean) => void) | undefined>;
+  onNewSession?: () => void;
 }
 
 const ClaudeCodePanel = ({
@@ -27,7 +27,7 @@ const ClaudeCodePanel = ({
   onCliStateChange,
   onInputVisibleChange,
   onClose,
-  processHintRef,
+  onNewSession,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -73,7 +73,6 @@ const ClaudeCodePanel = ({
     hasMore: timelineHasMore,
     retrySession,
     sendResume,
-    sendProcessHint,
   } = useTimeline({
     sessionName,
     claudeSessionId,
@@ -110,13 +109,6 @@ const ClaudeCodePanel = ({
   useEffect(() => {
     navigateToTimelineRef.current = navigateToTimeline;
   });
-
-  useEffect(() => {
-    if (processHintRef) {
-      processHintRef.current = sendProcessHint;
-      return () => { processHintRef.current = undefined; };
-    }
-  }, [processHintRef, sendProcessHint]);
 
   const isInputVisible = view === 'timeline';
 
@@ -160,6 +152,7 @@ const ClaudeCodePanel = ({
           onRefresh={refetchSessions}
           onLoadMore={loadMoreSessions}
           onClose={onClose}
+          onNewSession={onNewSession}
         />
       </div>
     );

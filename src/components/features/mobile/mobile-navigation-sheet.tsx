@@ -25,13 +25,14 @@ interface IMobileNavigationSheetProps {
   onOpenChange: (open: boolean) => void;
   workspaces: IWorkspace[];
   activeWorkspaceId: string | null;
-  panes: IPaneNode[];
-  activePaneId: string | null;
-  activeTabId: string | null;
+  panes?: IPaneNode[];
+  activePaneId?: string | null;
+  activeTabId?: string | null;
   onSelectWorkspace: (workspaceId: string) => void;
-  onSelectSurface: (paneId: string, tabId: string) => void;
-  onCreateTab: (paneId: string) => Promise<ITab | null>;
-  onDeleteTab: (paneId: string, tabId: string) => Promise<void>;
+  onSelectSurface?: (paneId: string, tabId: string) => void;
+  onCreateTab?: (paneId: string) => Promise<ITab | null>;
+  onDeleteTab?: (paneId: string, tabId: string) => Promise<void>;
+  onCreateWorkspace: () => Promise<void>;
 }
 
 const MobileNavigationSheet = ({
@@ -39,13 +40,14 @@ const MobileNavigationSheet = ({
   onOpenChange,
   workspaces,
   activeWorkspaceId,
-  panes,
-  activePaneId,
-  activeTabId,
+  panes = [],
+  activePaneId = null,
+  activeTabId = null,
   onSelectWorkspace,
   onSelectSurface,
   onCreateTab,
   onDeleteTab,
+  onCreateWorkspace,
 }: IMobileNavigationSheetProps) => {
   const router = useRouter();
   const [creatingPaneId, setCreatingPaneId] = useState<string | null>(null);
@@ -63,7 +65,7 @@ const MobileNavigationSheet = ({
 
   const handleSelectSurface = useCallback(
     (paneId: string, tabId: string) => {
-      onSelectSurface(paneId, tabId);
+      onSelectSurface?.(paneId, tabId);
       onOpenChange(false);
     },
     [onSelectSurface, onOpenChange],
@@ -71,12 +73,12 @@ const MobileNavigationSheet = ({
 
   const handleCreateTab = useCallback(
     async (paneId: string) => {
-      if (creatingPaneId) return;
+      if (creatingPaneId || !onCreateTab) return;
       setCreatingPaneId(paneId);
       const tab = await onCreateTab(paneId);
       setCreatingPaneId(null);
       if (tab) {
-        onSelectSurface(paneId, tab.id);
+        onSelectSurface?.(paneId, tab.id);
         onOpenChange(false);
       }
     },
@@ -99,7 +101,7 @@ const MobileNavigationSheet = ({
   const handleDeleteTab = useCallback(
     async (paneId: string, tabId: string) => {
       setLongPressTabId(null);
-      await onDeleteTab(paneId, tabId);
+      await onDeleteTab?.(paneId, tabId);
     },
     [onDeleteTab],
   );
@@ -174,7 +176,7 @@ const MobileNavigationSheet = ({
   const renderAddTabButton = (paneId: string, indent: string) => (
     <button
       className={cn(
-        'flex h-11 w-full items-center gap-1.5 pr-4 text-left text-xs text-muted-foreground/70 transition-colors hover:text-muted-foreground',
+        'flex h-11 w-full items-center gap-1.5 pr-4 text-left text-sm text-muted-foreground/70 transition-colors hover:text-muted-foreground',
         indent,
       )}
       onClick={() => handleCreateTab(paneId)}
@@ -185,7 +187,7 @@ const MobileNavigationSheet = ({
       ) : (
         <Plus size={16} />
       )}
-      새 탭
+      Tab
     </button>
   );
 
@@ -293,6 +295,13 @@ const MobileNavigationSheet = ({
         </div>
 
         <div className="shrink-0 border-t">
+          <button
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            onClick={onCreateWorkspace}
+          >
+            <Plus size={16} />
+            Workspace
+          </button>
           <button
             className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
             onClick={() => {

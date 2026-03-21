@@ -9,7 +9,7 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
-import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
@@ -109,9 +109,6 @@ const MobileSurfaceView = ({
 
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
-  const processHintRef = useRef<((isClaudeRunning: boolean) => void) | undefined>(undefined);
-  const manualToggleCooldownRef = useRef<Record<string, number>>({});
-  const claudeCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
@@ -119,26 +116,6 @@ const MobileSurfaceView = ({
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleInputVisibleChange = useCallback((_visible: boolean) => {}, []);
-
-  const checkClaudeSession = useCallback(async (tabId: string) => {
-    const tab = tabsRef.current.find((t) => t.id === tabId);
-    if (!tab || tab.panelType === 'claude-code') return;
-
-    const cooldownTime = manualToggleCooldownRef.current[tabId];
-    if (cooldownTime && Date.now() - cooldownTime < 10_000) return;
-
-    try {
-      const res = await fetch(`/api/timeline/session?session=${tab.sessionName}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.status === 'active') {
-        const currentTab = tabsRef.current.find((t) => t.id === tabId);
-        if (currentTab?.panelType !== 'claude-code') {
-          onUpdateTabPanelType(paneId, tabId, 'claude-code');
-        }
-      }
-    } catch { /* ignore */ }
-  }, [paneId, onUpdateTabPanelType]);
 
   const handleCustomKeyEvent = useCallback((event: KeyboardEvent): boolean => {
     if (isAppShortcut(event)) {
@@ -161,18 +138,6 @@ const MobileSurfaceView = ({
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       fetchAndUpdateCwd();
-
-      if (isShellProcess(title)) {
-        processHintRef.current?.(false);
-        delete manualToggleCooldownRef.current[tabId];
-      } else {
-        processHintRef.current?.(true);
-        const tab = tabsRef.current.find((t) => t.id === tabId);
-        if (tab?.panelType !== 'claude-code') {
-          if (claudeCheckTimerRef.current) clearTimeout(claudeCheckTimerRef.current);
-          claudeCheckTimerRef.current = setTimeout(() => checkClaudeSession(tabId), 500);
-        }
-      }
     },
     customKeyEventHandler: handleCustomKeyEvent,
   });
@@ -180,12 +145,6 @@ const MobileSurfaceView = ({
   useEffect(() => {
     clearRef.current = clear;
   });
-
-  useEffect(() => {
-    return () => {
-      if (claudeCheckTimerRef.current) clearTimeout(claudeCheckTimerRef.current);
-    };
-  }, []);
 
   const handleSessionEnded = useCallback(async () => {
     const currentTabs = tabsRef.current;
@@ -308,7 +267,6 @@ const MobileSurfaceView = ({
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
           focusInputRef={focusInputRef}
-          processHintRef={processHintRef}
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
         />

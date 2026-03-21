@@ -1,4 +1,4 @@
-import { Terminal, Bell, LogOut } from 'lucide-react';
+import { Terminal, Bell, LogOut, Menu } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -14,17 +14,30 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+interface IAppHeaderProps {
+  onMenuOpen?: () => void;
+}
+
 const handleLogout = async () => {
   await fetch('/api/auth/logout', { method: 'POST' });
   window.location.href = '/login';
 };
 
-const AppHeader = () => {
+const AppHeader = ({ onMenuOpen }: IAppHeaderProps) => {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-card px-3">
       <div className="flex items-center gap-1.5">
+        {onMenuOpen && (
+          <button
+            className="flex h-8 w-8 items-center justify-center text-foreground"
+            onClick={onMenuOpen}
+            aria-label="메뉴 열기"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        )}
         <Terminal className="h-4 w-4 text-ui-purple" />
-        <span className="text-sm font-semibold text-ui-purple">Purple Terminal</span>
+        <span className="text-sm font-semibold text-ui-purple">PT</span>
       </div>
 
       <TooltipProvider>

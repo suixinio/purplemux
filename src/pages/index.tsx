@@ -6,7 +6,6 @@ import useWorkspaceStore from '@/hooks/use-workspace-store';
 import type { IWorkspaceInitialData } from '@/hooks/use-workspace-store';
 import { initTerminalTheme } from '@/hooks/use-terminal-theme';
 import { useEffect, useRef } from 'react';
-import AppHeader from '@/components/layout/app-header';
 import useIsMobile from '@/hooks/use-is-mobile';
 
 const TerminalPage = dynamic(
@@ -55,11 +54,8 @@ const Index = ({ initialWorkspace }: IIndexProps) => {
       <Head>
         <title>Purple Terminal</title>
       </Head>
-      <div style={{ backgroundColor: '#18181b' }} className="flex h-screen w-screen flex-col">
-        <AppHeader />
-        <div className="min-h-0 flex-1">
-          <TerminalPage />
-        </div>
+      <div style={{ backgroundColor: '#18181b' }} className="flex h-screen w-screen">
+        <TerminalPage />
       </div>
     </>
   );

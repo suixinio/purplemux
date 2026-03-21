@@ -41,7 +41,6 @@ interface IUseTimelineWebSocketReturn {
   unsubscribe: () => void;
   reconnect: () => void;
   sendResume: (sessionId: string, tmuxSession: string) => void;
-  sendProcessHint: (isClaudeRunning: boolean) => void;
 }
 
 const useTimelineWebSocket = ({
@@ -223,14 +222,7 @@ const useTimelineWebSocket = ({
     }
   }, []);
 
-  const sendProcessHint = useCallback((isClaudeRunning: boolean) => {
-    const ws = wsRef.current;
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'timeline:process-hint', isClaudeRunning }));
-    }
-  }, []);
-
-  return { status, subscribe, unsubscribe, reconnect, sendResume, sendProcessHint };
+  return { status, subscribe, unsubscribe, reconnect, sendResume };
 };
 
 export default useTimelineWebSocket;

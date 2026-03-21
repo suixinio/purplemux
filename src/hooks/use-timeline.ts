@@ -57,7 +57,6 @@ interface IUseTimelineReturn {
   hasMore: boolean;
   retrySession: () => void;
   sendResume: (sessionId: string, tmuxSession: string) => void;
-  sendProcessHint: (isClaudeRunning: boolean) => void;
 }
 
 const useTimeline = ({
@@ -213,7 +212,7 @@ const useTimeline = ({
 
   const shouldConnect = enabled && sessionStatus !== 'not-installed';
 
-  const { status: wsStatus, reconnect, sendResume, sendProcessHint } = useTimelineWebSocket({
+  const { status: wsStatus, reconnect, sendResume } = useTimelineWebSocket({
     sessionName,
     claudeSessionId,
     enabled: shouldConnect,
@@ -253,7 +252,6 @@ const useTimeline = ({
     hasMore,
     retrySession,
     sendResume,
-    sendProcessHint,
   };
 };
 

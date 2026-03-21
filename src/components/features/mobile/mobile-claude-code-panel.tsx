@@ -33,7 +33,6 @@ interface IMobileClaudeCodePanelProps {
   terminalWsConnected: boolean;
   focusTerminal: () => void;
   focusInputRef: React.MutableRefObject<(() => void) | undefined>;
-  processHintRef: React.MutableRefObject<((isClaudeRunning: boolean) => void) | undefined>;
   onCliStateChange: (state: TCliState) => void;
   onInputVisibleChange: (visible: boolean) => void;
 }
@@ -50,7 +49,6 @@ const MobileClaudeCodePanel = ({
   terminalWsConnected,
   focusTerminal,
   focusInputRef,
-  processHintRef,
   onCliStateChange,
   onInputVisibleChange,
 }: IMobileClaudeCodePanelProps) => {
@@ -102,7 +100,6 @@ const MobileClaudeCodePanel = ({
     hasMore: timelineHasMore,
     retrySession,
     sendResume,
-    sendProcessHint,
   } = useTimeline({
     sessionName,
     claudeSessionId,
@@ -142,15 +139,6 @@ const MobileClaudeCodePanel = ({
   useEffect(() => {
     navigateToTimelineRef.current = navigateToTimeline;
   });
-
-  useEffect(() => {
-    if (processHintRef) {
-      processHintRef.current = sendProcessHint;
-      return () => {
-        processHintRef.current = undefined;
-      };
-    }
-  }, [processHintRef, sendProcessHint]);
 
   const isInputVisible = view === 'timeline';
 

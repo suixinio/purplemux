@@ -64,7 +64,7 @@ const SessionListItem = ({
     <button
       type="button"
       className={cn(
-        'w-full cursor-pointer border-b border-border/50 px-4 py-3 text-left transition-colors',
+        'w-full cursor-pointer border-b border-border/50 py-3 pl-1 pr-4 text-left transition-colors',
         isHighlighted ? 'bg-ui-purple/5' : 'hover:bg-ui-purple/5',
         isDisabled && !isResuming && 'pointer-events-none opacity-50',
         isResuming && 'bg-ui-purple/5',
@@ -106,7 +106,7 @@ const SessionListItem = ({
           </TooltipContent>
         </Tooltip>
       </div>
-      <div className="mt-1 flex items-center justify-between gap-2 pl-[18px]">
+      <div className="mt-1 flex items-center justify-between gap-2 pl-[12px]">
         <Tooltip>
           <TooltipTrigger
             className="min-w-0 truncate text-sm text-left"

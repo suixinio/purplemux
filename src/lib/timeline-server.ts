@@ -391,33 +391,6 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           sessionId: msg.sessionId,
           tmuxSession: msg.tmuxSession,
         });
-      } else if (msg.type === 'timeline:process-hint') {
-        const newInfo = await detectActiveSession(conn.panePid);
-        if (newInfo.jsonlPath && newInfo.jsonlPath !== conn.currentJsonlPath) {
-          cancelJsonlRetry(conn.sessionName);
-          if (conn.currentJsonlPath) {
-            unsubscribeFromFile(ws, conn.currentJsonlPath);
-          }
-          conn.currentJsonlPath = newInfo.jsonlPath;
-          if (newInfo.sessionId) {
-            await updateTabClaudeSessionId(conn.sessionName, newInfo.sessionId).catch(() => {});
-          }
-          sendJson(ws, {
-            type: 'timeline:session-changed',
-            newSessionId: newInfo.sessionId ?? '',
-            reason: 'new-session-started',
-          });
-          await subscribeToFile(ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
-        } else if (!newInfo.jsonlPath && newInfo.status === 'none' && conn.currentJsonlPath) {
-          await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});
-          sendJson(ws, {
-            type: 'timeline:session-changed',
-            newSessionId: '',
-            reason: 'session-ended',
-          });
-        } else if (newInfo.status === 'active' && !newInfo.jsonlPath) {
-          scheduleJsonlRetry(conn.sessionName, conn.panePid);
-        }
       }
     } catch {}
   });

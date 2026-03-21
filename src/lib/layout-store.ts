@@ -102,6 +102,11 @@ export const writeLayoutFile = async (data: ILayoutData, filePath: string): Prom
   if (wsId) broadcastSync({ type: 'layout', workspaceId: wsId });
 };
 
+export const clearLayoutCache = (wsId: string): void => {
+  const filePath = resolveLayoutFile(wsId);
+  g.__ptLayoutContentCache!.delete(filePath);
+};
+
 export const collectPanes = (node: TLayoutNode): IPaneNode[] => {
   if (node.type === 'pane') return [node];
   return [...collectPanes(node.children[0]), ...collectPanes(node.children[1])];

@@ -6,6 +6,9 @@ import {
   Settings,
   Info,
   BarChart3,
+  Terminal,
+  Bell,
+  LogOut,
 } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { toast } from 'sonner';
@@ -18,6 +21,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
+  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
@@ -30,6 +34,11 @@ interface ISidebarProps {
 
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 480;
+
+const handleLogout = async () => {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  window.location.href = '/login';
+};
 
 const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const router = useRouter();
@@ -178,14 +187,45 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
         role="navigation"
         aria-label="Workspace 목록"
       >
-        <button
-          className="flex h-[30px] w-full shrink-0 items-center justify-end border-b border-sidebar-border px-2 text-muted-foreground transition-colors hover:bg-sidebar-accent"
-          onClick={handleToggleCollapse}
-          aria-label="사이드바 접기"
-          aria-expanded={!collapsed}
-        >
-          <ChevronsLeft className="h-3.5 w-3.5" />
-        </button>
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
+          <div className="flex items-center gap-1.5">
+            <Terminal className="h-4 w-4 text-ui-purple" />
+            <span className="text-sm font-semibold text-ui-purple">PT</span>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button
+              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
+              onClick={() => toast.info('개발중입니다')}
+              aria-label="알림"
+            >
+              <Bell className="h-3.5 w-3.5" />
+            </button>
+            <AlertDialog>
+              <AlertDialogTrigger
+                render={
+                  <button
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
+                    aria-label="로그아웃"
+                  />
+                }
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>로그아웃</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    로그아웃하시겠습니까? 다시 접속하려면 서버 로그의 비밀번호가 필요합니다.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>취소</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleLogout}>로그아웃</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </div>
 
         <div
           className="flex-1 overflow-y-auto"
@@ -249,10 +289,10 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
             </div>
             <button
               className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => toast.info('추후 구현 예정')}
-              aria-label="정보"
+              onClick={handleToggleCollapse}
+              aria-label="사이드바 접기"
             >
-              <Info className="h-3.5 w-3.5" />
+              <ChevronsLeft className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>
@@ -299,12 +339,12 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
 
       {collapsed && (
         <button
-          className="flex shrink-0 items-center border-r border-sidebar-border bg-sidebar px-1 text-muted-foreground transition-colors hover:bg-sidebar-accent"
+          className="flex shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar px-1.5 pt-3.5 text-muted-foreground transition-colors hover:bg-sidebar-accent"
           onClick={handleToggleCollapse}
           aria-label="사이드바 펼치기"
           aria-expanded="false"
         >
-          <ChevronsRight className="h-3.5 w-3.5" />
+          <Terminal className="h-4 w-4 text-ui-purple" />
         </button>
       )}
 

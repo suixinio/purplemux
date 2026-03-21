@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useCallback } from 'react';
+import { useRef, useLayoutEffect, useCallback, useEffect, type MutableRefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import type { TLayoutNode, ITab, TPanelType } from '@/types/terminal';
@@ -9,7 +9,6 @@ interface IPaneLayoutProps {
   root: TLayoutNode;
   focusedPaneId: string | null;
   paneCount: number;
-  canSplit: boolean;
   isSplitting: boolean;
   onSplitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => void;
   onClosePane: (paneId: string) => void;
@@ -24,6 +23,7 @@ interface IPaneLayoutProps {
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   onEqualizeRatios: () => void;
+  equalizeRef?: MutableRefObject<(() => void) | null>;
 }
 
 const PaneLayout = (props: IPaneLayoutProps) => {
@@ -31,7 +31,6 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     root,
     focusedPaneId,
     paneCount,
-    canSplit,
     isSplitting,
     onSplitPane,
     onClosePane,
@@ -46,6 +45,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     onRemoveTabLocally,
     onUpdateTabPanelType,
     onEqualizeRatios,
+    equalizeRef,
   } = props;
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -77,6 +77,10 @@ const PaneLayout = (props: IPaneLayoutProps) => {
     walk(equalized, []);
     onEqualizeRatios();
   }, [root, onEqualizeRatios]);
+
+  useEffect(() => {
+    if (equalizeRef) equalizeRef.current = handleEqualizeRatios;
+  });
 
   const panes = collectPanes(root);
 
@@ -187,7 +191,6 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             activeTabId={pane.activeTabId}
             isFocused={pane.id === focusedPaneId}
             paneCount={paneCount}
-            canSplit={canSplit}
             isSplitting={isSplitting}
             onSplitPane={onSplitPane}
             onClosePane={onClosePane}
@@ -200,7 +203,6 @@ const PaneLayout = (props: IPaneLayoutProps) => {
             onReorderTabs={onReorderTabs}
             onRemoveTabLocally={onRemoveTabLocally}
             onUpdateTabPanelType={onUpdateTabPanelType}
-            onEqualizeRatios={handleEqualizeRatios}
           />,
           getStableContainer(pane.id),
         ),

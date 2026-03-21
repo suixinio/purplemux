@@ -7,13 +7,14 @@ import type { ITab, TDisconnectReason, TPanelType } from '@/types/terminal';
 import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { useShallow } from 'zustand/react/shallow';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
-import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
@@ -55,7 +56,6 @@ interface IPaneContainerProps {
   activeTabId: string | null;
   isFocused: boolean;
   paneCount: number;
-  canSplit: boolean;
   isSplitting: boolean;
   onSplitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => void;
   onClosePane: (paneId: string) => void;
@@ -68,7 +68,6 @@ interface IPaneContainerProps {
   onReorderTabs: (paneId: string, tabIds: string[]) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
-  onEqualizeRatios: () => void;
 }
 
 const CLAUDE_CODE_FONT_SIZE = 10;
@@ -80,7 +79,6 @@ const PaneContainer = ({
   activeTabId,
   isFocused,
   paneCount,
-  canSplit,
   isSplitting,
   onSplitPane,
   onClosePane,
@@ -93,7 +91,6 @@ const PaneContainer = ({
   onReorderTabs,
   onRemoveTabLocally,
   onUpdateTabPanelType,
-  onEqualizeRatios,
 }: IPaneContainerProps) => {
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
@@ -126,7 +123,6 @@ const PaneContainer = ({
     const id = requestAnimationFrame(() => setMounted(true));
     return () => {
       cancelAnimationFrame(id);
-      if (claudeCheckTimerRef.current) clearTimeout(claudeCheckTimerRef.current);
     };
   }, []);
   const termActionsRef = useRef<ITermActions>(NOOP_TERM_ACTIONS);
@@ -160,33 +156,6 @@ const PaneContainer = ({
 
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
-  const processHintRef = useRef<((isClaudeRunning: boolean) => void) | undefined>(undefined);
-  const manualToggleCooldownRef = useRef<Record<string, number>>({});
-  const isNonShellRunningRef = useRef<Record<string, boolean>>({});
-  const claudeCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const checkClaudeSession = useCallback(async (tabId: string) => {
-    const tab = tabsRef.current.find((t) => t.id === tabId);
-    if (!tab || tab.panelType === 'claude-code') return;
-
-    const cooldownTime = manualToggleCooldownRef.current[tabId];
-    if (cooldownTime && Date.now() - cooldownTime < 10_000) return;
-
-    try {
-      const res = await fetch(`/api/timeline/session?session=${tab.sessionName}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data.status === 'active') {
-        const currentTab = tabsRef.current.find((t) => t.id === tabId);
-        if (currentTab?.panelType !== 'claude-code') {
-          setIsPanelTransitioning(true);
-          onUpdateTabPanelType(paneId, tabId, 'claude-code');
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }, [paneId, onUpdateTabPanelType]);
 
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
@@ -220,21 +189,6 @@ const PaneContainer = ({
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       fetchAndUpdateCwd();
-
-      if (isShellProcess(title)) {
-        isNonShellRunningRef.current[tabId] = false;
-        processHintRef.current?.(false);
-        delete manualToggleCooldownRef.current[tabId];
-      } else {
-        isNonShellRunningRef.current[tabId] = true;
-        processHintRef.current?.(true);
-
-        const tab = tabsRef.current.find((t) => t.id === tabId);
-        if (tab?.panelType !== 'claude-code') {
-          if (claudeCheckTimerRef.current) clearTimeout(claudeCheckTimerRef.current);
-          claudeCheckTimerRef.current = setTimeout(() => checkClaudeSession(tabId), 500);
-        }
-      }
     },
     customKeyEventHandler: handleCustomKeyEvent,
   });
@@ -441,13 +395,16 @@ const PaneContainer = ({
     const current = activeTab?.panelType ?? 'terminal';
     const next: TPanelType = current === 'terminal' ? 'claude-code' : 'terminal';
 
-    if (current === 'claude-code' && next === 'terminal' && isNonShellRunningRef.current[activeTabId]) {
-      manualToggleCooldownRef.current[activeTabId] = Date.now();
-    }
-
     setIsPanelTransitioning(true);
     onUpdateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, tabs, onUpdateTabPanelType]);
+
+  const handleNewClaudeSession = useCallback(() => {
+    if (status !== 'connected') return;
+    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
+    sendStdin(`${cmd}\n`);
+  }, [status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);
@@ -526,28 +483,21 @@ const PaneContainer = ({
         tabs={tabs}
         activeTabId={activeTabId}
         tabTitles={tabTitles}
-        activeTabCwd={activeTabCwd}
         isLoading={false}
         error={null}
         isCreating={isCreating}
         paneCount={paneCount}
-        canSplit={canSplit}
         isSplitting={isSplitting}
         onSwitchTab={handleSwitchTab}
         onCreateTab={handleCreateTab}
         onDeleteTab={handleDeleteTab}
         onRenameTab={handleRenameTab}
         onReorderTabs={handleReorderTabs}
-        onSplitHorizontal={() => onSplitPane(paneId, 'horizontal')}
-        onSplitVertical={() => onSplitPane(paneId, 'vertical')}
         onClosePane={() => onClosePane(paneId)}
         onMoveTab={handleMoveTab}
         onFocusPane={handleFocusPane}
         onRetry={() => {}}
-        onEqualizeRatios={onEqualizeRatios}
-        activePanelType={activePanelType}
         activeTabCliState={claudeCliState}
-        onTogglePanelType={handleTogglePanelType}
       />
 
       <div role="tabpanel" className="relative min-h-0 flex-1 flex flex-col" style={{ backgroundColor: terminalTheme.colors.background }}>
@@ -575,7 +525,7 @@ const PaneContainer = ({
                   onCliStateChange={handleCliStateChange}
                   onInputVisibleChange={handleInputVisibleChange}
                   onClose={handleTogglePanelType}
-                  processHintRef={processHintRef}
+                  onNewSession={handleNewClaudeSession}
                 />
               )}
               {isClaudeCode && (
@@ -593,7 +543,7 @@ const PaneContainer = ({
 
           <Separator
             className={cn(
-              'group flex items-center justify-center bg-muted',
+              'group flex items-center justify-center overflow-hidden bg-muted',
               isClaudeCode && !isTerminalCollapsed ? 'h-3' : 'h-0',
             )}
             disabled={!isClaudeCode || isTerminalCollapsed}
