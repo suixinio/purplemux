@@ -62,6 +62,7 @@ const PaneTabBar = ({
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(false);
+  const hasOverflow = showLeftArrow || showRightArrow;
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [draggedTabId, setDraggedTabId] = useState<string | null>(null);
@@ -109,12 +110,15 @@ const PaneTabBar = ({
     const el = scrollRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      const delta = e.deltaY || e.deltaX;
+      if (delta === 0) return;
       e.preventDefault();
-      el.scrollBy({ left: (e.deltaY || e.deltaX) * 0.4, behavior: 'smooth' });
+      el.scrollLeft += delta;
+      checkOverflow();
     };
     el.addEventListener('wheel', onWheel, { passive: false });
     return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  }, [checkOverflow]);
 
   const scrollBy = (delta: number) => {
     const el = scrollRef.current;
@@ -270,10 +274,14 @@ const PaneTabBar = ({
       onDragOver={(e) => e.preventDefault()}
       onDrop={handleDrop}
     >
-      {showLeftArrow && (
+      {hasOverflow && (
         <button
-          className="flex w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+          className={cn(
+            'flex w-5 shrink-0 items-center justify-center text-muted-foreground transition-opacity hover:text-foreground',
+            showLeftArrow ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
           onClick={() => scrollBy(-200)}
+          tabIndex={showLeftArrow ? 0 : -1}
         >
           <ChevronLeft className="h-3.5 w-3.5" />
         </button>
@@ -383,7 +391,7 @@ const PaneTabBar = ({
 
               <button
                 className={cn(
-                  'ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary hover:text-foreground',
+                  'ml-auto -mr-1.5 flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground',
                   isActive ? 'visible' : 'invisible group-hover:visible',
                 )}
                 onClick={(e) => {
@@ -403,10 +411,14 @@ const PaneTabBar = ({
         })}
       </div>
 
-      {showRightArrow && (
+      {hasOverflow && (
         <button
-          className="flex w-5 shrink-0 items-center justify-center text-muted-foreground hover:text-foreground"
+          className={cn(
+            'flex w-5 shrink-0 items-center justify-center text-muted-foreground transition-opacity hover:text-foreground',
+            showRightArrow ? 'opacity-100' : 'pointer-events-none opacity-0',
+          )}
           onClick={() => scrollBy(200)}
+          tabIndex={showRightArrow ? 0 : -1}
         >
           <ChevronRight className="h-3.5 w-3.5" />
         </button>

@@ -631,7 +631,7 @@ const PaneContainer = ({
         )}
 
         {showInitialLoading && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 animate-[fadeIn_300ms_ease-out_150ms_both]">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             <span className="text-sm text-muted-foreground">연결 중...</span>
           </div>

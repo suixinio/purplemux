@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { Loader2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,7 @@ const TerminalPage = () => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const workspaceCount = useWorkspaceStore((s) => s.workspaces.length);
   const prevWorkspaceIdRef = useRef<string | null>(null);
-  const switchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const equalizeRef = useRef<(() => void) | null>(null);
-  const [fadeOut, setFadeOut] = useState(false);
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -95,15 +93,9 @@ const TerminalPage = () => {
 
       prevWorkspaceIdRef.current = activeWorkspaceId;
       layout.saveCurrentLayout();
-
-      if (switchTimeoutRef.current) clearTimeout(switchTimeoutRef.current);
-      setFadeOut(true);
-      switchTimeoutRef.current = setTimeout(() => {
-        useTabMetadataStore.getState().reset();
-        layout.clearLayout();
-        useWorkspaceStore.getState().switchWorkspace(workspaceId);
-        setFadeOut(false);
-      }, 100);
+      useTabMetadataStore.getState().reset();
+      layout.clearLayout();
+      useWorkspaceStore.getState().switchWorkspace(workspaceId);
     },
     [layout],
   );
@@ -112,7 +104,7 @@ const TerminalPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full overflow-hidden bg-terminal-bg">
+      <div className="flex h-full w-full overflow-hidden bg-background">
         <div className="flex w-[200px] shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
           <div className="flex h-9 shrink-0 items-center justify-end border-b border-sidebar-border px-2" />
           <div className="flex flex-col gap-0.5 p-2">
@@ -147,7 +139,7 @@ const TerminalPage = () => {
 
   if (error && !workspaceCount) {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden bg-terminal-bg">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-3 overflow-hidden bg-background">
         <AlertTriangle className="h-5 w-5 text-ui-amber" />
         <span className="text-sm text-muted-foreground">{error}</span>
         <Button variant="outline" size="sm" className="gap-1.5" onClick={useWorkspaceStore.getState().fetchWorkspaces}>
@@ -161,7 +153,7 @@ const TerminalPage = () => {
   const showSwitching = !layout.layout && layout.isLoading && activeWorkspaceId;
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden bg-terminal-bg">
+    <div className="relative flex h-full w-full overflow-hidden bg-background">
       <Sidebar onSelectWorkspace={handleSelectWorkspace} />
 
       <div className="relative flex min-w-0 flex-1 flex-col">
@@ -180,10 +172,8 @@ const TerminalPage = () => {
 
         <div className="relative min-h-0 flex-1">
           {showSwitching && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-terminal-bg">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-              </div>
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background animate-[fadeIn_300ms_ease-out_150ms_both]">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}
 
@@ -201,8 +191,7 @@ const TerminalPage = () => {
           {layout.layout && !layout.isLoading && (
             <div
               key={activeWorkspaceId}
-              className={`h-full ${fadeOut ? '' : 'animate-in fade-in-0 duration-100'}`}
-              style={fadeOut ? { opacity: 0, transition: 'opacity 100ms ease-out' } : undefined}
+              className="h-full"
             >
               <PaneLayout
               root={layout.layout.root}

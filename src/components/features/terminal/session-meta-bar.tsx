@@ -2,12 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
-import { ChevronDown, GitBranch } from 'lucide-react';
+import { ChevronDown, GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/format-tokens';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
+import useGitStatus from '@/hooks/use-git-status';
+import type { IGitStatus } from '@/lib/git-status';
 import type { ITimelineEntry } from '@/types/timeline';
 
 dayjs.extend(relativeTime);
@@ -97,6 +99,7 @@ const MetaBarDetail = ({
   tokensByModel,
   branch,
   isBranchLoading,
+  gitStatus,
 }: {
   title: string;
   sessionId: string | null;
@@ -111,6 +114,7 @@ const MetaBarDetail = ({
   tokensByModel: IModelTokens[];
   branch: string | null;
   isBranchLoading: boolean;
+  gitStatus: IGitStatus | null;
 }) => {
   const createdRelative = createdAt ? dayjs(createdAt).fromNow() : '';
   const updatedRelative = updatedAt ? dayjs(updatedAt).fromNow() : '';
@@ -195,6 +199,56 @@ const MetaBarDetail = ({
             </div>
           )}
         </div>
+
+        {gitStatus && (
+          <div className="mt-1 border-t border-border pt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="w-12 shrink-0 text-xs text-muted-foreground/70">Git</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                {gitStatus.staged > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-green">
+                    <CircleDot size={11} />
+                    {gitStatus.staged} staged
+                  </span>
+                )}
+                {gitStatus.modified > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-amber">
+                    <FilePen size={11} />
+                    {gitStatus.modified} modified
+                  </span>
+                )}
+                {gitStatus.untracked > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                    <FileQuestion size={11} />
+                    {gitStatus.untracked} untracked
+                  </span>
+                )}
+                {gitStatus.ahead > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-blue">
+                    <ArrowUp size={11} />
+                    {gitStatus.ahead} ahead
+                  </span>
+                )}
+                {gitStatus.behind > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-purple">
+                    <ArrowDown size={11} />
+                    {gitStatus.behind} behind
+                  </span>
+                )}
+                {gitStatus.stash > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                    <Archive size={11} />
+                    {gitStatus.stash} stash
+                  </span>
+                )}
+                {gitStatus.staged === 0 && gitStatus.modified === 0 && gitStatus.untracked === 0 &&
+                  gitStatus.ahead === 0 && gitStatus.behind === 0 && gitStatus.stash === 0 && (
+                  <span className="text-xs text-muted-foreground/50">clean</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
     </div>
   );
 };
@@ -202,6 +256,7 @@ const MetaBarDetail = ({
 const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary }: ISessionMetaBarProps) => {
   const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
+  const { status: gitStatus } = useGitStatus(sessionName, isExpanded);
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);
 
@@ -282,6 +337,7 @@ const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary }: ISe
           tokensByModel={meta.tokensByModel}
           branch={branch}
           isBranchLoading={isBranchLoading}
+          gitStatus={gitStatus}
         />
       </div>
     </div>
