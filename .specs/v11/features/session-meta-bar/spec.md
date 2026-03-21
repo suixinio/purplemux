@@ -2,7 +2,7 @@
 page: session-meta-bar
 title: 세션 메타 바
 route: /
-status: CONFIRMED
+status: DETAILED
 complexity: High
 depends_on:
   - .specs/v11/features/git-branch-api/spec.md

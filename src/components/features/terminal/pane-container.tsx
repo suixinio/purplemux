@@ -500,7 +500,7 @@ const PaneContainer = ({
           <Separator
             className={cn(
               'group flex items-center justify-center',
-              isClaudeCode && !isTerminalCollapsed ? 'h-2' : 'h-0',
+              isClaudeCode && !isTerminalCollapsed ? 'h-4' : 'h-0',
             )}
             disabled={!isClaudeCode || isTerminalCollapsed}
           >

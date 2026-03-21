@@ -2,7 +2,7 @@
 page: git-branch-api
 title: Git 브랜치 조회 API
 route: /api/git/branch
-status: CONFIRMED
+status: DETAILED
 complexity: Low
 depends_on: []
 created: 2026-03-21

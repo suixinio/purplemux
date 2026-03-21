@@ -263,7 +263,7 @@ const TimelineView = ({
     <div className="relative flex h-full flex-col">
       <div
         ref={parentRef}
-        className="flex-1 overflow-y-auto transition-opacity"
+        className="flex-1 overflow-y-auto pt-2 transition-opacity"
         style={{
           opacity: isSessionTransitioning ? 0 : 1,
           transitionDuration: isSessionTransitioning ? '100ms' : '150ms',
