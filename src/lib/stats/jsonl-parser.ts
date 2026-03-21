@@ -1,0 +1,189 @@
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import path from 'path';
+import os from 'os';
+import readline from 'readline';
+import type { IProjectStats, ISessionStats, TPeriod } from '@/types/stats';
+import { isWithinPeriod } from './period-filter';
+
+const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
+const CONCURRENCY_LIMIT = 10;
+
+interface IRawSessionAgg {
+  sessionId: string;
+  project: string;
+  startedAt: string;
+  lastActivityAt: string;
+  messageCount: number;
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  model: string;
+}
+
+const isAgentFile = (filename: string): boolean => /^agent-/.test(filename);
+
+const collectJsonlFiles = async (): Promise<{ filePath: string; project: string }[]> => {
+  const result: { filePath: string; project: string }[] = [];
+  try {
+    const projectDirs = await fs.readdir(PROJECTS_DIR);
+    for (const dir of projectDirs) {
+      const projectPath = path.join(PROJECTS_DIR, dir);
+      const stat = await fs.stat(projectPath).catch(() => null);
+      if (!stat?.isDirectory()) continue;
+
+      const files = await fs.readdir(projectPath).catch(() => []);
+      for (const file of files) {
+        if (!file.endsWith('.jsonl') || isAgentFile(file)) continue;
+        result.push({ filePath: path.join(projectPath, file), project: dir });
+      }
+    }
+  } catch {
+    // projects dir doesn't exist
+  }
+  return result;
+};
+
+const parseJsonlStream = async (
+  filePath: string,
+  project: string,
+  period: TPeriod,
+): Promise<IRawSessionAgg[]> => {
+  const sessions = new Map<string, IRawSessionAgg>();
+
+  try {
+    const stream = createReadStream(filePath, { encoding: 'utf-8' });
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line) as Record<string, unknown>;
+        const timestamp = String(entry.timestamp ?? '');
+        if (!timestamp || !isWithinPeriod(timestamp, period)) continue;
+
+        const sessionId = String(entry.sessionId ?? '');
+        if (!sessionId) continue;
+
+        const type = String(entry.type ?? '');
+        if (type !== 'user' && type !== 'assistant') continue;
+
+        let agg = sessions.get(sessionId);
+        if (!agg) {
+          agg = {
+            sessionId,
+            project,
+            startedAt: timestamp,
+            lastActivityAt: timestamp,
+            messageCount: 0,
+            totalInputTokens: 0,
+            totalOutputTokens: 0,
+            model: '',
+          };
+          sessions.set(sessionId, agg);
+        }
+
+        if (timestamp < agg.startedAt) agg.startedAt = timestamp;
+        if (timestamp > agg.lastActivityAt) agg.lastActivityAt = timestamp;
+
+        if (type === 'user') {
+          agg.messageCount++;
+        }
+
+        if (type === 'assistant') {
+          const message = entry.message as Record<string, unknown> | undefined;
+          if (message) {
+            const model = String(message.model ?? '');
+            if (model) agg.model = model;
+
+            const usage = message.usage as Record<string, unknown> | undefined;
+            if (usage) {
+              agg.totalInputTokens += Number(usage.input_tokens ?? 0);
+              agg.totalOutputTokens += Number(usage.output_tokens ?? 0);
+            }
+          }
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+  } catch {
+    // file read error
+  }
+
+  return Array.from(sessions.values());
+};
+
+const runWithConcurrency = async <T>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<T[]> => {
+  const results: T[] = [];
+  let index = 0;
+
+  const runNext = async (): Promise<void> => {
+    while (index < tasks.length) {
+      const current = index++;
+      results[current] = await tasks[current]();
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => runNext());
+  await Promise.all(workers);
+  return results;
+};
+
+export const parseAllProjects = async (period: TPeriod): Promise<IProjectStats[]> => {
+  const files = await collectJsonlFiles();
+  if (files.length === 0) return [];
+
+  const tasks = files.map((f) => () => parseJsonlStream(f.filePath, f.project, period));
+  const allResults = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+
+  const projectMap = new Map<string, IProjectStats>();
+
+  for (const sessions of allResults) {
+    for (const s of sessions) {
+      const existing = projectMap.get(s.project);
+      if (existing) {
+        existing.sessionCount++;
+        existing.messageCount += s.messageCount;
+        existing.totalTokens += s.totalInputTokens + s.totalOutputTokens;
+      } else {
+        projectMap.set(s.project, {
+          project: s.project,
+          sessionCount: 1,
+          messageCount: s.messageCount,
+          totalTokens: s.totalInputTokens + s.totalOutputTokens,
+        });
+      }
+    }
+  }
+
+  return Array.from(projectMap.values()).sort((a, b) => b.totalTokens - a.totalTokens);
+};
+
+export const parseAllSessions = async (period: TPeriod): Promise<ISessionStats[]> => {
+  const files = await collectJsonlFiles();
+  if (files.length === 0) return [];
+
+  const tasks = files.map((f) => () => parseJsonlStream(f.filePath, f.project, period));
+  const allResults = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+
+  const sessions: ISessionStats[] = [];
+
+  for (const fileResults of allResults) {
+    for (const s of fileResults) {
+      sessions.push({
+        sessionId: s.sessionId,
+        project: s.project,
+        startedAt: s.startedAt,
+        lastActivityAt: s.lastActivityAt,
+        messageCount: s.messageCount,
+        totalTokens: s.totalInputTokens + s.totalOutputTokens,
+        model: s.model,
+      });
+    }
+  }
+
+  return sessions.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+};
