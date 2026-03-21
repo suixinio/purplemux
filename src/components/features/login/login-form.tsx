@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { Lock, Shield, Terminal } from 'lucide-react';
+import { Lock, Terminal } from 'lucide-react';
 import { useState } from 'react';
 
 export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) => {
@@ -33,10 +33,12 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
 
   return (
     <div className={cn('flex flex-col gap-6', className)} {...props}>
-      <div className="flex flex-col gap-7">
-        <div className="flex flex-col items-center gap-1 text-center">
-          <h1 className="text-2xl font-bold">로그인</h1>
-          <p className="text-muted-foreground text-balance text-sm">비밀번호를 입력하여 접속하세요</p>
+      <div className="flex flex-col gap-14">
+        <div className="flex items-center justify-center gap-2.5">
+          <Terminal className="h-6 w-6 text-ui-purple" />
+          <span className="animate-shimmer inline-block bg-[length:400%_200%] bg-clip-text text-xl font-semibold text-transparent bg-[linear-gradient(90deg,var(--color-ui-purple)_calc(50%-4em),var(--color-foreground)_50%,var(--color-ui-purple)_calc(50%+4em))] bg-no-repeat">
+            Purple Terminal
+          </span>
         </div>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-2">
@@ -58,17 +60,10 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
             <Lock className="size-4" />
             {isLoading ? '로그인 중...' : '로그인'}
           </Button>
+          <p className="text-center text-muted-foreground text-xs">
+            비밀번호는 서버 로그에서 확인할 수 있습니다
+          </p>
         </form>
-        <div className="space-y-2 text-muted-foreground text-xs">
-          <div className="flex items-center gap-2">
-            <Shield className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>서버 시작 시 생성된 비밀번호로 접근을 제어합니다</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Terminal className="h-3.5 w-3.5 flex-shrink-0" />
-            <span>비밀번호는 서버 로그에서 확인할 수 있습니다</span>
-          </div>
-        </div>
       </div>
     </div>
   );

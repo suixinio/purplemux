@@ -222,6 +222,19 @@ body {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 0% center;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s linear infinite;
+}
+
 @keyframes timeline-fade-in {
   from {
     opacity: 0;

@@ -50,6 +50,11 @@ const start = async () => {
     const url = new URL(request.url ?? '', `http://localhost:${port}`);
     const cookies = parseCookies(request.headers.cookie);
 
+    if (dev && url.pathname.startsWith('/_next/')) {
+      upgrade(request, socket, head);
+      return;
+    }
+
     if (cookies['auth-token'] !== process.env.AUTH_TOKEN) {
       socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
       socket.destroy();
