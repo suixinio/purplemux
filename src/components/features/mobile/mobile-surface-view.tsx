@@ -271,6 +271,7 @@ const MobileSurfaceView = ({
       const timer = setTimeout(() => {
         const { cols, rows } = fit();
         wsActionsRef.current.sendResize(cols, rows);
+        focus();
       }, 150);
       return () => clearTimeout(timer);
     }

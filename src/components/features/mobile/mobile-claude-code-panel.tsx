@@ -225,8 +225,13 @@ const MobileClaudeCodePanel = ({
         </div>
       )}
 
-      <div className="min-h-0 flex-1">
-        {claudeActiveTab === 'timeline' ? (
+      <div className="relative min-h-0 flex-1">
+        <div
+          className={cn(
+            'absolute inset-0 transition-opacity duration-100',
+            claudeActiveTab === 'timeline' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
+          )}
+        >
           <TimelineView
             entries={entries}
             sessionId={sessionId}
@@ -241,15 +246,21 @@ const MobileClaudeCodePanel = ({
             onLoadMore={loadMoreTimeline}
             hasMore={timelineHasMore}
           />
-        ) : (
+        </div>
+        <div
+          className={cn(
+            'absolute inset-0 transition-opacity duration-100',
+            claudeActiveTab === 'terminal'
+              ? 'pointer-events-auto opacity-100'
+              : 'pointer-events-none opacity-0',
+            !terminalReady && claudeActiveTab === 'terminal' && 'opacity-0',
+          )}
+        >
           <TerminalContainer
             ref={terminalRef}
-            className={cn(
-              'min-h-0 flex-1 transition-opacity duration-150',
-              terminalReady ? 'opacity-100' : 'opacity-0',
-            )}
+            className="h-full w-full"
           />
-        )}
+        </div>
       </div>
 
       <div className="shrink-0">
