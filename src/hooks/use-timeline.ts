@@ -1,11 +1,32 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type {
   ITimelineEntry,
   ISessionInfo,
   TSessionStatus,
   TTimelineConnectionStatus,
+  TCliState,
 } from '@/types/timeline';
 import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
+
+const deriveCliState = (
+  sessionStatus: TSessionStatus,
+  entries: ITimelineEntry[],
+): TCliState => {
+  if (sessionStatus !== 'active') {
+    return 'inactive';
+  }
+
+  if (entries.length === 0) {
+    return 'idle';
+  }
+
+  const lastEntry = entries[entries.length - 1];
+  if (lastEntry.type === 'assistant-message') {
+    return 'idle';
+  }
+
+  return 'busy';
+};
 
 interface IResumeCallbacks {
   onResumeStarted?: (payload: { sessionId: string; jsonlPath: string | null }) => void;
@@ -21,6 +42,7 @@ interface IUseTimelineOptions {
 
 interface IUseTimelineReturn {
   entries: ITimelineEntry[];
+  cliState: TCliState;
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isAutoScrollEnabled: boolean;
@@ -106,18 +128,12 @@ const useTimeline = ({
     });
   }, []);
 
-  const [isSessionTransitioning, setIsSessionTransitioning] = useState(false);
-
   const handleSessionChanged = useCallback(() => {
     setSessionStatus('active');
-    setIsSessionTransitioning(true);
-    setTimeout(() => {
-      setEntries([]);
-      setHasMore(false);
-      setIsLoading(true);
-      setAutoScrollEnabled(true);
-      setIsSessionTransitioning(false);
-    }, 100);
+    setEntries([]);
+    setHasMore(false);
+    setIsLoading(true);
+    setAutoScrollEnabled(true);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -199,14 +215,20 @@ const useTimeline = ({
     reconnect();
   }, [fetchSession, reconnect]);
 
+  const cliState = useMemo(
+    () => deriveCliState(sessionStatus, entries),
+    [sessionStatus, entries],
+  );
+
   return {
     entries,
+    cliState,
     sessionStatus,
     wsStatus,
     isAutoScrollEnabled,
     setAutoScrollEnabled,
     isLoading,
-    isSessionTransitioning,
+    isSessionTransitioning: false,
     error,
     loadMore,
     hasMore,

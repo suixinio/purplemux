@@ -1,11 +1,17 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
 import { Terminal, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { ITimelineEntry, TSessionStatus, TTimelineConnectionStatus } from '@/types/timeline';
+import type {
+  ITimelineEntry,
+  ITimelineToolCall,
+  ITimelineToolResult,
+  TSessionStatus,
+  TTimelineConnectionStatus,
+} from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
 import AssistantMessageItem from '@/components/features/timeline/assistant-message-item';
-import ToolCallItem from '@/components/features/timeline/tool-call-item';
 import AgentGroupItem from '@/components/features/timeline/agent-group-item';
+import ToolGroupItem from '@/components/features/timeline/tool-group-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 
 interface ITimelineViewProps {
@@ -24,18 +30,51 @@ interface ITimelineViewProps {
 
 const SCROLL_THRESHOLD = 10;
 
+type TGroupedItem =
+  | { type: 'entry'; id: string; entry: ITimelineEntry }
+  | { type: 'tool-group'; id: string; toolCalls: ITimelineToolCall[]; toolResults: ITimelineToolResult[] };
+
+const groupTimelineEntries = (entries: ITimelineEntry[]): TGroupedItem[] => {
+  const result: TGroupedItem[] = [];
+  let toolCallBuffer: ITimelineToolCall[] = [];
+  let toolResultBuffer: ITimelineToolResult[] = [];
+
+  const flushToolBuffer = () => {
+    if (toolCallBuffer.length > 0) {
+      result.push({
+        type: 'tool-group',
+        id: toolCallBuffer[0].id,
+        toolCalls: [...toolCallBuffer],
+        toolResults: [...toolResultBuffer],
+      });
+      toolCallBuffer = [];
+      toolResultBuffer = [];
+    }
+  };
+
+  for (const entry of entries) {
+    if (entry.type === 'tool-call') {
+      toolCallBuffer.push(entry);
+    } else if (entry.type === 'tool-result') {
+      toolResultBuffer.push(entry);
+    } else {
+      flushToolBuffer();
+      result.push({ type: 'entry', id: entry.id, entry });
+    }
+  }
+
+  flushToolBuffer();
+  return result;
+};
+
 const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
   switch (entry.type) {
     case 'user-message':
       return <UserMessageItem entry={entry} />;
     case 'assistant-message':
       return <AssistantMessageItem entry={entry} />;
-    case 'tool-call':
-      return <ToolCallItem entry={entry} />;
     case 'agent-group':
       return <AgentGroupItem entry={entry} />;
-    case 'tool-result':
-      return null;
     default:
       return null;
   }
@@ -126,7 +165,8 @@ const TimelineView = ({
   const isUserScrollingRef = useRef(false);
   const prevEntryCountRef = useRef(entries.length);
 
-  const displayEntries = entries.filter((e) => e.type !== 'tool-result');
+  const groupedItems = groupTimelineEntries(entries);
+  const hasDisplayItems = groupedItems.length > 0;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
     const el = parentRef.current;
@@ -212,7 +252,7 @@ const TimelineView = ({
     return <ErrorState error={error} onRetry={onRetry} />;
   }
 
-  if (displayEntries.length === 0) {
+  if (!hasDisplayItems) {
     return <EmptyState sessionStatus={sessionStatus} />;
   }
 
@@ -236,9 +276,13 @@ const TimelineView = ({
         role="log"
         aria-label="Claude Code 타임라인"
       >
-        {displayEntries.map((entry) => (
-          <div key={entry.id} className="px-4 py-2">
-            <TimelineEntryRenderer entry={entry} />
+        {groupedItems.map((item) => (
+          <div key={item.id} className="px-4 py-1.5">
+            {item.type === 'tool-group' ? (
+              <ToolGroupItem toolCalls={item.toolCalls} toolResults={item.toolResults} />
+            ) : (
+              <TimelineEntryRenderer entry={item.entry} />
+            )}
           </div>
         ))}
       </div>

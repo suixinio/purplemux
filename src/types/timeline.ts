@@ -1,5 +1,7 @@
 export type TSessionStatus = 'active' | 'none' | 'not-installed';
 
+export type TCliState = 'idle' | 'busy' | 'inactive';
+
 export type TTimelineConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 export interface ISessionInfo {

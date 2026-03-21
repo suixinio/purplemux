@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import dayjs from 'dayjs';
 import {
   FileText,
   FilePen,
@@ -10,11 +9,11 @@ import {
   Users,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import type { ITimelineToolCall, TToolName } from '@/types/timeline';
+import type { ITimelineToolCall, ITimelineToolResult, TToolName } from '@/types/timeline';
 
 interface IToolCallItemProps {
   entry: ITimelineToolCall;
+  result?: ITimelineToolResult;
 }
 
 const TOOL_ICONS: Record<string, typeof FileText> = {
@@ -37,7 +36,7 @@ const DiffView = ({ oldString, newString }: { oldString: string; newString: stri
   const newLines = newString.split('\n');
 
   return (
-    <div className="mt-2 overflow-x-auto rounded border bg-background font-mono text-xs">
+    <div className="mt-1.5 overflow-x-auto rounded border bg-background font-mono text-xs">
       {oldLines.map((line, i) => (
         <div key={`old-${i}`} className="bg-ui-red/10 px-3 py-0.5">
           <span className="mr-2 text-ui-red select-none">-</span>
@@ -54,42 +53,53 @@ const DiffView = ({ oldString, newString }: { oldString: string; newString: stri
   );
 };
 
-const ToolCallItem = ({ entry }: IToolCallItemProps) => {
+const ToolCallItem = ({ entry, result }: IToolCallItemProps) => {
   const [isDiffOpen, setIsDiffOpen] = useState(false);
   const hasDiff = entry.diff && (entry.diff.oldString || entry.diff.newString);
 
   const statusColor = {
     pending: 'text-ui-amber',
-    success: 'text-positive',
+    success: 'text-muted-foreground',
     error: 'text-negative',
   }[entry.status];
 
   const statusPulse = entry.status === 'pending' ? 'animate-pulse' : '';
 
   return (
-    <div className="animate-in fade-in duration-150">
-      <div className="rounded-md bg-muted/50 px-2.5 py-1.5">
-        <div className="flex items-center gap-1.5">
-          <span className="shrink-0 text-[10px] text-muted-foreground/60">{dayjs(entry.timestamp).format('HH:mm')}</span>
-          <span className={cn('shrink-0', statusColor, statusPulse)}>
-            {renderToolIcon(entry.toolName, 12)}
-          </span>
-          <span className="text-xs font-mono truncate">{entry.summary}</span>
+    <div className="py-1">
+      <div className="flex items-start gap-1.5">
+        <span className={cn('shrink-0 mt-0.5', statusColor, statusPulse)}>
+          {renderToolIcon(entry.toolName, 12)}
+        </span>
+        <div className="min-w-0 flex-1">
+          <span className="text-xs font-mono truncate block">{entry.summary}</span>
+          {result && result.summary && (
+            <p
+              className={cn(
+                'mt-0.5 text-xs whitespace-pre-wrap break-words font-mono',
+                result.isError ? 'text-negative/70' : 'text-muted-foreground/60',
+              )}
+            >
+              {result.summary}
+            </p>
+          )}
         </div>
-        {hasDiff && (
-          <Button
-            variant="ghost"
-            size="xs"
-            className="mt-1 h-auto p-0 text-xs text-muted-foreground hover:bg-transparent hover:text-foreground"
+      </div>
+      {hasDiff && (
+        <>
+          <button
+            className="ml-4 mt-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             onClick={() => setIsDiffOpen((prev) => !prev)}
           >
             {isDiffOpen ? '▾ diff 숨기기' : '▸ diff 보기'}
-          </Button>
-        )}
-        {isDiffOpen && entry.diff && (
-          <DiffView oldString={entry.diff.oldString} newString={entry.diff.newString} />
-        )}
-      </div>
+          </button>
+          {isDiffOpen && entry.diff && (
+            <div className="ml-4">
+              <DiffView oldString={entry.diff.oldString} newString={entry.diff.newString} />
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 };

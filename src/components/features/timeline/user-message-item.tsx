@@ -1,4 +1,3 @@
-import dayjs from 'dayjs';
 import type { ITimelineUserMessage } from '@/types/timeline';
 
 interface IUserMessageItemProps {
@@ -6,10 +5,9 @@ interface IUserMessageItemProps {
 }
 
 const UserMessageItem = ({ entry }: IUserMessageItemProps) => (
-  <div className="animate-in fade-in duration-150">
-    <div className="border-l-2 border-ui-blue bg-ui-blue/10 px-3 py-2">
-      <span className="text-[10px] text-muted-foreground/60">{dayjs(entry.timestamp).format('HH:mm')}</span>
-      <p className="mt-0.5 text-xs whitespace-pre-wrap break-words">{entry.text}</p>
+  <div className="animate-in fade-in duration-150 flex justify-end">
+    <div className="bg-ui-blue/10 rounded-lg px-4 py-2.5 max-w-[85%]">
+      <p className="text-sm whitespace-pre-wrap break-words">{entry.text}</p>
     </div>
   </div>
 );
