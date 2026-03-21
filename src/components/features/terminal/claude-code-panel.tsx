@@ -1,45 +1,155 @@
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
+import useSessionList from '@/hooks/use-session-list';
+import useSessionView from '@/hooks/use-session-view';
+import SessionListView from '@/components/features/terminal/session-list-view';
+import SessionEmptyView from '@/components/features/terminal/session-empty-view';
+import SessionNavBar from '@/components/features/terminal/session-nav-bar';
 import TimelineView from '@/components/features/timeline/timeline-view';
 
 interface IClaudeCodePanelProps {
   sessionName: string;
+  claudeSessionId?: string | null;
   className?: string;
 }
 
-const ClaudeCodePanel = ({ sessionName, className }: IClaudeCodePanelProps) => {
+const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCodePanelProps) => {
+  const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
+  const navigateToTimelineRef = useRef<() => void>(() => {});
+
+  const handleResumeStarted = useCallback(
+    () => {
+      setResumingSessionId(null);
+      navigateToTimelineRef.current();
+    },
+    [],
+  );
+
+  const handleResumeBlocked = useCallback(
+    (payload: { reason: string; processName?: string }) => {
+      setResumingSessionId(null);
+      toast.warning('터미널에서 다른 프로세스가 실행 중입니다', {
+        description: payload.processName
+          ? `현재 실행 중인 프로세스: ${payload.processName}`
+          : undefined,
+      });
+    },
+    [],
+  );
+
+  const handleResumeError = useCallback(() => {
+    setResumingSessionId(null);
+    toast.error('세션을 재개할 수 없습니다');
+  }, []);
+
   const {
     entries,
     sessionStatus,
     wsStatus,
     isAutoScrollEnabled,
     setAutoScrollEnabled,
-    isLoading,
+    isLoading: isTimelineLoading,
     isSessionTransitioning,
-    error,
-    loadMore,
-    hasMore,
+    error: timelineError,
+    loadMore: loadMoreTimeline,
+    hasMore: timelineHasMore,
     retrySession,
+    sendResume,
   } = useTimeline({
     sessionName,
     enabled: !!sessionName,
+    resumeCallbacks: {
+      onResumeStarted: handleResumeStarted,
+      onResumeBlocked: handleResumeBlocked,
+      onResumeError: handleResumeError,
+    },
   });
 
+  const {
+    sessions,
+    hasMore: sessionListHasMore,
+    isLoading: isSessionListLoading,
+    isLoadingMore: isSessionListLoadingMore,
+    error: sessionListError,
+    refetch: refetchSessions,
+    loadMore: loadMoreSessions,
+  } = useSessionList({
+    tmuxSession: sessionName,
+    enabled: !!sessionName && sessionStatus !== 'active',
+  });
+
+  const { view, navigateToList, navigateToTimeline } = useSessionView(
+    sessionStatus,
+    sessions,
+    isSessionListLoading,
+  );
+
+  useEffect(() => {
+    navigateToTimelineRef.current = navigateToTimeline;
+  });
+
+  const handleSelectSession = useCallback(
+    (sessionId: string) => {
+      if (resumingSessionId) return;
+      setResumingSessionId(sessionId);
+      sendResume(sessionId, sessionName);
+    },
+    [resumingSessionId, sendResume, sessionName],
+  );
+
+  const handleNavigateToList = useCallback(() => {
+    if (resumingSessionId) return;
+    refetchSessions();
+    navigateToList();
+  }, [resumingSessionId, refetchSessions, navigateToList]);
+
+  if (view === 'empty') {
+    return (
+      <div className={cn('h-full w-full', className)}>
+        <SessionEmptyView />
+      </div>
+    );
+  }
+
+  if (view === 'list') {
+    return (
+      <div className={cn('h-full w-full', className)}>
+        <SessionListView
+          sessions={sessions}
+          isLoading={isSessionListLoading}
+          isLoadingMore={isSessionListLoadingMore}
+          hasMore={sessionListHasMore}
+          error={sessionListError}
+          highlightedSessionId={claudeSessionId ?? null}
+          resumingSessionId={resumingSessionId}
+          onSelectSession={handleSelectSession}
+          onRefresh={refetchSessions}
+          onLoadMore={loadMoreSessions}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('h-full w-full', className)}>
-      <TimelineView
-        entries={entries}
-        sessionStatus={sessionStatus}
-        wsStatus={wsStatus}
-        isLoading={isLoading}
-        isSessionTransitioning={isSessionTransitioning}
-        error={error}
-        isAutoScrollEnabled={isAutoScrollEnabled}
-        onAutoScrollChange={setAutoScrollEnabled}
-        onRetry={retrySession}
-        onLoadMore={loadMore}
-        hasMore={hasMore}
-      />
+    <div className={cn('flex h-full w-full flex-col', className)}>
+      <SessionNavBar onNavigateToList={handleNavigateToList} />
+      <div className="min-h-0 flex-1">
+        <TimelineView
+          entries={entries}
+          sessionStatus={sessionStatus}
+          wsStatus={wsStatus}
+          isLoading={isTimelineLoading}
+          isSessionTransitioning={isSessionTransitioning}
+          error={timelineError}
+          isAutoScrollEnabled={isAutoScrollEnabled}
+          onAutoScrollChange={setAutoScrollEnabled}
+          onRetry={retrySession}
+          onLoadMore={loadMoreTimeline}
+          hasMore={timelineHasMore}
+        />
+      </div>
     </div>
   );
 };

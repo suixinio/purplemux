@@ -394,6 +394,34 @@ export const getFirstPaneTabs = async (wsId: string): Promise<{ tabs: ITab[]; ac
     };
   });
 
+export const parseSessionName = (sessionName: string): { wsId: string; paneId: string; tabId: string } | null => {
+  const parts = sessionName.split('-');
+  if (parts.length < 4 || parts[0] !== 'pt') return null;
+  return { wsId: parts[1], paneId: `pane-${parts[2]}`, tabId: `tab-${parts[3]}` };
+};
+
+export const updateTabClaudeSessionId = async (
+  sessionName: string,
+  claudeSessionId: string | null,
+): Promise<void> => {
+  const parsed = parseSessionName(sessionName);
+  if (!parsed) return;
+
+  await withLock(async () => {
+    const filePath = resolveLayoutFile(parsed.wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return;
+
+    const allTabs = collectAllTabs(layout.root);
+    const tab = allTabs.find((t) => t.sessionName === sessionName);
+    if (!tab) return;
+
+    tab.claudeSessionId = claudeSessionId;
+    layout.updatedAt = new Date().toISOString();
+    await writeLayoutFile(layout, filePath);
+  });
+};
+
 const nextTabName = (tabs: ITab[]): string => {
   const existing = tabs
     .map((t) => t.name)

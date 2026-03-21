@@ -7,9 +7,16 @@ import type {
 } from '@/types/timeline';
 import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
 
+interface IResumeCallbacks {
+  onResumeStarted?: (payload: { sessionId: string; jsonlPath: string | null }) => void;
+  onResumeBlocked?: (payload: { reason: string; processName?: string }) => void;
+  onResumeError?: (payload: { message: string }) => void;
+}
+
 interface IUseTimelineOptions {
   sessionName: string;
   enabled: boolean;
+  resumeCallbacks?: IResumeCallbacks;
 }
 
 interface IUseTimelineReturn {
@@ -24,11 +31,13 @@ interface IUseTimelineReturn {
   loadMore: () => Promise<void>;
   hasMore: boolean;
   retrySession: () => void;
+  sendResume: (sessionId: string, tmuxSession: string) => void;
 }
 
 const useTimeline = ({
   sessionName,
   enabled,
+  resumeCallbacks,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
   const [sessionStatus, setSessionStatus] = useState<TSessionStatus>('none');
@@ -138,15 +147,47 @@ const useTimeline = ({
     console.warn(`[timeline] WebSocket error: ${err.code} — ${err.message}`);
   }, []);
 
+  const resumeCallbacksRef = useRef(resumeCallbacks);
+  useEffect(() => {
+    resumeCallbacksRef.current = resumeCallbacks;
+  });
+
+  const handleResumeStarted = useCallback(
+    (payload: { sessionId: string; jsonlPath: string | null }) => {
+      if (payload.jsonlPath) {
+        jsonlPathRef.current = payload.jsonlPath;
+      }
+      resumeCallbacksRef.current?.onResumeStarted?.(payload);
+    },
+    [],
+  );
+
+  const handleResumeBlocked = useCallback(
+    (payload: { reason: string; processName?: string }) => {
+      resumeCallbacksRef.current?.onResumeBlocked?.(payload);
+    },
+    [],
+  );
+
+  const handleResumeError = useCallback(
+    (payload: { message: string }) => {
+      resumeCallbacksRef.current?.onResumeError?.(payload);
+    },
+    [],
+  );
+
   const shouldConnect = enabled && sessionStatus !== 'not-installed';
 
-  const { status: wsStatus, reconnect } = useTimelineWebSocket({
+  const { status: wsStatus, reconnect, sendResume } = useTimelineWebSocket({
     sessionName,
     enabled: shouldConnect,
     onInit: handleInit,
     onAppend: handleAppend,
     onSessionChanged: handleSessionChanged,
     onError: handleError,
+    onResumeStarted: handleResumeStarted,
+    onResumeBlocked: handleResumeBlocked,
+    onResumeError: handleResumeError,
   });
 
   const retrySession = useCallback(async () => {
@@ -167,6 +208,7 @@ const useTimeline = ({
     loadMore,
     hasMore,
     retrySession,
+    sendResume,
   };
 };
 

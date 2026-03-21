@@ -17,6 +17,7 @@ export interface ITab {
   title?: string;
   cwd?: string;
   panelType?: TPanelType;
+  claudeSessionId?: string | null;
 }
 
 export interface ISplitNode {

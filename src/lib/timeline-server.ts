@@ -4,8 +4,11 @@ import { watch, type FSWatcher } from 'fs';
 import { existsSync } from 'fs';
 import { detectActiveSession, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { parseSessionFile, parseIncremental } from './session-parser';
-import { getSessionPanePid } from './tmux';
+import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd } from './tmux';
+import { cwdToProjectPath } from './session-list';
+import { updateTabClaudeSessionId } from './layout-store';
 import type { TTimelineServerMessage } from '@/types/timeline';
+import path from 'path';
 
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 90_000;
@@ -195,6 +198,55 @@ const cleanup = (conn: ITimelineConnection) => {
   }
 };
 
+const resolveJsonlPath = async (
+  tmuxSession: string,
+  sessionId: string,
+): Promise<string | null> => {
+  const cwd = await getSessionCwd(tmuxSession);
+  if (!cwd) return null;
+  const projectDir = cwdToProjectPath(cwd);
+  const jsonlPath = path.join(projectDir, `${sessionId}.jsonl`);
+  return existsSync(jsonlPath) ? jsonlPath : null;
+};
+
+const handleResumeMessage = async (
+  ws: WebSocket,
+  conn: ITimelineConnection,
+  payload: { sessionId: string; tmuxSession: string },
+) => {
+  const { sessionId, tmuxSession } = payload;
+
+  try {
+    const { isSafe, processName } = await checkTerminalProcess(tmuxSession);
+
+    if (!isSafe) {
+      sendJson(ws, {
+        type: 'timeline:resume-blocked',
+        reason: 'process-running',
+        processName,
+      });
+      return;
+    }
+
+    await sendKeys(tmuxSession, `claude --resume ${sessionId}`);
+
+    await updateTabClaudeSessionId(conn.sessionName, sessionId).catch(() => {});
+
+    const jsonlPath = await resolveJsonlPath(tmuxSession, sessionId);
+
+    sendJson(ws, {
+      type: 'timeline:resume-started',
+      sessionId,
+      jsonlPath,
+    });
+  } catch (err) {
+    sendJson(ws, {
+      type: 'timeline:resume-error',
+      message: err instanceof Error ? err.message : 'resume 실행 중 오류가 발생했습니다',
+    });
+  }
+};
+
 export const handleTimelineConnection = async (ws: WebSocket, request: IncomingMessage) => {
   if (connections.size >= MAX_CONNECTIONS) {
     ws.close(1013, 'Too many connections');
@@ -259,6 +311,11 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           unsubscribeFromFile(ws, conn.currentJsonlPath);
           conn.currentJsonlPath = null;
         }
+      } else if (msg.type === 'timeline:resume' && msg.sessionId && msg.tmuxSession) {
+        await handleResumeMessage(ws, conn, {
+          sessionId: msg.sessionId,
+          tmuxSession: msg.tmuxSession,
+        });
       }
     } catch {}
   });

@@ -102,11 +102,31 @@ export interface ITimelineErrorMessage {
   message: string;
 }
 
+export interface ITimelineResumeStartedMessage {
+  type: 'timeline:resume-started';
+  sessionId: string;
+  jsonlPath: string | null;
+}
+
+export interface ITimelineResumeBlockedMessage {
+  type: 'timeline:resume-blocked';
+  reason: string;
+  processName?: string;
+}
+
+export interface ITimelineResumeErrorMessage {
+  type: 'timeline:resume-error';
+  message: string;
+}
+
 export type TTimelineServerMessage =
   | ITimelineInitMessage
   | ITimelineAppendMessage
   | ITimelineSessionChangedMessage
-  | ITimelineErrorMessage;
+  | ITimelineErrorMessage
+  | ITimelineResumeStartedMessage
+  | ITimelineResumeBlockedMessage
+  | ITimelineResumeErrorMessage;
 
 export interface ITimelineSubscribeMessage {
   type: 'timeline:subscribe';
@@ -117,9 +137,16 @@ export interface ITimelineUnsubscribeMessage {
   type: 'timeline:unsubscribe';
 }
 
+export interface ITimelineResumeMessage {
+  type: 'timeline:resume';
+  sessionId: string;
+  tmuxSession: string;
+}
+
 export type TTimelineClientMessage =
   | ITimelineSubscribeMessage
-  | ITimelineUnsubscribeMessage;
+  | ITimelineUnsubscribeMessage
+  | ITimelineResumeMessage;
 
 export interface IParseResult {
   entries: ITimelineEntry[];

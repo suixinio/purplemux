@@ -8,6 +8,20 @@ import type {
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000];
 const MAX_RETRIES = 5;
 
+interface IResumeStartedPayload {
+  sessionId: string;
+  jsonlPath: string | null;
+}
+
+interface IResumeBlockedPayload {
+  reason: string;
+  processName?: string;
+}
+
+interface IResumeErrorPayload {
+  message: string;
+}
+
 interface IUseTimelineWebSocketOptions {
   sessionName: string;
   enabled: boolean;
@@ -15,6 +29,9 @@ interface IUseTimelineWebSocketOptions {
   onAppend: (entries: ITimelineEntry[]) => void;
   onSessionChanged: (newSessionId: string) => void;
   onError?: (error: { code: string; message: string }) => void;
+  onResumeStarted?: (payload: IResumeStartedPayload) => void;
+  onResumeBlocked?: (payload: IResumeBlockedPayload) => void;
+  onResumeError?: (payload: IResumeErrorPayload) => void;
 }
 
 interface IUseTimelineWebSocketReturn {
@@ -22,6 +39,7 @@ interface IUseTimelineWebSocketReturn {
   subscribe: (jsonlPath: string) => void;
   unsubscribe: () => void;
   reconnect: () => void;
+  sendResume: (sessionId: string, tmuxSession: string) => void;
 }
 
 const useTimelineWebSocket = ({
@@ -31,6 +49,9 @@ const useTimelineWebSocket = ({
   onAppend,
   onSessionChanged,
   onError,
+  onResumeStarted,
+  onResumeBlocked,
+  onResumeError,
 }: IUseTimelineWebSocketOptions): IUseTimelineWebSocketReturn => {
   const [status, setStatus] = useState<TTimelineConnectionStatus>('disconnected');
   const [connectTrigger, setConnectTrigger] = useState(0);
@@ -40,9 +61,15 @@ const useTimelineWebSocket = ({
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connectIdRef = useRef(0);
 
-  const callbacksRef = useRef({ onInit, onAppend, onSessionChanged, onError });
+  const callbacksRef = useRef({
+    onInit, onAppend, onSessionChanged, onError,
+    onResumeStarted, onResumeBlocked, onResumeError,
+  });
   useEffect(() => {
-    callbacksRef.current = { onInit, onAppend, onSessionChanged, onError };
+    callbacksRef.current = {
+      onInit, onAppend, onSessionChanged, onError,
+      onResumeStarted, onResumeBlocked, onResumeError,
+    };
   });
 
   const doConnectRef = useRef<(connectId: number) => void>(() => {});
@@ -92,6 +119,21 @@ const useTimelineWebSocket = ({
               break;
             case 'timeline:error':
               callbacksRef.current.onError?.({ code: msg.code, message: msg.message });
+              break;
+            case 'timeline:resume-started':
+              callbacksRef.current.onResumeStarted?.({
+                sessionId: msg.sessionId,
+                jsonlPath: msg.jsonlPath,
+              });
+              break;
+            case 'timeline:resume-blocked':
+              callbacksRef.current.onResumeBlocked?.({
+                reason: msg.reason,
+                processName: msg.processName,
+              });
+              break;
+            case 'timeline:resume-error':
+              callbacksRef.current.onResumeError?.({ message: msg.message });
               break;
           }
         } catch {}
@@ -169,7 +211,14 @@ const useTimelineWebSocket = ({
     setConnectTrigger((prev) => prev + 1);
   }, []);
 
-  return { status, subscribe, unsubscribe, reconnect };
+  const sendResume = useCallback((sessionId: string, tmuxSession: string) => {
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'timeline:resume', sessionId, tmuxSession }));
+    }
+  }, []);
+
+  return { status, subscribe, unsubscribe, reconnect, sendResume };
 };
 
 export default useTimelineWebSocket;

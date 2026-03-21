@@ -168,3 +168,44 @@ export const defaultSessionName = (): string =>
 
 export const workspaceSessionName = (wsId: string, paneId: string, tabId: string): string =>
   `pt-${wsId}-${paneId}-${tabId}`;
+
+export const getPaneCurrentCommand = async (
+  sessionName: string,
+): Promise<string | null> => {
+  try {
+    const { stdout } = await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'list-panes', '-t', sessionName, '-F', '#{pane_current_command}'],
+      { timeout: CMD_TIMEOUT },
+    );
+    return stdout.trim() || null;
+  } catch {
+    return null;
+  }
+};
+
+const SAFE_SHELLS = new Set(['bash', 'zsh', 'fish', 'sh', 'dash']);
+
+export const checkTerminalProcess = async (
+  tmuxSession: string,
+): Promise<{ isSafe: boolean; processName: string }> => {
+  const command = await getPaneCurrentCommand(tmuxSession);
+  if (!command) {
+    return { isSafe: false, processName: 'unknown' };
+  }
+  return {
+    isSafe: SAFE_SHELLS.has(command),
+    processName: command,
+  };
+};
+
+export const sendKeys = async (
+  sessionName: string,
+  command: string,
+): Promise<void> => {
+  await execFile(
+    'tmux',
+    ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, command, 'Enter'],
+    { timeout: CMD_TIMEOUT },
+  );
+};

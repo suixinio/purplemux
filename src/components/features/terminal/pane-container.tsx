@@ -490,7 +490,10 @@ const PaneContainer = ({
             disabled={!isClaudeCode}
           >
             {isClaudeCode && activeTab && (
-              <ClaudeCodePanel sessionName={activeTab.sessionName} />
+              <ClaudeCodePanel
+                sessionName={activeTab.sessionName}
+                claudeSessionId={activeTab.claudeSessionId}
+              />
             )}
           </Panel>
 
