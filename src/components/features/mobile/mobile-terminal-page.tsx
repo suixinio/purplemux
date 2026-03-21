@@ -94,10 +94,10 @@ const MobileTerminalPage = () => {
     if (!layout.layout || panes.length === 0) return;
 
     const activePaneId = layout.layout.activePaneId;
-    const focusedPane = activePaneId
+    const targetPane = activePaneId
       ? panes.find((p) => p.id === activePaneId)
       : null;
-    const firstPane = focusedPane ?? panes[0];
+    const firstPane = targetPane ?? panes[0];
 
     const currentPane = selectedPaneId
       ? panes.find((p) => p.id === selectedPaneId)
@@ -106,6 +106,13 @@ const MobileTerminalPage = () => {
     if (!currentPane) {
       setSelectedPaneId(firstPane.id);
       setSelectedTabId(firstPane.activeTabId);
+      return;
+    }
+
+    // 서버의 activePaneId가 변경되었으면 반영
+    if (activePaneId && activePaneId !== selectedPaneId && targetPane) {
+      setSelectedPaneId(targetPane.id);
+      setSelectedTabId(targetPane.activeTabId);
       return;
     }
 
@@ -276,15 +283,7 @@ const MobileTerminalPage = () => {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-terminal-bg">
-      <MobileLayout
-        onSelectWorkspace={handleSelectWorkspace}
-        panes={panes}
-        activePaneId={selectedPaneId}
-        activeTabId={selectedTabId}
-        onSelectSurface={handleSelectSurface}
-        onCreateTab={layout.createTabInPane}
-        onDeleteTab={layout.deleteTabInPane}
-      >
+      <MobileLayout onSelectWorkspace={handleSelectWorkspace}>
         {renderContent()}
       </MobileLayout>
     </div>

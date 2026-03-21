@@ -3,7 +3,6 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  Loader2,
   BarChart3,
   X,
   Terminal,
@@ -19,19 +18,17 @@ import {
 } from '@/components/ui/sheet';
 import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
 
 interface IMobileNavigationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaces: IWorkspace[];
   activeWorkspaceId: string | null;
-  panes?: IPaneNode[];
-  activePaneId?: string | null;
-  activeTabId?: string | null;
-  onSelectWorkspace: (workspaceId: string) => void;
-  onSelectSurface?: (paneId: string, tabId: string) => void;
-  onCreateTab?: (paneId: string) => Promise<ITab | null>;
-  onDeleteTab?: (paneId: string, tabId: string) => Promise<void>;
+  workspaceLayouts: Record<string, IPaneNode[]>;
+  activePaneId: string | null;
+  activeTabId: string | null;
+  onSelectSurface: (workspaceId: string, paneId: string, tabId: string) => void;
   onCreateWorkspace: () => Promise<void>;
 }
 
@@ -40,49 +37,23 @@ const MobileNavigationSheet = ({
   onOpenChange,
   workspaces,
   activeWorkspaceId,
-  panes = [],
-  activePaneId = null,
-  activeTabId = null,
-  onSelectWorkspace,
+  workspaceLayouts,
+  activePaneId,
+  activeTabId,
   onSelectSurface,
-  onCreateTab,
-  onDeleteTab,
   onCreateWorkspace,
 }: IMobileNavigationSheetProps) => {
   const router = useRouter();
-  const [creatingPaneId, setCreatingPaneId] = useState<string | null>(null);
+  const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
   const [longPressTabId, setLongPressTabId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const metadata = useTabMetadataStore((s) => s.metadata);
 
-  const handleSelectWorkspace = useCallback(
+  const handleToggleWorkspace = useCallback(
     (workspaceId: string) => {
-      if (workspaceId === activeWorkspaceId) return;
-      onSelectWorkspace(workspaceId);
+      setExpandedWsId((prev) => (prev === workspaceId ? null : workspaceId));
     },
-    [onSelectWorkspace, activeWorkspaceId],
-  );
-
-  const handleSelectSurface = useCallback(
-    (paneId: string, tabId: string) => {
-      onSelectSurface?.(paneId, tabId);
-      onOpenChange(false);
-    },
-    [onSelectSurface, onOpenChange],
-  );
-
-  const handleCreateTab = useCallback(
-    async (paneId: string) => {
-      if (creatingPaneId || !onCreateTab) return;
-      setCreatingPaneId(paneId);
-      const tab = await onCreateTab(paneId);
-      setCreatingPaneId(null);
-      if (tab) {
-        onSelectSurface?.(paneId, tab.id);
-        onOpenChange(false);
-      }
-    },
-    [creatingPaneId, onCreateTab, onSelectSurface, onOpenChange],
+    [],
   );
 
   const handleLongPressStart = useCallback((tabId: string) => {
@@ -98,33 +69,28 @@ const MobileNavigationSheet = ({
     }
   }, []);
 
-  const handleDeleteTab = useCallback(
-    async (paneId: string, tabId: string) => {
-      setLongPressTabId(null);
-      await onDeleteTab?.(paneId, tabId);
-    },
-    [onDeleteTab],
-  );
-
   const handleSheetOpenChange = useCallback(
     (v: boolean) => {
       onOpenChange(v);
       if (!v) setLongPressTabId(null);
+      if (v) setExpandedWsId(activeWorkspaceId);
     },
-    [onOpenChange],
+    [onOpenChange, activeWorkspaceId],
   );
 
   const getTabDisplayName = (tab: ITab) => {
-    if (tab.name) return tab.name;
     const meta = metadata[tab.id];
-    if (meta?.title) return meta.title;
+    const rawTitle = meta?.title || tab.title;
+    const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
+
+    if (tab.name && !isAutoTabName(tab.name)) return tab.name;
+    if (formatted) return formatted;
     return `Tab ${tab.order + 1}`;
   };
 
-  const renderSurfaceItem = (pane: IPaneNode, tab: ITab, indent: string) => {
-    const isTabActive = pane.id === activePaneId && tab.id === activeTabId;
-    const isLastTab = pane.tabs.length <= 1;
-    const showClose = longPressTabId === tab.id && !isLastTab;
+  const renderSurfaceItem = (workspaceId: string, pane: IPaneNode, tab: ITab, indent: string) => {
+    const isCurrentWs = workspaceId === activeWorkspaceId;
+    const isTabActive = isCurrentWs && pane.id === activePaneId && tab.id === activeTabId;
     const panelType = tab.panelType ?? 'terminal';
     const isClaudeCode = panelType === 'claude-code';
 
@@ -143,7 +109,7 @@ const MobileNavigationSheet = ({
               setLongPressTabId(null);
               return;
             }
-            handleSelectSurface(pane.id, tab.id);
+            onSelectSurface(workspaceId, pane.id, tab.id);
           }}
           onTouchStart={() => handleLongPressStart(tab.id)}
           onTouchEnd={handleLongPressEnd}
@@ -151,61 +117,19 @@ const MobileNavigationSheet = ({
           onContextMenu={(e) => e.preventDefault()}
         >
           {isClaudeCode ? (
-            <BotMessageSquare size={14} className="shrink-0 text-ui-purple" />
+            <BotMessageSquare size={14} className={cn('shrink-0', isTabActive ? 'text-ui-purple' : 'text-muted-foreground')} />
           ) : (
-            <Terminal size={14} className="shrink-0 text-muted-foreground" />
+            <Terminal size={14} className={cn('shrink-0', isTabActive ? 'text-foreground' : 'text-muted-foreground')} />
           )}
           <span className="truncate">{getTabDisplayName(tab)}</span>
-          {isTabActive && (
-            <span className="ml-auto shrink-0 text-xs text-ui-purple">●</span>
-          )}
         </button>
-        {showClose && (
-          <button
-            className="absolute right-2 flex h-6 w-6 items-center justify-center rounded bg-ui-red/10 text-ui-red transition-colors hover:bg-ui-red/20"
-            onClick={() => handleDeleteTab(pane.id, tab.id)}
-            aria-label="탭 닫기"
-          >
-            <X size={14} />
-          </button>
-        )}
       </div>
     );
   };
 
-  const renderAddTabButton = (paneId: string, indent: string) => (
-    <button
-      className={cn(
-        'flex h-11 w-full items-center gap-1.5 pr-4 text-left text-sm text-muted-foreground/70 transition-colors hover:text-muted-foreground',
-        indent,
-      )}
-      onClick={() => handleCreateTab(paneId)}
-      disabled={!!creatingPaneId}
-    >
-      {creatingPaneId === paneId ? (
-        <Loader2 size={16} className="animate-spin" />
-      ) : (
-        <Plus size={16} />
-      )}
-      Tab
-    </button>
-  );
-
-  const renderPaneTree = () => {
+  const renderPaneTree = (workspaceId: string) => {
+    const panes = workspaceLayouts[workspaceId] ?? [];
     if (panes.length === 0) return null;
-
-    const isSingleSurface = panes.length === 1 && panes[0].tabs.length === 1;
-
-    if (isSingleSurface) {
-      const pane = panes[0];
-      const tab = pane.tabs[0];
-      return (
-        <div className="pb-1">
-          {renderSurfaceItem(pane, tab, 'pl-10')}
-          {renderAddTabButton(pane.id, 'pl-10')}
-        </div>
-      );
-    }
 
     const isMultiPane = panes.length > 1;
 
@@ -216,28 +140,13 @@ const MobileNavigationSheet = ({
       return (
         <div key={pane.id} className="pb-1">
           {isMultiPane && (
-            <div className="flex items-center justify-between py-1.5 pl-8 pr-2">
+            <div className="flex items-center py-1.5 pl-8 pr-2">
               <span className="text-xs text-muted-foreground">
                 Pane {index + 1}
               </span>
-              <button
-                className="flex h-11 w-11 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:text-muted-foreground"
-                onClick={() => handleCreateTab(pane.id)}
-                disabled={!!creatingPaneId}
-                aria-label="새 탭 추가"
-              >
-                {creatingPaneId === pane.id ? (
-                  <Loader2 size={16} className="animate-spin" />
-                ) : (
-                  <Plus size={16} />
-                )}
-              </button>
             </div>
           )}
-
-          {sortedTabs.map((tab) => renderSurfaceItem(pane, tab, surfaceIndent))}
-
-          {!isMultiPane && renderAddTabButton(pane.id, surfaceIndent)}
+          {sortedTabs.map((tab) => renderSurfaceItem(workspaceId, pane, tab, surfaceIndent))}
         </div>
       );
     });
@@ -262,6 +171,7 @@ const MobileNavigationSheet = ({
           style={{ scrollbarWidth: 'none' }}
         >
           {workspaces.map((ws) => {
+            const isExpanded = ws.id === expandedWsId;
             const isActive = ws.id === activeWorkspaceId;
             return (
               <div key={ws.id}>
@@ -269,12 +179,12 @@ const MobileNavigationSheet = ({
                   className={cn(
                     'flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors',
                     isActive
-                      ? 'bg-muted font-medium text-foreground'
+                      ? 'font-medium text-foreground'
                       : 'text-foreground hover:bg-accent/50',
                   )}
-                  onClick={() => handleSelectWorkspace(ws.id)}
+                  onClick={() => handleToggleWorkspace(ws.id)}
                 >
-                  {isActive ? (
+                  {isExpanded ? (
                     <ChevronDown
                       size={14}
                       className="shrink-0 text-muted-foreground"
@@ -288,7 +198,7 @@ const MobileNavigationSheet = ({
                   <span className="truncate">{ws.name}</span>
                 </button>
 
-                {isActive && renderPaneTree()}
+                {isExpanded && renderPaneTree(ws.id)}
               </div>
             );
           })}

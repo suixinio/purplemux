@@ -3,37 +3,28 @@ import { useRouter } from 'next/router';
 import AppHeader from '@/components/layout/app-header';
 import MobileNavigationSheet from '@/components/features/mobile/mobile-navigation-sheet';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
-import { collectPanes } from '@/hooks/use-layout';
-import type { ILayoutData, IPaneNode, ITab } from '@/types/terminal';
+import { useLayoutStore, collectPanes } from '@/hooks/use-layout';
+import type { ILayoutData, IPaneNode } from '@/types/terminal';
 
 interface IMobileLayoutProps {
   children: ReactNode;
   onSelectWorkspace: (workspaceId: string) => void;
-  panes?: IPaneNode[];
-  activePaneId?: string | null;
-  activeTabId?: string | null;
-  onSelectSurface?: (paneId: string, tabId: string) => void;
-  onCreateTab?: (paneId: string) => Promise<ITab | null>;
-  onDeleteTab?: (paneId: string, tabId: string) => Promise<void>;
 }
 
 const MobileLayout = ({
   children,
   onSelectWorkspace,
-  panes: externalPanes,
-  activePaneId,
-  activeTabId,
-  onSelectSurface,
-  onCreateTab,
-  onDeleteTab,
 }: IMobileLayoutProps) => {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
-  const isLoading = useWorkspaceStore((s) => s.isLoading);
 
-  const [fetchedLayout, setFetchedLayout] = useState<ILayoutData | null>(null);
+  const storeLayout = useLayoutStore((s) => s.layout);
+  const storeWorkspaceId = useLayoutStore((s) => s.workspaceId);
+
+  const [layoutCache, setLayoutCache] = useState<Record<string, ILayoutData>>({});
 
   useEffect(() => {
     if (workspaces.length === 0) {
@@ -41,42 +32,100 @@ const MobileLayout = ({
     }
   }, [workspaces.length]);
 
+  // store의 layout을 cache에 반영
   useEffect(() => {
-    if (externalPanes || !activeWorkspaceId) {
-      setFetchedLayout(null);
-      return;
+    if (storeLayout && storeWorkspaceId) {
+      setLayoutCache((prev) => ({ ...prev, [storeWorkspaceId]: storeLayout }));
     }
+  }, [storeLayout, storeWorkspaceId]);
+
+  // 메뉴 열릴 때 모든 workspace 레이아웃 fetch
+  useEffect(() => {
+    if (!menuOpen) return;
     let cancelled = false;
-    const fetchLayout = async () => {
-      try {
-        const res = await fetch(`/api/layout?workspace=${activeWorkspaceId}`);
-        if (!res.ok) return;
-        const data: ILayoutData = await res.json();
-        if (!cancelled) setFetchedLayout(data);
-      } catch {
-        // ignore
-      }
+
+    const fetchAll = async () => {
+      const toFetch = workspaces.filter((ws) => {
+        if (ws.id === storeWorkspaceId && storeLayout) return false;
+        return !layoutCache[ws.id];
+      });
+      if (toFetch.length === 0) return;
+
+      const results = await Promise.all(
+        toFetch.map(async (ws) => {
+          try {
+            const res = await fetch(`/api/layout?workspace=${ws.id}`);
+            if (!res.ok) return null;
+            const data: ILayoutData = await res.json();
+            return { id: ws.id, data };
+          } catch {
+            return null;
+          }
+        }),
+      );
+
+      if (cancelled) return;
+      setLayoutCache((prev) => {
+        const next = { ...prev };
+        for (const r of results) {
+          if (r) next[r.id] = r.data;
+        }
+        return next;
+      });
     };
-    fetchLayout();
+    fetchAll();
     return () => { cancelled = true; };
-  }, [activeWorkspaceId, externalPanes]);
+  }, [menuOpen, workspaces, storeWorkspaceId, storeLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fallbackPanes = useMemo(() => {
-    if (!fetchedLayout) return [];
-    return collectPanes(fetchedLayout.root);
-  }, [fetchedLayout]);
+  const workspaceLayouts = useMemo(() => {
+    const map: Record<string, IPaneNode[]> = {};
+    for (const ws of workspaces) {
+      const layout = (ws.id === storeWorkspaceId && storeLayout)
+        ? storeLayout
+        : layoutCache[ws.id];
+      map[ws.id] = layout ? collectPanes(layout.root) : [];
+    }
+    return map;
+  }, [workspaces, storeLayout, storeWorkspaceId, layoutCache]);
 
-  const panes = externalPanes ?? fallbackPanes;
+  const activeLayout = (activeWorkspaceId === storeWorkspaceId && storeLayout)
+    ? storeLayout
+    : (activeWorkspaceId ? layoutCache[activeWorkspaceId] : null);
+  const activePanes = activeWorkspaceId ? (workspaceLayouts[activeWorkspaceId] ?? []) : [];
+  const activePaneId = activeLayout?.activePaneId ?? null;
+  const activePane = activePanes.find((p) => p.id === activePaneId) ?? activePanes[0];
+  const activeTabId = activePane?.activeTabId ?? null;
 
   const handleSelectSurface = useCallback(
-    (paneId: string, tabId: string) => {
-      if (onSelectSurface) {
-        onSelectSurface(paneId, tabId);
-      } else {
+    async (workspaceId: string, paneId: string, tabId: string) => {
+      const cachedLayout = (workspaceId === storeWorkspaceId && storeLayout)
+        ? storeLayout
+        : layoutCache[workspaceId];
+
+      if (cachedLayout) {
+        const updated = JSON.parse(JSON.stringify(cachedLayout)) as ILayoutData;
+        updated.activePaneId = paneId;
+        const panes = collectPanes(updated.root);
+        const targetPane = panes.find((p) => p.id === paneId);
+        if (targetPane) targetPane.activeTabId = tabId;
+
+        fetch(`/api/layout?workspace=${workspaceId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ root: updated.root, activePaneId: paneId }),
+        }).catch(() => {});
+      }
+
+      if (workspaceId !== activeWorkspaceId) {
+        onSelectWorkspace(workspaceId);
+      }
+
+      setMenuOpen(false);
+      if (router.pathname !== '/') {
         router.push('/');
       }
     },
-    [onSelectSurface, router],
+    [activeWorkspaceId, onSelectWorkspace, router, storeLayout, storeWorkspaceId, layoutCache],
   );
 
   const handleCreateWorkspace = useCallback(async () => {
@@ -98,13 +147,10 @@ const MobileLayout = ({
         onOpenChange={setMenuOpen}
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
-        panes={panes}
+        workspaceLayouts={workspaceLayouts}
         activePaneId={activePaneId}
         activeTabId={activeTabId}
-        onSelectWorkspace={onSelectWorkspace}
         onSelectSurface={handleSelectSurface}
-        onCreateTab={onCreateTab}
-        onDeleteTab={onDeleteTab}
         onCreateWorkspace={handleCreateWorkspace}
       />
     </>

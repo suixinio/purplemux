@@ -34,9 +34,8 @@ const StatsPage = () => {
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {
       useWorkspaceStore.getState().switchWorkspace(workspaceId);
-      router.push('/');
     },
-    [router],
+    [],
   );
 
   const {
