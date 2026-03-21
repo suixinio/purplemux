@@ -3,7 +3,6 @@ import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
-import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
 import useSessionView from '@/hooks/use-session-view';
@@ -11,9 +10,7 @@ import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
-import SessionNavBar from '@/components/features/terminal/session-nav-bar';
 import TimelineView from '@/components/features/timeline/timeline-view';
-import TerminalContainer from '@/components/features/terminal/terminal-container';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
 import MobileMetaSheet from './mobile-meta-sheet';
 import type { TCliState } from '@/types/timeline';
@@ -21,14 +18,9 @@ import type { TCliState } from '@/types/timeline';
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
 
-type TClaudeActiveTab = 'timeline' | 'terminal';
-
 interface IMobileClaudeCodePanelProps {
   sessionName: string;
   claudeSessionId?: string | null;
-  claudeActiveTab: TClaudeActiveTab;
-  terminalRef: React.RefObject<HTMLDivElement | null>;
-  terminalReady: boolean;
   sendStdin: (data: string) => void;
   terminalWsConnected: boolean;
   focusTerminal: () => void;
@@ -42,9 +34,6 @@ const RELATIVE_TIME_INTERVAL_MS = 60_000;
 const MobileClaudeCodePanel = ({
   sessionName,
   claudeSessionId,
-  claudeActiveTab,
-  terminalRef,
-  terminalReady,
   sendStdin,
   terminalWsConnected,
   focusTerminal,
@@ -190,68 +179,43 @@ const MobileClaudeCodePanel = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted">
-      <SessionNavBar onNavigateToList={navigateToList} />
-
-      {claudeActiveTab === 'timeline' && (
-        <div
-          className="flex shrink-0 cursor-pointer items-center border-b px-4 py-1.5 hover:bg-muted/30"
-          role="button"
-          tabIndex={0}
-          onClick={() => setMetaSheetOpen(true)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' || e.key === ' ') {
-              e.preventDefault();
-              setMetaSheetOpen(true);
-            }
-          }}
-        >
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs">
-            <span className="truncate text-sm font-medium text-foreground">{meta.title}</span>
-            <span className="text-muted-foreground/50">·</span>
-            <span className="shrink-0 text-muted-foreground">{relativeTimeStr}</span>
-          </div>
-        </div>
-      )}
-
-      <div className="relative min-h-0 flex-1">
-        <div
-          className={cn(
-            'absolute inset-0 transition-opacity duration-100',
-            claudeActiveTab === 'timeline' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0',
-          )}
-        >
-          <TimelineView
-            entries={entries}
-            sessionId={sessionId}
-            sessionStatus={sessionStatus}
-            wsStatus={wsStatus}
-            isLoading={isTimelineLoading}
-            isSessionTransitioning={isSessionTransitioning}
-            error={timelineError}
-            isAutoScrollEnabled={isAutoScrollEnabled}
-            onAutoScrollChange={setAutoScrollEnabled}
-            onRetry={retrySession}
-            onLoadMore={loadMoreTimeline}
-            hasMore={timelineHasMore}
-          />
-        </div>
-        <div
-          className={cn(
-            'absolute inset-0 transition-opacity duration-100',
-            claudeActiveTab === 'terminal'
-              ? 'pointer-events-auto opacity-100'
-              : 'pointer-events-none opacity-0',
-            !terminalReady && claudeActiveTab === 'terminal' && 'opacity-0',
-          )}
-        >
-          <TerminalContainer
-            ref={terminalRef}
-            className="h-full w-full"
-          />
+      <div
+        className="flex shrink-0 cursor-pointer items-center border-b px-4 py-1.5 hover:bg-muted/30"
+        role="button"
+        tabIndex={0}
+        onClick={() => setMetaSheetOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setMetaSheetOpen(true);
+          }
+        }}
+      >
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs">
+          <span className="truncate text-sm font-medium text-foreground">{meta.title}</span>
+          <span className="text-muted-foreground/50">·</span>
+          <span className="shrink-0 text-muted-foreground">{relativeTimeStr}</span>
         </div>
       </div>
 
-      <div className="shrink-0">
+      <div className="min-h-0 flex-1">
+        <TimelineView
+          entries={entries}
+          sessionId={sessionId}
+          sessionStatus={sessionStatus}
+          wsStatus={wsStatus}
+          isLoading={isTimelineLoading}
+          isSessionTransitioning={isSessionTransitioning}
+          error={timelineError}
+          isAutoScrollEnabled={isAutoScrollEnabled}
+          onAutoScrollChange={setAutoScrollEnabled}
+          onRetry={retrySession}
+          onLoadMore={loadMoreTimeline}
+          hasMore={timelineHasMore}
+        />
+      </div>
+
+      <div className="shrink-0 pb-3">
         <WebInputBar
           cliState={cliState}
           sendStdin={sendStdin}

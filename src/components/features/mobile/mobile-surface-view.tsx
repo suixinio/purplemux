@@ -44,14 +44,11 @@ const NOOP_WS_ACTIONS: IWsActions = {
   sendResize: () => {},
 };
 
-type TClaudeActiveTab = 'timeline' | 'terminal';
-
 interface IMobileSurfaceViewProps {
   paneId: string;
   tabs: ITab[];
   activeTabId: string | null;
   panelType: TPanelType;
-  claudeActiveTab: TClaudeActiveTab;
   onCreateTab: (paneId: string) => Promise<ITab | null>;
   onDeleteTab: (paneId: string, tabId: string) => Promise<void>;
   onSwitchTab: (paneId: string, tabId: string) => void;
@@ -67,7 +64,6 @@ const MobileSurfaceView = ({
   tabs,
   activeTabId,
   panelType,
-  claudeActiveTab,
   onCreateTab,
   onDeleteTab,
   onSwitchTab,
@@ -226,15 +222,14 @@ const MobileSurfaceView = ({
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isClaudeCode && claudeActiveTab === 'terminal' && isReady && status === 'connected') {
+    if (isClaudeCode && isReady && status === 'connected') {
       const timer = setTimeout(() => {
         const { cols, rows } = fit();
         wsActionsRef.current.sendResize(cols, rows);
-        focus();
       }, 150);
       return () => clearTimeout(timer);
     }
-  }, [claudeActiveTab]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateTab = useCallback(async () => {
     setIsCreating(true);
@@ -256,13 +251,10 @@ const MobileSurfaceView = ({
         overscrollBehavior: 'none',
       }}
     >
-      {isClaudeCode && activeTab ? (
+      {isClaudeCode && activeTab && (
         <MobileClaudeCodePanel
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
-          claudeActiveTab={claudeActiveTab}
-          terminalRef={terminalRef}
-          terminalReady={ready}
           sendStdin={sendStdin}
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
@@ -270,15 +262,17 @@ const MobileSurfaceView = ({
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
         />
-      ) : (
-        <TerminalContainer
-          ref={terminalRef}
-          className={cn(
-            'min-h-0 flex-1 transition-opacity duration-150',
-            ready ? 'opacity-100' : 'opacity-0',
-          )}
-        />
       )}
+
+      <TerminalContainer
+        ref={terminalRef}
+        className={cn(
+          'transition-opacity duration-150',
+          isClaudeCode ? 'absolute h-0 w-0 overflow-hidden opacity-0' : 'min-h-0 flex-1',
+          !isClaudeCode && ready ? 'opacity-100' : '',
+          !isClaudeCode && !ready ? 'opacity-0' : '',
+        )}
+      />
 
       {noTabs && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">

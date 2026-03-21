@@ -8,8 +8,10 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import type { TPanelType } from '@/types/terminal';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
+import MobileTabHeader from '@/components/features/mobile/mobile-tab-header';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileTabIndicator from '@/components/features/mobile/mobile-tab-indicator';
+import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
 import useSync from '@/hooks/use-sync';
 
 const MobileTerminalPage = () => {
@@ -23,7 +25,6 @@ const MobileTerminalPage = () => {
 
   const [selectedPaneId, setSelectedPaneId] = useState<string | null>(null);
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
-  const [claudeActiveTab, setClaudeActiveTab] = useState<'timeline' | 'terminal'>('timeline');
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -149,13 +150,33 @@ const MobileTerminalPage = () => {
     [layout],
   );
 
-  useEffect(() => {
-    setClaudeActiveTab('timeline');
-  }, [selectedTabId]);
 
   const currentPane = panes.find((p) => p.id === selectedPaneId);
   const currentTab = currentPane?.tabs.find((t) => t.id === selectedTabId);
   const currentPanelType: TPanelType = currentTab?.panelType ?? 'terminal';
+
+  const tabMetadata = useTabMetadataStore((s) =>
+    selectedTabId ? s.metadata[selectedTabId] : undefined,
+  );
+  const currentTabName = useMemo(() => {
+    if (!currentTab) return '';
+    if (currentTab.name && !isAutoTabName(currentTab.name)) return currentTab.name;
+    const rawTitle = tabMetadata?.title || currentTab.title;
+    const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
+    if (formatted) return formatted;
+    return `Tab ${currentTab.order + 1}`;
+  }, [currentTab, tabMetadata]);
+
+  const handleToggleClaude = useCallback(() => {
+    if (!currentPane || !selectedTabId) return;
+    const nextType: TPanelType = currentPanelType === 'claude-code' ? 'terminal' : 'claude-code';
+    layout.updateTabPanelType(currentPane.id, selectedTabId, nextType);
+  }, [currentPane, selectedTabId, currentPanelType, layout]);
+
+  const handleCloseTab = useCallback(() => {
+    if (!currentPane || !selectedTabId) return;
+    layout.deleteTabInPane(currentPane.id, selectedTabId);
+  }, [currentPane, selectedTabId, layout]);
 
   const sortedTabs = useMemo(() => {
     if (!currentPane) return [];
@@ -252,13 +273,21 @@ const MobileTerminalPage = () => {
     return (
       <>
         {currentPane && selectedTabId && (
+          <MobileTabHeader
+            tabName={currentTabName}
+            panelType={currentPanelType}
+            onToggleClaude={handleToggleClaude}
+            onClose={handleCloseTab}
+          />
+        )}
+
+        {currentPane && selectedTabId && (
           <MobileSurfaceView
             key={`${selectedPaneId}-${selectedTabId}`}
             paneId={currentPane.id}
             tabs={currentPane.tabs}
             activeTabId={selectedTabId}
             panelType={currentPanelType}
-            claudeActiveTab={claudeActiveTab}
             onCreateTab={layout.createTabInPane}
             onDeleteTab={layout.deleteTabInPane}
             onSwitchTab={(paneId, tabId) => {
