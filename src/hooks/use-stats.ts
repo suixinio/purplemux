@@ -102,7 +102,7 @@ const fetchJson = async <T>(url: string, signal: AbortSignal): Promise<T> => {
 };
 
 const useStats = (): IUseStatsReturn => {
-  const [period, setPeriod] = useState<TPeriod>('30d');
+  const [period, setPeriod] = useState<TPeriod>('7d');
   const [state, dispatch] = useReducer(reducer, initialState);
   const [fetchKey, setFetchKey] = useState(0);
 

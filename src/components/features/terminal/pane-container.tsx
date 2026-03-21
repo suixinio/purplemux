@@ -162,6 +162,7 @@ const PaneContainer = ({
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const processHintRef = useRef<((isClaudeRunning: boolean) => void) | undefined>(undefined);
   const manualToggleCooldownRef = useRef<Record<string, number>>({});
+  const isNonShellRunningRef = useRef<Record<string, boolean>>({});
   const claudeCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const checkClaudeSession = useCallback(async (tabId: string) => {
@@ -221,8 +222,11 @@ const PaneContainer = ({
       fetchAndUpdateCwd();
 
       if (isShellProcess(title)) {
+        isNonShellRunningRef.current[tabId] = false;
         processHintRef.current?.(false);
+        delete manualToggleCooldownRef.current[tabId];
       } else {
+        isNonShellRunningRef.current[tabId] = true;
         processHintRef.current?.(true);
 
         const tab = tabsRef.current.find((t) => t.id === tabId);
@@ -437,7 +441,7 @@ const PaneContainer = ({
     const current = activeTab?.panelType ?? 'terminal';
     const next: TPanelType = current === 'terminal' ? 'claude-code' : 'terminal';
 
-    if (current === 'claude-code' && next === 'terminal') {
+    if (current === 'claude-code' && next === 'terminal' && isNonShellRunningRef.current[activeTabId]) {
       manualToggleCooldownRef.current[activeTabId] = Date.now();
     }
 
@@ -479,9 +483,20 @@ const PaneContainer = ({
       if (!isReady || status !== 'connected') return;
       const { cols, rows } = fit();
       wsActionsRef.current.sendResize(cols, rows);
+      if (isClaudeCode) {
+        if (claudeInputVisible) focusInputRef.current?.();
+      } else {
+        focus();
+      }
     }, 150);
     return () => clearTimeout(timer);
   }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isClaudeCode && claudeInputVisible) {
+      focusInputRef.current?.();
+    }
+  }, [claudeInputVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const noTabs = tabs.length === 0;
   const ready = isReady && status === 'connected' && !noTabs;
@@ -579,33 +594,36 @@ const PaneContainer = ({
           <Separator
             className={cn(
               'group flex items-center justify-center bg-muted',
-              isClaudeCode && !isTerminalCollapsed ? 'h-4' : 'h-0',
+              isClaudeCode && !isTerminalCollapsed ? 'h-3' : 'h-0',
             )}
             disabled={!isClaudeCode || isTerminalCollapsed}
           >
             <div className="h-px w-16 rounded-full bg-border transition-colors group-hover:bg-muted-foreground group-data-[resize-handle-active]:bg-muted-foreground" />
           </Separator>
 
+          {isClaudeCode && (
+            <button
+              className={cn(
+                'flex h-6 w-full shrink-0 cursor-pointer items-center gap-1.5 border-t border-border bg-black/3 px-2 text-muted-foreground transition-colors hover:bg-black/5 dark:bg-white/3 dark:hover:bg-white/5',
+                isTerminalCollapsed && 'mt-3',
+              )}
+              onClick={handleToggleTerminal}
+            >
+              <TerminalSquare className="h-3 w-3" />
+              <span className="text-[11px] font-medium">Terminal</span>
+              {activeTabCwd && (
+                <span className="min-w-0 truncate text-[11px] opacity-60">
+                  {activeTabCwd.replace(/^\/Users\/[^/]+/, '~')}
+                </span>
+              )}
+              <span className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center">
+                {isTerminalCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </span>
+            </button>
+          )}
+
           <Panel id="terminal-area" minSize={0} collapsible collapsedSize={0}>
             <div className="flex h-full flex-col">
-              {isClaudeCode && (
-                <div className="flex h-6 shrink-0 items-center gap-1.5 border-t border-border px-2 text-muted-foreground">
-                  <TerminalSquare className="h-3 w-3" />
-                  <span className="text-[11px] font-medium">Terminal</span>
-                  {activeTabCwd && (
-                    <span className="min-w-0 truncate text-[11px] opacity-60">
-                      {activeTabCwd.replace(/^\/Users\/[^/]+/, '~')}
-                    </span>
-                  )}
-                  <button
-                    className="ml-auto flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
-                    onClick={handleToggleTerminal}
-                  >
-                    {isTerminalCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                  </button>
-                </div>
-              )}
-
               <TerminalContainer
                 ref={terminalRef}
                 className={cn(
