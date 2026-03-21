@@ -13,7 +13,7 @@ import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
-import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
+import { formatTabTitle, isClaudeProcess, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
@@ -192,10 +192,13 @@ const PaneContainer = ({
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       fetchAndUpdateCwd();
 
-      const claudeRunning = isClaudeProcess(title);
-      processHintRef.current?.(claudeRunning);
+      if (isShellProcess(title)) {
+        processHintRef.current?.(false);
+      } else {
+        processHintRef.current?.(true);
+      }
 
-      if (claudeRunning) {
+      if (isClaudeProcess(title)) {
         const cooldownTime = manualToggleCooldownRef.current[tabId];
         const isCoolingDown = cooldownTime && Date.now() - cooldownTime < 10_000;
         if (!isCoolingDown) {
@@ -561,7 +564,7 @@ const PaneContainer = ({
                 </span>
               )}
               <button
-                className="ml-auto flex h-4 w-4 shrink-0 items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
+                className="ml-auto flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
                 onClick={handleToggleTerminal}
               >
                 {isTerminalCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}

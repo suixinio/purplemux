@@ -20,6 +20,11 @@ export const isClaudeProcess = (raw: string): boolean => {
   return cmd === 'claude';
 };
 
+export const isShellProcess = (raw: string): boolean => {
+  const cmd = parseCurrentCommand(raw);
+  return cmd !== null && SHELL_NAMES.has(cmd);
+};
+
 export const formatTabTitle = (raw: string): string => {
   const trimmed = raw.trim();
   if (!trimmed) return '';

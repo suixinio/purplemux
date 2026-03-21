@@ -41,15 +41,28 @@ const getChildPids = async (parentPid: number): Promise<number[]> => {
   }
 };
 
+const getProcessCwd = async (pid: number): Promise<string | null> => {
+  try {
+    const { stdout } = await execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
+    const line = stdout.split('\n').find((l) => l.startsWith('n/'));
+    return line ? line.slice(1) : null;
+  } catch {
+    return null;
+  }
+};
+
 const getClaudeSessionFromArgs = async (
   childPids: number[],
-): Promise<{ pid: number; sessionId: string } | null> => {
+): Promise<{ pid: number; sessionId: string; cwd: string | null } | null> => {
   for (const pid of childPids) {
     try {
       const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'args=']);
       const args = stdout.trim();
       const match = args.match(/claude\s+--resume\s+([0-9a-f-]{36})/);
-      if (match) return { pid, sessionId: match[1] };
+      if (match) {
+        const cwd = await getProcessCwd(pid);
+        return { pid, sessionId: match[1], cwd };
+      }
     } catch {
       continue;
     }
@@ -122,6 +135,23 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
     }
   } catch {
     // sessions dir doesn't exist yet
+  }
+
+  const fromArgs = await getClaudeSessionFromArgs(childPids);
+  if (fromArgs) {
+    const cwd = fromArgs.cwd;
+    if (cwd) {
+      const projectName = toClaudeProjectName(cwd);
+      const projectDir = path.join(PROJECTS_DIR, projectName);
+      const jsonlPath = await findJsonlPath(projectDir, fromArgs.sessionId);
+      return {
+        status: 'active',
+        sessionId: fromArgs.sessionId,
+        jsonlPath,
+        pid: fromArgs.pid,
+        startedAt: null,
+      };
+    }
   }
 
   return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };

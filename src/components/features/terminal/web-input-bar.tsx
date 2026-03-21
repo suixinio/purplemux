@@ -117,7 +117,7 @@ const WebInputBar = ({
           <div
             ref={containerRef}
             className={cn(
-              'relative z-10 flex items-end gap-2 border-t px-3 py-2 bg-background',
+              'relative z-10 flex items-end gap-2 border-t px-3 py-2 bg-black/5 dark:bg-white/5',
               isFocused && mode === 'input' ? 'border-ring' : 'border-border',
               mode === 'disabled' && 'opacity-50',
             )}
@@ -139,7 +139,7 @@ const WebInputBar = ({
               }
               aria-label="Claude Code 메시지 입력"
               className={cn(
-                'flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
+                'flex-1 resize-none bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground',
                 isDisabled && 'cursor-not-allowed opacity-70',
               )}
               rows={1}

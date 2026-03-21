@@ -7,7 +7,6 @@ import useSessionList from '@/hooks/use-session-list';
 import useSessionView from '@/hooks/use-session-view';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
-import SessionNavBar from '@/components/features/terminal/session-nav-bar';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import type { TCliState } from '@/types/timeline';
 
@@ -97,7 +96,7 @@ const ClaudeCodePanel = ({
     enabled: !!sessionName && sessionStatus !== 'active' && !isAutoResuming,
   });
 
-  const { view, navigateToList, navigateToTimeline } = useSessionView(
+  const { view, navigateToTimeline } = useSessionView(
     sessionStatus,
     sessions,
     isSessionListLoading,
@@ -145,12 +144,6 @@ const ClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  const handleNavigateToList = useCallback(() => {
-    if (resumingSessionId) return;
-    refetchSessions();
-    navigateToList();
-  }, [resumingSessionId, refetchSessions, navigateToList]);
-
   if (isAutoResuming) {
     return (
       <div className={cn('flex h-full w-full items-center justify-center', className)}>
@@ -191,7 +184,6 @@ const ClaudeCodePanel = ({
 
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
-      <SessionNavBar onNavigateToList={handleNavigateToList} />
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}

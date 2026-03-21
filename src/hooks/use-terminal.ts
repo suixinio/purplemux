@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type { ITerminalThemeColors } from "@/lib/terminal-themes";
 
 interface IUseTerminalOptions {
@@ -138,6 +139,10 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(new WebLinksAddon());
+
+      const unicode11Addon = new Unicode11Addon();
+      terminal.loadAddon(unicode11Addon);
+      terminal.unicode.activeVersion = "11";
 
       terminal.open(container);
 
