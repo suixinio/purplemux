@@ -28,6 +28,7 @@ interface IWorkspaceState {
 
   hydrate: (data: IWorkspaceInitialData) => void;
   fetchWorkspaces: () => Promise<void>;
+  syncWorkspaces: () => Promise<void>;
   createWorkspace: (directory: string, name?: string) => Promise<IWorkspace | null>;
   deleteWorkspace: (workspaceId: string) => Promise<boolean>;
   removeWorkspace: (workspaceId: string) => void;
@@ -92,6 +93,17 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
     } catch {
       set({ error: 'Workspace 목록을 불러올 수 없습니다', isLoading: false });
     }
+  },
+
+  syncWorkspaces: async () => {
+    try {
+      const res = await fetch('/api/workspace');
+      if (!res.ok) return;
+      const data = await res.json();
+      const current = get().workspaces;
+      if (JSON.stringify(current) === JSON.stringify(data.workspaces)) return;
+      set({ workspaces: data.workspaces });
+    } catch {}
   },
 
   createWorkspace: async (directory, name?) => {

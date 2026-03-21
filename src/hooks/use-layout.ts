@@ -228,12 +228,22 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     const controller = new AbortController();
     _abortController = controller;
 
-    set({ isLoading: true, error: null });
+    if (!get().layout) {
+      set({ isLoading: true, error: null });
+    }
     try {
       const res = await fetch(wsQuery('/api/layout', targetWsId), { signal: controller.signal });
       if (!res.ok) throw new Error();
       const data: ILayoutData = await res.json();
       if (controller.signal.aborted) return;
+      const current = get().layout;
+      if (current) {
+        const { updatedAt: _a, ...currentContent } = current;
+        const { updatedAt: _b, ...fetchedContent } = data;
+        if (JSON.stringify(currentContent) === JSON.stringify(fetchedContent)) {
+          return;
+        }
+      }
       set({ layout: data, retryCount: 0, ...updateDerived(data, get().isSplitting) });
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;

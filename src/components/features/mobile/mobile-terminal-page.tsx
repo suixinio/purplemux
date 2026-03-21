@@ -6,13 +6,16 @@ import useLayout, { collectPanes } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
+import { isAutoTabName } from '@/lib/tab-title';
 import type { TPanelType } from '@/types/terminal';
 import MobileNavBar from '@/components/features/mobile/mobile-nav-bar';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileTabIndicator from '@/components/features/mobile/mobile-tab-indicator';
 import MobileNavigationSheet from '@/components/features/mobile/mobile-navigation-sheet';
+import useSync from '@/hooks/use-sync';
 
 const MobileTerminalPage = () => {
+  useSync();
   const isLoading = useWorkspaceStore((s) => s.isLoading);
   const error = useWorkspaceStore((s) => s.error);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -182,7 +185,9 @@ const MobileTerminalPage = () => {
   const tabMetadata = useTabMetadataStore((s) =>
     selectedTabId ? s.metadata[selectedTabId] : undefined,
   );
-  const surfaceName = currentTab?.name || tabMetadata?.title || `Tab ${(currentTab?.order ?? 0) + 1}`;
+  const surfaceName = isAutoTabName(currentTab?.name ?? '')
+    ? (tabMetadata?.title || currentTab?.name || `Tab ${(currentTab?.order ?? 0) + 1}`)
+    : (currentTab?.name || `Tab ${(currentTab?.order ?? 0) + 1}`);
 
   const navigationSheet = (
     <MobileNavigationSheet

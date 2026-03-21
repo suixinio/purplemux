@@ -3,6 +3,7 @@ import next from 'next';
 import { WebSocketServer } from 'ws';
 import { handleConnection, gracefulShutdown } from './src/lib/terminal-server';
 import { handleTimelineConnection, gracefulTimelineShutdown } from './src/lib/timeline-server';
+import { handleSyncConnection, gracefulSyncShutdown } from './src/lib/sync-server';
 import { checkTmux, scanSessions, applyConfig } from './src/lib/tmux';
 import { initWorkspaceStore } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
@@ -46,6 +47,9 @@ const start = async () => {
   const timelineWss = new WebSocketServer({ noServer: true });
   timelineWss.on('connection', handleTimelineConnection);
 
+  const syncWss = new WebSocketServer({ noServer: true });
+  syncWss.on('connection', handleSyncConnection);
+
   server.on('upgrade', (request, socket, head) => {
     const url = new URL(request.url ?? '', `http://localhost:${port}`);
     const cookies = parseCookies(request.headers.cookie);
@@ -70,6 +74,10 @@ const start = async () => {
       timelineWss.handleUpgrade(request, socket, head, (ws) => {
         timelineWss.emit('connection', ws, request);
       });
+    } else if (url.pathname === '/api/sync') {
+      syncWss.handleUpgrade(request, socket, head, (ws) => {
+        syncWss.emit('connection', ws);
+      });
     } else {
       upgrade(request, socket, head);
     }
@@ -78,6 +86,7 @@ const start = async () => {
   const shutdown = async () => {
     gracefulShutdown();
     gracefulTimelineShutdown();
+    gracefulSyncShutdown();
     process.exit(0);
   };
 

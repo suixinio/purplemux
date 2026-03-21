@@ -3,6 +3,7 @@ import path from 'path';
 import os from 'os';
 import { nanoid } from 'nanoid';
 import { listSessions, killSession } from '@/lib/tmux';
+import { broadcastSync } from '@/lib/sync-server';
 import {
   readLayoutFile,
   writeLayoutFile,
@@ -32,7 +33,10 @@ const WORKSPACES_FILE = path.join(BASE_DIR, 'workspaces.json');
 const LEGACY_LAYOUT_FILE = path.join(BASE_DIR, 'layout.json');
 const LEGACY_TABS_FILE = path.join(BASE_DIR, 'tabs.json');
 
-const g = globalThis as unknown as { __ptWorkspaceLock?: Promise<void> };
+const g = globalThis as unknown as {
+  __ptWorkspaceLock?: Promise<void>;
+  __ptWorkspacesContentCache?: string;
+};
 if (!g.__ptWorkspaceLock) g.__ptWorkspaceLock = Promise.resolve();
 
 const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
@@ -86,10 +90,18 @@ const readWorkspacesFile = async (): Promise<IWorkspacesData | null> => {
 };
 
 const writeWorkspacesFile = async (data: IWorkspacesData): Promise<void> => {
+  const { updatedAt: _, ...comparable } = data;
+  const contentKey = JSON.stringify(comparable);
+
+  if (g.__ptWorkspacesContentCache === contentKey) return;
+
   data.updatedAt = new Date().toISOString();
   const tmpFile = WORKSPACES_FILE + '.tmp';
   await fs.writeFile(tmpFile, JSON.stringify(data, null, 2));
   await fs.rename(tmpFile, WORKSPACES_FILE);
+
+  g.__ptWorkspacesContentCache = contentKey;
+  broadcastSync({ type: 'workspace' });
 };
 
 const migrateFromPhase4 = async (): Promise<IWorkspacesData | null> => {

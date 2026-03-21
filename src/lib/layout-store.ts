@@ -3,12 +3,17 @@ import path from 'path';
 import os from 'os';
 import { nanoid } from 'nanoid';
 import { createSession, killSession, workspaceSessionName } from '@/lib/tmux';
+import { broadcastSync } from '@/lib/sync-server';
 import type { ITab, TLayoutNode, IPaneNode, ILayoutData } from '@/types/terminal';
 
 const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
 
-const g = globalThis as unknown as { __ptLayoutLock?: Promise<void> };
+const g = globalThis as unknown as {
+  __ptLayoutLock?: Promise<void>;
+  __ptLayoutContentCache?: Map<string, string>;
+};
 if (!g.__ptLayoutLock) g.__ptLayoutLock = Promise.resolve();
+if (!g.__ptLayoutContentCache) g.__ptLayoutContentCache = new Map();
 
 const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
   let release: () => void;
@@ -74,11 +79,27 @@ export const readLayoutFile = async (filePath: string): Promise<ILayoutData | nu
   }
 };
 
+const extractWsIdFromPath = (filePath: string): string | null => {
+  const match = filePath.match(/workspaces\/(ws-[^/]+)\//);
+  return match?.[1] ?? null;
+};
+
 export const writeLayoutFile = async (data: ILayoutData, filePath: string): Promise<void> => {
+  const { updatedAt: _, ...comparable } = data;
+  const contentKey = JSON.stringify(comparable);
+  const cache = g.__ptLayoutContentCache!;
+
+  if (cache.get(filePath) === contentKey) return;
+
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   const tmpFile = filePath + '.tmp';
   await fs.writeFile(tmpFile, JSON.stringify(data, null, 2));
   await fs.rename(tmpFile, filePath);
+
+  cache.set(filePath, contentKey);
+
+  const wsId = extractWsIdFromPath(filePath);
+  if (wsId) broadcastSync({ type: 'layout', workspaceId: wsId });
 };
 
 export const collectPanes = (node: TLayoutNode): IPaneNode[] => {

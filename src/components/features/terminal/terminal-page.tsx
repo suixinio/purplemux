@@ -9,8 +9,10 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
+import useSync from '@/hooks/use-sync';
 
 const TerminalPage = () => {
+  useSync();
   const isLoading = useWorkspaceStore((s) => s.isLoading);
   const error = useWorkspaceStore((s) => s.error);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
