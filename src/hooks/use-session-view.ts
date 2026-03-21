@@ -13,6 +13,7 @@ const useSessionView = (
   sessionStatus: TSessionStatus,
   sessions: ISessionMeta[],
   isSessionListLoading: boolean,
+  error?: string | null,
 ): IUseSessionViewReturn => {
   const [manualView, setManualView] = useState<TSessionView | null>(null);
 
@@ -21,6 +22,7 @@ const useSessionView = (
     if (manualView === 'timeline') return 'timeline';
     if (manualView === 'list') return 'list';
     if (isSessionListLoading) return 'list';
+    if (error) return 'list';
     if (sessions.length > 0) return 'list';
     return 'empty';
   })();

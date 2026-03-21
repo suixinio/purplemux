@@ -6,7 +6,7 @@ interface ISessionNavBarProps {
 }
 
 const SessionNavBar = ({ onNavigateToList }: ISessionNavBarProps) => (
-  <div className="flex items-center border-b px-2 py-1">
+  <div className="flex items-center border-b px-4 py-2">
     <Button
       variant="ghost"
       size="sm"

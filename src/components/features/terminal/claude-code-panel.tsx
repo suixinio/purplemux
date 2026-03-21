@@ -88,6 +88,7 @@ const ClaudeCodePanel = ({ sessionName, claudeSessionId, className }: IClaudeCod
     sessionStatus,
     sessions,
     isSessionListLoading,
+    sessionListError,
   );
 
   useEffect(() => {
