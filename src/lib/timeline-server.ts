@@ -101,8 +101,10 @@ const removeFileWatcher = (jsonlPath: string) => {
 };
 
 const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: string): Promise<void> => {
+  console.log('[timeline] subscribeToFile:', jsonlPath, 'exists:', existsSync(jsonlPath), 'sessionId:', sessionId);
   if (!existsSync(jsonlPath)) {
-    sendJson(ws, { type: 'timeline:error', code: 'file-not-found', message: 'JSONL 파일을 찾을 수 없습니다' });
+    console.log('[timeline] file not found, sending empty init');
+    sendJson(ws, { type: 'timeline:init', entries: [], sessionId: sessionId ?? '', totalEntries: 0 });
     return;
   }
 
@@ -204,10 +206,15 @@ const resolveJsonlPath = async (
   sessionId: string,
 ): Promise<string | null> => {
   const cwd = await getSessionCwd(tmuxSession);
-  if (!cwd) return null;
+  if (!cwd) {
+    console.log('[timeline] resolveJsonlPath: cwd is null for', tmuxSession);
+    return null;
+  }
   const projectDir = cwdToProjectPath(cwd);
   const jsonlPath = path.join(projectDir, `${sessionId}.jsonl`);
-  return existsSync(jsonlPath) ? jsonlPath : null;
+  const exists = existsSync(jsonlPath);
+  console.log('[timeline] resolveJsonlPath:', jsonlPath, 'exists:', exists);
+  return exists ? jsonlPath : null;
 };
 
 const handleResumeMessage = async (
@@ -251,6 +258,13 @@ const handleResumeMessage = async (
       }
       conn.currentJsonlPath = jsonlPath;
       await subscribeToFile(ws, jsonlPath, sessionId);
+    } else {
+      sendJson(ws, {
+        type: 'timeline:init',
+        entries: [],
+        sessionId,
+        totalEntries: 0,
+      });
     }
   } catch (err) {
     sendJson(ws, {
@@ -331,6 +345,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
         });
       } else if (msg.type === 'timeline:process-hint') {
         const newInfo = await detectActiveSession(conn.panePid);
+        console.log('[timeline] process-hint detectActiveSession:', { status: newInfo.status, sessionId: newInfo.sessionId, jsonlPath: newInfo.jsonlPath, currentJsonlPath: conn.currentJsonlPath });
         if (newInfo.jsonlPath && newInfo.jsonlPath !== conn.currentJsonlPath) {
           if (conn.currentJsonlPath) {
             unsubscribeFromFile(ws, conn.currentJsonlPath);
@@ -357,6 +372,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   ws.on('error', () => cleanup(conn));
 
   const sessionInfo = await detectActiveSession(panePid);
+  console.log('[timeline] initial detectActiveSession:', { status: sessionInfo.status, sessionId: sessionInfo.sessionId, jsonlPath: sessionInfo.jsonlPath, pid: sessionInfo.pid });
 
   if (sessionInfo.jsonlPath) {
     conn.currentJsonlPath = sessionInfo.jsonlPath;
@@ -366,6 +382,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       await updateTabClaudeSessionId(conn.sessionName, sessionInfo.sessionId).catch(() => {});
     }
   } else {
+    console.log('[timeline] no jsonlPath, sending empty init');
     sendJson(ws, {
       type: 'timeline:init',
       entries: [],

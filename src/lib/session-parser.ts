@@ -155,6 +155,25 @@ export const summarizeToolResult = (content: string | unknown[], isError: boolea
   return '';
 };
 
+const PROTOCOL_TAGS = [
+  'local-command-caveat',
+  'local-command-stdout',
+  'command-name',
+  'command-message',
+  'command-args',
+  'user-prompt-submit-hook',
+  'system-reminder',
+];
+
+const PROTOCOL_TAG_RE = new RegExp(
+  `<(?:${PROTOCOL_TAGS.join('|')})[^>]*>[\\s\\S]*?</(?:${PROTOCOL_TAGS.join('|')})>`,
+  'g',
+);
+
+const stripProtocolTags = (text: string): string => {
+  return text.replace(PROTOCOL_TAG_RE, '').trim();
+};
+
 // --- Internal Helpers ---
 
 const extractDiff = (toolName: string, input: Record<string, unknown> = {}): { filePath?: string; diff?: ITimelineDiff } => {
@@ -229,12 +248,13 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
     const content = parsed.data.message.content;
 
     if (typeof content === 'string') {
-      if (content.trim()) {
+      const cleaned = stripProtocolTags(content);
+      if (cleaned) {
         entries.push({
           id: nanoid(),
           type: 'user-message',
           timestamp,
-          text: content,
+          text: cleaned,
         } satisfies ITimelineUserMessage);
       }
       return entries;
@@ -242,11 +262,13 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
 
     for (const item of content) {
       if (item.type === 'text' && 'text' in item) {
+        const cleaned = stripProtocolTags((item as { text: string }).text);
+        if (!cleaned) continue;
         entries.push({
           id: nanoid(),
           type: 'user-message',
           timestamp,
-          text: (item as { text: string }).text,
+          text: cleaned,
         } satisfies ITimelineUserMessage);
       } else if (item.type === 'tool_result' && 'tool_use_id' in item) {
         const c = item as { tool_use_id: string; is_error?: boolean; content?: unknown };
