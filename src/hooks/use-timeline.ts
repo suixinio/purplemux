@@ -54,6 +54,7 @@ interface IUseTimelineReturn {
   hasMore: boolean;
   retrySession: () => void;
   sendResume: (sessionId: string, tmuxSession: string) => void;
+  sendProcessHint: (isClaudeRunning: boolean) => void;
 }
 
 const useTimeline = ({
@@ -128,7 +129,12 @@ const useTimeline = ({
     });
   }, []);
 
-  const handleSessionChanged = useCallback(() => {
+  const handleSessionChanged = useCallback((_newSessionId: string, reason: string) => {
+    if (reason === 'session-ended') {
+      setSessionStatus('none');
+      setIsLoading(false);
+      return;
+    }
     setSessionStatus('active');
     setEntries([]);
     setHasMore(false);
@@ -197,7 +203,7 @@ const useTimeline = ({
 
   const shouldConnect = enabled && sessionStatus !== 'not-installed';
 
-  const { status: wsStatus, reconnect, sendResume } = useTimelineWebSocket({
+  const { status: wsStatus, reconnect, sendResume, sendProcessHint } = useTimelineWebSocket({
     sessionName,
     enabled: shouldConnect,
     onInit: handleInit,
@@ -234,6 +240,7 @@ const useTimeline = ({
     hasMore,
     retrySession,
     sendResume,
+    sendProcessHint,
   };
 };
 

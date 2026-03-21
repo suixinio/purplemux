@@ -9,7 +9,7 @@ import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import SessionNavBar from '@/components/features/terminal/session-nav-bar';
 import TimelineView from '@/components/features/timeline/timeline-view';
-import WebInputBar from '@/components/features/terminal/web-input-bar';
+import type { TCliState } from '@/types/timeline';
 
 const AUTO_RESUME_TIMEOUT_MS = 10_000;
 
@@ -17,20 +17,18 @@ interface IClaudeCodePanelProps {
   sessionName: string;
   claudeSessionId?: string | null;
   className?: string;
-  sendStdin: (data: string) => void;
-  terminalWsConnected: boolean;
-  focusInputRef: React.MutableRefObject<(() => void) | undefined>;
-  focusTerminal: () => void;
+  onCliStateChange?: (state: TCliState) => void;
+  onInputVisibleChange?: (visible: boolean) => void;
+  processHintRef?: React.MutableRefObject<((isClaudeRunning: boolean) => void) | undefined>;
 }
 
 const ClaudeCodePanel = ({
   sessionName,
   claudeSessionId,
   className,
-  sendStdin,
-  terminalWsConnected,
-  focusInputRef,
-  focusTerminal,
+  onCliStateChange,
+  onInputVisibleChange,
+  processHintRef,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const [isAutoResuming, setIsAutoResuming] = useState(!!claudeSessionId);
@@ -75,6 +73,7 @@ const ClaudeCodePanel = ({
     hasMore: timelineHasMore,
     retrySession,
     sendResume,
+    sendProcessHint,
   } = useTimeline({
     sessionName,
     enabled: !!sessionName,
@@ -108,6 +107,23 @@ const ClaudeCodePanel = ({
   useEffect(() => {
     navigateToTimelineRef.current = navigateToTimeline;
   });
+
+  useEffect(() => {
+    if (processHintRef) {
+      processHintRef.current = sendProcessHint;
+      return () => { processHintRef.current = undefined; };
+    }
+  }, [processHintRef, sendProcessHint]);
+
+  const isInputVisible = view === 'timeline' && !isAutoResuming;
+
+  useEffect(() => {
+    onCliStateChange?.(cliState);
+  }, [cliState, onCliStateChange]);
+
+  useEffect(() => {
+    onInputVisibleChange?.(isInputVisible);
+  }, [isInputVisible, onInputVisibleChange]);
 
   useEffect(() => {
     if (!isAutoResuming) return;
@@ -173,8 +189,6 @@ const ClaudeCodePanel = ({
     );
   }
 
-  const isInputVisible = view === 'timeline';
-
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
       <SessionNavBar onNavigateToList={handleNavigateToList} />
@@ -193,14 +207,6 @@ const ClaudeCodePanel = ({
           hasMore={timelineHasMore}
         />
       </div>
-      <WebInputBar
-        cliState={cliState}
-        sendStdin={sendStdin}
-        terminalWsConnected={terminalWsConnected}
-        visible={isInputVisible}
-        focusTerminal={focusTerminal}
-        focusInputRef={focusInputRef}
-      />
     </div>
   );
 };

@@ -134,6 +134,15 @@ const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
     );
   }
 
+  if (sessionStatus === 'active') {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
+        <Loader2 size={24} className="animate-spin opacity-40" />
+        <p className="text-xs">타임라인을 불러오는 중...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
       <Terminal size={32} className="opacity-40" />

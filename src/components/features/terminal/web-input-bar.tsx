@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { SendHorizontal, Square } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,8 @@ const WebInputBar = ({
   );
 
   const [interruptDialogOpen, setInterruptDialogOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     focusInputRef.current = focusInput;
@@ -41,6 +43,21 @@ const WebInputBar = ({
       focusInputRef.current = undefined;
     };
   }, [focusInput, focusInputRef]);
+
+  useEffect(() => {
+    if (!visible) {
+      setValue('');
+    }
+  }, [visible, setValue]);
+
+  const prevModeRef = useRef(mode);
+  useEffect(() => {
+    if (prevModeRef.current !== mode && mode === 'interrupt') {
+      textareaRef.current?.blur();
+      focusTerminal();
+    }
+    prevModeRef.current = mode;
+  }, [mode, textareaRef, focusTerminal]);
 
   const adjustHeight = useCallback(() => {
     const textarea = textareaRef.current;
@@ -82,6 +99,9 @@ const WebInputBar = ({
     interrupt();
   };
 
+  const handleFocusIn = () => setIsFocused(true);
+  const handleFocusOut = () => setIsFocused(false);
+
   const isDisabled = mode !== 'input';
   const hasValue = value.trim().length > 0;
 
@@ -89,67 +109,74 @@ const WebInputBar = ({
     <>
       <div
         className={cn(
-          'overflow-hidden transition-[height] duration-150 ease-out',
-          !visible && 'h-0',
+          'grid transition-[grid-template-rows] duration-150 ease-out',
+          visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
-        <div
-          className={cn(
-            'relative z-10 flex items-end gap-2 border-t px-3 py-2 bg-background',
-            mode === 'disabled' && 'opacity-50',
-          )}
-        >
-          <textarea
-            ref={textareaRef}
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isDisabled}
-            placeholder={
-              mode === 'interrupt'
-                ? 'Claude가 응답 중...'
-                : mode === 'disabled'
-                  ? 'Claude Code가 실행 중이 아닙니다'
-                  : '메시지를 입력하세요...'
-            }
-            aria-label="Claude Code 메시지 입력"
+        <div className="overflow-hidden">
+          <div
+            ref={containerRef}
             className={cn(
-              'flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
-              isDisabled && 'cursor-not-allowed opacity-70',
+              'relative z-10 flex items-end gap-2 border-t px-3 py-2 bg-background',
+              isFocused && mode === 'input' ? 'border-ring' : 'border-border',
+              mode === 'disabled' && 'opacity-50',
             )}
-            rows={1}
-            style={{
-              lineHeight: `${LINE_HEIGHT}px`,
-              maxHeight: `${LINE_HEIGHT * MAX_ROWS + PADDING_Y}px`,
-              overflowY: 'auto',
-            }}
-          />
-
-          {mode === 'interrupt' ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 shrink-0 p-0 text-ui-red hover:text-ui-red/80"
-              onClick={handleInterruptClick}
-              aria-label="작업 중단"
-            >
-              <Square size={14} fill="currentColor" />
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
+            onFocusCapture={handleFocusIn}
+            onBlurCapture={handleFocusOut}
+          >
+            <textarea
+              ref={textareaRef}
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isDisabled}
+              placeholder={
+                mode === 'interrupt'
+                  ? 'Claude가 응답 중...'
+                  : mode === 'disabled'
+                    ? 'Claude Code가 실행 중이 아닙니다'
+                    : '메시지를 입력하세요...'
+              }
+              aria-label="Claude Code 메시지 입력"
               className={cn(
-                'h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground',
-                hasValue && mode === 'input' && 'text-ui-purple',
+                'flex-1 resize-none bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground',
+                isDisabled && 'cursor-not-allowed opacity-70',
               )}
-              onClick={handleSendClick}
-              disabled={mode === 'disabled'}
-              aria-label="메시지 전송"
-            >
-              <SendHorizontal size={16} />
-            </Button>
-          )}
+              rows={1}
+              style={{
+                lineHeight: `${LINE_HEIGHT}px`,
+                maxHeight: `${LINE_HEIGHT * MAX_ROWS + PADDING_Y}px`,
+                overflowY: 'auto',
+              }}
+            />
+
+            {mode === 'interrupt' ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 w-7 shrink-0 p-0 text-ui-red hover:text-ui-red/80"
+                onClick={handleInterruptClick}
+                aria-label="작업 중단"
+              >
+                <Square size={14} fill="currentColor" />
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground',
+                  hasValue && mode === 'input' && 'text-ui-purple',
+                  mode === 'disabled' && 'opacity-30',
+                )}
+                onClick={handleSendClick}
+                disabled={mode === 'disabled'}
+                aria-label="메시지 전송"
+              >
+                <SendHorizontal size={16} />
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

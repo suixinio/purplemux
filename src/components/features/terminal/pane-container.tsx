@@ -10,10 +10,12 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { useShallow } from 'zustand/react/shallow';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
+import WebInputBar from '@/components/features/terminal/web-input-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
+import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
@@ -154,7 +156,19 @@ const PaneContainer = ({
 
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
+  const processHintRef = useRef<((isClaudeRunning: boolean) => void) | undefined>(undefined);
   const manualToggleCooldownRef = useRef<Record<string, number>>({});
+
+  const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
+  const [claudeInputVisible, setClaudeInputVisible] = useState(false);
+
+  const handleCliStateChange = useCallback((state: TCliState) => {
+    setClaudeCliState(state);
+  }, []);
+
+  const handleInputVisibleChange = useCallback((visible: boolean) => {
+    setClaudeInputVisible(visible);
+  }, []);
 
   const handleCustomKeyEvent = useCallback((event: KeyboardEvent): boolean => {
     if (isAppShortcut(event)) {
@@ -178,7 +192,10 @@ const PaneContainer = ({
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       fetchAndUpdateCwd();
 
-      if (isClaudeProcess(title)) {
+      const claudeRunning = isClaudeProcess(title);
+      processHintRef.current?.(claudeRunning);
+
+      if (claudeRunning) {
         const cooldownTime = manualToggleCooldownRef.current[tabId];
         const isCoolingDown = cooldownTime && Date.now() - cooldownTime < 10_000;
         if (!isCoolingDown) {
@@ -506,10 +523,9 @@ const PaneContainer = ({
               <ClaudeCodePanel
                 sessionName={activeTab.sessionName}
                 claudeSessionId={activeTab.claudeSessionId}
-                sendStdin={sendStdin}
-                terminalWsConnected={status === 'connected'}
-                focusInputRef={focusInputRef}
-                focusTerminal={focus}
+                onCliStateChange={handleCliStateChange}
+                onInputVisibleChange={handleInputVisibleChange}
+                processHintRef={processHintRef}
               />
             )}
           </Panel>
@@ -523,6 +539,17 @@ const PaneContainer = ({
           >
             <div className="h-px w-16 rounded-full bg-border transition-colors group-hover:bg-muted-foreground group-data-[resize-handle-active]:bg-muted-foreground" />
           </Separator>
+
+          {isClaudeCode && (
+            <WebInputBar
+              cliState={claudeCliState}
+              sendStdin={sendStdin}
+              terminalWsConnected={status === 'connected'}
+              visible={claudeInputVisible}
+              focusTerminal={focus}
+              focusInputRef={focusInputRef}
+            />
+          )}
 
           {isClaudeCode && (
             <div className="flex h-6 shrink-0 items-center gap-1.5 border-t border-border px-2 text-muted-foreground">

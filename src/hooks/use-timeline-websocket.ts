@@ -27,7 +27,7 @@ interface IUseTimelineWebSocketOptions {
   enabled: boolean;
   onInit: (entries: ITimelineEntry[], totalEntries: number) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
-  onSessionChanged: (newSessionId: string) => void;
+  onSessionChanged: (newSessionId: string, reason: string) => void;
   onError?: (error: { code: string; message: string }) => void;
   onResumeStarted?: (payload: IResumeStartedPayload) => void;
   onResumeBlocked?: (payload: IResumeBlockedPayload) => void;
@@ -40,6 +40,7 @@ interface IUseTimelineWebSocketReturn {
   unsubscribe: () => void;
   reconnect: () => void;
   sendResume: (sessionId: string, tmuxSession: string) => void;
+  sendProcessHint: (isClaudeRunning: boolean) => void;
 }
 
 const useTimelineWebSocket = ({
@@ -115,7 +116,7 @@ const useTimelineWebSocket = ({
               callbacksRef.current.onAppend(msg.entries);
               break;
             case 'timeline:session-changed':
-              callbacksRef.current.onSessionChanged(msg.newSessionId);
+              callbacksRef.current.onSessionChanged(msg.newSessionId, msg.reason);
               break;
             case 'timeline:error':
               callbacksRef.current.onError?.({ code: msg.code, message: msg.message });
@@ -218,7 +219,14 @@ const useTimelineWebSocket = ({
     }
   }, []);
 
-  return { status, subscribe, unsubscribe, reconnect, sendResume };
+  const sendProcessHint = useCallback((isClaudeRunning: boolean) => {
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'timeline:process-hint', isClaudeRunning }));
+    }
+  }, []);
+
+  return { status, subscribe, unsubscribe, reconnect, sendResume, sendProcessHint };
 };
 
 export default useTimelineWebSocket;

@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Monitor, Moon, Settings, Sun, Terminal, X } from 'lucide-react';
+import { Bot, Monitor, Moon, Settings, Sun, Terminal, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 
-type TSettingsTab = 'general' | 'terminal';
+type TSettingsTab = 'general' | 'terminal' | 'claude';
 
 interface ISettingsItem {
   id: TSettingsTab;
@@ -28,6 +31,11 @@ const settingsItems: ISettingsItem[] = [
     id: 'terminal',
     label: '터미널',
     icon: <Terminal className="h-4 w-4" />,
+  },
+  {
+    id: 'claude',
+    label: 'Claude',
+    icon: <Bot className="h-4 w-4" />,
   },
 ];
 
@@ -133,6 +141,30 @@ const TerminalTab = () => {
   );
 };
 
+const ClaudeTab = () => {
+  const { dangerouslySkipPermissions, setDangerouslySkipPermissions } = useWorkspaceStore();
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="skip-permissions" className="text-sm font-medium">
+            권한 확인 건너뛰기
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            Claude CLI 실행 시 --dangerously-skip-permissions 옵션을 추가합니다.
+          </p>
+        </div>
+        <Switch
+          id="skip-permissions"
+          checked={dangerouslySkipPermissions}
+          onCheckedChange={setDangerouslySkipPermissions}
+        />
+      </div>
+    </div>
+  );
+};
+
 interface ISettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -187,6 +219,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             <h2 className="mb-6 text-lg font-semibold">{activeItem?.label}</h2>
             {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'terminal' && <TerminalTab />}
+            {activeTab === 'claude' && <ClaudeTab />}
           </div>
         </div>
       </DialogContent>

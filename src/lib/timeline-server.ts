@@ -329,6 +329,26 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           sessionId: msg.sessionId,
           tmuxSession: msg.tmuxSession,
         });
+      } else if (msg.type === 'timeline:process-hint') {
+        const newInfo = await detectActiveSession(conn.panePid);
+        if (newInfo.jsonlPath && newInfo.jsonlPath !== conn.currentJsonlPath) {
+          if (conn.currentJsonlPath) {
+            unsubscribeFromFile(ws, conn.currentJsonlPath);
+          }
+          conn.currentJsonlPath = newInfo.jsonlPath;
+          sendJson(ws, {
+            type: 'timeline:session-changed',
+            newSessionId: newInfo.sessionId ?? '',
+            reason: 'new-session-started',
+          });
+          await subscribeToFile(ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
+        } else if (!newInfo.jsonlPath && newInfo.status === 'none' && conn.currentJsonlPath) {
+          sendJson(ws, {
+            type: 'timeline:session-changed',
+            newSessionId: '',
+            reason: 'session-ended',
+          });
+        }
       }
     } catch {}
   });
@@ -377,6 +397,12 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           });
 
           await subscribeToFile(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined);
+        } else if (!newInfo.jsonlPath && newInfo.status === 'none') {
+          sendJson(c.ws, {
+            type: 'timeline:session-changed',
+            newSessionId: '',
+            reason: 'session-ended',
+          });
         }
       }
     });
