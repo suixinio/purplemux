@@ -208,15 +208,22 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
     const parsed = AssistantEntrySchema.safeParse(raw);
     if (!parsed.success) return [];
 
+    const usage = parsed.data.message.usage;
+    let usageAttached = false;
     const entries: ITimelineEntry[] = [];
     for (const content of parsed.data.message.content) {
       if (content.type === 'text' && 'text' in content) {
-        entries.push({
+        const entry: ITimelineAssistantMessage = {
           id: nanoid(),
           type: 'assistant-message',
           timestamp,
           markdown: (content as { text: string }).text,
-        } satisfies ITimelineAssistantMessage);
+        };
+        if (usage && !usageAttached) {
+          entry.usage = usage;
+          usageAttached = true;
+        }
+        entries.push(entry);
       } else if (content.type === 'tool_use' && 'id' in content && 'name' in content) {
         const input = ('input' in content ? content.input : {}) as Record<string, unknown>;
         const toolName = (content as { name: string }).name;

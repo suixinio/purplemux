@@ -78,12 +78,59 @@ export const createSession = async (
   console.log(`[terminal] tmux session created: ${name} (cols: ${cols}, rows: ${rows})`);
 };
 
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const killSession = async (name: string): Promise<void> => {
-  await execFile(
-    'tmux',
-    ['-L', TMUX_SOCKET, 'kill-session', '-t', name],
-    { timeout: CMD_TIMEOUT },
-  );
+  if (!(await hasSession(name))) return;
+
+  const panePid = await getSessionPanePid(name);
+  if (panePid) {
+    try {
+      process.kill(-panePid, 'SIGTERM');
+    } catch {
+      // process group already gone
+    }
+  }
+
+  try {
+    await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'kill-session', '-t', name],
+      { timeout: CMD_TIMEOUT },
+    );
+  } catch {
+    // kill-session failed, will verify below
+  }
+
+  for (let i = 0; i < 5; i++) {
+    if (!(await hasSession(name))) return;
+    await sleep(200);
+  }
+
+  // 아직 살아있으면 SIGKILL로 강제 종료
+  if (panePid) {
+    try {
+      process.kill(-panePid, 'SIGKILL');
+    } catch {
+      // already gone
+    }
+  }
+  try {
+    await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'kill-session', '-t', name],
+      { timeout: CMD_TIMEOUT },
+    );
+  } catch {
+    // already gone
+  }
+
+  for (let i = 0; i < 3; i++) {
+    if (!(await hasSession(name))) return;
+    await sleep(200);
+  }
+
+  console.warn(`[terminal] tmux session still alive after kill: ${name}`);
 };
 
 export const hasSession = async (name: string): Promise<boolean> => {

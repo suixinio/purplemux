@@ -460,6 +460,12 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
 
   deleteTabInPane: async (paneId, tabId) => {
     const { workspaceId, updateAndSave: uas } = get();
+    try {
+      await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { method: 'DELETE' });
+    } catch {
+      toast.error('탭 삭제 중 오류가 발생했습니다');
+      return;
+    }
     uas((data) => {
       const pane = findPane(data.root, paneId);
       if (!pane) return data;
@@ -470,11 +476,6 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       pane.tabs.forEach((t, i) => { t.order = i; });
       return data;
     });
-    try {
-      await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { method: 'DELETE' });
-    } catch {
-      toast.error('탭 삭제 중 오류가 발생했습니다');
-    }
   },
 
   switchTabInPane: (paneId, tabId) => {

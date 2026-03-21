@@ -31,6 +31,10 @@ export interface ITimelineAssistantMessage {
   type: 'assistant-message';
   timestamp: number;
   markdown: string;
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+  };
 }
 
 export type TToolName = 'Read' | 'Edit' | 'Write' | 'Bash' | 'Grep' | 'Glob' | 'Agent' | string;

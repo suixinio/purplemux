@@ -92,16 +92,16 @@ const findJsonlPath = async (projectDir: string, sessionId: string): Promise<str
 };
 
 export const detectActiveSession = async (panePid: number): Promise<ISessionInfo> => {
-  console.log('[session] detectActiveSession panePid:', panePid);
+
   try {
     await fs.access(CLAUDE_DIR);
   } catch {
-    console.log('[session] claude dir not found');
+
     return { status: 'not-installed', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
   }
 
   const childPids = await getChildPids(panePid);
-  console.log('[session] childPids:', childPids);
+
 
   if (childPids.length === 0) {
     return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
@@ -113,18 +113,14 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
     const pidFiles = await fs.readdir(SESSIONS_DIR);
     const jsonFiles = pidFiles.filter((f) => f.endsWith('.json'));
 
-    console.log('[session] pidFiles:', jsonFiles);
+
     for (const file of jsonFiles) {
       const data = await readPidFile(path.join(SESSIONS_DIR, file));
       if (!data) continue;
-      if (!childPidSet.has(data.pid)) {
-        console.log('[session] pid', data.pid, 'not in childPids, skip');
-        continue;
-      }
+      if (!childPidSet.has(data.pid)) continue;
 
       const running = await isProcessRunning(data.pid);
       if (!running) {
-        console.log('[session] pid', data.pid, 'not running, cleanup');
         try { await fs.unlink(path.join(SESSIONS_DIR, file)); } catch {}
         continue;
       }
@@ -132,8 +128,6 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
       const projectName = toClaudeProjectName(data.cwd);
       const projectDir = path.join(PROJECTS_DIR, projectName);
       const jsonlPath = await findJsonlPath(projectDir, data.sessionId);
-      console.log('[session] found via pidFile:', { pid: data.pid, cwd: data.cwd, projectDir, sessionId: data.sessionId, jsonlPath });
-
       return {
         status: 'active',
         sessionId: data.sessionId,
@@ -147,14 +141,12 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
   }
 
   const fromArgs = await getClaudeSessionFromArgs(childPids);
-  console.log('[session] fromArgs:', fromArgs);
   if (fromArgs) {
     const cwd = fromArgs.cwd;
     if (cwd) {
       const projectName = toClaudeProjectName(cwd);
       const projectDir = path.join(PROJECTS_DIR, projectName);
       const jsonlPath = await findJsonlPath(projectDir, fromArgs.sessionId);
-      console.log('[session] found via args:', { cwd, projectDir, sessionId: fromArgs.sessionId, jsonlPath });
       return {
         status: 'active',
         sessionId: fromArgs.sessionId,
@@ -165,7 +157,6 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
     }
   }
 
-  console.log('[session] no session found, returning none');
   return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null };
 };
 

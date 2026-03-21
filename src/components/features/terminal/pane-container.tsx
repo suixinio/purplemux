@@ -102,6 +102,7 @@ const PaneContainer = ({
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [closingTabId, setClosingTabId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isPanelTransitioning, setIsPanelTransitioning] = useState(false);
 
@@ -359,6 +360,7 @@ const PaneContainer = ({
 
   const handleDeleteTab = useCallback(
     async (tabId: string) => {
+      if (closingTabId) return;
       const isLastTab = tabs.length === 1;
       if (isLastTab && paneCount > 1) {
         onClosePane(paneId);
@@ -373,9 +375,14 @@ const PaneContainer = ({
           onSwitchTab(paneId, adjacent.id);
         }
       }
-      await onDeleteTab(paneId, tabId);
+      setClosingTabId(tabId);
+      try {
+        await onDeleteTab(paneId, tabId);
+      } finally {
+        setClosingTabId(null);
+      }
     },
-    [paneId, activeTabId, tabs, paneCount, onSwitchTab, onDeleteTab, onClosePane],
+    [paneId, activeTabId, tabs, paneCount, closingTabId, onSwitchTab, onDeleteTab, onClosePane],
   );
 
   const handleRenameTab = useCallback(
@@ -593,6 +600,13 @@ const PaneContainer = ({
               )}
               새 탭 열기
             </Button>
+          </div>
+        )}
+
+        {closingTabId && (
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-background/80">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="text-sm text-muted-foreground">프로세스 정리 중...</span>
           </div>
         )}
 

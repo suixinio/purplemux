@@ -8,6 +8,7 @@ import useSessionView from '@/hooks/use-session-view';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import SessionMetaBar from '@/components/features/terminal/session-meta-bar';
 import type { TCliState } from '@/types/timeline';
 
 const AUTO_RESUME_TIMEOUT_MS = 10_000;
@@ -184,6 +185,7 @@ const ClaudeCodePanel = ({
 
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
+      <SessionMetaBar entries={entries} sessionName={sessionName} />
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}

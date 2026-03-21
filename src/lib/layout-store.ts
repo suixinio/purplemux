@@ -328,8 +328,24 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     return tab;
   });
 
-export const removeTabFromPane = async (wsId: string, paneId: string, tabId: string): Promise<boolean> =>
-  withLock(async () => {
+export const removeTabFromPane = async (wsId: string, paneId: string, tabId: string): Promise<boolean> => {
+  const sessionName = await withLock(async () => {
+    const filePath = resolveLayoutFile(wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return null;
+
+    const pane = collectPanes(layout.root).find((p) => p.id === paneId);
+    if (!pane) return null;
+
+    const tab = pane.tabs.find((t) => t.id === tabId);
+    return tab?.sessionName ?? null;
+  });
+
+  if (!sessionName) return false;
+
+  await killSession(sessionName);
+
+  return withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
     const layout = await readLayoutFile(filePath);
     if (!layout) return false;
@@ -340,14 +356,7 @@ export const removeTabFromPane = async (wsId: string, paneId: string, tabId: str
     const idx = pane.tabs.findIndex((t) => t.id === tabId);
     if (idx === -1) return false;
 
-    const tab = pane.tabs[idx];
     pane.tabs.splice(idx, 1);
-
-    try {
-      await killSession(tab.sessionName);
-    } catch {
-      // session already gone
-    }
 
     if (pane.activeTabId === tabId) {
       pane.activeTabId = pane.tabs[0]?.id ?? null;
@@ -356,11 +365,12 @@ export const removeTabFromPane = async (wsId: string, paneId: string, tabId: str
     pane.tabs.forEach((t, i) => { t.order = i; });
     layout.updatedAt = new Date().toISOString();
     await writeLayoutFile(layout, filePath);
-    syncWorkspaceDirectories(wsId,layout.root);
+    syncWorkspaceDirectories(wsId, layout.root);
 
     console.log(`[layout] 탭 삭제: pane=${paneId}, tab=${tabId}`);
     return true;
   });
+};
 
 export const renameTabInPane = async (wsId: string, paneId: string, tabId: string, name: string): Promise<ITab | null> =>
   withLock(async () => {
