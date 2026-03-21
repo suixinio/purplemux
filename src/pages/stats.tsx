@@ -49,12 +49,13 @@ const StatsPage = () => {
     <>
       <Head>
         <title>사용량 통계 — Purple Terminal</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
       <div className="flex h-screen w-screen flex-col bg-background">
         <AppHeader />
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-5xl px-4 py-6">
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2">
                 <Button
                   variant="ghost"
@@ -67,7 +68,9 @@ const StatsPage = () => {
                 <BarChart3 className="h-4 w-4 text-ui-purple" />
                 <h1 className="text-sm font-semibold">사용량 통계</h1>
               </div>
-              <PeriodFilter value={period} onChange={setPeriod} />
+              <div className="overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+                <PeriodFilter value={period} onChange={setPeriod} />
+              </div>
             </div>
 
             <div className="space-y-8">

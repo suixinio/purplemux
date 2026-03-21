@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { ChevronRight, Plus, Loader2, BarChart3 } from 'lucide-react';
+import { useState, useCallback, useRef } from 'react';
+import { ChevronRight, Plus, Loader2, BarChart3, X } from 'lucide-react';
 import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import {
@@ -22,6 +22,7 @@ interface IMobileNavigationSheetProps {
   onSelectWorkspace: (workspaceId: string) => void;
   onSelectSurface: (paneId: string, tabId: string) => void;
   onCreateTab: (paneId: string) => Promise<ITab | null>;
+  onDeleteTab: (paneId: string, tabId: string) => Promise<void>;
 }
 
 const MobileNavigationSheet = ({
@@ -35,9 +36,12 @@ const MobileNavigationSheet = ({
   onSelectWorkspace,
   onSelectSurface,
   onCreateTab,
+  onDeleteTab,
 }: IMobileNavigationSheetProps) => {
   const router = useRouter();
   const [creatingPaneId, setCreatingPaneId] = useState<string | null>(null);
+  const [longPressTabId, setLongPressTabId] = useState<string | null>(null);
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const metadata = useTabMetadataStore((s) => s.metadata);
 
   const handleSelectWorkspace = useCallback(
@@ -68,6 +72,28 @@ const MobileNavigationSheet = ({
       }
     },
     [creatingPaneId, onCreateTab, onSelectSurface, onOpenChange],
+  );
+
+  const handleLongPressStart = useCallback((tabId: string) => {
+    longPressTimerRef.current = setTimeout(() => {
+      setLongPressTabId(tabId);
+    }, 500);
+  }, []);
+
+  const handleLongPressEnd = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  }, []);
+
+  const handleDeleteTab = useCallback(
+    async (paneId: string, tabId: string) => {
+      setLongPressTabId(null);
+      await onDeleteTab(paneId, tabId);
+      onOpenChange(false);
+    },
+    [onDeleteTab, onOpenChange],
   );
 
   const getTabDisplayName = (tab: ITab) => {
@@ -116,19 +142,41 @@ const MobileNavigationSheet = ({
                       .map((tab) => {
                         const isTabActive =
                           pane.id === activePaneId && tab.id === activeTabId;
+                        const isLastTab = pane.tabs.length <= 1;
+                        const showClose = longPressTabId === tab.id && !isLastTab;
                         return (
-                          <button
-                            key={tab.id}
-                            className={cn(
-                              'flex w-full items-center px-4 py-2 pl-10 text-left text-sm transition-colors',
-                              isTabActive
-                                ? 'bg-ui-purple/10 text-foreground'
-                                : 'text-muted-foreground hover:bg-accent/50',
+                          <div key={tab.id} className="relative flex items-center">
+                            <button
+                              className={cn(
+                                'flex w-full items-center px-4 py-2 pl-10 text-left text-sm transition-colors',
+                                isTabActive
+                                  ? 'bg-ui-purple/10 text-foreground'
+                                  : 'text-muted-foreground hover:bg-accent/50',
+                              )}
+                              onClick={() => {
+                                if (longPressTabId) {
+                                  setLongPressTabId(null);
+                                  return;
+                                }
+                                handleSelectSurface(pane.id, tab.id);
+                              }}
+                              onTouchStart={() => handleLongPressStart(tab.id)}
+                              onTouchEnd={handleLongPressEnd}
+                              onTouchCancel={handleLongPressEnd}
+                              onContextMenu={(e) => e.preventDefault()}
+                            >
+                              <span className="truncate">{getTabDisplayName(tab)}</span>
+                            </button>
+                            {showClose && (
+                              <button
+                                className="absolute right-2 flex h-6 w-6 items-center justify-center rounded bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"
+                                onClick={() => handleDeleteTab(pane.id, tab.id)}
+                                aria-label="탭 닫기"
+                              >
+                                <X size={14} />
+                              </button>
                             )}
-                            onClick={() => handleSelectSurface(pane.id, tab.id)}
-                          >
-                            <span className="truncate">{getTabDisplayName(tab)}</span>
-                          </button>
+                          </div>
                         );
                       })}
 

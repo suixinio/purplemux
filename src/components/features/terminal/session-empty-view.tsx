@@ -27,6 +27,15 @@ const SessionEmptyView = ({ onClose }: ISessionEmptyViewProps) => (
         새 세션을 시작하세요
       </p>
     </div>
+    {onClose && (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClose}
+      >
+        닫기
+      </Button>
+    )}
   </div>
 );
 

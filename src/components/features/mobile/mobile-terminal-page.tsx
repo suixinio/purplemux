@@ -289,6 +289,7 @@ const MobileTerminalPage = () => {
         onSelectWorkspace={handleSelectWorkspace}
         onSelectSurface={handleSelectSurface}
         onCreateTab={layout.createTabInPane}
+        onDeleteTab={layout.deleteTabInPane}
       />
     </div>
   );

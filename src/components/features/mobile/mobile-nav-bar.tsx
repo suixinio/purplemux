@@ -1,5 +1,4 @@
-import { Menu, Terminal, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Menu, Terminal } from 'lucide-react';
 import type { TPanelType } from '@/types/terminal';
 
 interface IMobileNavBarProps {
@@ -52,15 +51,7 @@ const MobileNavBar = ({
           <Terminal size={18} className="text-muted-foreground" />
         </button>
       ) : (
-        <button
-          className={cn(
-            'flex h-11 w-11 shrink-0 items-center justify-center',
-          )}
-          onClick={onTogglePanel}
-          aria-label="Claude Code 보기"
-        >
-          <MessageSquare size={18} className="text-muted-foreground" />
-        </button>
+        <div className="w-11 shrink-0" />
       )}
     </div>
   );
