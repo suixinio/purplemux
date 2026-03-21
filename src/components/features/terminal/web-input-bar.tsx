@@ -101,12 +101,12 @@ const WebInputBar = ({
     <>
       <div
         className={cn(
-          'grid transition-[grid-template-rows] duration-150 ease-out',
+          'grid bg-muted',
           visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >
         <div className="overflow-hidden">
-          <div className="px-3 pt-2 pb-3">
+          <div className="px-3 pt-0 pb-0">
           <div
             ref={containerRef}
             className={cn(

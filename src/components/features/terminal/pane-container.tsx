@@ -529,20 +529,32 @@ const PaneContainer = ({
             collapsedSize={0}
             disabled={!isClaudeCode}
           >
-            {isClaudeCode && activeTab && (
-              <ClaudeCodePanel
-                sessionName={activeTab.sessionName}
-                claudeSessionId={activeTab.claudeSessionId}
-                onCliStateChange={handleCliStateChange}
-                onInputVisibleChange={handleInputVisibleChange}
-                processHintRef={processHintRef}
-              />
-            )}
+            <div className="flex h-full flex-col">
+              {isClaudeCode && activeTab && (
+                <ClaudeCodePanel
+                  sessionName={activeTab.sessionName}
+                  claudeSessionId={activeTab.claudeSessionId}
+                  onCliStateChange={handleCliStateChange}
+                  onInputVisibleChange={handleInputVisibleChange}
+                  processHintRef={processHintRef}
+                />
+              )}
+              {isClaudeCode && (
+                <WebInputBar
+                  cliState={claudeCliState}
+                  sendStdin={sendStdin}
+                  terminalWsConnected={status === 'connected'}
+                  visible={claudeInputVisible}
+                  focusTerminal={focus}
+                  focusInputRef={focusInputRef}
+                />
+              )}
+            </div>
           </Panel>
 
           <Separator
             className={cn(
-              'group flex items-center justify-center',
+              'group flex items-center justify-center bg-muted',
               isClaudeCode && !isTerminalCollapsed ? 'h-4' : 'h-0',
             )}
             disabled={!isClaudeCode || isTerminalCollapsed}
@@ -550,43 +562,34 @@ const PaneContainer = ({
             <div className="h-px w-16 rounded-full bg-border transition-colors group-hover:bg-muted-foreground group-data-[resize-handle-active]:bg-muted-foreground" />
           </Separator>
 
-          {isClaudeCode && (
-            <WebInputBar
-              cliState={claudeCliState}
-              sendStdin={sendStdin}
-              terminalWsConnected={status === 'connected'}
-              visible={claudeInputVisible}
-              focusTerminal={focus}
-              focusInputRef={focusInputRef}
-            />
-          )}
-
-          {isClaudeCode && (
-            <div className="flex h-6 shrink-0 items-center gap-1.5 border-t border-border px-2 text-muted-foreground">
-              <TerminalSquare className="h-3 w-3" />
-              <span className="text-[11px] font-medium">Terminal</span>
-              {activeTabCwd && (
-                <span className="min-w-0 truncate text-[11px] opacity-60">
-                  {activeTabCwd.replace(/^\/Users\/[^/]+/, '~')}
-                </span>
-              )}
-              <button
-                className="ml-auto flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
-                onClick={handleToggleTerminal}
-              >
-                {isTerminalCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </button>
-            </div>
-          )}
-
           <Panel id="terminal-area" minSize={0} collapsible collapsedSize={0}>
-            <TerminalContainer
-              ref={terminalRef}
-              className={cn(
-                'min-h-0 flex-1 transition-opacity duration-150',
-                ready ? 'opacity-100' : 'opacity-0',
+            <div className="flex h-full flex-col">
+              {isClaudeCode && (
+                <div className="flex h-6 shrink-0 items-center gap-1.5 border-t border-border px-2 text-muted-foreground">
+                  <TerminalSquare className="h-3 w-3" />
+                  <span className="text-[11px] font-medium">Terminal</span>
+                  {activeTabCwd && (
+                    <span className="min-w-0 truncate text-[11px] opacity-60">
+                      {activeTabCwd.replace(/^\/Users\/[^/]+/, '~')}
+                    </span>
+                  )}
+                  <button
+                    className="ml-auto flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground/60 transition-colors hover:text-foreground"
+                    onClick={handleToggleTerminal}
+                  >
+                    {isTerminalCollapsed ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  </button>
+                </div>
               )}
-            />
+
+              <TerminalContainer
+                ref={terminalRef}
+                className={cn(
+                  'min-h-0 flex-1 transition-opacity duration-150',
+                  ready ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+            </div>
           </Panel>
         </Group>
 

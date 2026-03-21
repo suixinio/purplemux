@@ -186,7 +186,7 @@ const ClaudeCodePanel = ({
   }
 
   return (
-    <div className={cn('flex h-full w-full flex-col', className)}>
+    <div className={cn('flex min-h-0 w-full flex-1 flex-col bg-muted', className)}>
       <SessionMetaBar entries={entries} sessionName={sessionName} sessionSummary={sessionSummary} />
       <div className="min-h-0 flex-1">
         <TimelineView
