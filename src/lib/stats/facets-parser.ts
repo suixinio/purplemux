@@ -1,7 +1,8 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
-import type { IFacetEntry } from '@/types/stats';
+import type { IFacetEntry, TPeriod } from '@/types/stats';
+import { isWithinPeriod } from './period-filter';
 
 const FACETS_DIR = path.join(os.homedir(), '.claude', 'usage-data', 'facets');
 
@@ -23,7 +24,7 @@ const parseSingleFacet = (raw: Record<string, unknown>, sessionId: string): IFac
   summary: String(raw.brief_summary ?? ''),
 });
 
-export const parseAllFacets = async (): Promise<IFacetEntry[]> => {
+export const parseAllFacets = async (period: TPeriod): Promise<IFacetEntry[]> => {
   const facets: IFacetEntry[] = [];
 
   try {
@@ -32,7 +33,14 @@ export const parseAllFacets = async (): Promise<IFacetEntry[]> => {
     for (const file of files) {
       if (!file.endsWith('.json')) continue;
       try {
-        const content = await fs.readFile(path.join(FACETS_DIR, file), 'utf-8');
+        const filePath = path.join(FACETS_DIR, file);
+        const [content, stat] = await Promise.all([
+          fs.readFile(filePath, 'utf-8'),
+          fs.stat(filePath),
+        ]);
+
+        if (!isWithinPeriod(stat.mtime, period)) continue;
+
         const raw = JSON.parse(content) as Record<string, unknown>;
         const sessionId = String(raw.session_id ?? file.replace('.json', ''));
         facets.push(parseSingleFacet(raw, sessionId));
