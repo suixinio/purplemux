@@ -6,7 +6,7 @@ import useWebInput from '@/hooks/use-web-input';
 import InterruptDialog from '@/components/features/terminal/interrupt-dialog';
 import type { TCliState } from '@/types/timeline';
 
-const MAX_ROWS = 5;
+const DEFAULT_MAX_ROWS = 5;
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
 
@@ -17,6 +17,7 @@ interface IWebInputBarProps {
   visible: boolean;
   focusTerminal: () => void;
   focusInputRef: React.MutableRefObject<(() => void) | undefined>;
+  maxRows?: number;
 }
 
 const WebInputBar = ({
@@ -26,6 +27,7 @@ const WebInputBar = ({
   visible,
   focusTerminal,
   focusInputRef,
+  maxRows = DEFAULT_MAX_ROWS,
 }: IWebInputBarProps) => {
   const { value, setValue, mode, send, interrupt, textareaRef, focusInput } = useWebInput(
     cliState,
@@ -55,9 +57,9 @@ const WebInputBar = ({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = 'auto';
-    const maxHeight = LINE_HEIGHT * MAX_ROWS + PADDING_Y;
+    const maxHeight = LINE_HEIGHT * maxRows + PADDING_Y;
     textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
-  }, [textareaRef]);
+  }, [textareaRef, maxRows]);
 
   useEffect(() => {
     adjustHeight();
@@ -140,7 +142,7 @@ const WebInputBar = ({
               rows={1}
               style={{
                 lineHeight: `${LINE_HEIGHT}px`,
-                maxHeight: `${LINE_HEIGHT * MAX_ROWS + PADDING_Y}px`,
+                maxHeight: `${LINE_HEIGHT * maxRows + PADDING_Y}px`,
                 overflowY: 'auto',
               }}
             />

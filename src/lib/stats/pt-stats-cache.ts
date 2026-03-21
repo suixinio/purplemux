@@ -386,7 +386,7 @@ const buildStatsCacheFromPt = (
 
     const tokensByModel: Record<string, number> = {};
     for (const [model, tokens] of Object.entries(day.modelTokens)) {
-      tokensByModel[model] = tokens.input + tokens.output;
+      tokensByModel[model] = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheCreation;
 
       if (!modelUsage[model]) {
         modelUsage[model] = {

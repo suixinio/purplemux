@@ -1,20 +1,24 @@
-import { Menu, Terminal } from 'lucide-react';
+import { Menu, Terminal, MessageSquare } from 'lucide-react';
 import type { TPanelType } from '@/types/terminal';
+
+type TClaudeActiveTab = 'timeline' | 'terminal';
 
 interface IMobileNavBarProps {
   workspaceName: string;
   surfaceName: string;
   panelType: TPanelType;
+  claudeActiveTab: TClaudeActiveTab;
   onMenuOpen: () => void;
-  onTogglePanel: () => void;
+  onToggleClaudeTab: () => void;
 }
 
 const MobileNavBar = ({
   workspaceName,
   surfaceName,
   panelType,
+  claudeActiveTab,
   onMenuOpen,
-  onTogglePanel,
+  onToggleClaudeTab,
 }: IMobileNavBarProps) => {
   const isClaudeCode = panelType === 'claude-code';
 
@@ -45,10 +49,14 @@ const MobileNavBar = ({
       {isClaudeCode ? (
         <button
           className="flex h-11 w-11 shrink-0 items-center justify-center"
-          onClick={onTogglePanel}
-          aria-label="터미널 보기"
+          onClick={onToggleClaudeTab}
+          aria-label={claudeActiveTab === 'timeline' ? '터미널 보기' : '타임라인 보기'}
         >
-          <Terminal size={18} className="text-muted-foreground" />
+          {claudeActiveTab === 'timeline' ? (
+            <Terminal size={18} className="text-muted-foreground" />
+          ) : (
+            <MessageSquare size={18} className="text-muted-foreground" />
+          )}
         </button>
       ) : (
         <div className="w-11 shrink-0" />

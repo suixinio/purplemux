@@ -44,11 +44,14 @@ const NOOP_WS_ACTIONS: IWsActions = {
   sendResize: () => {},
 };
 
+type TClaudeActiveTab = 'timeline' | 'terminal';
+
 interface IMobileSurfaceViewProps {
   paneId: string;
   tabs: ITab[];
   activeTabId: string | null;
   panelType: TPanelType;
+  claudeActiveTab: TClaudeActiveTab;
   onCreateTab: (paneId: string) => Promise<ITab | null>;
   onDeleteTab: (paneId: string, tabId: string) => Promise<void>;
   onSwitchTab: (paneId: string, tabId: string) => void;
@@ -64,6 +67,7 @@ const MobileSurfaceView = ({
   tabs,
   activeTabId,
   panelType,
+  claudeActiveTab,
   onCreateTab,
   onDeleteTab,
   onSwitchTab,
@@ -109,17 +113,12 @@ const MobileSurfaceView = ({
   const manualToggleCooldownRef = useRef<Record<string, number>>({});
   const claudeCheckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
-  const [claudeInputVisible, setClaudeInputVisible] = useState(false);
-
   const handleCliStateChange = useCallback((state: TCliState) => {
-    setClaudeCliState(state);
     onCliStateChange?.(state);
   }, [onCliStateChange]);
 
-  const handleInputVisibleChange = useCallback((visible: boolean) => {
-    setClaudeInputVisible(visible);
-  }, []);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const handleInputVisibleChange = useCallback((_visible: boolean) => {}, []);
 
   const checkClaudeSession = useCallback(async (tabId: string) => {
     const tab = tabsRef.current.find((t) => t.id === tabId);
@@ -267,6 +266,16 @@ const MobileSurfaceView = ({
     return () => clearTimeout(timer);
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    if (isClaudeCode && claudeActiveTab === 'terminal' && isReady && status === 'connected') {
+      const timer = setTimeout(() => {
+        const { cols, rows } = fit();
+        wsActionsRef.current.sendResize(cols, rows);
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [claudeActiveTab]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleCreateTab = useCallback(async () => {
     setIsCreating(true);
     await onCreateTab(paneId);
@@ -291,15 +300,16 @@ const MobileSurfaceView = ({
         <MobileClaudeCodePanel
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
-          cliState={claudeCliState}
-          inputVisible={claudeInputVisible}
+          claudeActiveTab={claudeActiveTab}
+          terminalRef={terminalRef}
+          terminalReady={ready}
           sendStdin={sendStdin}
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
           focusInputRef={focusInputRef}
+          processHintRef={processHintRef}
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
-          processHintRef={processHintRef}
         />
       ) : (
         <TerminalContainer

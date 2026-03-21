@@ -23,6 +23,7 @@ const MobileTerminalPage = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [selectedPaneId, setSelectedPaneId] = useState<string | null>(null);
   const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
+  const [claudeActiveTab, setClaudeActiveTab] = useState<'timeline' | 'terminal'>('timeline');
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -145,14 +146,13 @@ const MobileTerminalPage = () => {
     [layout],
   );
 
-  const handleTogglePanelType = useCallback(() => {
-    if (!selectedPaneId || !selectedTabId) return;
-    const pane = panes.find((p) => p.id === selectedPaneId);
-    const tab = pane?.tabs.find((t) => t.id === selectedTabId);
-    const current = tab?.panelType ?? 'terminal';
-    const next: TPanelType = current === 'terminal' ? 'claude-code' : 'terminal';
-    layout.updateTabPanelType(selectedPaneId, selectedTabId, next);
-  }, [selectedPaneId, selectedTabId, panes, layout]);
+  const handleToggleClaudeTab = useCallback(() => {
+    setClaudeActiveTab((prev) => (prev === 'timeline' ? 'terminal' : 'timeline'));
+  }, []);
+
+  useEffect(() => {
+    setClaudeActiveTab('timeline');
+  }, [selectedTabId]);
 
   // Derive current state
   const currentPane = panes.find((p) => p.id === selectedPaneId);
@@ -281,8 +281,9 @@ const MobileTerminalPage = () => {
         workspaceName={workspaceName}
         surfaceName={surfaceName}
         panelType={currentPanelType}
+        claudeActiveTab={claudeActiveTab}
         onMenuOpen={() => setMenuOpen(true)}
-        onTogglePanel={handleTogglePanelType}
+        onToggleClaudeTab={handleToggleClaudeTab}
       />
 
       {currentPane && selectedTabId && (
@@ -292,6 +293,7 @@ const MobileTerminalPage = () => {
           tabs={currentPane.tabs}
           activeTabId={selectedTabId}
           panelType={currentPanelType}
+          claudeActiveTab={claudeActiveTab}
           onCreateTab={layout.createTabInPane}
           onDeleteTab={layout.deleteTabInPane}
           onSwitchTab={(paneId, tabId) => {

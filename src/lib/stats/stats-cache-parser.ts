@@ -24,14 +24,29 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
 };
 
-const estimateCost = (model: string, inputTokens: number, outputTokens: number): number => {
+const getModelPricing = (model: string): { input: number; output: number } => {
+  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
   const lower = model.toLowerCase();
-  const pricing = MODEL_PRICING[model]
-    ?? (lower.includes('opus') ? { input: 15, output: 75 }
-    : lower.includes('sonnet') ? { input: 3, output: 15 }
-    : lower.includes('haiku') ? { input: 0.8, output: 4 }
-    : { input: 3, output: 15 });
-  return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
+  if (lower.includes('opus')) return { input: 15, output: 75 };
+  if (lower.includes('sonnet')) return { input: 3, output: 15 };
+  if (lower.includes('haiku')) return { input: 0.8, output: 4 };
+  return { input: 3, output: 15 };
+};
+
+const estimateCostFromUsage = (
+  model: string,
+  input: number,
+  output: number,
+  cacheRead: number,
+  cacheCreation: number,
+): number => {
+  const p = getModelPricing(model);
+  return (
+    (input / 1_000_000) * p.input +
+    (output / 1_000_000) * p.output +
+    (cacheRead / 1_000_000) * p.input * 0.1 +
+    (cacheCreation / 1_000_000) * p.input * 1.25
+  );
 };
 
 const EMPTY_CACHE: IStatsCache = {
@@ -161,24 +176,39 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
         input: usage.inputTokens,
         output: usage.outputTokens,
         cache: usage.cacheReadInputTokens + usage.cacheCreationInputTokens,
-        cost: 0,
+        cost: estimateCostFromUsage(
+          model,
+          usage.inputTokens,
+          usage.outputTokens,
+          usage.cacheReadInputTokens,
+          usage.cacheCreationInputTokens,
+        ),
       };
     }
   } else {
     for (const day of filteredTokens) {
       for (const [model, total] of Object.entries(day.tokensByModel)) {
         if (!modelTokens[model]) modelTokens[model] = { input: 0, output: 0, cache: 0, cost: 0 };
-        const usage = cache.modelUsage[model];
-        const modelTotal = usage ? usage.inputTokens + usage.outputTokens : 0;
-        const ratio = modelTotal > 0 ? usage.inputTokens / modelTotal : 0.7;
-        modelTokens[model].input += Math.round(total * ratio);
-        modelTokens[model].output += Math.round(total * (1 - ratio));
+        modelTokens[model].input += total;
       }
     }
-  }
 
-  for (const [model, tokens] of Object.entries(modelTokens)) {
-    tokens.cost = estimateCost(model, tokens.input, tokens.output);
+    for (const [model, tokens] of Object.entries(modelTokens)) {
+      const usage = cache.modelUsage[model];
+      if (!usage) continue;
+      const allTimeTotal = usage.inputTokens + usage.outputTokens
+        + usage.cacheReadInputTokens + usage.cacheCreationInputTokens;
+      if (allTimeTotal > 0) {
+        const allTimeCost = estimateCostFromUsage(
+          model,
+          usage.inputTokens,
+          usage.outputTokens,
+          usage.cacheReadInputTokens,
+          usage.cacheCreationInputTokens,
+        );
+        tokens.cost = allTimeCost * (tokens.input / allTimeTotal);
+      }
+    }
   }
 
   const totalInput = Object.values(cache.modelUsage).reduce((s, u) => s + u.inputTokens, 0);

@@ -567,7 +567,7 @@ const PaneContainer = ({
             collapsedSize={0}
             disabled={!isClaudeCode}
           >
-            <div className="flex h-full flex-col bg-muted">
+            <div className={cn('flex h-full flex-col bg-muted', isTerminalCollapsed && 'pb-3')}>
               {isClaudeCode && activeTab && (
                 <ClaudeCodePanel
                   sessionName={activeTab.sessionName}
@@ -603,10 +603,7 @@ const PaneContainer = ({
 
           {isClaudeCode && (
             <button
-              className={cn(
-                'flex h-6 w-full shrink-0 cursor-pointer items-center gap-1.5 border-t border-border bg-black/3 px-2 text-muted-foreground transition-colors hover:bg-black/5 dark:bg-white/3 dark:hover:bg-white/5',
-                isTerminalCollapsed && 'mt-3',
-              )}
+              className="flex h-6 w-full shrink-0 cursor-pointer items-center gap-1.5 border-t border-border bg-black/3 px-2 text-muted-foreground transition-colors hover:bg-black/5 dark:bg-white/3 dark:hover:bg-white/5"
               onClick={handleToggleTerminal}
             >
               <TerminalSquare className="h-3 w-3" />
