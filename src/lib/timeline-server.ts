@@ -39,9 +39,13 @@ interface IFileWatcher {
   retryCount: number;
 }
 
+const JSONL_RETRY_DELAY = 500;
+const JSONL_RETRY_MAX_ATTEMPTS = 10;
+
 const connections = new Map<WebSocket, ITimelineConnection>();
 const fileWatchers = new Map<string, IFileWatcher>();
 const sessionWatchers = new Map<string, ISessionWatcher>();
+const pendingJsonlRetries = new Map<string, ReturnType<typeof setTimeout>>();
 
 const sendJson = (ws: WebSocket, msg: TTimelineServerMessage) => {
   if (ws.readyState === WebSocket.OPEN) {
@@ -155,6 +159,7 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
     entries,
     sessionId: sessionId ?? '',
     totalEntries: result.entries.length,
+    summary: result.summary,
   });
 };
 
@@ -175,6 +180,56 @@ const getSessionConnections = (sessionName: string): ITimelineConnection[] => {
     }
   }
   return result;
+};
+
+const cancelJsonlRetry = (sessionName: string) => {
+  const timer = pendingJsonlRetries.get(sessionName);
+  if (timer) {
+    clearTimeout(timer);
+    pendingJsonlRetries.delete(sessionName);
+  }
+};
+
+const scheduleJsonlRetry = (
+  sessionName: string,
+  panePid: number,
+  attempt = 0,
+) => {
+  if (attempt >= JSONL_RETRY_MAX_ATTEMPTS) return;
+  if (pendingJsonlRetries.has(sessionName)) return;
+
+  const timer = setTimeout(async () => {
+    pendingJsonlRetries.delete(sessionName);
+
+    const info = await detectActiveSession(panePid);
+    if (info.status !== 'active') return;
+    if (!info.jsonlPath) {
+      scheduleJsonlRetry(sessionName, panePid, attempt + 1);
+      return;
+    }
+
+    if (info.sessionId) {
+      await updateTabClaudeSessionId(sessionName, info.sessionId).catch(() => {});
+    }
+
+    const wsConns = getSessionConnections(sessionName);
+    for (const c of wsConns) {
+      if (info.jsonlPath !== c.currentJsonlPath) {
+        if (c.currentJsonlPath) {
+          unsubscribeFromFile(c.ws, c.currentJsonlPath);
+        }
+        c.currentJsonlPath = info.jsonlPath;
+        sendJson(c.ws, {
+          type: 'timeline:session-changed',
+          newSessionId: info.sessionId ?? '',
+          reason: 'new-session-started',
+        });
+        await subscribeToFile(c.ws, info.jsonlPath, info.sessionId ?? undefined);
+      }
+    }
+  }, JSONL_RETRY_DELAY);
+
+  pendingJsonlRetries.set(sessionName, timer);
 };
 
 const cleanup = (conn: ITimelineConnection) => {
@@ -339,6 +394,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       } else if (msg.type === 'timeline:process-hint') {
         const newInfo = await detectActiveSession(conn.panePid);
         if (newInfo.jsonlPath && newInfo.jsonlPath !== conn.currentJsonlPath) {
+          cancelJsonlRetry(conn.sessionName);
           if (conn.currentJsonlPath) {
             unsubscribeFromFile(ws, conn.currentJsonlPath);
           }
@@ -355,6 +411,8 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
             newSessionId: '',
             reason: 'session-ended',
           });
+        } else if (newInfo.status === 'active' && !newInfo.jsonlPath) {
+          scheduleJsonlRetry(conn.sessionName, conn.panePid);
         }
       }
     } catch {}
@@ -392,6 +450,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       const wsConns = getSessionConnections(sessionName);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
+          cancelJsonlRetry(sessionName);
           if (c.currentJsonlPath) {
             unsubscribeFromFile(c.ws, c.currentJsonlPath);
           }
@@ -412,6 +471,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           });
         }
       }
+
+      if (newInfo.status === 'active' && !newInfo.jsonlPath) {
+        scheduleJsonlRetry(sessionName, panePid);
+      }
     });
     sessionWatchers.set(wsKey, sw);
   }
@@ -428,6 +491,9 @@ export const gracefulTimelineShutdown = () => {
     sw.stop();
   }
   sessionWatchers.clear();
+  for (const [name] of pendingJsonlRetries) {
+    cancelJsonlRetry(name);
+  }
   for (const [jsonlPath] of fileWatchers) {
     removeFileWatcher(jsonlPath);
   }

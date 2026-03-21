@@ -89,6 +89,7 @@ export interface ITimelineInitMessage {
   entries: ITimelineEntry[];
   sessionId: string;
   totalEntries: number;
+  summary?: string;
 }
 
 export interface ITimelineAppendMessage {
@@ -159,6 +160,7 @@ export interface IParseResult {
   lastOffset: number;
   totalLines: number;
   errorCount: number;
+  summary?: string;
 }
 
 export interface IIncrementalResult {

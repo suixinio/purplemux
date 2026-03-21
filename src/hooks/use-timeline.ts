@@ -44,6 +44,7 @@ interface IUseTimelineReturn {
   entries: ITimelineEntry[];
   cliState: TCliState;
   sessionId: string | null;
+  sessionSummary: string | undefined;
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isAutoScrollEnabled: boolean;
@@ -70,6 +71,7 @@ const useTimeline = ({
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessionSummary, setSessionSummary] = useState<string | undefined>();
 
   const entriesRef = useRef(entries);
   useEffect(() => {
@@ -105,10 +107,11 @@ const useTimeline = ({
     fetchSession();
   }, [fetchSession]);
 
-  const handleInit = useCallback((newEntries: ITimelineEntry[], totalEntries: number) => {
+  const handleInit = useCallback((newEntries: ITimelineEntry[], totalEntries: number, summary?: string) => {
     setEntries(newEntries);
     totalEntriesRef.current = totalEntries;
     setHasMore(newEntries.length < totalEntries);
+    setSessionSummary(summary);
     setIsLoading(false);
     setError(null);
   }, []);
@@ -141,6 +144,7 @@ const useTimeline = ({
     setSessionId(newSessionId || null);
     setSessionStatus('active');
     setEntries([]);
+    setSessionSummary(undefined);
     setHasMore(false);
     setIsLoading(true);
     setAutoScrollEnabled(true);
@@ -234,6 +238,7 @@ const useTimeline = ({
     entries,
     cliState,
     sessionId,
+    sessionSummary,
     sessionStatus,
     wsStatus,
     isAutoScrollEnabled,

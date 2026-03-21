@@ -21,8 +21,6 @@ const useWebInput = (
 ): IUseWebInputReturn => {
   const [value, setValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const savedValueRef = useRef('');
-
   const mode: TWebInputMode = useMemo(() => {
     if (cliState === 'idle') return 'input';
     if (cliState === 'busy') return 'interrupt';
@@ -30,10 +28,8 @@ const useWebInput = (
   }, [cliState]);
 
   const send = useCallback(() => {
-    if (mode !== 'input') {
-      if (mode === 'disabled') {
-        toast.error('Claude Code가 실행 중이 아닙니다');
-      }
+    if (mode === 'disabled') {
+      toast.error('Claude Code가 실행 중이 아닙니다');
       return;
     }
 
@@ -44,7 +40,14 @@ const useWebInput = (
 
     if (value.trim() === '') return;
 
-    sendStdin(value + '\r');
+    if (mode === 'interrupt') {
+      sendStdin('\x1b\x1b');
+      setTimeout(() => {
+        sendStdin(value + '\r');
+      }, 100);
+    } else {
+      sendStdin(value + '\r');
+    }
     setValue('');
   }, [mode, value, sendStdin, terminalWsConnected]);
 

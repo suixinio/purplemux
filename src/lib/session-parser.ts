@@ -389,6 +389,7 @@ const parseContent = (content: string): IParseResult => {
   const lines = content.split('\n').filter((line) => line.trim());
   const rawEntries: IRawEntry[] = [];
   let errorCount = 0;
+  let sessionSummary: string | undefined;
 
   for (const line of lines) {
     try {
@@ -397,6 +398,12 @@ const parseContent = (content: string): IParseResult => {
       if (!base.success) {
         errorCount++;
         continue;
+      }
+      if (base.data.type === 'summary') {
+        const rawObj = raw as Record<string, unknown>;
+        if (typeof rawObj.summary === 'string' && rawObj.summary) {
+          sessionSummary = rawObj.summary;
+        }
       }
       if (EXCLUDED_TYPES.has(base.data.type)) continue;
       rawEntries.push({ base: base.data, raw });
@@ -451,6 +458,7 @@ const parseContent = (content: string): IParseResult => {
     lastOffset: Buffer.byteLength(content, 'utf-8'),
     totalLines: lines.length,
     errorCount,
+    summary: sessionSummary,
   };
 };
 

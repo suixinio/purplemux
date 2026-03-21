@@ -16,6 +16,7 @@ dayjs.locale('ko');
 interface ISessionMetaBarProps {
   entries: ITimelineEntry[];
   sessionName: string;
+  sessionSummary?: string;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
@@ -165,8 +166,8 @@ const MetaBarDetail = ({
   );
 };
 
-const SessionMetaBar = ({ entries, sessionName }: ISessionMetaBarProps) => {
-  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries);
+const SessionMetaBar = ({ entries, sessionName, sessionSummary }: ISessionMetaBarProps) => {
+  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const containerRef = useRef<HTMLDivElement>(null);
   const [, setTick] = useState(0);

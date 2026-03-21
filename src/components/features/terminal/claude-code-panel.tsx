@@ -63,6 +63,7 @@ const ClaudeCodePanel = ({
     entries,
     cliState,
     sessionId,
+    sessionSummary,
     sessionStatus,
     wsStatus,
     isAutoScrollEnabled,
@@ -186,7 +187,7 @@ const ClaudeCodePanel = ({
 
   return (
     <div className={cn('flex h-full w-full flex-col', className)}>
-      <SessionMetaBar entries={entries} sessionName={sessionName} />
+      <SessionMetaBar entries={entries} sessionName={sessionName} sessionSummary={sessionSummary} />
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}

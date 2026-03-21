@@ -73,10 +73,16 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
   };
 };
 
-const useSessionMeta = (entries: ITimelineEntry[]): IUseSessionMetaReturn => {
+const useSessionMeta = (entries: ITimelineEntry[], sessionSummary?: string): IUseSessionMetaReturn => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const meta = useMemo(() => computeMetaFromEntries(entries), [entries]);
+  const meta = useMemo(() => {
+    const computed = computeMetaFromEntries(entries);
+    if (sessionSummary) {
+      return { ...computed, title: sessionSummary };
+    }
+    return computed;
+  }, [entries, sessionSummary]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);

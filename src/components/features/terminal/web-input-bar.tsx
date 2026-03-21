@@ -114,11 +114,14 @@ const WebInputBar = ({
         )}
       >
         <div className="overflow-hidden">
+          <div className="px-3 pt-2 pb-3">
           <div
             ref={containerRef}
             className={cn(
-              'relative z-10 flex items-end gap-2 border-t px-3 py-2 bg-black/5 dark:bg-white/5',
-              isFocused && mode === 'input' ? 'border-ring' : 'border-border',
+              'relative z-10 flex items-end gap-2 rounded-lg border px-3 py-2',
+              isFocused && mode === 'input'
+                ? 'border-ring bg-background'
+                : 'border-border bg-black/5 dark:bg-white/5',
               mode === 'disabled' && 'opacity-50',
             )}
             onFocusCapture={handleFocusIn}
@@ -176,6 +179,7 @@ const WebInputBar = ({
                 <SendHorizontal size={16} />
               </Button>
             )}
+          </div>
           </div>
         </div>
       </div>
