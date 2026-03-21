@@ -92,7 +92,7 @@ const MobileTerminalPage = () => {
     deleteWorkspace(wsId);
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-select first pane/tab when layout loads
+  // Auto-select first pane/tab when layout loads or selected tab is removed
   useEffect(() => {
     if (!layout.layout || panes.length === 0) return;
 
@@ -102,9 +102,20 @@ const MobileTerminalPage = () => {
       : null;
     const firstPane = focusedPane ?? panes[0];
 
-    if (!selectedPaneId || !panes.find((p) => p.id === selectedPaneId)) {
+    const currentPane = selectedPaneId
+      ? panes.find((p) => p.id === selectedPaneId)
+      : null;
+
+    if (!currentPane) {
       setSelectedPaneId(firstPane.id);
       setSelectedTabId(firstPane.activeTabId);
+      return;
+    }
+
+    if (selectedTabId && !currentPane.tabs.find((t) => t.id === selectedTabId)) {
+      const sorted = [...currentPane.tabs].sort((a, b) => a.order - b.order);
+      const adjacent = sorted[0];
+      setSelectedTabId(adjacent?.id ?? currentPane.activeTabId);
     }
   }, [layout.layout, panes]); // eslint-disable-line react-hooks/exhaustive-deps
 
