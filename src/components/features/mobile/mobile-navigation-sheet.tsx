@@ -160,7 +160,7 @@ const MobileNavigationSheet = ({
         </button>
         {showClose && (
           <button
-            className="absolute right-2 flex h-6 w-6 items-center justify-center rounded bg-destructive/10 text-destructive transition-colors hover:bg-destructive/20"
+            className="absolute right-2 flex h-6 w-6 items-center justify-center rounded bg-ui-red/10 text-ui-red transition-colors hover:bg-ui-red/20"
             onClick={() => handleDeleteTab(pane.id, tab.id)}
             aria-label="탭 닫기"
           >

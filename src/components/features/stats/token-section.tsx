@@ -76,10 +76,15 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
         output: tokens.output,
         cache: tokens.cache,
         total: tokens.input + tokens.output + tokens.cache,
+        cost: tokens.cost,
         color: getModelColor(model),
       }))
       .sort((a, b) => b.total - a.total);
   }, [data.modelTokens]);
+
+  const totalCost = useMemo(() => {
+    return modelBarData.reduce((sum, d) => sum + d.cost, 0);
+  }, [modelBarData]);
 
   const donutData = useMemo(() => {
     return Object.entries(data.modelTokens)
@@ -135,6 +140,21 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                   </Bar>
                 </BarChart>
               </ChartContainer>
+              <div className="mt-3 space-y-1.5 border-t border-foreground/5 pt-3">
+                {modelBarData.map((d) => (
+                  <div key={d.model} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: d.color }} />
+                      <span>{d.model}</span>
+                    </div>
+                    <span className="tabular-nums font-medium">${d.cost < 1 ? d.cost.toFixed(2) : d.cost.toFixed(1)}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between border-t border-foreground/5 pt-1.5 text-xs font-medium">
+                  <span className="text-muted-foreground">합계</span>
+                  <span className="tabular-nums">${totalCost < 1 ? totalCost.toFixed(2) : totalCost.toFixed(1)}</span>
+                </div>
+              </div>
             </CardContent>
           </Card>
         )}
@@ -166,7 +186,7 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                   </Pie>
                   <text
                     x="50%"
-                    y="48%"
+                    y="46%"
                     textAnchor="middle"
                     dominantBaseline="middle"
                     className="fill-foreground text-lg font-semibold"
@@ -184,6 +204,15 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                   </text>
                 </PieChart>
               </ChartContainer>
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 pt-1">
+                {donutData.map((d) => (
+                  <div key={d.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="inline-block h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: d.fill }} />
+                    <span>{d.name}</span>
+                    <span className="tabular-nums">({((d.value / totalTokens) * 100).toFixed(0)}%)</span>
+                  </div>
+                ))}
+              </div>
             </CardContent>
           </Card>
         )}

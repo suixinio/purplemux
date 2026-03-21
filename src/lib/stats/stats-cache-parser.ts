@@ -15,6 +15,25 @@ import { isDateStringWithinPeriod } from './period-filter';
 
 const STATS_CACHE_PATH = path.join(os.homedir(), '.claude', 'stats-cache.json');
 
+// $/M tokens
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'claude-opus-4-6': { input: 15, output: 75 },
+  'claude-opus-4-5-20251101': { input: 15, output: 75 },
+  'claude-sonnet-4-6': { input: 3, output: 15 },
+  'claude-sonnet-4-5-20241022': { input: 3, output: 15 },
+  'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
+};
+
+const estimateCost = (model: string, inputTokens: number, outputTokens: number): number => {
+  const lower = model.toLowerCase();
+  const pricing = MODEL_PRICING[model]
+    ?? (lower.includes('opus') ? { input: 15, output: 75 }
+    : lower.includes('sonnet') ? { input: 3, output: 15 }
+    : lower.includes('haiku') ? { input: 0.8, output: 4 }
+    : { input: 3, output: 15 });
+  return (inputTokens / 1_000_000) * pricing.input + (outputTokens / 1_000_000) * pricing.output;
+};
+
 const EMPTY_CACHE: IStatsCache = {
   version: 0,
   lastComputedDate: '',
@@ -142,16 +161,24 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
         input: usage.inputTokens,
         output: usage.outputTokens,
         cache: usage.cacheReadInputTokens + usage.cacheCreationInputTokens,
-        cost: usage.costUSD,
+        cost: 0,
       };
     }
   } else {
     for (const day of filteredTokens) {
-      for (const [model, tokens] of Object.entries(day.tokensByModel)) {
+      for (const [model, total] of Object.entries(day.tokensByModel)) {
         if (!modelTokens[model]) modelTokens[model] = { input: 0, output: 0, cache: 0, cost: 0 };
-        modelTokens[model].input += tokens;
+        const usage = cache.modelUsage[model];
+        const modelTotal = usage ? usage.inputTokens + usage.outputTokens : 0;
+        const ratio = modelTotal > 0 ? usage.inputTokens / modelTotal : 0.7;
+        modelTokens[model].input += Math.round(total * ratio);
+        modelTokens[model].output += Math.round(total * (1 - ratio));
       }
     }
+  }
+
+  for (const [model, tokens] of Object.entries(modelTokens)) {
+    tokens.cost = estimateCost(model, tokens.input, tokens.output);
   }
 
   const totalInput = Object.values(cache.modelUsage).reduce((s, u) => s + u.inputTokens, 0);
