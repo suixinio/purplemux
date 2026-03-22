@@ -285,10 +285,10 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
                 transition: 'opacity 150ms ease-out',
                 borderTop: dropIndex === i && dragIndex !== null && dragIndex > i
                   ? '2px solid var(--ui-purple)'
-                  : '2px solid transparent',
+                  : undefined,
                 borderBottom: dropIndex === i && dragIndex !== null && dragIndex < i
                   ? '2px solid var(--ui-purple)'
-                  : '2px solid transparent',
+                  : undefined,
               }}
             >
               <WorkspaceItem

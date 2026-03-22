@@ -1,36 +1,83 @@
+import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useShallow } from 'zustand/react/shallow';
-import useClaudeStatusStore, { getWorkspaceStatus } from '@/hooks/use-claude-status-store';
+import useClaudeStatusStore, { getTabStatus } from '@/hooks/use-claude-status-store';
+import { useLayoutStore, collectPanes } from '@/hooks/use-layout';
+import type { TTabDisplayStatus } from '@/types/status';
 
 interface IWorkspaceStatusIndicatorProps {
   workspaceId: string;
 }
 
-const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProps) => {
-  const { busyCount, attentionCount } = useClaudeStatusStore(
-    useShallow((state) => getWorkspaceStatus(state.tabs, workspaceId)),
-  );
+const DotByStatus = ({ status }: { status: TTabDisplayStatus }) => {
+  if (status === 'busy') {
+    return (
+      <span className="flex h-3 w-3 items-center justify-center">
+        <Loader2
+          className="h-2 w-2 animate-spin text-muted-foreground"
+          aria-hidden="true"
+        />
+      </span>
+    );
+  }
 
-  if (busyCount === 0 && attentionCount === 0) return null;
+  if (status === 'needs-attention') {
+    return (
+      <span className="flex h-3 w-3 items-center justify-center">
+        <span
+          className="h-2 w-2 rounded-full bg-ui-purple"
+          aria-hidden="true"
+        />
+      </span>
+    );
+  }
 
   return (
-    <span className="ml-auto flex shrink-0 items-center gap-1.5">
-      {busyCount > 0 && (
-        <span role="status" aria-label="처리 중">
-          <Loader2
-            className="h-3.5 w-3.5 animate-spin text-muted-foreground"
-            aria-hidden="true"
-          />
-        </span>
-      )}
-      {attentionCount > 0 && (
-        <span
-          className="flex h-4 min-w-4 items-center justify-center rounded-full bg-ui-red/20 px-1 text-xs text-ui-red"
-          aria-label={`확인 필요 ${attentionCount}개`}
-        >
-          {attentionCount > 9 ? '9+' : attentionCount}
-        </span>
-      )}
+    <span className="flex h-3 w-3 items-center justify-center">
+      <span
+        className="h-2 w-2 rounded-full border border-muted-foreground/40"
+        aria-hidden="true"
+      />
+    </span>
+  );
+};
+
+const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProps) => {
+  const tabs = useClaudeStatusStore((state) => state.tabs);
+  const layout = useLayoutStore((state) => state.layout);
+
+  const tabEntries = useMemo(() => {
+    const layoutTabIds: string[] = [];
+    if (layout?.root) {
+      for (const pane of collectPanes(layout.root)) {
+        for (const tab of pane.tabs) {
+          layoutTabIds.push(tab.id);
+        }
+      }
+    }
+
+    const statusTabIds = new Set<string>();
+    for (const [tabId, entry] of Object.entries(tabs)) {
+      if (entry.workspaceId === workspaceId) statusTabIds.add(tabId);
+    }
+
+    const ordered = layoutTabIds.filter((id) => statusTabIds.has(id));
+    for (const id of statusTabIds) {
+      if (!ordered.includes(id)) ordered.push(id);
+    }
+
+    return ordered.map((tabId) => ({
+      tabId,
+      status: getTabStatus(tabs, tabId),
+    }));
+  }, [tabs, layout, workspaceId]);
+
+  if (tabEntries.length === 0) return null;
+
+  return (
+    <span className="mt-1 flex h-3 items-center gap-0.5" aria-label="탭 상태">
+      {tabEntries.map(({ tabId, status }) => (
+        <DotByStatus key={tabId} status={status} />
+      ))}
     </span>
   );
 };

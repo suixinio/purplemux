@@ -1,3 +1,5 @@
+import type { TCliState } from '@/types/timeline';
+
 export type TConnectionStatus =
   | 'connecting'
   | 'connected'
@@ -21,6 +23,8 @@ export interface ITab {
   claudeJsonlPath?: string | null;
   claudeSummary?: string | null;
   lastCommand?: string | null;
+  cliState?: TCliState;
+  dismissed?: boolean;
 }
 
 export interface ISplitNode {

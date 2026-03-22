@@ -95,7 +95,7 @@ const WorkspaceItem = ({
     <ContextMenu>
       <ContextMenuTrigger
         className={cn(
-          'flex cursor-pointer flex-col justify-center border-l-2 px-3 py-1.5 transition-colors duration-75',
+          'flex cursor-pointer flex-col justify-center border-l-2 px-3 py-2 transition-colors duration-75',
           'overflow-hidden',
           isActive
             ? 'border-l-ui-purple bg-accent text-foreground'
@@ -123,17 +123,15 @@ const WorkspaceItem = ({
           />
         ) : (
           <>
-            <span className="flex items-center gap-1.5">
-              <span className="truncate text-sm font-medium leading-tight">
-                {workspace.name}
-              </span>
-              <WorkspaceStatusIndicator workspaceId={workspace.id} />
+            <span className="truncate text-sm font-medium leading-tight">
+              {workspace.name}
             </span>
             {displayDirs.map((dir, i) => (
               <span key={dir} className={cn('truncate text-xs leading-tight text-muted-foreground/70', i === 0 && 'mt-1')}>
                 {dir}
               </span>
             ))}
+            <WorkspaceStatusIndicator workspaceId={workspace.id} />
           </>
         )}
       </ContextMenuTrigger>

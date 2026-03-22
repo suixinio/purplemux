@@ -173,7 +173,10 @@ const PaneContainer = ({
   useEffect(() => {
     if (!activeTabId || !isClaudeCode) return;
     reportActiveTab(activeTabId, claudeCliState);
-  }, [activeTabId, claudeCliState, isClaudeCode]);
+    if (isFocused && claudeCliState === 'idle') {
+      dismissStatusTab(activeTabId);
+    }
+  }, [activeTabId, claudeCliState, isClaudeCode, isFocused]);
 
   useEffect(() => {
     if (activeTabId && isFocused) {
@@ -603,10 +606,11 @@ const PaneContainer = ({
               )}
               {isClaudeCode && (
                 <WebInputBar
+                  tabId={activeTabId ?? undefined}
                   cliState={claudeCliState}
                   sendStdin={sendWebStdin}
                   terminalWsConnected={status === 'connected'}
-                  visible={claudeInputVisible}
+                  visible
                   focusTerminal={focus}
                   focusInputRef={focusInputRef}
                   setInputValueRef={setInputValueRef}
@@ -617,7 +621,7 @@ const PaneContainer = ({
                 <QuickPromptBar
                   prompts={quickPrompts}
                   cliState={claudeCliState}
-                  visible={claudeInputVisible}
+                  visible
                   onSelect={handleSelectQuickPrompt}
                 />
               )}

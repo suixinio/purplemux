@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { IClientTabStatusEntry, TTabDisplayStatus } from '@/types/status';
+import type { TCliState } from '@/types/timeline';
 
 interface IClaudeStatusState {
   tabs: Record<string, IClientTabStatusEntry>;
@@ -9,6 +10,7 @@ interface IClaudeStatusState {
   syncAll: (tabs: Record<string, IClientTabStatusEntry>) => void;
   updateTab: (tabId: string, update: IClientTabStatusEntry | null) => void;
   dismissTabLocal: (tabId: string) => void;
+  updateCliStateLocal: (tabId: string, cliState: TCliState) => void;
 }
 
 const useClaudeStatusStore = create<IClaudeStatusState>((set) => ({
@@ -39,6 +41,23 @@ const useClaudeStatusStore = create<IClaudeStatusState>((set) => ({
         tabs: {
           ...state.tabs,
           [tabId]: { ...entry, dismissed: true },
+        },
+      };
+    }),
+
+  updateCliStateLocal: (tabId, cliState) =>
+    set((state) => {
+      const entry = state.tabs[tabId];
+      if (!entry || entry.cliState === cliState) return state;
+      const prevState = entry.cliState;
+      const dismissed = cliState === 'inactive' ? true
+        : cliState === 'busy' ? false
+        : prevState === 'busy' && cliState === 'idle' ? false
+        : entry.dismissed;
+      return {
+        tabs: {
+          ...state.tabs,
+          [tabId]: { ...entry, cliState, dismissed },
         },
       };
     }),

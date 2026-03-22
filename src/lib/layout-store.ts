@@ -5,6 +5,7 @@ import { nanoid } from 'nanoid';
 import { createSession, hasSession, killSession, workspaceSessionName } from '@/lib/tmux';
 import { broadcastSync } from '@/lib/sync-server';
 import type { ITab, TLayoutNode, IPaneNode, ILayoutData } from '@/types/terminal';
+import type { TCliState } from '@/types/timeline';
 
 const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
 
@@ -283,6 +284,8 @@ export const updateLayout = async (
         if (prev) {
           tab.claudeSessionId = prev.claudeSessionId;
           tab.claudeSummary = prev.claudeSummary;
+          tab.cliState = prev.cliState;
+          tab.dismissed = prev.dismissed;
         }
       }
     }
@@ -491,6 +494,31 @@ export const updateTabClaudeSummary = async (
 
     if (tab.claudeSummary === claudeSummary) return;
     tab.claudeSummary = claudeSummary;
+    layout.updatedAt = new Date().toISOString();
+    await writeLayoutFile(layout, filePath);
+  });
+};
+
+export const updateTabCliStatus = async (
+  sessionName: string,
+  cliState: TCliState,
+  dismissed: boolean,
+): Promise<void> => {
+  const parsed = parseSessionName(sessionName);
+  if (!parsed) return;
+
+  await withLock(async () => {
+    const filePath = resolveLayoutFile(parsed.wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return;
+
+    const allTabs = collectAllTabs(layout.root);
+    const tab = allTabs.find((t) => t.sessionName === sessionName);
+    if (!tab) return;
+
+    if (tab.cliState === cliState && tab.dismissed === dismissed) return;
+    tab.cliState = cliState;
+    tab.dismissed = dismissed;
     layout.updatedAt = new Date().toISOString();
     await writeLayoutFile(layout, filePath);
   });

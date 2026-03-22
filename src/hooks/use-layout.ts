@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import type { ILayoutData, TLayoutNode, IPaneNode, ITab, TPanelType } from '@/types/terminal';
+import { clearInputDraft } from '@/hooks/use-web-input';
 
 
 export const collectPanes = (node: TLayoutNode): IPaneNode[] => {
@@ -478,6 +479,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   },
 
   deleteTabInPane: async (paneId, tabId) => {
+    clearInputDraft(tabId);
     const { workspaceId, updateAndSave: uas } = get();
     try {
       await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { method: 'DELETE' });
@@ -552,6 +554,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   },
 
   removeTabLocally: (paneId, tabId) => {
+    clearInputDraft(tabId);
     get().updateAndSave((data) => {
       const pane = findPane(data.root, paneId);
       if (!pane) return data;

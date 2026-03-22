@@ -289,6 +289,7 @@ const MobileSurfaceView = ({
     >
       {isClaudeCode && activeTab && (
         <MobileClaudeCodePanel
+          tabId={activeTabId ?? undefined}
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
           sendStdin={sendWebStdin}

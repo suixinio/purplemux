@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
-import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-store';
+import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
 import { getAllPanesInfo } from '@/lib/tmux';
 import { detectActiveSession } from '@/lib/session-detection';
 import type { IPaneInfo } from '@/lib/tmux';
@@ -65,6 +65,13 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
   }
 };
 
+const resolveDismissed = (prevState: TCliState, newState: TCliState, currentDismissed: boolean): boolean => {
+  if (newState === 'inactive') return true;
+  if (newState === 'busy') return false;
+  if (prevState === 'busy' && newState === 'idle') return false;
+  return currentDismissed;
+};
+
 const g = globalThis as unknown as { __ptStatusManager?: StatusManager };
 
 class StatusManager {
@@ -94,9 +101,12 @@ class StatusManager {
       const tabs = collectAllTabs(layout.root);
       for (const tab of tabs) {
         const cliState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
+        const dismissed = cliState === 'inactive'
+          ? true
+          : (tab.dismissed ?? false);
         this.tabs.set(tab.id, {
           cliState,
-          dismissed: false,
+          dismissed,
           workspaceId: ws.id,
           tabName: tab.name,
           tmuxSession: tab.sessionName,
@@ -160,14 +170,18 @@ class StatusManager {
         const newCliState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
 
         if (!existing) {
+          const dismissed = newCliState === 'inactive'
+            ? true
+            : (tab.dismissed ?? false);
           const entry: ITabStatusEntry = {
             cliState: newCliState,
-            dismissed: newCliState === 'inactive',
+            dismissed,
             workspaceId: ws.id,
             tabName: tab.name,
             tmuxSession: tab.sessionName,
           };
           this.tabs.set(tab.id, entry);
+          this.persistToLayout(entry);
           this.broadcastUpdate(tab.id, entry);
           continue;
         }
@@ -178,14 +192,9 @@ class StatusManager {
         if (existing.cliState !== newCliState) {
           const prevState = existing.cliState;
           existing.cliState = newCliState;
+          existing.dismissed = resolveDismissed(prevState, newCliState, existing.dismissed);
 
-          if (prevState === 'busy' && newCliState === 'idle') {
-            existing.dismissed = false;
-          } else if (newCliState === 'busy' && prevState !== 'busy') {
-            existing.dismissed = false;
-          } else if (newCliState === 'inactive') {
-            existing.dismissed = true;
-          }
+          this.persistToLayout(existing);
 
           this.broadcastUpdate(tab.id, existing);
         }
@@ -231,15 +240,9 @@ class StatusManager {
     if (prevState === cliState) return;
 
     entry.cliState = cliState;
+    entry.dismissed = resolveDismissed(prevState, cliState, entry.dismissed);
 
-    if (prevState === 'busy' && cliState === 'idle') {
-      entry.dismissed = false;
-    } else if (cliState === 'busy' && prevState !== 'busy') {
-      entry.dismissed = false;
-    } else if (cliState === 'inactive') {
-      entry.dismissed = true;
-    }
-
+    this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
   }
 
@@ -248,6 +251,7 @@ class StatusManager {
     if (!entry || entry.dismissed) return;
 
     entry.dismissed = true;
+    this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
   }
 
@@ -267,6 +271,10 @@ class StatusManager {
 
   removeClient(ws: WebSocket): void {
     this.clients.delete(ws);
+  }
+
+  private persistToLayout(entry: ITabStatusEntry): void {
+    updateTabCliStatus(entry.tmuxSession, entry.cliState, entry.dismissed).catch(() => {});
   }
 
   private broadcastUpdate(tabId: string, entry: ITabStatusEntry, exclude?: WebSocket): void {

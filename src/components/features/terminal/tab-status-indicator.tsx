@@ -15,7 +15,6 @@ const TabStatusIndicator = ({ tabId, isActive, panelType }: ITabStatusIndicatorP
 
   if (panelType !== 'claude-code') return null;
   if (status === 'idle') return null;
-  if (status === 'needs-attention' && isActive) return null;
 
   if (status === 'busy') {
     return (
@@ -32,7 +31,7 @@ const TabStatusIndicator = ({ tabId, isActive, panelType }: ITabStatusIndicatorP
   return (
     <>
       <span
-        className="h-1.5 w-1.5 shrink-0 rounded-full bg-ui-red"
+        className="h-2 w-2 shrink-0 rounded-full bg-ui-purple"
         aria-hidden="true"
       />
       <span className="sr-only">확인 필요,</span>

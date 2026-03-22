@@ -16,6 +16,7 @@ export const dismissTab = (tabId: string) => {
 };
 
 export const reportActiveTab = (tabId: string, cliState: TCliState) => {
+  useClaudeStatusStore.getState().updateCliStateLocal(tabId, cliState);
   if (sharedWs?.readyState === WebSocket.OPEN) {
     sharedWs.send(JSON.stringify({ type: 'status:tab-active-report', tabId, cliState }));
   }
