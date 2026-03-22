@@ -557,7 +557,6 @@ const PaneContainer = ({
         onMoveTab={handleMoveTab}
         onFocusPane={handleFocusPane}
         onRetry={() => {}}
-        activeTabCliState={claudeCliState}
       />
 
       <div role="tabpanel" className="relative min-h-0 flex-1 flex flex-col" style={{ backgroundColor: terminalTheme.colors.background }}>

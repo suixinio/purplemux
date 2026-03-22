@@ -13,8 +13,8 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ITab } from '@/types/terminal';
-import type { TCliState } from '@/types/timeline';
 import { isAutoTabName } from '@/lib/tab-title';
+import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 
 interface IPaneTabBarProps {
   paneId: string;
@@ -35,7 +35,6 @@ interface IPaneTabBarProps {
   onMoveTab: (tabId: string, fromPaneId: string, toIndex: number) => void;
   onFocusPane: () => void;
   onRetry: () => void;
-  activeTabCliState?: TCliState;
 }
 
 const PaneTabBar = ({
@@ -57,7 +56,6 @@ const PaneTabBar = ({
   onMoveTab,
   onFocusPane,
   onRetry,
-  activeTabCliState,
 }: IPaneTabBarProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [showLeftArrow, setShowLeftArrow] = useState(false);
@@ -369,12 +367,13 @@ const PaneTabBar = ({
                 />
               ) : (
                 <>
+                  <TabStatusIndicator
+                    tabId={tab.id}
+                    isActive={isActive}
+                    panelType={tab.panelType}
+                  />
                   {tab.panelType === 'claude-code' ? (
-                    isActive && activeTabCliState === 'busy' ? (
-                      <Loader2 className="h-3 w-3 shrink-0 animate-spin text-ui-purple" />
-                    ) : (
-                      <BotMessageSquare className="h-3 w-3 shrink-0 text-ui-purple" />
-                    )
+                    <BotMessageSquare className="h-3 w-3 shrink-0 text-ui-purple" />
                   ) : (
                     <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
                   )}
