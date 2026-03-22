@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { removeTabFromPane, renameTabInPane, restartTabSession } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
+import { getStatusManager } from '@/lib/status-manager';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const wsId = (req.query.workspace as string) || await getActiveWorkspaceId();
@@ -16,6 +17,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!found) {
       return res.status(404).json({ error: '탭을 찾을 수 없습니다' });
     }
+    getStatusManager().removeTab(tabId);
     return res.status(204).end();
   }
 

@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { addTabToPane } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
+import { getStatusManager } from '@/lib/status-manager';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -21,6 +22,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!tab) {
       return res.status(404).json({ error: 'Pane을 찾을 수 없습니다' });
     }
+    getStatusManager().registerTab(tab.id, {
+      cliState: 'inactive',
+      dismissed: true,
+      workspaceId: wsId,
+      tabName: tab.name,
+      tmuxSession: tab.sessionName,
+    });
     return res.status(200).json(tab);
   } catch (err) {
     console.log(`[layout] tab creation failed: ${err instanceof Error ? err.message : err}`);
