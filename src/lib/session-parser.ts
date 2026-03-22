@@ -8,6 +8,7 @@ import type {
   ITimelineToolCall,
   ITimelineToolResult,
   ITimelineAgentGroup,
+  ITimelineTaskNotification,
   ITimelineInterrupt,
   ITimelineSessionExit,
   ITimelineTurnEnd,
@@ -190,6 +191,51 @@ const extractCommandName = (text: string): string | null => {
   return argsMatch ? `${name} ${argsMatch[1]}` : name;
 };
 
+// --- Task Notification Parsing ---
+
+const TASK_NOTIFICATION_RE = /<task-notification>([\s\S]*?)<\/task-notification>/;
+
+const extractTag = (xml: string, tag: string): string | undefined => {
+  const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
+  const m = xml.match(re);
+  return m ? m[1].trim() : undefined;
+};
+
+const parseTaskNotification = (text: string, timestamp: number): ITimelineTaskNotification | null => {
+  const match = text.match(TASK_NOTIFICATION_RE);
+  if (!match) return null;
+
+  const xml = match[1];
+  const taskId = extractTag(xml, 'task-id');
+  const status = extractTag(xml, 'status');
+  const summary = extractTag(xml, 'summary');
+  if (!taskId || !status || !summary) return null;
+
+  const result = extractTag(xml, 'result');
+  const totalTokens = extractTag(xml, 'total_tokens');
+  const toolUses = extractTag(xml, 'tool_uses');
+  const durationMs = extractTag(xml, 'duration_ms');
+
+  const usage = (totalTokens || toolUses || durationMs)
+    ? {
+      totalTokens: totalTokens ? Number(totalTokens) : undefined,
+      toolUses: toolUses ? Number(toolUses) : undefined,
+      durationMs: durationMs ? Number(durationMs) : undefined,
+    }
+    : undefined;
+
+  return {
+    id: nanoid(),
+    type: 'task-notification',
+    timestamp,
+    taskId,
+    status,
+    summary,
+    result,
+    usage,
+  };
+};
+
 // --- Internal Helpers ---
 
 const extractDiff = (toolName: string, input: Record<string, unknown> = {}): { filePath?: string; diff?: ITimelineDiff } => {
@@ -273,6 +319,9 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
     const content = parsed.data.message.content;
 
     if (typeof content === 'string') {
+      const taskNotif = parseTaskNotification(content, timestamp);
+      if (taskNotif) return [taskNotif];
+
       const commandName = extractCommandName(content);
       if (commandName) {
         if (commandName === '/exit') {

@@ -19,6 +19,7 @@ export type TTimelineEntryType =
   | 'tool-call'
   | 'tool-result'
   | 'agent-group'
+  | 'task-notification'
   | 'interrupt'
   | 'session-exit'
   | 'turn-end';
@@ -84,6 +85,21 @@ export interface ITimelineAgentGroup {
   entryCount: number;
 }
 
+export interface ITimelineTaskNotification {
+  id: string;
+  type: 'task-notification';
+  timestamp: number;
+  taskId: string;
+  status: 'completed' | 'failed' | string;
+  summary: string;
+  result?: string;
+  usage?: {
+    totalTokens?: number;
+    toolUses?: number;
+    durationMs?: number;
+  };
+}
+
 export interface ITimelineInterrupt {
   id: string;
   type: 'interrupt';
@@ -108,6 +124,7 @@ export type ITimelineEntry =
   | ITimelineToolCall
   | ITimelineToolResult
   | ITimelineAgentGroup
+  | ITimelineTaskNotification
   | ITimelineInterrupt
   | ITimelineSessionExit
   | ITimelineTurnEnd;

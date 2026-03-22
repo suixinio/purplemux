@@ -12,6 +12,7 @@ import type {
 import UserMessageItem from '@/components/features/timeline/user-message-item';
 import AssistantMessageItem from '@/components/features/timeline/assistant-message-item';
 import AgentGroupItem from '@/components/features/timeline/agent-group-item';
+import TaskNotificationItem from '@/components/features/timeline/task-notification-item';
 import ToolGroupItem from '@/components/features/timeline/tool-group-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 
@@ -108,6 +109,8 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
       return <AssistantMessageItem entry={entry} />;
     case 'agent-group':
       return <AgentGroupItem entry={entry} />;
+    case 'task-notification':
+      return <TaskNotificationItem entry={entry} />;
     case 'interrupt':
       return <InterruptItem />;
     case 'session-exit':
