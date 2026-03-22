@@ -13,7 +13,7 @@ import { autoResumeOnStartup } from './src/lib/auto-resume';
 import { initAuthCredentials } from './src/lib/auth-credentials';
 import type { IncomingMessage } from 'http';
 
-const port = parseInt(process.env.PORT || '3000', 10);
+const port = parseInt(process.env.PORT || '8022', 10);
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();

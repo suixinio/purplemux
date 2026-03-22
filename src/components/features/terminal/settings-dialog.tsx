@@ -96,7 +96,7 @@ const GeneralTab = () => {
           <p className="mt-2 text-muted-foreground/60"># 실행</p>
           <p>pnpm start</p>
           <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
-          <p>tailscale serve --bg --https=443 http://localhost:3000</p>
+          <p>tailscale serve --bg --https=443 http://localhost:8022</p>
         </div>
       </div>
     </div>
