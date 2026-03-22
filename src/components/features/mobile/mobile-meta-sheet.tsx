@@ -1,10 +1,11 @@
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
-import { GitBranch } from 'lucide-react';
+import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive } from 'lucide-react';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/format-tokens';
+import type { IGitStatus } from '@/lib/git-status';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -32,6 +33,8 @@ interface IMobileMetaSheetProps {
   tokensByModel: IModelTokens[];
   branch: string | null;
   isBranchLoading: boolean;
+  sessionId: string | null;
+  gitStatus: IGitStatus | null;
 }
 
 const formatModelName = (model: string): string => {
@@ -54,6 +57,8 @@ const MobileMetaSheet = ({
   tokensByModel,
   branch,
   isBranchLoading,
+  sessionId,
+  gitStatus,
 }: IMobileMetaSheetProps) => {
   const createdRelative = createdAt ? dayjs(createdAt).fromNow() : '';
   const updatedRelative = updatedAt ? dayjs(updatedAt).fromNow() : '';
@@ -64,27 +69,26 @@ const MobileMetaSheet = ({
         <div className="mx-auto mt-2 h-1.5 w-12 rounded-full bg-muted-foreground/20" />
         <div className="px-4 pt-4 pb-6">
           <div className="flex flex-col gap-1">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs text-muted-foreground/50">{sessionId}</span>
+              <div className="flex items-center gap-1">
+                {isBranchLoading && (
+                  <span className="text-xs text-muted-foreground/50">...</span>
+                )}
+                {!isBranchLoading && branch && (
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <GitBranch size={12} />
+                    <span className="font-mono text-xs">{branch}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
             <span className="max-h-20 overflow-y-auto text-sm font-medium text-foreground">
               {title}
             </span>
 
             <div className="mt-1 flex flex-col gap-1">
-              {isBranchLoading && (
-                <div className="flex items-center gap-2">
-                  <span className="w-12 shrink-0 text-xs text-muted-foreground/70" />
-                  <span className="text-xs text-muted-foreground/50">로드 중...</span>
-                </div>
-              )}
-
-              {!isBranchLoading && branch && (
-                <div className="flex items-center gap-2">
-                  <span className="w-12 shrink-0 text-xs text-muted-foreground/70" />
-                  <div className="flex items-center gap-1">
-                    <GitBranch size={12} className="text-muted-foreground" />
-                    <span className="font-mono text-xs text-muted-foreground">{branch}</span>
-                  </div>
-                </div>
-              )}
 
               <div className="flex items-baseline gap-2">
                 <span className="w-12 shrink-0 text-xs text-muted-foreground/70">메시지</span>
@@ -147,6 +151,56 @@ const MobileMetaSheet = ({
                 </div>
               )}
             </div>
+
+            {gitStatus && (
+              <div className="mt-1 border-t border-border pt-2">
+                <div className="flex items-baseline gap-2">
+                  <span className="w-12 shrink-0 text-xs text-muted-foreground/70">Git</span>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    {gitStatus.staged > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-ui-green">
+                        <CircleDot size={11} />
+                        {gitStatus.staged} staged
+                      </span>
+                    )}
+                    {gitStatus.modified > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-ui-amber">
+                        <FilePen size={11} />
+                        {gitStatus.modified} modified
+                      </span>
+                    )}
+                    {gitStatus.untracked > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                        <FileQuestion size={11} />
+                        {gitStatus.untracked} untracked
+                      </span>
+                    )}
+                    {gitStatus.ahead > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-ui-blue">
+                        <ArrowUp size={11} />
+                        {gitStatus.ahead} ahead
+                      </span>
+                    )}
+                    {gitStatus.behind > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-ui-purple">
+                        <ArrowDown size={11} />
+                        {gitStatus.behind} behind
+                      </span>
+                    )}
+                    {gitStatus.stash > 0 && (
+                      <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                        <Archive size={11} />
+                        {gitStatus.stash} stash
+                      </span>
+                    )}
+                    {gitStatus.staged === 0 && gitStatus.modified === 0 && gitStatus.untracked === 0 &&
+                      gitStatus.ahead === 0 && gitStatus.behind === 0 && gitStatus.stash === 0 && (
+                      <span className="text-xs text-muted-foreground/50">clean</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </SheetContent>

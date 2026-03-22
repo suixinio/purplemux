@@ -8,6 +8,7 @@ import useSessionList from '@/hooks/use-session-list';
 import useSessionView from '@/hooks/use-session-view';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
+import useGitStatus from '@/hooks/use-git-status';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
@@ -129,6 +130,7 @@ const MobileClaudeCodePanel = ({
 
   const { meta } = useSessionMeta(entries, sessionSummary);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
+  const { status: gitStatus } = useGitStatus(sessionName, metaSheetOpen);
 
   useEffect(() => {
     navigateToTimelineRef.current = navigateToTimeline;
@@ -258,6 +260,8 @@ const MobileClaudeCodePanel = ({
         tokensByModel={meta.tokensByModel}
         branch={branch}
         isBranchLoading={isBranchLoading}
+        sessionId={sessionId}
+        gitStatus={gitStatus}
       />
     </div>
   );

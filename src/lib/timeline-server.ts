@@ -187,7 +187,6 @@ const getSessionConnections = (sessionName: string): ITimelineConnection[] => {
 const cancelJsonlWatcher = (sessionName: string) => {
   const w = pendingJsonlWatchers.get(sessionName);
   if (w) {
-    console.log(`[jsonl-watcher] stop sessionName=${sessionName}`);
     w.stop();
     pendingJsonlWatchers.delete(sessionName);
   }
@@ -216,7 +215,6 @@ const watchForJsonlFile = (
   };
 
   const onJsonlFound = async () => {
-    console.log(`[jsonl-watcher] found sessionName=${sessionName} path=${expectedJsonlPath}`);
     stop();
     pendingJsonlWatchers.delete(sessionName);
 
@@ -241,7 +239,6 @@ const watchForJsonlFile = (
 
   const watchProjectDir = () => {
     if (stopped) return;
-    console.log(`[jsonl-watcher] watch-dir sessionName=${sessionName} dir=${projectDir}`);
     try {
       dirWatcher = watch(projectDir, (_event, filename) => {
         if (stopped) return;
@@ -251,7 +248,6 @@ const watchForJsonlFile = (
       });
       dirWatcher.on('error', () => {});
     } catch {
-      console.log(`[jsonl-watcher] watch-dir failed sessionName=${sessionName} dir=${projectDir}`);
     }
   };
 
@@ -265,12 +261,10 @@ const watchForJsonlFile = (
   } else {
     const projectsDir = path.dirname(projectDir);
     const projectDirName = path.basename(projectDir);
-    console.log(`[jsonl-watcher] watch-parent sessionName=${sessionName} dir=${projectsDir} waiting=${projectDirName}`);
     try {
       parentWatcher = watch(projectsDir, (_event, filename) => {
         if (stopped) return;
         if (filename === projectDirName && existsSync(projectDir)) {
-          console.log(`[jsonl-watcher] project-dir-created sessionName=${sessionName} dir=${projectDir}`);
           if (parentWatcher) { parentWatcher.close(); parentWatcher = null; }
           if (existsSync(expectedJsonlPath)) {
             onJsonlFound();
@@ -281,7 +275,6 @@ const watchForJsonlFile = (
       });
       parentWatcher.on('error', () => {});
     } catch {
-      console.log(`[jsonl-watcher] watch-parent failed sessionName=${sessionName} dir=${projectsDir}`);
     }
   }
 
@@ -504,12 +497,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       if (newInfo.status === 'active') {
         const { isSafe } = await checkTerminalProcess(sessionName);
         if (isSafe) {
-          console.log(`[timeline-server] watcher-callback sessionName=${sessionName} status=active overridden to none (tmux shows shell)`);
           newInfo = { ...newInfo, status: 'none', sessionId: null, jsonlPath: null, pid: null, cwd: null };
         }
       }
       const wsConns = getSessionConnections(sessionName);
-      console.log(`[timeline-server] watcher-callback sessionName=${sessionName} status=${newInfo.status} jsonlPath=${newInfo.jsonlPath ?? 'null'} connections=${wsConns.length}`);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
           cancelJsonlWatcher(sessionName);
