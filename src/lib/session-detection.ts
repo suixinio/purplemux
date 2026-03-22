@@ -91,20 +91,16 @@ const findJsonlPath = async (projectDir: string, sessionId: string): Promise<str
   }
 };
 
-export const detectActiveSession = async (panePid: number, trigger?: string): Promise<ISessionInfo> => {
-  const label = `[session-detection] (trigger: ${trigger ?? 'unknown'})`;
-
+export const detectActiveSession = async (panePid: number, _trigger?: string): Promise<ISessionInfo> => {
   try {
     await fs.access(CLAUDE_DIR);
   } catch {
-    console.log(`${label} status=not-installed panePid=${panePid}`);
     return { status: 'not-installed', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
   const childPids = await getChildPids(panePid);
 
   if (childPids.length === 0) {
-    console.log(`${label} status=none panePid=${panePid} reason=no-child-pids`);
     return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
@@ -128,7 +124,6 @@ export const detectActiveSession = async (panePid: number, trigger?: string): Pr
       const projectName = toClaudeProjectName(data.cwd);
       const projectDir = path.join(PROJECTS_DIR, projectName);
       const jsonlPath = await findJsonlPath(projectDir, data.sessionId);
-      console.log(`${label} status=active panePid=${panePid} pid=${data.pid} sessionId=${data.sessionId} method=pid-file jsonlPath=${jsonlPath ?? 'null'}`);
       return {
         status: 'active',
         sessionId: data.sessionId,
@@ -149,7 +144,6 @@ export const detectActiveSession = async (panePid: number, trigger?: string): Pr
       const projectName = toClaudeProjectName(cwd);
       const projectDir = path.join(PROJECTS_DIR, projectName);
       const jsonlPath = await findJsonlPath(projectDir, fromArgs.sessionId);
-      console.log(`${label} status=active panePid=${panePid} pid=${fromArgs.pid} sessionId=${fromArgs.sessionId} method=process-args jsonlPath=${jsonlPath ?? 'null'}`);
       return {
         status: 'active',
         sessionId: fromArgs.sessionId,
@@ -161,7 +155,6 @@ export const detectActiveSession = async (panePid: number, trigger?: string): Pr
     }
   }
 
-  console.log(`${label} status=none panePid=${panePid} reason=no-match childPids=[${childPids.join(',')}]`);
   return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
 };
 
