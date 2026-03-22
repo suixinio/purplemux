@@ -32,6 +32,7 @@ interface IMobileClaudeCodePanelProps {
   onCliStateChange: (state: TCliState) => void;
   onInputVisibleChange: (visible: boolean) => void;
   onRestartSession?: () => void;
+  onNewSession?: () => void;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
@@ -47,6 +48,7 @@ const MobileClaudeCodePanel = ({
   onCliStateChange,
   onInputVisibleChange,
   onRestartSession,
+  onNewSession,
 }: IMobileClaudeCodePanelProps) => {
   const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
@@ -183,6 +185,7 @@ const MobileClaudeCodePanel = ({
           onSelectSession={handleSelectSession}
           onRefresh={refetchSessions}
           onLoadMore={loadMoreSessions}
+          onNewSession={onNewSession}
         />
       </div>
     );

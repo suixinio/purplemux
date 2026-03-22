@@ -242,6 +242,13 @@ const MobileSurfaceView = ({
     setIsCreating(false);
   }, [paneId, onCreateTab]);
 
+  const handleNewClaudeSession = useCallback(() => {
+    if (status !== 'connected') return;
+    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
+    sendStdin(`${cmd}\r`);
+  }, [status, sendStdin]);
+
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
     pendingRestartRef.current = true;
@@ -283,6 +290,7 @@ const MobileSurfaceView = ({
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
           onRestartSession={handleRestartClaudeSession}
+          onNewSession={handleNewClaudeSession}
         />
       )}
 

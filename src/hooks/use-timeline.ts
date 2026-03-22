@@ -82,6 +82,10 @@ const useTimeline = ({
   const jsonlPathRef = useRef<string | null>(null);
   const totalEntriesRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
+  const claudeSessionIdRef = useRef(claudeSessionId);
+  useEffect(() => {
+    claudeSessionIdRef.current = claudeSessionId;
+  });
 
   const fetchSession = useCallback(async () => {
     if (!enabled || !sessionName) return;
@@ -92,9 +96,8 @@ const useTimeline = ({
       if (!res.ok) throw new Error('세션 정보를 불러올 수 없습니다');
       const info: ISessionInfo = await res.json();
       setSessionStatus(info.status);
-      setSessionId(info.sessionId);
       jsonlPathRef.current = info.jsonlPath;
-      if (info.status !== 'active' && !claudeSessionId) {
+      if (info.status !== 'active' && !claudeSessionIdRef.current) {
         setIsLoading(false);
       }
       setError(null);
@@ -102,7 +105,7 @@ const useTimeline = ({
       setError(err instanceof Error ? err.message : '세션 정보를 불러올 수 없습니다');
       setSessionStatus('none');
     }
-  }, [enabled, sessionName, claudeSessionId]);
+  }, [enabled, sessionName]);
 
   useEffect(() => {
     fetchSession();
