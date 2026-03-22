@@ -119,7 +119,7 @@ const WebInputBar = ({
     <>
       <div
         className={cn(
-          'grid bg-muted',
+          'grid',
           visible ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >

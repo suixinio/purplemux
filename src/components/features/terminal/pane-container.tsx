@@ -625,7 +625,7 @@ const PaneContainer = ({
 
           <Separator
             className={cn(
-              'group flex items-center justify-center overflow-hidden bg-muted',
+              'group flex items-center justify-center overflow-hidden bg-card',
               isClaudeCode && !isTerminalCollapsed ? 'h-3' : 'h-0',
             )}
             disabled={!isClaudeCode || isTerminalCollapsed}
