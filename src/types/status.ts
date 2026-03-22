@@ -14,7 +14,7 @@ export type IClientTabStatusEntry = Omit<ITabStatusEntry, 'tmuxSession'>;
 
 export interface IStatusSyncMessage {
   type: 'status:sync';
-  tabs: Record<string, ITabStatusEntry>;
+  tabs: Record<string, IClientTabStatusEntry>;
 }
 
 export interface IStatusUpdateMessage {

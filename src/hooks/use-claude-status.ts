@@ -1,13 +1,27 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import useClaudeStatusStore from '@/hooks/use-claude-status-store';
 import type { TCliState } from '@/types/timeline';
-import type { TStatusServerMessage, IClientTabStatusEntry } from '@/types/status';
+import type { TStatusServerMessage } from '@/types/status';
 
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
 
+let sharedWs: WebSocket | null = null;
+
+export const dismissTab = (tabId: string) => {
+  useClaudeStatusStore.getState().dismissTabLocal(tabId);
+  if (sharedWs?.readyState === WebSocket.OPEN) {
+    sharedWs.send(JSON.stringify({ type: 'status:tab-dismissed', tabId }));
+  }
+};
+
+export const reportActiveTab = (tabId: string, cliState: TCliState) => {
+  if (sharedWs?.readyState === WebSocket.OPEN) {
+    sharedWs.send(JSON.stringify({ type: 'status:tab-active-report', tabId, cliState }));
+  }
+};
+
 const useClaudeStatus = () => {
-  const wsRef = useRef<WebSocket | null>(null);
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
@@ -22,7 +36,7 @@ const useClaudeStatus = () => {
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const ws = new WebSocket(`${protocol}//${location.host}/api/status`);
-      wsRef.current = ws;
+      sharedWs = ws;
 
       ws.onopen = () => {
         if (!mountedRef.current) return;
@@ -36,19 +50,9 @@ const useClaudeStatus = () => {
           const msg = JSON.parse(event.data) as TStatusServerMessage;
 
           switch (msg.type) {
-            case 'status:sync': {
-              const clientTabs: Record<string, IClientTabStatusEntry> = {};
-              for (const [tabId, entry] of Object.entries(msg.tabs)) {
-                clientTabs[tabId] = {
-                  cliState: entry.cliState,
-                  dismissed: entry.dismissed,
-                  workspaceId: entry.workspaceId,
-                  tabName: entry.tabName,
-                };
-              }
-              syncAll(clientTabs);
+            case 'status:sync':
+              syncAll(msg.tabs);
               break;
-            }
 
             case 'status:update':
               if (msg.cliState === null) {
@@ -71,7 +75,7 @@ const useClaudeStatus = () => {
       ws.onclose = () => {
         if (!mountedRef.current) return;
         setConnected(false);
-        wsRef.current = null;
+        sharedWs = null;
 
         const delay = Math.min(
           RECONNECT_BASE * Math.pow(2, retryCountRef.current),
@@ -94,30 +98,12 @@ const useClaudeStatus = () => {
         clearTimeout(retryTimerRef.current);
         retryTimerRef.current = null;
       }
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+      if (sharedWs) {
+        sharedWs.close();
+        sharedWs = null;
       }
     };
   }, [syncAll, updateTab, setConnected]);
-
-  const dismissTab = useCallback((tabId: string) => {
-    useClaudeStatusStore.getState().dismissTabLocal(tabId);
-
-    const ws = wsRef.current;
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'status:tab-dismissed', tabId }));
-    }
-  }, []);
-
-  const reportActiveTab = useCallback((tabId: string, cliState: TCliState) => {
-    const ws = wsRef.current;
-    if (ws?.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'status:tab-active-report', tabId, cliState }));
-    }
-  }, []);
-
-  return { dismissTab, reportActiveTab };
 };
 
 export default useClaudeStatus;

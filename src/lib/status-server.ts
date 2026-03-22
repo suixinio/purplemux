@@ -8,7 +8,7 @@ export const handleStatusConnection = (ws: WebSocket) => {
 
   const syncMsg: IStatusSyncMessage = {
     type: 'status:sync',
-    tabs: manager.getAll(),
+    tabs: manager.getAllForClient(),
   };
   if (ws.readyState === WebSocket.OPEN) {
     ws.send(JSON.stringify(syncMsg));

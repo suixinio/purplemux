@@ -5,7 +5,7 @@ import { getAllPanesInfo } from '@/lib/tmux';
 import { detectActiveSession } from '@/lib/session-detection';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
-import type { ITabStatusEntry, IStatusUpdateMessage } from '@/types/status';
+import type { ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage } from '@/types/status';
 
 const POLL_INTERVAL_SMALL = 5_000;
 const POLL_INTERVAL_MEDIUM = 8_000;
@@ -163,10 +163,15 @@ class StatusManager {
     }
   }
 
-  getAll(): Record<string, ITabStatusEntry> {
-    const result: Record<string, ITabStatusEntry> = {};
+  getAllForClient(): Record<string, IClientTabStatusEntry> {
+    const result: Record<string, IClientTabStatusEntry> = {};
     for (const [tabId, entry] of this.tabs) {
-      result[tabId] = { ...entry };
+      result[tabId] = {
+        cliState: entry.cliState,
+        dismissed: entry.dismissed,
+        workspaceId: entry.workspaceId,
+        tabName: entry.tabName,
+      };
     }
     return result;
   }
