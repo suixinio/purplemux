@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ToolCallItem from '@/components/features/timeline/tool-call-item';
@@ -29,7 +29,7 @@ const ToolGroupItem = ({ toolCalls, toolResults }: IToolGroupItemProps) => {
   const hasPending = toolCalls.some((t) => t.status === 'pending');
   const [isExpanded, setIsExpanded] = useState(hasPending);
 
-  const resultMap = new Map(toolResults.map((r) => [r.toolUseId, r]));
+  const resultMap = useMemo(() => new Map(toolResults.map((r) => [r.toolUseId, r])), [toolResults]);
 
   const headerText = hasPending
     ? `명령 ${toolCalls.length}개 실행 중...`

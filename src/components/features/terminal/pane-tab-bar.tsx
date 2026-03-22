@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus,
   X,
@@ -74,7 +74,7 @@ const PaneTabBar = ({
   const dragEnterCountRef = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const sortedTabs = [...tabs].sort((a, b) => a.order - b.order);
+  const sortedTabs = useMemo(() => [...tabs].sort((a, b) => a.order - b.order), [tabs]);
 
   const checkOverflow = useCallback(() => {
     const el = scrollRef.current;

@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useRef, useCallback, useEffect, useState, useMemo } from 'react';
 import { Terminal, RefreshCw, Loader2, OctagonX, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
@@ -224,7 +224,7 @@ const TimelineView = ({
   const prevEntryCountRef = useRef(entries.length);
   const isInitialLoadRef = useRef(true);
 
-  const groupedItems = groupTimelineEntries(entries);
+  const groupedItems = useMemo(() => groupTimelineEntries(entries), [entries]);
   const hasDisplayItems = groupedItems.length > 0;
 
   const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
