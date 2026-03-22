@@ -117,6 +117,14 @@ const GlobalStatusSummary = () => {
     items[next]?.scrollIntoView({ block: 'nearest' });
   }, []);
 
+  const shouldClose = open && sessions.length === 0;
+  const effectiveOpen = open && !shouldClose;
+
+  const handleOpenChange = useCallback((nextOpen: boolean) => {
+    if (nextOpen && sessions.length === 0) return;
+    setOpen(nextOpen);
+  }, [sessions.length]);
+
   if (busyCount === 0 && attentionCount === 0) return null;
 
   const ariaLabel = [
@@ -125,7 +133,7 @@ const GlobalStatusSummary = () => {
   ].filter(Boolean).join(', ');
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={effectiveOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={
           <button
