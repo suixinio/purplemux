@@ -15,6 +15,7 @@ export interface IWorkspaceInitialData {
   sidebarWidth: number;
   terminalTheme: { light: string; dark: string } | null;
   dangerouslySkipPermissions: boolean;
+  editorUrl: string;
 }
 
 interface IWorkspaceState {
@@ -23,6 +24,7 @@ interface IWorkspaceState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   dangerouslySkipPermissions: boolean;
+  editorUrl: string;
   isLoading: boolean;
   error: string | null;
 
@@ -40,6 +42,7 @@ interface IWorkspaceState {
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
+  setEditorUrl: (url: string) => void;
   validateDirectory: (directory: string) => Promise<IValidateResponse>;
 }
 
@@ -48,6 +51,7 @@ const saveActive = (updates: {
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
   dangerouslySkipPermissions?: boolean;
+  editorUrl?: string;
 }) => {
   fetch('/api/workspace/active', {
     method: 'PATCH',
@@ -62,6 +66,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   sidebarCollapsed: false,
   sidebarWidth: 200,
   dangerouslySkipPermissions: false,
+  editorUrl: '',
   isLoading: true,
   error: null,
 
@@ -72,6 +77,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       sidebarCollapsed: data.sidebarCollapsed,
       sidebarWidth: data.sidebarWidth,
       dangerouslySkipPermissions: data.dangerouslySkipPermissions,
+      editorUrl: data.editorUrl,
       isLoading: false,
       error: null,
     });
@@ -89,6 +95,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         sidebarCollapsed: data.sidebarCollapsed ?? false,
         sidebarWidth: data.sidebarWidth ?? 200,
         dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
+        editorUrl: data.editorUrl ?? '',
         isLoading: false,
       });
     } catch {
@@ -221,6 +228,11 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   setDangerouslySkipPermissions: (enabled) => {
     set({ dangerouslySkipPermissions: enabled });
     saveActive({ dangerouslySkipPermissions: enabled });
+  },
+
+  setEditorUrl: (url) => {
+    set({ editorUrl: url });
+    saveActive({ editorUrl: url });
   },
 
   validateDirectory: async (directory) => {

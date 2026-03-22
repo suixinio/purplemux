@@ -1,10 +1,12 @@
 import { useState, useCallback } from 'react';
 import { Equal, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 
 const SplitVerticalIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -52,6 +54,8 @@ const ContentHeader = ({
     (state) => (activeTab?.id ? state.metadata[activeTab.id]?.cwd : undefined),
   );
 
+  const editorUrl = useWorkspaceStore((state) => state.editorUrl);
+
   const handleToggle = useCallback(() => {
     if (isToggling || !focusedPane || !activeTab) return;
     setIsToggling(true);
@@ -83,8 +87,13 @@ const ContentHeader = ({
             <button
               className="flex h-7 items-center px-2 text-[11px] font-medium tracking-wide text-muted-foreground hover:text-foreground"
               onClick={() => {
+                if (!editorUrl) {
+                  toast.info('에디터 URL이 설정되지 않았습니다. 설정 > 일반에서 에디터 URL을 입력해주세요.');
+                  return;
+                }
                 const folder = activeTabCwd || '/';
-                const url = `${window.location.protocol}//${window.location.hostname}:8080/?folder=${encodeURIComponent(folder)}`;
+                const separator = editorUrl.includes('?') ? '&' : '?';
+                const url = `${editorUrl}${separator}folder=${encodeURIComponent(folder)}`;
                 window.open(url, '_blank');
               }}
               aria-label="code-server 열기"

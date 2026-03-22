@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useTheme } from 'next-themes';
-import { Bot, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
+import { Bot, Code, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -14,7 +15,7 @@ import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
 
-type TSettingsTab = 'general' | 'terminal' | 'claude' | 'quick-prompts';
+type TSettingsTab = 'general' | 'terminal' | 'editor' | 'claude' | 'quick-prompts';
 
 interface ISettingsItem {
   id: TSettingsTab;
@@ -34,6 +35,11 @@ const settingsItems: ISettingsItem[] = [
     icon: <Terminal className="h-4 w-4" />,
   },
   {
+    id: 'editor',
+    label: '에디터',
+    icon: <Code className="h-4 w-4" />,
+  },
+  {
     id: 'claude',
     label: 'Claude',
     icon: <Bot className="h-4 w-4" />,
@@ -49,7 +55,7 @@ const GeneralTab = () => {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">테마</p>
@@ -69,6 +75,22 @@ const GeneralTab = () => {
             시스템
           </Button>
         </ButtonGroup>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">설치 및 실행</p>
+          <p className="text-sm text-muted-foreground">앱 설치, 빌드, 실행 방법입니다.</p>
+        </div>
+        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground/60"># 설치 및 빌드</p>
+          <p>pnpm install</p>
+          <p>pnpm build</p>
+          <p className="mt-2 text-muted-foreground/60"># 실행</p>
+          <p>pnpm start</p>
+          <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
+          <p>tailscale serve --bg http://localhost:3000</p>
+        </div>
       </div>
     </div>
   );
@@ -143,6 +165,61 @@ const TerminalTab = () => {
           <ThemeGrid list={lightThemes} selectedId={themeIds.light} onSelect={(id) => setTerminalTheme('light', id)} />
         </TabsContent>
       </Tabs>
+    </div>
+  );
+};
+
+const EditorTab = () => {
+  const { editorUrl, setEditorUrl } = useWorkspaceStore();
+  const [localEditorUrl, setLocalEditorUrl] = useState(editorUrl);
+
+  const handleEditorUrlBlur = () => {
+    const trimmed = localEditorUrl.trim();
+    setLocalEditorUrl(trimmed);
+    if (trimmed !== editorUrl) {
+      setEditorUrl(trimmed);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">에디터 URL</p>
+          <p className="text-sm text-muted-foreground">
+            헤더의 EDITOR 버튼 클릭 시 이동할 에디터 주소를 입력합니다.
+          </p>
+        </div>
+        <Input
+          placeholder="https://example.com:8080"
+          value={localEditorUrl}
+          onChange={(e) => setLocalEditorUrl(e.target.value)}
+          onBlur={handleEditorUrlBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleEditorUrlBlur();
+          }}
+        />
+        <p className="text-sm text-muted-foreground">
+          <a
+            href="https://github.com/coder/code-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            code-server
+          </a>
+          를 설치하고 실행하면 브라우저에서 VS Code를 사용할 수 있습니다.
+          URL에 <code className="rounded bg-muted px-1 py-0.5 text-xs">?folder=</code> 파라미터가 자동으로 추가됩니다.
+        </p>
+        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground/60"># macOS 설치</p>
+          <p>brew install code-server</p>
+          <p className="mt-2 text-muted-foreground/60"># 실행</p>
+          <p>code-server --port 8080</p>
+          <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
+          <p>tailscale serve --bg http://localhost:8080</p>
+        </div>
+      </div>
     </div>
   );
 };
@@ -225,6 +302,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             <h2 className="mb-6 text-lg font-semibold">{activeItem?.label}</h2>
             {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'terminal' && <TerminalTab />}
+            {activeTab === 'editor' && <EditorTab />}
             {activeTab === 'claude' && <ClaudeTab />}
             {activeTab === 'quick-prompts' && <QuickPromptsSettings />}
           </div>

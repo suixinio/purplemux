@@ -187,6 +187,11 @@ const PaneContainer = ({
       if (isFocusInputShortcut(event)) focusInputRef.current?.();
       return false;
     }
+    if (event.key === 'Enter' && event.shiftKey && event.type === 'keydown') {
+      event.preventDefault();
+      wsActionsRef.current.sendStdin('\n');
+      return false;
+    }
     return true;
   }, []);
 
