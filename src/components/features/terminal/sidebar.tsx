@@ -53,6 +53,9 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [fadingOutIds, setFadingOutIds] = useState<Set<string>>(new Set());
 
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dropIndex, setDropIndex] = useState<number | null>(null);
+
   const [isDragging, setIsDragging] = useState(false);
   const isResizing = useRef(false);
   const startX = useRef(0);
@@ -169,6 +172,38 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
     [],
   );
 
+  const handleDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDragIndex(index);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(index));
+    requestAnimationFrame(() => {
+      (e.target as HTMLElement).style.opacity = '0.4';
+    });
+  }, []);
+
+  const handleDragEnd = useCallback((e: React.DragEvent) => {
+    (e.target as HTMLElement).style.opacity = '';
+    setDragIndex(null);
+    setDropIndex(null);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragIndex !== null && index !== dragIndex) {
+      setDropIndex(index);
+    }
+  }, [dragIndex]);
+
+  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
+    e.preventDefault();
+    if (dragIndex !== null && dragIndex !== toIndex) {
+      useWorkspaceStore.getState().reorderWorkspaces(dragIndex, toIndex);
+    }
+    setDragIndex(null);
+    setDropIndex(null);
+  }, [dragIndex]);
+
   const handleToggleCollapse = useCallback(() => {
     useWorkspaceStore.getState().toggleSidebar();
   }, []);
@@ -239,12 +274,23 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
             </div>
           )}
 
-          {workspaces.map((ws) => (
+          {workspaces.map((ws, i) => (
             <div
               key={ws.id}
+              draggable
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => handleDragOver(e, i)}
+              onDrop={(e) => handleDrop(e, i)}
               style={{
                 opacity: fadingOutIds.has(ws.id) ? 0 : undefined,
                 transition: 'opacity 150ms ease-out',
+                borderTop: dropIndex === i && dragIndex !== null && dragIndex > i
+                  ? '2px solid var(--ui-purple)'
+                  : '2px solid transparent',
+                borderBottom: dropIndex === i && dragIndex !== null && dragIndex < i
+                  ? '2px solid var(--ui-purple)'
+                  : '2px solid transparent',
               }}
             >
               <WorkspaceItem

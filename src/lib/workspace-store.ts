@@ -387,6 +387,26 @@ export const getDangerouslySkipPermissions = async (): Promise<boolean> => {
   return data?.dangerouslySkipPermissions ?? false;
 };
 
+export const reorderWorkspaces = async (workspaceIds: string[]): Promise<boolean> =>
+  withLock(async () => {
+    const data = (await readWorkspacesFile()) ?? emptyState();
+    const byId = new Map(data.workspaces.map((w) => [w.id, w]));
+
+    const reordered: IWorkspace[] = [];
+    for (const id of workspaceIds) {
+      const ws = byId.get(id);
+      if (!ws) return false;
+      reordered.push(ws);
+    }
+
+    if (reordered.length !== data.workspaces.length) return false;
+
+    reordered.forEach((w, i) => { w.order = i; });
+    data.workspaces = reordered;
+    await writeWorkspacesFile(data);
+    return true;
+  });
+
 export const validateDirectory = async (directory: string): Promise<{
   valid: boolean;
   error?: string;

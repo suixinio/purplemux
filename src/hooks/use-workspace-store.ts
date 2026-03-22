@@ -34,6 +34,7 @@ interface IWorkspaceState {
   removeWorkspace: (workspaceId: string) => void;
   switchWorkspace: (workspaceId: string) => void;
   renameWorkspace: (workspaceId: string, name: string) => Promise<boolean>;
+  reorderWorkspaces: (fromIndex: number, toIndex: number) => void;
   updateDirectories: (workspaceId: string, directories: string[]) => void;
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
@@ -175,6 +176,22 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       toast.error('이름 변경에 실패했습니다');
       return false;
     }
+  },
+
+  reorderWorkspaces: (fromIndex, toIndex) => {
+    const list = [...get().workspaces];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    set({ workspaces: list });
+
+    fetch('/api/workspace/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ workspaceIds: list.map((w) => w.id) }),
+    }).catch(() => {
+      toast.error('순서 변경에 실패했습니다');
+      get().fetchWorkspaces();
+    });
   },
 
   updateDirectories: (workspaceId, directories) => {
