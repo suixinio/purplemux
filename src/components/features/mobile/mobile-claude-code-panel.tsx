@@ -31,6 +31,7 @@ interface IMobileClaudeCodePanelProps {
   setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   onCliStateChange: (state: TCliState) => void;
   onInputVisibleChange: (visible: boolean) => void;
+  onRestartSession?: () => void;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
@@ -45,6 +46,7 @@ const MobileClaudeCodePanel = ({
   setInputValueRef,
   onCliStateChange,
   onInputVisibleChange,
+  onRestartSession,
 }: IMobileClaudeCodePanelProps) => {
   const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
@@ -119,7 +121,7 @@ const MobileClaudeCodePanel = ({
     enabled: !!sessionName && sessionStatus !== 'active',
   });
 
-  const { view, navigateToList, navigateToTimeline } = useSessionView(
+  const { view, navigateToTimeline } = useSessionView(
     sessionStatus,
     sessions,
     isSessionListLoading,
@@ -237,6 +239,7 @@ const MobileClaudeCodePanel = ({
           focusInputRef={focusInputRef}
           setInputValueRef={setInputValueRef}
           maxRows={3}
+          onRestartSession={onRestartSession}
         />
         <QuickPromptBar
           prompts={quickPrompts}

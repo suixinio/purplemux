@@ -9,7 +9,7 @@ const getSnapshot = () => {
 
 const getServerSnapshot = () => false;
 
-const subscribe = (_cb: () => void) => () => {};
+const subscribe: (cb: () => void) => () => void = () => () => {};
 
 const useIsMobileDevice = (): boolean =>
   useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

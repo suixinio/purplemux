@@ -32,12 +32,12 @@ const MobileLayout = ({
     }
   }, [workspaces.length]);
 
-  // store의 layout을 cache에 반영
-  useEffect(() => {
-    if (storeLayout && storeWorkspaceId) {
-      setLayoutCache((prev) => ({ ...prev, [storeWorkspaceId]: storeLayout }));
-    }
-  }, [storeLayout, storeWorkspaceId]);
+  // store의 layout을 cache에 반영 (render-phase adjustment)
+  const [prevStoreSnapshot, setPrevStoreSnapshot] = useState<{ layout: typeof storeLayout; wsId: typeof storeWorkspaceId }>({ layout: null, wsId: null });
+  if (storeLayout && storeWorkspaceId && (storeLayout !== prevStoreSnapshot.layout || storeWorkspaceId !== prevStoreSnapshot.wsId)) {
+    setPrevStoreSnapshot({ layout: storeLayout, wsId: storeWorkspaceId });
+    setLayoutCache((prev) => ({ ...prev, [storeWorkspaceId]: storeLayout }));
+  }
 
   // 메뉴 열릴 때 모든 workspace 레이아웃 fetch
   useEffect(() => {

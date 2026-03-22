@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import type { ISessionMeta, TSessionStatus } from '@/types/timeline';
 
 export type TSessionView = 'list' | 'empty' | 'timeline';
@@ -18,16 +18,14 @@ const useSessionView = (
   isTimelineLoading?: boolean,
 ): IUseSessionViewReturn => {
   const [manualView, setManualView] = useState<TSessionView | null>(null);
-  const prevStatusRef = useRef(sessionStatus);
+  const [prevSessionStatus, setPrevSessionStatus] = useState(sessionStatus);
 
-  useEffect(() => {
-    const prev = prevStatusRef.current;
-    prevStatusRef.current = sessionStatus;
-
-    if (prev === 'active' && sessionStatus !== 'active' && manualView === 'timeline') {
+  if (prevSessionStatus !== sessionStatus) {
+    setPrevSessionStatus(sessionStatus);
+    if (prevSessionStatus === 'active' && sessionStatus !== 'active' && manualView === 'timeline') {
       setManualView(null);
     }
-  }, [sessionStatus, manualView]);
+  }
 
   const view: TSessionView = (() => {
     if (sessionStatus === 'active') return 'timeline';

@@ -23,7 +23,8 @@ const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
 const FILE_PATH = path.join(BASE_DIR, 'quick-prompts.json');
 
 const BUILTIN_PROMPTS: IQuickPrompt[] = [
-  { id: 'builtin-commit', name: '커밋하기', prompt: '/commit-commands:commit', enabled: true },
+  { id: 'builtin-commit', name: '코드 커밋', prompt: '/commit-commands:commit', enabled: true },
+  { id: 'builtin-simplify', name: '코드 정리', prompt: '/simplify', enabled: true },
 ];
 
 const migrateFromFlatArray = (arr: IQuickPrompt[]): IQuickPromptsFile => {

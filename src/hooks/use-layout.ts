@@ -238,8 +238,8 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       if (controller.signal.aborted) return;
       const current = get().layout;
       if (current) {
-        const { updatedAt: _a, ...currentContent } = current;
-        const { updatedAt: _b, ...fetchedContent } = data;
+        const currentContent = { root: current.root, activePaneId: current.activePaneId };
+        const fetchedContent = { root: data.root, activePaneId: data.activePaneId };
         if (JSON.stringify(currentContent) === JSON.stringify(fetchedContent)) {
           return;
         }
@@ -324,6 +324,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       if (!res.ok) throw new Error();
       const { paneId: newPaneId, tab } = await res.json();
 
+      if (activeTab?.panelType) tab.panelType = activeTab.panelType;
       const newPane: IPaneNode = { type: 'pane', id: newPaneId, tabs: [tab], activeTabId: tab.id };
 
       await uas((data) => {

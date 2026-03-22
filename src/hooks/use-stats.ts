@@ -120,10 +120,12 @@ const useStats = (): IUseStatsReturn => {
   const [initializing, setInitializing] = useState(false);
   const [fileCount, setFileCount] = useState(0);
 
-  useEffect(() => {
-    if (!router.isReady) return;
+  const [prevRouterPeriod, setPrevRouterPeriod] = useState<string | undefined>(undefined);
+  const routerPeriodRaw = router.isReady ? String(router.query.period ?? '') : undefined;
+  if (routerPeriodRaw !== undefined && routerPeriodRaw !== prevRouterPeriod) {
+    setPrevRouterPeriod(routerPeriodRaw);
     setPeriodState(parsePeriodParam(router.query.period));
-  }, [router.isReady, router.query.period]);
+  }
 
   const setPeriod = useCallback((p: TPeriod) => {
     setPeriodState(p);

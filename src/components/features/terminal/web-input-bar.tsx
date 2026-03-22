@@ -20,6 +20,7 @@ interface IWebInputBarProps {
   focusInputRef: React.MutableRefObject<(() => void) | undefined>;
   setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   maxRows?: number;
+  onRestartSession?: () => void;
 }
 
 const WebInputBar = ({
@@ -31,11 +32,13 @@ const WebInputBar = ({
   focusInputRef,
   setInputValueRef,
   maxRows = DEFAULT_MAX_ROWS,
+  onRestartSession,
 }: IWebInputBarProps) => {
   const { value, setValue, mode, send, interrupt, textareaRef, focusInput } = useWebInput(
     cliState,
     sendStdin,
     terminalWsConnected,
+    { onRestartSession },
   );
   const isMobileDevice = useIsMobileDevice();
 

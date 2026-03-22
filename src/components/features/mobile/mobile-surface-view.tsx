@@ -9,10 +9,11 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
-import { formatTabTitle } from '@/lib/tab-title';
+import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
   'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
@@ -68,7 +69,6 @@ const MobileSurfaceView = ({
   onDeleteTab,
   onSwitchTab,
   onRemoveTabLocally,
-  onUpdateTabPanelType,
   onCliStateChange,
 }: IMobileSurfaceViewProps) => {
   const activeTab = tabs.find((t) => t.id === activeTabId);
@@ -107,6 +107,9 @@ const MobileSurfaceView = ({
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
+  const [isClaudeRunning, setIsClaudeRunning] = useState(false);
+  const pendingRestartRef = useRef(false);
+
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
   }, [onCliStateChange]);
@@ -134,6 +137,7 @@ const MobileSurfaceView = ({
       if (!tabId) return;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
+      setIsClaudeRunning(isClaudeProcess(title));
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,
@@ -238,6 +242,21 @@ const MobileSurfaceView = ({
     setIsCreating(false);
   }, [paneId, onCreateTab]);
 
+  const handleRestartClaudeSession = useCallback(() => {
+    if (status !== 'connected') return;
+    pendingRestartRef.current = true;
+    sendStdin('/exit\n');
+  }, [status, sendStdin]);
+
+  useEffect(() => {
+    if (!pendingRestartRef.current || isClaudeRunning) return;
+    pendingRestartRef.current = false;
+    if (status !== 'connected') return;
+    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
+    sendStdin(`${cmd}\n`);
+  }, [isClaudeRunning, status, sendStdin]);
+
   const noTabs = tabs.length === 0;
   const ready = isReady && status === 'connected' && !noTabs;
   const showInitialLoading =
@@ -263,6 +282,7 @@ const MobileSurfaceView = ({
           setInputValueRef={setInputValueRef}
           onCliStateChange={handleCliStateChange}
           onInputVisibleChange={handleInputVisibleChange}
+          onRestartSession={handleRestartClaudeSession}
         />
       )}
 

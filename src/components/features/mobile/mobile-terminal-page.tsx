@@ -91,8 +91,9 @@ const MobileTerminalPage = () => {
     deleteWorkspace(wsId);
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    if (!layout.layout || panes.length === 0) return;
+  const [prevLayoutSnapshot, setPrevLayoutSnapshot] = useState<{ layout: typeof layout.layout; panes: typeof panes }>({ layout: null, panes: [] });
+  if (layout.layout && panes.length > 0 && (layout.layout !== prevLayoutSnapshot.layout || panes !== prevLayoutSnapshot.panes)) {
+    setPrevLayoutSnapshot({ layout: layout.layout, panes });
 
     const activePaneId = layout.layout.activePaneId;
     const targetPane = activePaneId
@@ -107,31 +108,21 @@ const MobileTerminalPage = () => {
     if (!currentPane) {
       setSelectedPaneId(firstPane.id);
       setSelectedTabId(firstPane.activeTabId);
-      return;
-    }
-
-    // 서버의 activePaneId가 변경되었으면 반영
-    if (activePaneId && activePaneId !== selectedPaneId && targetPane) {
+    } else if (activePaneId && activePaneId !== selectedPaneId && targetPane) {
       setSelectedPaneId(targetPane.id);
       setSelectedTabId(targetPane.activeTabId);
-      return;
-    }
-
-    if (selectedTabId && !currentPane.tabs.find((t) => t.id === selectedTabId)) {
+    } else if (selectedTabId && !currentPane.tabs.find((t) => t.id === selectedTabId)) {
       const sorted = [...currentPane.tabs].sort((a, b) => a.order - b.order);
       const adjacent = sorted[0];
       setSelectedTabId(adjacent?.id ?? currentPane.activeTabId);
-      return;
-    }
-
-    if (
+    } else if (
       currentPane.activeTabId &&
       currentPane.activeTabId !== selectedTabId &&
       currentPane.tabs.some((t) => t.id === currentPane.activeTabId)
     ) {
       setSelectedTabId(currentPane.activeTabId);
     }
-  }, [layout.layout, panes]); // eslint-disable-line react-hooks/exhaustive-deps
+  }
 
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {

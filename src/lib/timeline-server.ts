@@ -457,7 +457,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   ws.on('error', () => cleanup(conn));
 
   const claudeSessionId = url.searchParams.get('claudeSessionId');
-  const sessionInfo = await detectActiveSession(panePid, '3:ws-connect');
+  const sessionInfo = await detectActiveSession(panePid);
 
   if (claudeSessionId && sessionInfo.status === 'none') {
     await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});

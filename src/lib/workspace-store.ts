@@ -91,8 +91,8 @@ const readWorkspacesFile = async (): Promise<IWorkspacesData | null> => {
 };
 
 const writeWorkspacesFile = async (data: IWorkspacesData): Promise<void> => {
-  const { updatedAt: _, ...comparable } = data;
-  const contentKey = JSON.stringify(comparable);
+  const { workspaces, activeWorkspaceId, sidebarCollapsed, sidebarWidth, terminalTheme, dangerouslySkipPermissions } = data;
+  const contentKey = JSON.stringify({ workspaces, activeWorkspaceId, sidebarCollapsed, sidebarWidth, terminalTheme, dangerouslySkipPermissions });
 
   if (g.__ptWorkspacesContentCache === contentKey) return;
 

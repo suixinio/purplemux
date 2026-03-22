@@ -1,10 +1,8 @@
 import { useState, useCallback, useRef } from 'react';
 import {
   ChevronsLeft,
-  ChevronsRight,
   Plus,
   Settings,
-  Info,
   BarChart3,
   Terminal,
   Bell,

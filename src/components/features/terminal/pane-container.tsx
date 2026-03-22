@@ -81,7 +81,6 @@ const PaneContainer = ({
   isFocused,
   paneCount,
   isSplitting,
-  onSplitPane,
   onClosePane,
   onFocusPane,
   onMoveTab,
@@ -133,11 +132,13 @@ const PaneContainer = ({
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
   const paneCountRef = useRef(paneCount);
+  const isFocusedRef = useRef(isFocused);
 
   useEffect(() => {
     tabsRef.current = tabs;
     activeTabIdRef.current = activeTabId;
     paneCountRef.current = paneCount;
+    isFocusedRef.current = isFocused;
   });
 
   const fetchAndUpdateCwd = useCallback(async () => {
@@ -161,6 +162,7 @@ const PaneContainer = ({
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
   const [isClaudeRunning, setIsClaudeRunning] = useState(false);
+  const pendingRestartRef = useRef(false);
 
   const { prompts: quickPrompts } = useQuickPrompts();
 
@@ -261,7 +263,9 @@ const PaneContainer = ({
       prevConnectedTabIdRef.current = activeTabIdRef.current;
       const { cols, rows } = termActionsRef.current.fit();
       wsActionsRef.current.sendResize(cols, rows);
-      termActionsRef.current.focus();
+      if (isFocusedRef.current) {
+        termActionsRef.current.focus();
+      }
       fetchAndUpdateCwd();
     },
     onSessionEnded: handleSessionEnded,
@@ -427,6 +431,21 @@ const PaneContainer = ({
     sendStdin(`${cmd}\n`);
   }, [status, sendStdin]);
 
+  const handleRestartClaudeSession = useCallback(() => {
+    if (status !== 'connected') return;
+    pendingRestartRef.current = true;
+    sendStdin('/exit\n');
+  }, [status, sendStdin]);
+
+  useEffect(() => {
+    if (!pendingRestartRef.current || isClaudeRunning) return;
+    pendingRestartRef.current = false;
+    if (status !== 'connected') return;
+    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
+    sendStdin(`${cmd}\n`);
+  }, [isClaudeRunning, status, sendStdin]);
+
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);
 
@@ -560,6 +579,7 @@ const PaneContainer = ({
                   focusTerminal={focus}
                   focusInputRef={focusInputRef}
                   setInputValueRef={setInputValueRef}
+                  onRestartSession={handleRestartClaudeSession}
                 />
               )}
               {isClaudeCode && (

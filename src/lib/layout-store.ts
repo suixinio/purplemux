@@ -85,8 +85,7 @@ const extractWsIdFromPath = (filePath: string): string | null => {
 };
 
 export const writeLayoutFile = async (data: ILayoutData, filePath: string): Promise<void> => {
-  const { updatedAt: _, ...comparable } = data;
-  const contentKey = JSON.stringify(comparable);
+  const contentKey = JSON.stringify({ root: data.root, activePaneId: data.activePaneId });
   const cache = g.__ptLayoutContentCache!;
 
   if (cache.get(filePath) === contentKey) return;
