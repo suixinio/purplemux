@@ -1,21 +1,13 @@
 import { create } from 'zustand';
-import type { TCliState } from '@/types/timeline';
-import type { TTabDisplayStatus } from '@/types/status';
-
-interface ITabStatusEntry {
-  cliState: TCliState;
-  dismissed: boolean;
-  workspaceId: string;
-  tabName: string;
-}
+import type { IClientTabStatusEntry, TTabDisplayStatus } from '@/types/status';
 
 interface IClaudeStatusState {
-  tabs: Record<string, ITabStatusEntry>;
+  tabs: Record<string, IClientTabStatusEntry>;
   wsConnected: boolean;
 
   setConnected: (connected: boolean) => void;
-  syncAll: (tabs: Record<string, ITabStatusEntry>) => void;
-  updateTab: (tabId: string, update: ITabStatusEntry | null) => void;
+  syncAll: (tabs: Record<string, IClientTabStatusEntry>) => void;
+  updateTab: (tabId: string, update: IClientTabStatusEntry | null) => void;
   dismissTabLocal: (tabId: string) => void;
 }
 
@@ -52,7 +44,7 @@ const useClaudeStatusStore = create<IClaudeStatusState>((set) => ({
     }),
 }));
 
-export const getTabStatus = (tabs: Record<string, ITabStatusEntry>, tabId: string): TTabDisplayStatus => {
+export const getTabStatus = (tabs: Record<string, IClientTabStatusEntry>, tabId: string): TTabDisplayStatus => {
   const entry = tabs[tabId];
   if (!entry || entry.cliState === 'inactive') return 'idle';
   if (entry.cliState === 'busy') return 'busy';
@@ -61,7 +53,7 @@ export const getTabStatus = (tabs: Record<string, ITabStatusEntry>, tabId: strin
 };
 
 export const getWorkspaceStatus = (
-  tabs: Record<string, ITabStatusEntry>,
+  tabs: Record<string, IClientTabStatusEntry>,
   wsId: string,
 ): { busyCount: number; attentionCount: number } => {
   let busyCount = 0;
@@ -75,7 +67,7 @@ export const getWorkspaceStatus = (
 };
 
 export const getGlobalStatus = (
-  tabs: Record<string, ITabStatusEntry>,
+  tabs: Record<string, IClientTabStatusEntry>,
 ): { busyCount: number; attentionCount: number } => {
   let busyCount = 0;
   let attentionCount = 0;

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback } from 'react';
 import useClaudeStatusStore from '@/hooks/use-claude-status-store';
 import type { TCliState } from '@/types/timeline';
-import type { TStatusServerMessage } from '@/types/status';
+import type { TStatusServerMessage, IClientTabStatusEntry } from '@/types/status';
 
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
@@ -36,9 +36,19 @@ const useClaudeStatus = () => {
           const msg = JSON.parse(event.data) as TStatusServerMessage;
 
           switch (msg.type) {
-            case 'status:sync':
-              syncAll(msg.tabs);
+            case 'status:sync': {
+              const clientTabs: Record<string, IClientTabStatusEntry> = {};
+              for (const [tabId, entry] of Object.entries(msg.tabs)) {
+                clientTabs[tabId] = {
+                  cliState: entry.cliState,
+                  dismissed: entry.dismissed,
+                  workspaceId: entry.workspaceId,
+                  tabName: entry.tabName,
+                };
+              }
+              syncAll(clientTabs);
               break;
+            }
 
             case 'status:update':
               if (msg.cliState === null) {

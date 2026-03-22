@@ -10,6 +10,8 @@ export interface ITabStatusEntry {
 
 export type TTabDisplayStatus = 'busy' | 'needs-attention' | 'idle';
 
+export type IClientTabStatusEntry = Omit<ITabStatusEntry, 'tmuxSession'>;
+
 export interface IStatusSyncMessage {
   type: 'status:sync';
   tabs: Record<string, ITabStatusEntry>;

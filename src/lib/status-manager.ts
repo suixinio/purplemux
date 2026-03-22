@@ -1,8 +1,9 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-store';
-import { getPaneCurrentCommand, getSessionPanePid } from '@/lib/tmux';
+import { getAllPanesInfo } from '@/lib/tmux';
 import { detectActiveSession } from '@/lib/session-detection';
+import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
 import type { ITabStatusEntry, IStatusUpdateMessage } from '@/types/status';
 
@@ -37,6 +38,7 @@ class StatusManager {
 
   private async scanAll(): Promise<void> {
     const { workspaces } = await getWorkspaces();
+    const panesInfo = await getAllPanesInfo();
     this.tabs.clear();
 
     for (const ws of workspaces) {
@@ -45,7 +47,7 @@ class StatusManager {
 
       const tabs = collectAllTabs(layout.root);
       for (const tab of tabs) {
-        const cliState = await this.detectTabCliState(tab.sessionName);
+        const cliState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
         this.tabs.set(tab.id, {
           cliState,
           dismissed: false,
@@ -57,16 +59,14 @@ class StatusManager {
     }
   }
 
-  private async detectTabCliState(tmuxSession: string): Promise<TCliState> {
-    const cmd = await getPaneCurrentCommand(tmuxSession);
-    if (!cmd) return 'inactive';
+  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<TCliState> {
+    if (!paneInfo) return 'inactive';
 
-    if (!isClaudeCommand(cmd)) return 'inactive';
+    if (!isClaudeCommand(paneInfo.command)) return 'inactive';
 
-    const panePid = await getSessionPanePid(tmuxSession);
-    if (!panePid) return 'inactive';
+    if (!paneInfo.pid) return 'inactive';
 
-    const session = await detectActiveSession(panePid);
+    const session = await detectActiveSession(paneInfo.pid);
     if (session.status === 'active') return 'busy';
 
     return 'idle';
@@ -98,6 +98,7 @@ class StatusManager {
 
   async poll(): Promise<void> {
     const { workspaces } = await getWorkspaces();
+    const panesInfo = await getAllPanesInfo();
     const knownTabIds = new Set<string>();
 
     for (const ws of workspaces) {
@@ -109,7 +110,7 @@ class StatusManager {
         knownTabIds.add(tab.id);
         const existing = this.tabs.get(tab.id);
 
-        const newCliState = await this.detectTabCliState(tab.sessionName);
+        const newCliState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
 
         if (!existing) {
           const entry: ITabStatusEntry = {

@@ -210,6 +210,33 @@ export const getPaneCurrentCommand = async (
   }
 };
 
+export interface IPaneInfo {
+  command: string;
+  pid: number;
+}
+
+export const getAllPanesInfo = async (): Promise<Map<string, IPaneInfo>> => {
+  try {
+    const { stdout } = await execFile(
+      'tmux',
+      ['-L', TMUX_SOCKET, 'list-panes', '-a', '-F', '#{session_name}\t#{pane_current_command}\t#{pane_pid}'],
+      { timeout: CMD_TIMEOUT },
+    );
+    const result = new Map<string, IPaneInfo>();
+    for (const line of stdout.trim().split('\n')) {
+      if (!line) continue;
+      const [session, command, pidStr] = line.split('\t');
+      if (session && command) {
+        const pid = parseInt(pidStr, 10);
+        result.set(session, { command, pid: Number.isNaN(pid) ? 0 : pid });
+      }
+    }
+    return result;
+  } catch {
+    return new Map();
+  }
+};
+
 const SAFE_SHELLS = new Set(['bash', 'zsh', 'fish', 'sh', 'dash']);
 
 export const checkTerminalProcess = async (
