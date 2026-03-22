@@ -73,7 +73,7 @@ interface IPaneContainerProps {
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
 }
 
-const CLAUDE_CODE_FONT_SIZE = 10;
+const CLAUDE_CODE_FONT_SIZE = 11;
 
 const PaneContainer = ({
   paneId,
@@ -150,8 +150,9 @@ const PaneContainer = ({
     try {
       const res = await fetch(`/api/layout/cwd?session=${tab.sessionName}`);
       if (!res.ok) return;
-      const { cwd } = await res.json();
+      const { cwd, lastCommand } = await res.json();
       if (cwd) useTabMetadataStore.getState().setCwd(tab.id, cwd);
+      if (lastCommand) useTabMetadataStore.getState().setLastCommand(tab.id, lastCommand);
     } catch {
       /* ignore */
     }
