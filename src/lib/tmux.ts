@@ -284,3 +284,44 @@ export const sendKeys = async (
     { timeout: CMD_TIMEOUT },
   );
 };
+
+const INTERPRETERS = new Set(['node', 'python', 'python3', 'ruby', 'perl', 'deno', 'bun']);
+
+const cleanCommandLine = (raw: string): string => {
+  const parts = raw.split(/\s+/);
+  if (parts.length === 0) return raw;
+
+  parts[0] = path.basename(parts[0]);
+
+  if (INTERPRETERS.has(parts[0]) && parts.length > 1) {
+    const scriptName = path.basename(parts[1]).replace(/\.(c|m)?js$/, '');
+    parts.splice(0, 2, scriptName);
+  }
+
+  return parts.join(' ');
+};
+
+export const getLastCommand = async (sessionName: string): Promise<string | null> => {
+  const shellPid = await getSessionPanePid(sessionName);
+  if (!shellPid) return null;
+
+  try {
+    const { stdout: pgrepOut } = await execFile(
+      'pgrep', ['-n', '-P', String(shellPid)],
+      { timeout: CMD_TIMEOUT },
+    );
+    const childPid = pgrepOut.trim();
+    if (!childPid) return null;
+
+    const { stdout: psOut } = await execFile(
+      'ps', ['-o', 'args=', '-p', childPid],
+      { timeout: CMD_TIMEOUT },
+    );
+    const args = psOut.trim();
+    if (!args) return null;
+
+    return cleanCommandLine(args);
+  } catch {
+    return null;
+  }
+};

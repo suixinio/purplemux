@@ -20,6 +20,7 @@ export interface ITab {
   claudeSessionId?: string | null;
   claudeJsonlPath?: string | null;
   claudeSummary?: string | null;
+  lastCommand?: string | null;
 }
 
 export interface ISplitNode {
