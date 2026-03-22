@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
 
 interface IQuickPrompt {
@@ -23,76 +24,91 @@ interface IUseQuickPromptsReturn {
   resetAll: () => Promise<void>;
 }
 
-const useQuickPrompts = (): IUseQuickPromptsReturn => {
-  const [data, setData] = useState<IQuickPromptsData>({ builtins: [], custom: [] });
-  const [isLoading, setIsLoading] = useState(true);
+const fetcher = (url: string) =>
+  fetch(url).then((res) => {
+    if (!res.ok) throw new Error('fetch failed');
+    return res.json() as Promise<IQuickPromptsData>;
+  });
 
-  useEffect(() => {
-    let cancelled = false;
-    const fetchPrompts = async () => {
-      try {
-        const res = await fetch('/api/quick-prompts');
-        if (!res.ok) throw new Error('fetch failed');
-        const result = await res.json();
-        if (!cancelled) setData(result);
-      } catch {
-        // fallback handled by server
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
-    };
-    fetchPrompts();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+const EMPTY: IQuickPromptsData = { builtins: [], custom: [] };
+
+const useQuickPrompts = (): IUseQuickPromptsReturn => {
+  const { data, isLoading, mutate } = useSWR('/api/quick-prompts', fetcher, {
+    revalidateOnFocus: false,
+  });
+
+  const safeData = data ?? EMPTY;
 
   const prompts = useMemo(
-    () => [...data.builtins, ...data.custom].filter((p) => p.enabled),
-    [data],
+    () => [...safeData.builtins, ...safeData.custom].filter((p) => p.enabled),
+    [safeData],
   );
 
   const persist = useCallback(async (builtins: IQuickPrompt[], custom: IQuickPrompt[]) => {
     const disabledBuiltinIds = builtins.filter((b) => !b.enabled).map((b) => b.id);
-    try {
-      const res = await fetch('/api/quick-prompts', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ custom, disabledBuiltinIds }),
-      });
-      if (!res.ok) throw new Error('save failed');
-    } catch {
-      toast.error('설정을 저장할 수 없습니다');
-    }
+    const res = await fetch('/api/quick-prompts', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ custom, disabledBuiltinIds }),
+    });
+    if (!res.ok) throw new Error('save failed');
   }, []);
 
-  const toggleBuiltin = useCallback(async (id: string, enabled: boolean) => {
-    setData((prev) => {
-      const nextBuiltins = prev.builtins.map((b) => (b.id === id ? { ...b, enabled } : b));
-      persist(nextBuiltins, prev.custom);
-      return { ...prev, builtins: nextBuiltins };
-    });
-  }, [persist]);
+  const toggleBuiltin = useCallback(
+    async (id: string, enabled: boolean) => {
+      const update = (prev: IQuickPromptsData) => ({
+        ...prev,
+        builtins: prev.builtins.map((b) => (b.id === id ? { ...b, enabled } : b)),
+      });
+      await mutate(
+        async (current) => {
+          const prev = current ?? EMPTY;
+          const next = update(prev);
+          await persist(next.builtins, next.custom);
+          return next;
+        },
+        { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
+      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+    },
+    [mutate, persist],
+  );
 
-  const saveCustom = useCallback(async (custom: IQuickPrompt[]) => {
-    setData((prev) => {
-      persist(prev.builtins, custom);
-      return { ...prev, custom };
-    });
-  }, [persist]);
+  const saveCustom = useCallback(
+    async (custom: IQuickPrompt[]) => {
+      const update = (prev: IQuickPromptsData) => ({ ...prev, custom });
+      await mutate(
+        async (current) => {
+          const prev = current ?? EMPTY;
+          const next = update(prev);
+          await persist(next.builtins, next.custom);
+          return next;
+        },
+        { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
+      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+    },
+    [mutate, persist],
+  );
 
   const resetAll = useCallback(async () => {
-    setData((prev) => {
-      const nextBuiltins = prev.builtins.map((b) => ({ ...b, enabled: true }));
-      persist(nextBuiltins, []);
-      return { builtins: nextBuiltins, custom: [] };
+    const update = (prev: IQuickPromptsData) => ({
+      builtins: prev.builtins.map((b) => ({ ...b, enabled: true })),
+      custom: [],
     });
-  }, [persist]);
+    await mutate(
+      async (current) => {
+        const prev = current ?? EMPTY;
+        const next = update(prev);
+        await persist(next.builtins, next.custom);
+        return next;
+      },
+      { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
+    ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+  }, [mutate, persist]);
 
   return {
     prompts,
-    builtinPrompts: data.builtins,
-    customPrompts: data.custom,
+    builtinPrompts: safeData.builtins,
+    customPrompts: safeData.custom,
     isLoading,
     toggleBuiltin,
     saveCustom,
