@@ -1,5 +1,5 @@
 import { useRef, useCallback, useEffect, useState } from 'react';
-import { Terminal, RefreshCw, Loader2, OctagonX } from 'lucide-react';
+import { Terminal, RefreshCw, Loader2, OctagonX, LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
   ITimelineEntry,
@@ -93,6 +93,13 @@ const InterruptItem = () => (
   </div>
 );
 
+const SessionExitItem = () => (
+  <div className="flex items-center justify-end gap-1.5 py-1 text-xs text-muted-foreground/60">
+    <LogOut size={12} />
+    <span>세션 종료(/exit)</span>
+  </div>
+);
+
 const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
   switch (entry.type) {
     case 'user-message':
@@ -103,6 +110,8 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
       return <AgentGroupItem entry={entry} />;
     case 'interrupt':
       return <InterruptItem />;
+    case 'session-exit':
+      return <SessionExitItem />;
     default:
       return null;
   }
