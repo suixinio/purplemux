@@ -181,12 +181,13 @@ const EditorTab = () => {
   const setEditorUrl = useWorkspaceStore((state) => state.setEditorUrl);
   const [localEditorUrl, setLocalEditorUrl] = useState(editorUrl);
 
-  const handleEditorUrlBlur = () => {
+  const isDirty = localEditorUrl.trim() !== editorUrl;
+
+  const handleSave = () => {
     const trimmed = localEditorUrl.trim();
     setLocalEditorUrl(trimmed);
-    if (trimmed !== editorUrl) {
-      setEditorUrl(trimmed);
-    }
+    setEditorUrl(trimmed);
+    toast.success('저장되었습니다.');
   };
 
   return (
@@ -202,9 +203,8 @@ const EditorTab = () => {
           placeholder="https://example.com:8080"
           value={localEditorUrl}
           onChange={(e) => setLocalEditorUrl(e.target.value)}
-          onBlur={handleEditorUrlBlur}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') handleEditorUrlBlur();
+            if (e.key === 'Enter') handleSave();
           }}
         />
         <p className="text-sm text-muted-foreground">
@@ -227,6 +227,12 @@ const EditorTab = () => {
           <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
           <p>tailscale serve --bg --https=8443 http://localhost:8080</p>
         </div>
+      </div>
+
+      <div className="flex justify-end">
+        <Button disabled={!isDirty} onClick={handleSave}>
+          저장
+        </Button>
       </div>
     </div>
   );
