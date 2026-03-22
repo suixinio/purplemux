@@ -173,6 +173,14 @@ const MobileTerminalPage = () => {
     layout.updateTabPanelType(currentPane.id, selectedTabId, nextType);
   }, [currentPane, selectedTabId, currentPanelType, layout]);
 
+  const handleCreateTab = useCallback(async () => {
+    if (!currentPane) return;
+    const newTab = await layout.createTabInPane(currentPane.id);
+    if (newTab) {
+      setSelectedTabId(newTab.id);
+    }
+  }, [currentPane, layout]);
+
   const handleCloseTab = useCallback(() => {
     if (!currentPane || !selectedTabId) return;
     layout.deleteTabInPane(currentPane.id, selectedTabId);
@@ -277,6 +285,7 @@ const MobileTerminalPage = () => {
             tabName={currentTabName}
             panelType={currentPanelType}
             onToggleClaude={handleToggleClaude}
+            onCreateTab={handleCreateTab}
             onClose={handleCloseTab}
           />
         )}

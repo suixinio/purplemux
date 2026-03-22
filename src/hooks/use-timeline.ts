@@ -140,6 +140,9 @@ const useTimeline = ({
     if (reason === 'session-ended') {
       setSessionStatus('none');
       setIsLoading(false);
+      setEntries([]);
+      setSessionSummary(undefined);
+      setHasMore(false);
       return;
     }
     setSessionId(newSessionId || null);

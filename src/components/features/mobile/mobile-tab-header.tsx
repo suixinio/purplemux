@@ -1,4 +1,4 @@
-import { X, BotMessageSquare, Terminal } from 'lucide-react';
+import { X, Plus, BotMessageSquare, Terminal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   AlertDialog,
@@ -17,6 +17,7 @@ interface IMobileTabHeaderProps {
   tabName: string;
   panelType: TPanelType;
   onToggleClaude: () => void;
+  onCreateTab: () => void;
   onClose: () => void;
 }
 
@@ -24,6 +25,7 @@ const MobileTabHeader = ({
   tabName,
   panelType,
   onToggleClaude,
+  onCreateTab,
   onClose,
 }: IMobileTabHeaderProps) => {
   const isClaudeCode = panelType === 'claude-code';
@@ -50,6 +52,14 @@ const MobileTabHeader = ({
           onClick={onToggleClaude}
         >
           CLAUDE
+        </button>
+
+        <button
+          className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+          onClick={onCreateTab}
+          aria-label="새 탭"
+        >
+          <Plus size={16} />
         </button>
 
         <AlertDialog>
