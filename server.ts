@@ -95,7 +95,7 @@ const start = async () => {
 
   server.listen(port, () => {
     console.log(`> Server listening at http://localhost:${port} as ${dev ? 'development' : process.env.NODE_ENV}`);
-    console.log(`> Auth password: ${credentials.password}`);
+    console.log(`> Auth password: ${credentials.password}${credentials.fixed ? ' (fixed)' : ''}`);
   });
 };
 

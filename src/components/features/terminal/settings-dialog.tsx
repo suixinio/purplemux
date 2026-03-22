@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
-import { Bot, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
+import { Bot, Code, Dices, Lock, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
+import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -14,7 +17,7 @@ import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
 
-type TSettingsTab = 'general' | 'terminal' | 'claude' | 'quick-prompts';
+type TSettingsTab = 'general' | 'terminal' | 'editor' | 'claude' | 'auth' | 'quick-prompts';
 
 interface ISettingsItem {
   id: TSettingsTab;
@@ -34,9 +37,19 @@ const settingsItems: ISettingsItem[] = [
     icon: <Terminal className="h-4 w-4" />,
   },
   {
+    id: 'editor',
+    label: '에디터',
+    icon: <Code className="h-4 w-4" />,
+  },
+  {
     id: 'claude',
     label: 'Claude',
     icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    id: 'auth',
+    label: '인증',
+    icon: <Lock className="h-4 w-4" />,
   },
   {
     id: 'quick-prompts',
@@ -49,7 +62,7 @@ const GeneralTab = () => {
   const { theme, setTheme } = useTheme();
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm font-medium">테마</p>
@@ -69,6 +82,22 @@ const GeneralTab = () => {
             시스템
           </Button>
         </ButtonGroup>
+      </div>
+
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">설치 및 실행</p>
+          <p className="text-sm text-muted-foreground">앱 설치, 빌드, 실행 방법입니다.</p>
+        </div>
+        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground/60"># 설치 및 빌드</p>
+          <p>pnpm install</p>
+          <p>pnpm build</p>
+          <p className="mt-2 text-muted-foreground/60"># 실행</p>
+          <p>pnpm start</p>
+          <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
+          <p>tailscale serve --bg --https=443 http://localhost:3000</p>
+        </div>
       </div>
     </div>
   );
@@ -147,6 +176,62 @@ const TerminalTab = () => {
   );
 };
 
+const EditorTab = () => {
+  const editorUrl = useWorkspaceStore((state) => state.editorUrl);
+  const setEditorUrl = useWorkspaceStore((state) => state.setEditorUrl);
+  const [localEditorUrl, setLocalEditorUrl] = useState(editorUrl);
+
+  const handleEditorUrlBlur = () => {
+    const trimmed = localEditorUrl.trim();
+    setLocalEditorUrl(trimmed);
+    if (trimmed !== editorUrl) {
+      setEditorUrl(trimmed);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <div>
+          <p className="text-sm font-medium">에디터 URL</p>
+          <p className="text-sm text-muted-foreground">
+            헤더의 EDITOR 버튼 클릭 시 이동할 에디터 주소를 입력합니다.
+          </p>
+        </div>
+        <Input
+          placeholder="https://example.com:8080"
+          value={localEditorUrl}
+          onChange={(e) => setLocalEditorUrl(e.target.value)}
+          onBlur={handleEditorUrlBlur}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleEditorUrlBlur();
+          }}
+        />
+        <p className="text-sm text-muted-foreground">
+          <a
+            href="https://github.com/coder/code-server"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline hover:text-foreground"
+          >
+            code-server
+          </a>
+          를 설치하고 실행하면 브라우저에서 VS Code를 사용할 수 있습니다.
+          URL에 <code className="rounded bg-muted px-1 py-0.5 text-xs">?folder=</code> 파라미터가 자동으로 추가됩니다.
+        </p>
+        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground/60"># macOS 설치</p>
+          <p>brew install code-server</p>
+          <p className="mt-2 text-muted-foreground/60"># 실행</p>
+          <p>code-server --port 8080</p>
+          <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
+          <p>tailscale serve --bg --https=8443 http://localhost:8080</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ClaudeTab = () => {
   const { dangerouslySkipPermissions, setDangerouslySkipPermissions } = useWorkspaceStore();
 
@@ -166,6 +251,73 @@ const ClaudeTab = () => {
           checked={dangerouslySkipPermissions}
           onCheckedChange={setDangerouslySkipPermissions}
         />
+      </div>
+    </div>
+  );
+};
+
+const randomHex = (length: number): string => {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+};
+
+const AuthTab = () => {
+  const authPassword = useWorkspaceStore((state) => state.authPassword);
+  const authToken = useWorkspaceStore((state) => state.authToken);
+  const setAuthCredentials = useWorkspaceStore((state) => state.setAuthCredentials);
+  const [localPassword, setLocalPassword] = useState(authPassword);
+  const [localToken, setLocalToken] = useState(authToken);
+
+  const isDirty = localPassword.trim() !== authPassword || localToken.trim() !== authToken;
+
+  const handleSave = () => {
+    setAuthCredentials(localPassword.trim(), localToken.trim());
+    toast.success('저장되었습니다. 서버 재시작 후 적용됩니다.');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Field>
+        <FieldLabel htmlFor="auth-password">비밀번호</FieldLabel>
+        <FieldDescription>로그인 시 사용할 비밀번호입니다.</FieldDescription>
+        <div className="flex gap-2">
+          <Input
+            id="auth-password"
+            placeholder="비워두면 랜덤 생성"
+            value={localPassword}
+            onChange={(e) => setLocalPassword(e.target.value)}
+          />
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalPassword(randomHex(8))}>
+            <Dices className="h-4 w-4" />
+          </Button>
+        </div>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="auth-token">토큰</FieldLabel>
+        <FieldDescription>세션 인증에 사용되는 토큰입니다.</FieldDescription>
+        <div className="flex gap-2">
+          <Input
+            id="auth-token"
+            placeholder="비워두면 랜덤 생성"
+            value={localToken}
+            onChange={(e) => setLocalToken(e.target.value)}
+          />
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalToken(randomHex(32))}>
+            <Dices className="h-4 w-4" />
+          </Button>
+        </div>
+      </Field>
+
+      <FieldDescription>
+        두 값 모두 입력해야 고정됩니다. 비워두면 서버 시작 시 매번 랜덤 생성됩니다.
+      </FieldDescription>
+
+      <div className="flex justify-end">
+        <Button disabled={!isDirty} onClick={handleSave}>
+          저장
+        </Button>
       </div>
     </div>
   );
@@ -225,7 +377,9 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             <h2 className="mb-6 text-lg font-semibold">{activeItem?.label}</h2>
             {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'terminal' && <TerminalTab />}
+            {activeTab === 'editor' && <EditorTab />}
             {activeTab === 'claude' && <ClaudeTab />}
+            {activeTab === 'auth' && <AuthTab />}
             {activeTab === 'quick-prompts' && <QuickPromptsSettings />}
           </div>
         </div>

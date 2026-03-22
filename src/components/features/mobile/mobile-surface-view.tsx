@@ -10,7 +10,7 @@ import TerminalContainer from '@/components/features/terminal/terminal-container
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
 import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
-import { isAppShortcut, isClearShortcut, isFocusInputShortcut } from '@/lib/keyboard-shortcuts';
+import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
@@ -123,6 +123,11 @@ const MobileSurfaceView = ({
       event.preventDefault();
       if (isClearShortcut(event)) clearRef.current();
       if (isFocusInputShortcut(event)) focusInputRef.current?.();
+      return false;
+    }
+    if (isShiftEnter(event)) {
+      event.preventDefault();
+      wsActionsRef.current.sendStdin('\n');
       return false;
     }
     return true;

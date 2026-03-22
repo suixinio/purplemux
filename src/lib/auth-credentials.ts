@@ -9,18 +9,44 @@ interface IAuthCredentials {
   parentPid: number;
 }
 
-const CREDENTIALS_PATH = path.join(os.homedir(), '.purple-terminal', '.auth-credentials');
+const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
+const CREDENTIALS_PATH = path.join(BASE_DIR, '.auth-credentials');
+const WORKSPACES_FILE = path.join(BASE_DIR, 'workspaces.json');
 
 const generateRandomString = (length: number): string =>
   crypto.randomBytes(length).toString('hex').slice(0, length);
 
-export const initAuthCredentials = (): IAuthCredentials => {
+const readFixedAuth = (): { password: string; token: string } | null => {
+  // 1. 환경변수 우선
+  if (process.env.AUTH_PASSWORD && process.env.AUTH_TOKEN) {
+    return { password: process.env.AUTH_PASSWORD, token: process.env.AUTH_TOKEN };
+  }
+
+  // 2. workspaces.json에 저장된 고정 인증 정보
+  try {
+    const data = JSON.parse(fs.readFileSync(WORKSPACES_FILE, 'utf-8'));
+    if (data.authPassword && data.authToken) {
+      return { password: data.authPassword, token: data.authToken };
+    }
+  } catch {
+    // ignore
+  }
+
+  return null;
+};
+
+export const initAuthCredentials = (): IAuthCredentials & { fixed: boolean } => {
+  const fixed = readFixedAuth();
+  if (fixed) {
+    return { ...fixed, parentPid: process.ppid, fixed: true };
+  }
+
   const parentPid = process.ppid;
 
   try {
     const existing: IAuthCredentials = JSON.parse(fs.readFileSync(CREDENTIALS_PATH, 'utf-8'));
     if (existing.parentPid === parentPid) {
-      return existing;
+      return { ...existing, fixed: false };
     }
   } catch {
     // ignore
@@ -32,11 +58,10 @@ export const initAuthCredentials = (): IAuthCredentials => {
     parentPid,
   };
 
-  const dir = path.dirname(CREDENTIALS_PATH);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+  if (!fs.existsSync(BASE_DIR)) {
+    fs.mkdirSync(BASE_DIR, { recursive: true });
   }
 
   fs.writeFileSync(CREDENTIALS_PATH, JSON.stringify(credentials));
-  return credentials;
+  return { ...credentials, fixed: false };
 };

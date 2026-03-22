@@ -58,5 +58,8 @@ export interface IWorkspacesData {
   sidebarWidth: number;
   terminalTheme?: { light: string; dark: string };
   dangerouslySkipPermissions?: boolean;
+  editorUrl?: string;
+  authPassword?: string;
+  authToken?: string;
   updatedAt: string;
 }
