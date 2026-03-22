@@ -66,7 +66,7 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
   if (tabEntries.length === 0) return null;
 
   return (
-    <span className="mt-1 flex h-3 items-center gap-0.5" aria-label="탭 상태">
+    <span className="flex h-3 items-center gap-0.5" aria-label="탭 상태">
       {tabEntries.map(({ tabId, status }) => (
         <DotByStatus key={tabId} status={status} />
       ))}

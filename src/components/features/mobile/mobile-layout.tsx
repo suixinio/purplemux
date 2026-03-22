@@ -47,7 +47,7 @@ const MobileLayout = ({
     const fetchAll = async () => {
       const toFetch = workspaces.filter((ws) => {
         if (ws.id === storeWorkspaceId && storeLayout) return false;
-        return !layoutCache[ws.id];
+        return true;
       });
       if (toFetch.length === 0) return;
 
