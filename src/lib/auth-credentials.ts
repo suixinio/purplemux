@@ -15,6 +15,13 @@ const generateRandomString = (length: number): string =>
   crypto.randomBytes(length).toString('hex').slice(0, length);
 
 export const initAuthCredentials = (): IAuthCredentials => {
+  const envPassword = process.env.AUTH_PASSWORD;
+  const envToken = process.env.AUTH_TOKEN;
+
+  if (envPassword && envToken) {
+    return { password: envPassword, token: envToken, parentPid: process.ppid };
+  }
+
   const parentPid = process.ppid;
 
   try {

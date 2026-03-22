@@ -2,7 +2,7 @@
 page: tab-indicator
 title: 탭 바 상태 인디케이터
 route: /
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md

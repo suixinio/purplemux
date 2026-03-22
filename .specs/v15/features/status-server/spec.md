@@ -2,7 +2,7 @@
 page: status-server
 title: 서버 상태 감시 + 멀티 클라이언트 동기화
 route: /api/status
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STYLE.md

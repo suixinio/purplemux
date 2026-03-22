@@ -25,6 +25,7 @@ const parseCookies = (cookieHeader: string | undefined): Record<string, string> 
 };
 
 const start = async () => {
+  const isFixedAuth = !!(process.env.AUTH_PASSWORD && process.env.AUTH_TOKEN);
   const credentials = initAuthCredentials();
   process.env.AUTH_PASSWORD = credentials.password;
   process.env.AUTH_TOKEN = credentials.token;
@@ -95,7 +96,7 @@ const start = async () => {
 
   server.listen(port, () => {
     console.log(`> Server listening at http://localhost:${port} as ${dev ? 'development' : process.env.NODE_ENV}`);
-    console.log(`> Auth password: ${credentials.password}`);
+    console.log(`> Auth password: ${credentials.password}${isFixedAuth ? ' (env)' : ''}`);
   });
 };
 

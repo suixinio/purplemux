@@ -2,7 +2,7 @@
 page: global-status
 title: 글로벌 상태 요약 + 브라우저 탭 title
 route: /
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md

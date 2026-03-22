@@ -89,7 +89,7 @@ const GeneralTab = () => {
           <p className="mt-2 text-muted-foreground/60"># 실행</p>
           <p>pnpm start</p>
           <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
-          <p>tailscale serve --bg http://localhost:3000</p>
+          <p>tailscale serve --bg --https=443 http://localhost:3000</p>
         </div>
       </div>
     </div>
@@ -218,7 +218,7 @@ const EditorTab = () => {
           <p className="mt-2 text-muted-foreground/60"># 실행</p>
           <p>code-server --port 8080</p>
           <p className="mt-2 text-muted-foreground/60"># Tailscale로 외부 접속 (선택)</p>
-          <p>tailscale serve --bg http://localhost:8080</p>
+          <p>tailscale serve --bg --https=8443 http://localhost:8080</p>
         </div>
       </div>
     </div>

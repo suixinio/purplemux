@@ -2,7 +2,7 @@
 page: sidebar-indicator
 title: 사이드바 Workspace 상태 인디케이터
 route: /
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md
