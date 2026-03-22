@@ -1,4 +1,5 @@
 import { Loader2 } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import useClaudeStatusStore, { getWorkspaceStatus } from '@/hooks/use-claude-status-store';
 
 interface IWorkspaceStatusIndicatorProps {
@@ -7,7 +8,7 @@ interface IWorkspaceStatusIndicatorProps {
 
 const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProps) => {
   const { busyCount, attentionCount } = useClaudeStatusStore(
-    (state) => getWorkspaceStatus(state.tabs, workspaceId),
+    useShallow((state) => getWorkspaceStatus(state.tabs, workspaceId)),
   );
 
   if (busyCount === 0 && attentionCount === 0) return null;
@@ -15,14 +16,12 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
   return (
     <span className="ml-auto flex shrink-0 items-center gap-1.5">
       {busyCount > 0 && (
-        <>
+        <span role="status" aria-label="처리 중">
           <Loader2
             className="h-3.5 w-3.5 animate-spin text-muted-foreground"
-            role="status"
             aria-hidden="true"
           />
-          <span className="sr-only">처리 중</span>
-        </>
+        </span>
       )}
       {attentionCount > 0 && (
         <span

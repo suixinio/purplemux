@@ -20,6 +20,7 @@ import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
+import WorkspaceStatusIndicator from '@/components/features/terminal/workspace-status-indicator';
 
 interface IMobileNavigationSheetProps {
   open: boolean;
@@ -209,6 +210,7 @@ const MobileNavigationSheet = ({
                     />
                   )}
                   <span className="truncate">{ws.name}</span>
+                  <WorkspaceStatusIndicator workspaceId={ws.id} />
                 </button>
 
                 {isExpanded && renderPaneTree(ws.id)}
