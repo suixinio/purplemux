@@ -428,13 +428,13 @@ const PaneContainer = ({
     if (status !== 'connected') return;
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
-    sendStdin(`${cmd}\n`);
+    sendStdin(`${cmd}\r`);
   }, [status, sendStdin]);
 
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
     pendingRestartRef.current = true;
-    sendStdin('/exit\n');
+    sendStdin('/exit\r');
   }, [status, sendStdin]);
 
   useEffect(() => {
@@ -443,7 +443,7 @@ const PaneContainer = ({
     if (status !== 'connected') return;
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
-    sendStdin(`${cmd}\n`);
+    sendStdin(`${cmd}\r`);
   }, [isClaudeRunning, status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);

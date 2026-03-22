@@ -15,7 +15,7 @@ const MobileTabIndicator = ({
 
   return (
     <div
-      className="flex h-6 shrink-0 items-center justify-center gap-1.5 border-t bg-background"
+      className="flex h-10 shrink-0 items-center justify-center gap-1.5 border-t bg-background"
       style={{ borderTopWidth: '0.5px' }}
     >
       {Array.from({ length: count }, (_, i) => (
