@@ -15,8 +15,8 @@ import { isAllowedJsonlPath } from './path-validation';
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 90_000;
 const DEBOUNCE_MS = 50;
-const MAX_WATCHERS = 10;
-const MAX_CONNECTIONS = 30;
+const MAX_WATCHERS = 32;
+const MAX_CONNECTIONS = 32;
 const MAX_WATCHER_RETRIES = 3;
 const MAX_INIT_ENTRIES = 200;
 

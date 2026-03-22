@@ -6,18 +6,64 @@ import { detectActiveSession } from '@/lib/session-detection';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
 import type { ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage } from '@/types/status';
+import fs from 'fs/promises';
 
 const POLL_INTERVAL_SMALL = 5_000;
 const POLL_INTERVAL_MEDIUM = 8_000;
 const POLL_INTERVAL_LARGE = 15_000;
 const TAB_COUNT_MEDIUM = 11;
 const TAB_COUNT_LARGE = 21;
+const JSONL_TAIL_SIZE = 8192;
 
 const CLAUDE_COMMANDS = new Set(['claude']);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
 
 const isClaudeCommand = (cmd: string): boolean =>
   CLAUDE_COMMANDS.has(cmd) || VERSION_PATTERN.test(cmd);
+
+const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
+  try {
+    const handle = await fs.open(jsonlPath, 'r');
+    try {
+      const stat = await handle.stat();
+      if (stat.size === 0) return true;
+
+      const readSize = Math.min(stat.size, JSONL_TAIL_SIZE);
+      const buffer = Buffer.alloc(readSize);
+      await handle.read(buffer, 0, readSize, stat.size - readSize);
+
+      const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
+
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          const entry = JSON.parse(lines[i]);
+
+          if (entry.type === 'system' && entry.subtype === 'stop_hook_summary') {
+            return true;
+          }
+
+          if (entry.type === 'assistant') {
+            const stopReason = entry.message?.stop_reason;
+            if (!stopReason) return false;
+            return stopReason !== 'tool_use';
+          }
+
+          if (entry.type === 'user') {
+            return false;
+          }
+        } catch {
+          continue;
+        }
+      }
+
+      return false;
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return false;
+  }
+};
 
 const g = globalThis as unknown as { __ptStatusManager?: StatusManager };
 
@@ -61,15 +107,16 @@ class StatusManager {
 
   private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<TCliState> {
     if (!paneInfo) return 'inactive';
-
     if (!isClaudeCommand(paneInfo.command)) return 'inactive';
-
     if (!paneInfo.pid) return 'inactive';
 
     const session = await detectActiveSession(paneInfo.pid);
-    if (session.status === 'active') return 'busy';
+    if (session.status !== 'active') return 'idle';
 
-    return 'idle';
+    if (!session.jsonlPath) return 'idle';
+
+    const idle = await checkJsonlIdle(session.jsonlPath);
+    return idle ? 'idle' : 'busy';
   }
 
   private getPollingInterval(): number {
