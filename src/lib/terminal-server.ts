@@ -6,6 +6,7 @@ import {
   createSession,
   killSession,
   defaultSessionName,
+  exitCopyMode,
 } from './tmux';
 
 const MSG_STDIN = 0x00;
@@ -13,6 +14,7 @@ const MSG_STDOUT = 0x01;
 const MSG_RESIZE = 0x02;
 const MSG_HEARTBEAT = 0x03;
 const MSG_KILL_SESSION = 0x04;
+const MSG_WEB_STDIN = 0x05;
 
 const MAX_CONNECTIONS = 30;
 const HEARTBEAT_INTERVAL = 30_000;
@@ -156,6 +158,14 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
       case MSG_STDIN: {
         const decoder = new TextDecoder();
         ptyProcess.write(decoder.decode(msg.payload));
+        break;
+      }
+      case MSG_WEB_STDIN: {
+        const decoder = new TextDecoder();
+        const data = decoder.decode(msg.payload);
+        exitCopyMode(sessionName).finally(() => {
+          ptyProcess?.write(data);
+        });
         break;
       }
       case MSG_RESIZE: {

@@ -177,6 +177,7 @@ const MobileSurfaceView = ({
     connect,
     reconnect,
     sendStdin,
+    sendWebStdin,
     sendResize,
   } = useTerminalWebSocket({
     onData: (data) => termActionsRef.current.write(data),
@@ -289,7 +290,7 @@ const MobileSurfaceView = ({
         <MobileClaudeCodePanel
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
-          sendStdin={sendStdin}
+          sendStdin={sendWebStdin}
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
           focusInputRef={focusInputRef}

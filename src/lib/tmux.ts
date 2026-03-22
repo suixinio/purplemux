@@ -225,15 +225,19 @@ export const checkTerminalProcess = async (
   };
 };
 
-export const sendKeys = async (
-  sessionName: string,
-  command: string,
-): Promise<void> => {
+export const exitCopyMode = async (sessionName: string): Promise<void> => {
   await execFile(
     'tmux',
     ['-L', TMUX_SOCKET, 'copy-mode', '-q', '-t', sessionName],
     { timeout: CMD_TIMEOUT },
   ).catch(() => {});
+};
+
+export const sendKeys = async (
+  sessionName: string,
+  command: string,
+): Promise<void> => {
+  await exitCopyMode(sessionName);
   await execFile(
     'tmux',
     ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, command, 'Enter'],

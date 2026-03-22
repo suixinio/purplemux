@@ -3,6 +3,7 @@ export const MSG_STDOUT = 0x01;
 export const MSG_RESIZE = 0x02;
 export const MSG_HEARTBEAT = 0x03;
 export const MSG_KILL_SESSION = 0x04;
+export const MSG_WEB_STDIN = 0x05;
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
@@ -11,6 +12,14 @@ export const encodeStdin = (data: string): ArrayBuffer => {
   const payload = encoder.encode(data);
   const frame = new Uint8Array(1 + payload.length);
   frame[0] = MSG_STDIN;
+  frame.set(payload, 1);
+  return frame.buffer;
+};
+
+export const encodeWebStdin = (data: string): ArrayBuffer => {
+  const payload = encoder.encode(data);
+  const frame = new Uint8Array(1 + payload.length);
+  frame[0] = MSG_WEB_STDIN;
   frame.set(payload, 1);
   return frame.buffer;
 };

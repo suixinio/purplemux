@@ -5,6 +5,7 @@ import {
   MSG_STDOUT,
   MSG_HEARTBEAT,
   encodeStdin,
+  encodeWebStdin,
   encodeResize,
   encodeHeartbeat,
   decodeMessage,
@@ -182,6 +183,13 @@ const useTerminalWebSocket = ({
     }
   }, []);
 
+  const sendWebStdin = useCallback((data: string) => {
+    const ws = wsRef.current;
+    if (ws?.readyState === WebSocket.OPEN) {
+      ws.send(encodeWebStdin(data));
+    }
+  }, []);
+
   const sendResize = useCallback((cols: number, rows: number) => {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
@@ -208,6 +216,7 @@ const useTerminalWebSocket = ({
     disconnect,
     reconnect,
     sendStdin,
+    sendWebStdin,
     sendResize,
   };
 };

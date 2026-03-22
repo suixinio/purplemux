@@ -261,6 +261,7 @@ const PaneContainer = ({
     connect,
     reconnect,
     sendStdin,
+    sendWebStdin,
     sendResize,
   } = useTerminalWebSocket({
     onData: (data) => termActionsRef.current.write(data),
@@ -582,7 +583,7 @@ const PaneContainer = ({
               {isClaudeCode && (
                 <WebInputBar
                   cliState={claudeCliState}
-                  sendStdin={sendStdin}
+                  sendStdin={sendWebStdin}
                   terminalWsConnected={status === 'connected'}
                   visible={claudeInputVisible}
                   focusTerminal={focus}
