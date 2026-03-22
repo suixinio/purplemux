@@ -9,6 +9,7 @@ import type {
   ITimelineToolResult,
   ITimelineAgentGroup,
   ITimelineInterrupt,
+  ITimelineSessionExit,
   ITimelineTurnEnd,
   ITimelineDiff,
   IParseResult,
@@ -270,6 +271,13 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
     if (typeof content === 'string') {
       const commandName = extractCommandName(content);
       if (commandName) {
+        if (commandName === '/exit') {
+          return [{
+            id: nanoid(),
+            type: 'session-exit',
+            timestamp,
+          } satisfies ITimelineSessionExit];
+        }
         entries.push({
           id: nanoid(),
           type: 'user-message',

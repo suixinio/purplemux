@@ -550,6 +550,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
       if (newInfo.status === 'active' && !newInfo.jsonlPath) {
         for (const c of wsConns) {
+          if (c.currentJsonlPath) continue;
           sendJson(c.ws, {
             type: 'timeline:session-changed',
             newSessionId: newInfo.sessionId ?? '',
@@ -557,7 +558,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           });
         }
         if (newInfo.sessionId && newInfo.cwd) {
-          watchForJsonlFile(sessionName, newInfo.sessionId, newInfo.cwd);
+          const hasActiveSubscription = wsConns.some((c) => c.currentJsonlPath !== null);
+          if (!hasActiveSubscription) {
+            watchForJsonlFile(sessionName, newInfo.sessionId, newInfo.cwd);
+          }
         }
       }
     }, { skipInitial: true });

@@ -115,8 +115,16 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
       if (!data) continue;
       if (!childPidSet.has(data.pid)) continue;
 
-      const running = await isProcessRunning(data.pid);
-      if (!running) {
+      let processArgs = '';
+      try {
+        const { stdout } = await execFile('ps', ['-p', String(data.pid), '-o', 'args=']);
+        processArgs = stdout.trim();
+      } catch {
+        try { await fs.unlink(path.join(SESSIONS_DIR, file)); } catch {}
+        continue;
+      }
+
+      if (!processArgs.includes('claude')) {
         try { await fs.unlink(path.join(SESSIONS_DIR, file)); } catch {}
         continue;
       }
