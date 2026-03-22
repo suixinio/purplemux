@@ -2,7 +2,7 @@
 
 | feature | phase | priority | build | verify | updated |
 |---|---|---|---|---|---|
-| status-server | Phase 1 | P0 | ✅ | ⬜ | 2026-03-22 12:59 |
+| status-server | Phase 1 | P0 | ✅ | ✅ 3/true | 2026-03-22 13:17 |
 | tab-indicator | Phase 1 | P0 | ⬜ | ⬜ | |
 | sidebar-indicator | Phase 1 | P0 | ⬜ | ⬜ | |
 | global-status | Phase 1 | P1 | ⬜ | ⬜ | |
