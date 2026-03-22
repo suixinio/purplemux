@@ -109,6 +109,7 @@ const MobileSurfaceView = ({
 
   const [isClaudeRunning, setIsClaudeRunning] = useState(false);
   const pendingRestartRef = useRef(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
@@ -252,6 +253,7 @@ const MobileSurfaceView = ({
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
     pendingRestartRef.current = true;
+    setIsRestarting(true);
     sendStdin('/exit\r');
   }, [status, sendStdin]);
 
@@ -291,6 +293,8 @@ const MobileSurfaceView = ({
           onInputVisibleChange={handleInputVisibleChange}
           onRestartSession={handleRestartClaudeSession}
           onNewSession={handleNewClaudeSession}
+          isRestarting={isRestarting}
+          onRestartComplete={() => setIsRestarting(false)}
         />
       )}
 

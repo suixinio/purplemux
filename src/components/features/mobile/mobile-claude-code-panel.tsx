@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -33,6 +34,8 @@ interface IMobileClaudeCodePanelProps {
   onInputVisibleChange: (visible: boolean) => void;
   onRestartSession?: () => void;
   onNewSession?: () => void;
+  isRestarting?: boolean;
+  onRestartComplete?: () => void;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
@@ -49,6 +52,8 @@ const MobileClaudeCodePanel = ({
   onInputVisibleChange,
   onRestartSession,
   onNewSession,
+  isRestarting,
+  onRestartComplete,
 }: IMobileClaudeCodePanelProps) => {
   const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
@@ -140,6 +145,12 @@ const MobileClaudeCodePanel = ({
     navigateToTimelineRef.current = navigateToTimeline;
   });
 
+  useEffect(() => {
+    if (isRestarting && sessionStatus === 'active') {
+      onRestartComplete?.();
+    }
+  }, [isRestarting, sessionStatus, onRestartComplete]);
+
   const isInputVisible = view === 'timeline';
 
   useEffect(() => {
@@ -163,6 +174,15 @@ const MobileClaudeCodePanel = ({
     },
     [resumingSessionId, sendResume, sessionName],
   );
+
+  if (isRestarting && view !== 'timeline') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <span className="mt-2 text-sm text-muted-foreground">새 대화 만드는중...</span>
+      </div>
+    );
+  }
 
   if (view === 'empty') {
     return (
