@@ -163,6 +163,7 @@ const PaneContainer = ({
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
   const [isClaudeRunning, setIsClaudeRunning] = useState(false);
   const pendingRestartRef = useRef(false);
+  const [isRestarting, setIsRestarting] = useState(false);
 
   const { prompts: quickPrompts } = useQuickPrompts();
 
@@ -434,6 +435,7 @@ const PaneContainer = ({
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
     pendingRestartRef.current = true;
+    setIsRestarting(true);
     sendStdin('/exit\r');
   }, [status, sendStdin]);
 
@@ -568,6 +570,8 @@ const PaneContainer = ({
                   onInputVisibleChange={handleInputVisibleChange}
                   onClose={handleTogglePanelType}
                   onNewSession={handleNewClaudeSession}
+                  isRestarting={isRestarting}
+                  onRestartComplete={() => setIsRestarting(false)}
                 />
               )}
               {isClaudeCode && (

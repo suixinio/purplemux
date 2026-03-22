@@ -94,7 +94,11 @@ const WebInputBar = ({
 
   const handleSendClick = () => {
     send();
-    textareaRef.current?.focus();
+    if (isMobileDevice) {
+      textareaRef.current?.blur();
+    } else {
+      textareaRef.current?.focus();
+    }
   };
 
   const handleInterruptClick = () => {

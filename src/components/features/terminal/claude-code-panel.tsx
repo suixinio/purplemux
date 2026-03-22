@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
@@ -20,6 +21,8 @@ interface IClaudeCodePanelProps {
   onInputVisibleChange?: (visible: boolean) => void;
   onClose?: () => void;
   onNewSession?: () => void;
+  isRestarting?: boolean;
+  onRestartComplete?: () => void;
 }
 
 const ClaudeCodePanel = ({
@@ -32,6 +35,8 @@ const ClaudeCodePanel = ({
   onInputVisibleChange,
   onClose,
   onNewSession,
+  isRestarting,
+  onRestartComplete,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -119,6 +124,12 @@ const ClaudeCodePanel = ({
     navigateToTimelineRef.current = navigateToTimeline;
   });
 
+  useEffect(() => {
+    if (isRestarting && effectiveSessionStatus === 'active') {
+      onRestartComplete?.();
+    }
+  }, [isRestarting, effectiveSessionStatus, onRestartComplete]);
+
   const isInputVisible = view === 'timeline';
 
   const effectiveCliState = effectiveSessionStatus === 'none' && cliState !== 'inactive'
@@ -141,6 +152,15 @@ const ClaudeCodePanel = ({
     },
     [resumingSessionId, sendResume, sessionName],
   );
+
+  if (isRestarting && view !== 'timeline') {
+    return (
+      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        <span className="mt-2 text-sm text-muted-foreground">새 대화 만드는중...</span>
+      </div>
+    );
+  }
 
   if (view === 'empty') {
     return (
