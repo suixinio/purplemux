@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
-import { Bot, Code, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
+import { Bot, Code, Dices, Lock, Monitor, Moon, Settings, Sun, Terminal, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -15,7 +17,7 @@ import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
 
-type TSettingsTab = 'general' | 'terminal' | 'editor' | 'claude' | 'quick-prompts';
+type TSettingsTab = 'general' | 'terminal' | 'editor' | 'claude' | 'auth' | 'quick-prompts';
 
 interface ISettingsItem {
   id: TSettingsTab;
@@ -43,6 +45,11 @@ const settingsItems: ISettingsItem[] = [
     id: 'claude',
     label: 'Claude',
     icon: <Bot className="h-4 w-4" />,
+  },
+  {
+    id: 'auth',
+    label: '인증',
+    icon: <Lock className="h-4 w-4" />,
   },
   {
     id: 'quick-prompts',
@@ -249,6 +256,73 @@ const ClaudeTab = () => {
   );
 };
 
+const randomHex = (length: number): string => {
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('').slice(0, length);
+};
+
+const AuthTab = () => {
+  const authPassword = useWorkspaceStore((state) => state.authPassword);
+  const authToken = useWorkspaceStore((state) => state.authToken);
+  const setAuthCredentials = useWorkspaceStore((state) => state.setAuthCredentials);
+  const [localPassword, setLocalPassword] = useState(authPassword);
+  const [localToken, setLocalToken] = useState(authToken);
+
+  const isDirty = localPassword.trim() !== authPassword || localToken.trim() !== authToken;
+
+  const handleSave = () => {
+    setAuthCredentials(localPassword.trim(), localToken.trim());
+    toast.success('저장되었습니다. 서버 재시작 후 적용됩니다.');
+  };
+
+  return (
+    <div className="space-y-6">
+      <Field>
+        <FieldLabel htmlFor="auth-password">비밀번호</FieldLabel>
+        <FieldDescription>로그인 시 사용할 비밀번호입니다.</FieldDescription>
+        <div className="flex gap-2">
+          <Input
+            id="auth-password"
+            placeholder="비워두면 랜덤 생성"
+            value={localPassword}
+            onChange={(e) => setLocalPassword(e.target.value)}
+          />
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalPassword(randomHex(8))}>
+            <Dices className="h-4 w-4" />
+          </Button>
+        </div>
+      </Field>
+
+      <Field>
+        <FieldLabel htmlFor="auth-token">토큰</FieldLabel>
+        <FieldDescription>세션 인증에 사용되는 토큰입니다.</FieldDescription>
+        <div className="flex gap-2">
+          <Input
+            id="auth-token"
+            placeholder="비워두면 랜덤 생성"
+            value={localToken}
+            onChange={(e) => setLocalToken(e.target.value)}
+          />
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalToken(randomHex(32))}>
+            <Dices className="h-4 w-4" />
+          </Button>
+        </div>
+      </Field>
+
+      <FieldDescription>
+        두 값 모두 입력해야 고정됩니다. 비워두면 서버 시작 시 매번 랜덤 생성됩니다.
+      </FieldDescription>
+
+      <div className="flex justify-end">
+        <Button disabled={!isDirty} onClick={handleSave}>
+          저장
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 interface ISettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -305,6 +379,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             {activeTab === 'terminal' && <TerminalTab />}
             {activeTab === 'editor' && <EditorTab />}
             {activeTab === 'claude' && <ClaudeTab />}
+            {activeTab === 'auth' && <AuthTab />}
             {activeTab === 'quick-prompts' && <QuickPromptsSettings />}
           </div>
         </div>
