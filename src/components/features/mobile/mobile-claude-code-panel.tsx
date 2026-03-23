@@ -85,8 +85,6 @@ const MobileClaudeCodePanel = ({
     sessionSummary,
     sessionStatus,
     wsStatus,
-    isAutoScrollEnabled,
-    setAutoScrollEnabled,
     isLoading: isTimelineLoading,
     isSessionTransitioning,
     error: timelineError,
@@ -236,8 +234,6 @@ const MobileClaudeCodePanel = ({
           isLoading={isTimelineLoading}
           isSessionTransitioning={isSessionTransitioning}
           error={timelineError}
-          isAutoScrollEnabled={isAutoScrollEnabled}
-          onAutoScrollChange={setAutoScrollEnabled}
           onRetry={retrySession}
           onLoadMore={loadMoreTimeline}
           hasMore={timelineHasMore}

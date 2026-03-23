@@ -13,12 +13,11 @@ const ScrollToBottomButton = ({ visible, onClick }: IScrollToBottomButtonProps) 
     <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2">
       <Button
         variant="outline"
-        size="xs"
-        className="rounded-full"
+        size="icon"
+        className="h-8 w-8 rounded-full"
         onClick={onClick}
       >
-        <ArrowDown size={12} />
-        최신으로 이동
+        <ArrowDown size={14} />
       </Button>
     </div>
   );

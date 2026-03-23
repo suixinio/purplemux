@@ -48,8 +48,6 @@ interface IUseTimelineReturn {
   sessionSummary: string | undefined;
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
-  isAutoScrollEnabled: boolean;
-  setAutoScrollEnabled: (enabled: boolean) => void;
   isLoading: boolean;
   isSessionTransitioning: boolean;
   error: string | null;
@@ -67,7 +65,6 @@ const useTimeline = ({
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
   const [sessionStatus, setSessionStatus] = useState<TSessionStatus>('none');
-  const [isAutoScrollEnabled, setAutoScrollEnabled] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -159,7 +156,6 @@ const useTimeline = ({
       setHasMore(false);
       setIsLoading(true);
     }
-    setAutoScrollEnabled(true);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -255,8 +251,6 @@ const useTimeline = ({
     sessionSummary,
     sessionStatus,
     wsStatus,
-    isAutoScrollEnabled,
-    setAutoScrollEnabled,
     isLoading,
     isSessionTransitioning: false,
     error,

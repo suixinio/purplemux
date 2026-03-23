@@ -1,5 +1,6 @@
-import { useRef, useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo } from 'react';
 import { Terminal, RefreshCw, Loader2, OctagonX, LogOut } from 'lucide-react';
+import { useStickToBottom } from 'use-stick-to-bottom';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type {
@@ -26,14 +27,10 @@ interface ITimelineViewProps {
   isLoading: boolean;
   isSessionTransitioning: boolean;
   error: string | null;
-  isAutoScrollEnabled: boolean;
-  onAutoScrollChange: (enabled: boolean) => void;
   onRetry: () => void;
   onLoadMore: () => Promise<void>;
   hasMore: boolean;
 }
-
-const SCROLL_THRESHOLD = 10;
 
 const ElapsedTime = ({ since }: { since: number }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -213,107 +210,36 @@ const TimelineView = ({
   isLoading,
   isSessionTransitioning,
   error,
-  isAutoScrollEnabled,
-  onAutoScrollChange,
   onRetry,
   onLoadMore,
   hasMore,
 }: ITimelineViewProps) => {
-  const parentRef = useRef<HTMLDivElement>(null);
-  const [showScrollButton, setShowScrollButton] = useState(false);
-  const isUserScrollingRef = useRef(false);
-  const prevEntryCountRef = useRef(entries.length);
-  const isInitialLoadRef = useRef(true);
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
+    resize: { damping: 0.8, stiffness: 0.05 },
+    initial: 'instant',
+  });
   const [skipAnimation, setSkipAnimation] = useState(true);
 
   const groupedItems = useMemo(() => groupTimelineEntries(entries), [entries]);
   const hasDisplayItems = groupedItems.length > 0;
 
-  const scrollToBottom = useCallback((behavior: ScrollBehavior = 'smooth') => {
-    const el = parentRef.current;
-    if (!el) return;
-    el.scrollTo({ top: el.scrollHeight, behavior });
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    const el = parentRef.current;
-    if (!el) return;
-
-    const isAtBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_THRESHOLD;
-
-    if (isAtBottom) {
-      if (!isAutoScrollEnabled) {
-        onAutoScrollChange(true);
-      }
-      setShowScrollButton(false);
-    } else {
-      if (isAutoScrollEnabled && isUserScrollingRef.current) {
-        onAutoScrollChange(false);
-        setShowScrollButton(true);
-      }
-    }
-  }, [isAutoScrollEnabled, onAutoScrollChange]);
-
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) return;
-
-    const onWheel = () => { isUserScrollingRef.current = true; };
-    const onTouchStart = () => { isUserScrollingRef.current = true; };
-    const onScrollEnd = () => {
-      setTimeout(() => { isUserScrollingRef.current = false; }, 100);
-    };
-
-    el.addEventListener('wheel', onWheel, { passive: true });
-    el.addEventListener('touchstart', onTouchStart, { passive: true });
-    el.addEventListener('scrollend', onScrollEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('wheel', onWheel);
-      el.removeEventListener('touchstart', onTouchStart);
-      el.removeEventListener('scrollend', onScrollEnd);
-    };
-  }, []);
-
-  useEffect(() => {
-    const prevCount = prevEntryCountRef.current;
-    if (entries.length > prevCount) {
-      if (isAutoScrollEnabled) {
-        const behavior = isInitialLoadRef.current ? 'instant' : 'smooth';
-        isInitialLoadRef.current = false;
-        requestAnimationFrame(() => scrollToBottom(behavior));
-      }
-    }
-    prevEntryCountRef.current = entries.length;
-  }, [entries.length, isAutoScrollEnabled, scrollToBottom]);
-
   useEffect(() => {
     setSkipAnimation(true);
-    isInitialLoadRef.current = true;
   }, [sessionId]);
 
   useEffect(() => {
     if (skipAnimation && entries.length > 0) {
-      scrollToBottom('instant');
-      isInitialLoadRef.current = false;
-      prevEntryCountRef.current = entries.length;
-      requestAnimationFrame(() => setSkipAnimation(false));
+      Promise.resolve(scrollToBottom('instant')).then(() => setSkipAnimation(false));
     }
   }, [skipAnimation, entries.length, scrollToBottom]);
 
-  const handleScrollToBottomClick = useCallback(() => {
-    scrollToBottom('smooth');
-    onAutoScrollChange(true);
-    setShowScrollButton(false);
-  }, [scrollToBottom, onAutoScrollChange]);
-
-  const handleScrollForLoadMore = useCallback(() => {
-    const el = parentRef.current;
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
     if (!el || !hasMore) return;
     if (el.scrollTop < 100) {
       onLoadMore();
     }
-  }, [hasMore, onLoadMore]);
+  }, [scrollRef, hasMore, onLoadMore]);
 
   if (isLoading) {
     return <SkeletonLoader sessionId={sessionId} />;
@@ -333,7 +259,7 @@ const TimelineView = ({
   return (
     <div className="relative flex h-full flex-col">
       <div
-        ref={parentRef}
+        ref={scrollRef}
         className={cn(
           'flex-1 overflow-y-auto py-2 transition-opacity',
           skipAnimation && '[&_.animate-in]:!duration-0',
@@ -342,35 +268,34 @@ const TimelineView = ({
           opacity: isSessionTransitioning ? 0 : 1,
           transitionDuration: isSessionTransitioning ? '100ms' : '150ms',
         }}
-        onScroll={() => {
-          handleScroll();
-          handleScrollForLoadMore();
-        }}
+        onScroll={handleScroll}
         tabIndex={0}
         role="log"
         aria-label="Claude Code 타임라인"
       >
-        {groupedItems.map((item) => (
-          <div key={item.id} className="px-4 py-1.5">
-            {item.type === 'tool-group' ? (
-              <ToolGroupItem toolCalls={item.toolCalls} toolResults={item.toolResults} />
-            ) : (
-              <TimelineEntryRenderer entry={item.entry} />
-            )}
-          </div>
-        ))}
-        {cliState === 'busy' && (
-          <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
-            <Loader2 size={12} className="animate-spin text-ui-purple" />
-            <ElapsedTime since={entries[entries.length - 1].timestamp} />
-          </div>
-        )}
+        <div ref={contentRef}>
+          {groupedItems.map((item) => (
+            <div key={item.id} className="px-4 py-1.5">
+              {item.type === 'tool-group' ? (
+                <ToolGroupItem toolCalls={item.toolCalls} toolResults={item.toolResults} />
+              ) : (
+                <TimelineEntryRenderer entry={item.entry} />
+              )}
+            </div>
+          ))}
+          {cliState === 'busy' && (
+            <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
+              <Loader2 size={12} className="animate-spin text-ui-purple" />
+              <ElapsedTime since={entries[entries.length - 1].timestamp} />
+            </div>
+          )}
+        </div>
       </div>
       {isReconnecting && <ReconnectBanner />}
       {isDisconnected && <DisconnectedBanner onRetry={onRetry} />}
       <ScrollToBottomButton
-        visible={showScrollButton}
-        onClick={handleScrollToBottomClick}
+        visible={!isAtBottom}
+        onClick={() => scrollToBottom('smooth')}
       />
     </div>
   );
