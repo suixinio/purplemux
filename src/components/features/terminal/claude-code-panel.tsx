@@ -24,6 +24,7 @@ interface IClaudeCodePanelProps {
   isRestarting?: boolean;
   onRestartComplete?: () => void;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
+  isConnecting?: boolean;
 }
 
 const ClaudeCodePanel = ({
@@ -39,6 +40,7 @@ const ClaudeCodePanel = ({
   isRestarting,
   onRestartComplete,
   scrollToBottomRef,
+  isConnecting,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -152,6 +154,10 @@ const ClaudeCodePanel = ({
     },
     [resumingSessionId, sendResume, sessionName],
   );
+
+  if (isConnecting) {
+    return null;
+  }
 
   if (isRestarting && view !== 'timeline') {
     return (
