@@ -23,7 +23,7 @@ const DotByStatus = ({ status }: { status: TTabDisplayStatus }) => {
     return (
       <span className="flex h-3 w-3 items-center justify-center">
         <span
-          className="h-2 w-2 rounded-full bg-ui-purple"
+          className="h-2 w-2 rounded-full bg-ui-purple animate-pulse"
           aria-hidden="true"
         />
       </span>

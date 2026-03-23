@@ -94,7 +94,7 @@ const MobileWorkspaceTabBar = ({
               ) : status === 'busy' ? (
                 <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
               ) : status === 'needs-attention' ? (
-                <span className="h-2 w-2 rounded-full bg-ui-purple" />
+                <span className="h-2 w-2 rounded-full bg-ui-purple animate-pulse" />
               ) : (
                 <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
               )}

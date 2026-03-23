@@ -32,7 +32,7 @@ const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
         />
       ) : status === 'needs-attention' ? (
         <span
-          className="h-2 w-2 shrink-0 rounded-full bg-ui-purple"
+          className="h-2 w-2 shrink-0 rounded-full bg-ui-purple animate-pulse"
           aria-hidden="true"
         />
       ) : null}

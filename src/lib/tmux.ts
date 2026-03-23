@@ -47,7 +47,9 @@ export const createSession = async (
     {
       timeout: CMD_TIMEOUT,
       env: {
-        ...process.env,
+        ...Object.fromEntries(
+          Object.entries(process.env).filter(([key]) => !key.startsWith('npm_')),
+        ),
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
       },
