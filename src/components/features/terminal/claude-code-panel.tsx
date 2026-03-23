@@ -93,6 +93,17 @@ const ClaudeCodePanel = ({
     },
   });
 
+  const prevClaudeRunningRef = useRef(isClaudeRunning);
+
+  useEffect(() => {
+    const wasRunning = prevClaudeRunningRef.current;
+    prevClaudeRunningRef.current = isClaudeRunning;
+
+    if (!wasRunning && isClaudeRunning && sessionStatus !== 'active') {
+      retrySession();
+    }
+  }, [isClaudeRunning, sessionStatus, retrySession]);
+
   const effectiveSessionStatus = sessionStatus === 'active' && isClaudeRunning === false
     ? 'none' as const
     : sessionStatus;

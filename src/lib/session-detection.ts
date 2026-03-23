@@ -131,10 +131,24 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
 
       const projectName = toClaudeProjectName(data.cwd);
       const projectDir = path.join(PROJECTS_DIR, projectName);
-      const jsonlPath = await findJsonlPath(projectDir, data.sessionId);
+      let jsonlPath = await findJsonlPath(projectDir, data.sessionId);
+      let effectiveSessionId = data.sessionId;
+
+      if (!jsonlPath) {
+        const resumeMatch = processArgs.match(/--resume\s+([0-9a-f-]{36})/);
+        if (resumeMatch) {
+          const resumeSessionId = resumeMatch[1];
+          const resumeJsonlPath = await findJsonlPath(projectDir, resumeSessionId);
+          if (resumeJsonlPath) {
+            jsonlPath = resumeJsonlPath;
+            effectiveSessionId = resumeSessionId;
+          }
+        }
+      }
+
       return {
         status: 'active',
-        sessionId: data.sessionId,
+        sessionId: effectiveSessionId,
         jsonlPath,
         pid: data.pid,
         startedAt: data.startedAt,
