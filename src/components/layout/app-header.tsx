@@ -14,7 +14,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import GlobalStatusSummary from '@/components/features/terminal/global-status-summary';
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
@@ -40,8 +39,6 @@ const AppHeader = ({ onMenuOpen }: IAppHeaderProps) => {
         <Terminal className="h-4 w-4 text-ui-purple" />
         <span className="text-sm font-semibold text-ui-purple">PT</span>
       </div>
-
-      {!onMenuOpen && <GlobalStatusSummary />}
 
       <TooltipProvider>
         <div className="flex items-center gap-1">

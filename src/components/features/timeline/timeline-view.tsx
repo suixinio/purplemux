@@ -122,15 +122,8 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
   }
 };
 
-const SkeletonLoader = ({ sessionId }: { sessionId?: string | null }) => (
+const SkeletonLoader = () => (
   <div className="flex flex-col gap-4 p-4">
-    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-      <Loader2 size={12} className="animate-spin" />
-      <span>타임라인을 불러오는 중...</span>
-    </div>
-    {sessionId && (
-      <p className="text-xs text-muted-foreground/60">({sessionId})</p>
-    )}
     {[48, 36, 40].map((w, i) => (
       <div key={i} className="flex flex-col gap-2">
         <div className="h-4 animate-pulse rounded bg-ui-purple/20" style={{ width: `${w}%` }} />
@@ -255,7 +248,7 @@ const TimelineView = ({
   }, [scrollRef, hasMore, onLoadMore]);
 
   if (isLoading) {
-    return <SkeletonLoader sessionId={sessionId} />;
+    return <SkeletonLoader />;
   }
 
   if (error) {

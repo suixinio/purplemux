@@ -597,7 +597,7 @@ const PaneContainer = ({
             disabled={!isClaudeCode}
           >
             <div className={cn('flex h-full flex-col bg-card', isTerminalCollapsed && 'pb-3')}>
-              {isClaudeCode && activeTab && (
+              {isClaudeCode && activeTab && !showInitialLoading && (
                 <ClaudeCodePanel
                   sessionName={activeTab.sessionName}
                   claudeSessionId={activeTab.claudeSessionId}
@@ -612,7 +612,7 @@ const PaneContainer = ({
                   scrollToBottomRef={scrollToBottomRef}
                 />
               )}
-              {isClaudeCode && (
+              {isClaudeCode && !showInitialLoading && (
                 <WebInputBar
                   tabId={activeTabId ?? undefined}
                   cliState={claudeCliState}
@@ -626,7 +626,7 @@ const PaneContainer = ({
                   onSend={handleScrollToBottom}
                 />
               )}
-              {isClaudeCode && (
+              {isClaudeCode && !showInitialLoading && (
                 <QuickPromptBar
                   prompts={quickPrompts}
                   cliState={claudeCliState}
