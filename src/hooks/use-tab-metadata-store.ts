@@ -29,19 +29,28 @@ const scheduleSyncToLayout = () => {
   _syncTimer = setTimeout(() => {
     _syncTimer = null;
     const { metadata } = useTabMetadataStore.getState();
+    const layout = useLayoutStore.getState().layout;
+    const wsId = useLayoutStore.getState().workspaceId;
+    if (!layout || !wsId) return;
 
-    useLayoutStore.getState().updateAndSave((data) => {
-      for (const pane of collectPanes(data.root)) {
-        for (const tab of pane.tabs) {
-          const meta = metadata[tab.id];
-          if (!meta) continue;
-          if (meta.title !== undefined) tab.title = meta.title;
-          if (meta.cwd !== undefined) tab.cwd = meta.cwd;
-          if (meta.lastCommand !== undefined) tab.lastCommand = meta.lastCommand;
+    const wsParam = `?workspace=${wsId}`;
+    for (const pane of collectPanes(layout.root)) {
+      for (const tab of pane.tabs) {
+        const meta = metadata[tab.id];
+        if (!meta) continue;
+        const patch: Record<string, string | undefined> = {};
+        if (meta.title !== undefined && meta.title !== tab.title) patch.title = meta.title;
+        if (meta.cwd !== undefined && meta.cwd !== tab.cwd) patch.cwd = meta.cwd;
+        if (meta.lastCommand !== undefined && meta.lastCommand !== tab.lastCommand) patch.lastCommand = meta.lastCommand;
+        if (Object.keys(patch).length > 0) {
+          fetch(`/api/layout/pane/${pane.id}/tabs/${tab.id}${wsParam}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch),
+          }).catch(() => {});
         }
       }
-      return data;
-    });
+    }
 
     const cwds = [...new Set(
       Object.values(metadata)

@@ -130,8 +130,6 @@ const MobileTerminalPage = () => {
       if (workspaceId === currentId) return;
 
       prevWorkspaceIdRef.current = currentId;
-      layout.saveCurrentLayout();
-
       useTabMetadataStore.getState().reset();
       layout.clearLayout();
       setSelectedPaneId(null);

@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { createPane } from '@/lib/layout-store';
+import { createPane, splitPaneInLayout } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -14,7 +14,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   try {
-    const { cwd } = req.body ?? {};
+    const { sourcePaneId, orientation, cwd, panelType } = req.body ?? {};
+
+    if (sourcePaneId && orientation) {
+      const result = await splitPaneInLayout(wsId, sourcePaneId, orientation, cwd, panelType);
+      if (!result) {
+        return res.status(404).json({ error: '대상 Pane을 찾을 수 없습니다' });
+      }
+      return res.status(200).json(result);
+    }
+
     const result = await createPane(wsId, cwd);
     return res.status(200).json(result);
   } catch (err) {

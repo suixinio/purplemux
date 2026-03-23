@@ -92,7 +92,6 @@ const TerminalPage = () => {
       if (workspaceId === activeWorkspaceId) return;
 
       prevWorkspaceIdRef.current = activeWorkspaceId;
-      layout.saveCurrentLayout();
       useTabMetadataStore.getState().reset();
       layout.clearLayout();
       useWorkspaceStore.getState().switchWorkspace(workspaceId);

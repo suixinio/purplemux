@@ -75,7 +75,7 @@ const MobileLayout = ({
     };
     fetchAll();
     return () => { cancelled = true; };
-  }, [menuOpen, workspaces, storeWorkspaceId, storeLayout]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [menuOpen, workspaces, storeWorkspaceId, storeLayout]);
 
   const workspaceLayouts = useMemo(() => {
     const map: Record<string, IPaneNode[]> = {};
@@ -98,23 +98,20 @@ const MobileLayout = ({
 
   const handleSelectSurface = useCallback(
     async (workspaceId: string, paneId: string, tabId: string) => {
-      const cachedLayout = (workspaceId === storeWorkspaceId && storeLayout)
-        ? storeLayout
-        : layoutCache[workspaceId];
+      const wsParam = `?workspace=${workspaceId}`;
 
-      if (cachedLayout) {
-        const updated = JSON.parse(JSON.stringify(cachedLayout)) as ILayoutData;
-        updated.activePaneId = paneId;
-        const panes = collectPanes(updated.root);
-        const targetPane = panes.find((p) => p.id === paneId);
-        if (targetPane) targetPane.activeTabId = tabId;
+      // 서버에 activePaneId + activeTabId만 PATCH (root 전송 없음)
+      fetch(`/api/layout${wsParam}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activePaneId: paneId }),
+      }).catch(() => {});
 
-        fetch(`/api/layout?workspace=${workspaceId}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ root: updated.root, activePaneId: paneId }),
-        }).catch(() => {});
-      }
+      fetch(`/api/layout/pane/${paneId}${wsParam}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ activeTabId: tabId }),
+      }).catch(() => {});
 
       if (workspaceId !== activeWorkspaceId) {
         onSelectWorkspace(workspaceId);
@@ -125,7 +122,7 @@ const MobileLayout = ({
         router.push('/');
       }
     },
-    [activeWorkspaceId, onSelectWorkspace, router, storeLayout, storeWorkspaceId, layoutCache],
+    [activeWorkspaceId, onSelectWorkspace, router],
   );
 
   const handleCreateWorkspace = useCallback(async () => {

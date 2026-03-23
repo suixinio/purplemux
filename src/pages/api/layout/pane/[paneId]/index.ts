@@ -1,17 +1,38 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { deletePane } from '@/lib/layout-store';
+import { deletePane, patchPane, closePaneInLayout } from '@/lib/layout-store';
+import { getActiveWorkspaceId } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method !== 'DELETE') {
-    res.setHeader('Allow', 'DELETE');
-    return res.status(405).json({ error: 'Method not allowed' });
+  const wsId = (req.query.workspace as string) || await getActiveWorkspaceId();
+  const paneId = req.query.paneId as string;
+
+  if (req.method === 'DELETE') {
+    if (!wsId) {
+      const sessions: string[] = req.body?.sessions ?? [];
+      await deletePane(paneId, sessions);
+      return res.status(204).end();
+    }
+    const result = await closePaneInLayout(wsId, paneId);
+    if (!result) {
+      return res.status(404).json({ error: 'Pane을 찾을 수 없습니다' });
+    }
+    return res.status(200).json(result);
   }
 
-  const paneId = req.query.paneId as string;
-  const sessions: string[] = req.body?.sessions ?? [];
-  await deletePane(paneId, sessions);
+  if (req.method === 'PATCH') {
+    if (!wsId) {
+      return res.status(400).json({ error: 'Workspace가 없습니다' });
+    }
+    const { activeTabId } = req.body ?? {};
+    const result = await patchPane(wsId, paneId, { activeTabId });
+    if (!result) {
+      return res.status(404).json({ error: '대상을 찾을 수 없습니다' });
+    }
+    return res.status(200).json(result);
+  }
 
-  return res.status(204).end();
+  res.setHeader('Allow', 'DELETE, PATCH');
+  return res.status(405).json({ error: 'Method not allowed' });
 };
 
 export default handler;

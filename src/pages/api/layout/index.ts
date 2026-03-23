@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getLayout, updateLayout } from '@/lib/layout-store';
+import { getLayout, patchLayout } from '@/lib/layout-store';
 import { getActiveWorkspaceId, getWorkspaceById } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
@@ -19,20 +19,16 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
-  if (req.method === 'PUT') {
-    const { root, activePaneId } = req.body ?? {};
-    if (!root) {
-      return res.status(400).json({ error: 'root 필드 필수' });
-    }
-
-    const result = await updateLayout(wsId, root, activePaneId ?? null);
-    if ('error' in result) {
-      return res.status(400).json(result);
+  if (req.method === 'PATCH') {
+    const { activePaneId, ratioUpdate, equalize } = req.body ?? {};
+    const result = await patchLayout(wsId, { activePaneId, ratioUpdate, equalize });
+    if (!result) {
+      return res.status(404).json({ error: '대상을 찾을 수 없습니다' });
     }
     return res.status(200).json(result);
   }
 
-  res.setHeader('Allow', 'GET, PUT');
+  res.setHeader('Allow', 'GET, PATCH');
   return res.status(405).json({ error: 'Method not allowed' });
 };
 

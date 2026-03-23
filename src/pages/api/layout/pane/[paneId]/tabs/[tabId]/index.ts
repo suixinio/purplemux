@@ -1,7 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { removeTabFromPane, renameTabInPane, restartTabSession } from '@/lib/layout-store';
+import { removeTabFromPane, restartTabSession, patchTab } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
 import { getStatusManager } from '@/lib/status-manager';
+import type { ITab } from '@/types/terminal';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const wsId = (req.query.workspace as string) || await getActiveWorkspaceId();
@@ -35,16 +36,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'PATCH') {
-    const { name } = req.body ?? {};
-    if (!name || typeof name !== 'string' || !name.trim()) {
-      return res.status(400).json({ error: 'name 필드 필수' });
+    const { name, panelType, title, cwd, lastCommand } = req.body ?? {};
+
+    if (name !== undefined || panelType !== undefined || title !== undefined || cwd !== undefined || lastCommand !== undefined) {
+      const patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand'>> = {};
+      if (name !== undefined) {
+        if (typeof name !== 'string' || !name.trim()) {
+          return res.status(400).json({ error: 'name은 빈 문자열일 수 없습니다' });
+        }
+        patch.name = name.trim();
+      }
+      if (panelType !== undefined) patch.panelType = panelType;
+      if (title !== undefined) patch.title = title;
+      if (cwd !== undefined) patch.cwd = cwd;
+      if (lastCommand !== undefined) patch.lastCommand = lastCommand;
+
+      const result = await patchTab(wsId, paneId, tabId, patch);
+      if (!result) {
+        return res.status(404).json({ error: '탭을 찾을 수 없습니다' });
+      }
+      return res.status(200).json(result);
     }
 
-    const tab = await renameTabInPane(wsId, paneId, tabId, name.trim());
-    if (!tab) {
-      return res.status(404).json({ error: '탭을 찾을 수 없습니다' });
-    }
-    return res.status(200).json(tab);
+    return res.status(400).json({ error: '수정할 필드가 없습니다' });
   }
 
   res.setHeader('Allow', 'POST, DELETE, PATCH');

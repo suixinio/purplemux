@@ -4,6 +4,15 @@ import os from 'os';
 import { nanoid } from 'nanoid';
 import { createSession, hasSession, killSession, workspaceSessionName } from '@/lib/tmux';
 import { broadcastSync } from '@/lib/sync-server';
+import {
+  collectPanes,
+  collectAllTabs,
+  findPane,
+  replacePane,
+  removePaneWithFocus,
+  updateRatioAtPath,
+  equalizeNode,
+} from '@/lib/layout-tree';
 import type { ITab, TLayoutNode, IPaneNode, ILayoutData } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 
@@ -107,13 +116,7 @@ export const clearLayoutCache = (wsId: string): void => {
   g.__ptLayoutContentCache!.delete(filePath);
 };
 
-export const collectPanes = (node: TLayoutNode): IPaneNode[] => {
-  if (node.type === 'pane') return [node];
-  return [...collectPanes(node.children[0]), ...collectPanes(node.children[1])];
-};
-
-export const collectAllTabs = (node: TLayoutNode): ITab[] =>
-  collectPanes(node).flatMap((p) => p.tabs);
+export { collectPanes, collectAllTabs, normalizeTree } from '@/lib/layout-tree';
 
 const syncWorkspaceDirectories = (wsId: string, root: TLayoutNode): void => {
   const cwds = [...new Set(
@@ -126,15 +129,6 @@ const syncWorkspaceDirectories = (wsId: string, root: TLayoutNode): void => {
       updateWorkspaceDirectories(wsId, cwds).catch(() => {});
     }).catch(() => {});
   }
-};
-
-export const normalizeTree = (node: TLayoutNode): TLayoutNode => {
-  if (node.type === 'pane') return node;
-  const left = normalizeTree(node.children[0]);
-  const right = normalizeTree(node.children[1]);
-  if (left.type === 'pane' && left.tabs.length === 0) return right;
-  if (right.type === 'pane' && right.tabs.length === 0) return left;
-  return { ...node, children: [left, right] };
 };
 
 export const crossCheckLayout = async (
@@ -203,47 +197,6 @@ export const createDefaultLayout = async (wsId: string, cwd: string): Promise<IL
   };
 };
 
-export interface ILayoutValidationError {
-  error: string;
-}
-
-const validateTree = (root: TLayoutNode, activePaneId: string | null): ILayoutValidationError | null => {
-  const paneIds = new Set<string>();
-  const tabIds = new Set<string>();
-  let paneCount = 0;
-
-  const walk = (node: TLayoutNode): string | null => {
-    if (node.type === 'split') {
-      if (!Array.isArray(node.children) || node.children.length !== 2) {
-        return 'split 노드는 2개 자식 필수';
-      }
-      return walk(node.children[0]) || walk(node.children[1]);
-    }
-
-    if (node.type === 'pane') {
-      paneCount++;
-      if (paneIds.has(node.id)) return '중복 Pane ID';
-      paneIds.add(node.id);
-      if (!Array.isArray(node.tabs)) return 'pane 노드에 tabs 필드 필수';
-      for (const tab of node.tabs) {
-        if (tabIds.has(tab.id)) return '중복 탭 ID';
-        tabIds.add(tab.id);
-      }
-      return null;
-    }
-
-    return '알 수 없는 노드 타입';
-  };
-
-  const err = walk(root);
-  if (err) return { error: err };
-  if (paneCount > 10) return { error: '최대 Pane 수(10개) 초과' };
-  if (activePaneId && !paneIds.has(activePaneId)) {
-    return { error: '유효하지 않은 activePaneId' };
-  }
-  return null;
-};
-
 export const getLayout = async (wsId: string, defaultCwd?: string): Promise<ILayoutData> =>
   withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
@@ -260,42 +213,6 @@ export const getLayout = async (wsId: string, defaultCwd?: string): Promise<ILay
     };
     await writeLayoutFile(layout, filePath);
     console.log(`[layout] 기본 레이아웃 생성 (workspace: ${wsId}, pane: ${pane.id})`);
-    return layout;
-  });
-
-export const updateLayout = async (
-  wsId: string,
-  root: TLayoutNode,
-  activePaneId: string | null,
-): Promise<ILayoutData | ILayoutValidationError> =>
-  withLock(async () => {
-    const validationError = validateTree(root, activePaneId);
-    if (validationError) return validationError;
-
-    const normalized = normalizeTree(root);
-    const filePath = resolveLayoutFile(wsId);
-    const existing = await readLayoutFile(filePath);
-    if (existing) {
-      const prevTabs = new Map(
-        collectAllTabs(existing.root).map((t) => [t.sessionName, t]),
-      );
-      for (const tab of collectAllTabs(normalized)) {
-        const prev = prevTabs.get(tab.sessionName);
-        if (prev) {
-          tab.claudeSessionId = prev.claudeSessionId;
-          tab.claudeSummary = prev.claudeSummary;
-          tab.cliState = prev.cliState;
-          tab.dismissed = prev.dismissed;
-        }
-      }
-    }
-    const layout: ILayoutData = {
-      root: normalized,
-      activePaneId,
-      updatedAt: new Date().toISOString(),
-    };
-    await writeLayoutFile(layout, filePath);
-    syncWorkspaceDirectories(wsId,normalized);
     return layout;
   });
 
@@ -325,7 +242,7 @@ export const deletePane = async (
   console.log(`[layout] pane 삭제: ${paneId} (세션 ${sessions.length}개 종료)`);
 };
 
-export const addTabToPane = async (wsId: string, paneId: string, name?: string, cwd?: string): Promise<ITab | null> =>
+export const addTabToPane = async (wsId: string, paneId: string, name?: string, cwd?: string, panelType?: string): Promise<ITab | null> =>
   withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
     const layout = await readLayoutFile(filePath);
@@ -340,7 +257,7 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
 
     const nextOrder = pane.tabs.length > 0 ? Math.max(...pane.tabs.map((t) => t.order)) + 1 : 0;
     const tabName = name?.trim() || nextTabName(pane.tabs);
-    const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}) };
+    const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}), ...(panelType ? { panelType: panelType as ITab['panelType'] } : {}) };
 
     pane.tabs.push(tab);
     pane.activeTabId = tabId;
@@ -532,3 +449,196 @@ const nextTabName = (tabs: ITab[]): string => {
   const max = existing.length > 0 ? Math.max(...existing) : 0;
   return `Terminal ${max + 1}`;
 };
+
+const mutate = async (
+  wsId: string,
+  fn: (layout: ILayoutData) => ILayoutData | null,
+): Promise<ILayoutData | null> =>
+  withLock(async () => {
+    const filePath = resolveLayoutFile(wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return null;
+
+    const result = fn(layout);
+    if (!result) return null;
+
+    result.updatedAt = new Date().toISOString();
+    await writeLayoutFile(result, filePath);
+    syncWorkspaceDirectories(wsId, result.root);
+    return result;
+  });
+
+export const patchLayout = async (
+  wsId: string,
+  patch: { activePaneId?: string; ratioUpdate?: { path: number[]; ratio: number }; equalize?: boolean },
+): Promise<ILayoutData | null> =>
+  mutate(wsId, (layout) => {
+    if (patch.activePaneId !== undefined) {
+      const pane = findPane(layout.root, patch.activePaneId);
+      if (!pane) return null;
+      layout.activePaneId = patch.activePaneId;
+    }
+    if (patch.ratioUpdate) {
+      layout.root = updateRatioAtPath(layout.root, patch.ratioUpdate.path, patch.ratioUpdate.ratio);
+    }
+    if (patch.equalize) {
+      layout.root = equalizeNode(layout.root);
+    }
+    return layout;
+  });
+
+export const patchPane = async (
+  wsId: string,
+  paneId: string,
+  patch: { activeTabId?: string },
+): Promise<ILayoutData | null> =>
+  mutate(wsId, (layout) => {
+    const pane = findPane(layout.root, paneId);
+    if (!pane) return null;
+    if (patch.activeTabId !== undefined) {
+      if (!pane.tabs.some((t) => t.id === patch.activeTabId)) return null;
+      pane.activeTabId = patch.activeTabId;
+    }
+    return layout;
+  });
+
+export const splitPaneInLayout = async (
+  wsId: string,
+  sourcePaneId: string,
+  orientation: 'horizontal' | 'vertical',
+  cwd?: string,
+  panelType?: string,
+): Promise<ILayoutData | null> => {
+  const paneId = generatePaneId();
+  const tabId = generateTabId();
+  const sessionName = workspaceSessionName(wsId, paneId, tabId);
+
+  await createSession(sessionName, 80, 24, cwd);
+
+  const tab: ITab = { id: tabId, sessionName, name: 'Terminal 1', order: 0, ...(cwd ? { cwd } : {}) };
+  if (panelType) tab.panelType = panelType as ITab['panelType'];
+
+  const newPane: IPaneNode = { type: 'pane', id: paneId, tabs: [tab], activeTabId: tabId };
+
+  const result = await mutate(wsId, (layout) => {
+    const existing = findPane(layout.root, sourcePaneId);
+    if (!existing) return null;
+    if (cwd) {
+      const activeTab = existing.tabs.find((t) => t.id === existing.activeTabId);
+      if (activeTab) activeTab.cwd = cwd;
+    }
+    const splitNode: TLayoutNode = {
+      type: 'split',
+      orientation,
+      ratio: 50,
+      children: [{ ...existing }, newPane],
+    };
+    layout.root = replacePane(layout.root, sourcePaneId, splitNode);
+    layout.activePaneId = paneId;
+    return layout;
+  });
+
+  if (!result) {
+    await killSession(sessionName).catch(() => {});
+  }
+
+  return result;
+};
+
+export const closePaneInLayout = async (wsId: string, paneId: string): Promise<ILayoutData | null> => {
+  let sessions: string[] = [];
+
+  const result = await withLock(async () => {
+    const filePath = resolveLayoutFile(wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return null;
+
+    const pane = findPane(layout.root, paneId);
+    if (!pane) return null;
+    if (collectPanes(layout.root).length <= 1) return null;
+
+    sessions = pane.tabs.map((t) => t.sessionName);
+    removePaneWithFocus(layout, paneId);
+    layout.updatedAt = new Date().toISOString();
+    await writeLayoutFile(layout, filePath);
+    syncWorkspaceDirectories(wsId, layout.root);
+    return layout;
+  });
+
+  await Promise.all(sessions.map((s) => killSession(s).catch(() => {})));
+
+  return result;
+};
+
+export const reorderTabsInPane = async (
+  wsId: string,
+  paneId: string,
+  tabIds: string[],
+): Promise<ILayoutData | null> =>
+  mutate(wsId, (layout) => {
+    const pane = findPane(layout.root, paneId);
+    if (!pane) return null;
+    const tabMap = new Map(pane.tabs.map((t) => [t.id, t]));
+    const reordered = tabIds
+      .map((id, i) => {
+        const t = tabMap.get(id);
+        return t ? { ...t, order: i } : null;
+      })
+      .filter((t): t is ITab => t !== null);
+    if (reordered.length !== pane.tabs.length) return null;
+    pane.tabs = reordered;
+    return layout;
+  });
+
+export const moveTabBetweenPanes = async (
+  wsId: string,
+  tabId: string,
+  fromPaneId: string,
+  toPaneId: string,
+  toIndex: number,
+): Promise<ILayoutData | null> => {
+  return mutate(wsId, (layout) => {
+    const fromPane = findPane(layout.root, fromPaneId);
+    const toPane = findPane(layout.root, toPaneId);
+    if (!fromPane || !toPane) return null;
+
+    const tabIdx = fromPane.tabs.findIndex((t) => t.id === tabId);
+    if (tabIdx === -1) return null;
+
+    const [tab] = fromPane.tabs.splice(tabIdx, 1);
+    if (fromPane.activeTabId === tabId) {
+      fromPane.activeTabId = fromPane.tabs[0]?.id ?? null;
+    }
+    fromPane.tabs.forEach((t, i) => { t.order = i; });
+
+    toPane.tabs.splice(toIndex, 0, tab);
+    toPane.tabs.forEach((t, i) => { t.order = i; });
+    toPane.activeTabId = tabId;
+
+    if (fromPane.tabs.length === 0 && collectPanes(layout.root).length > 1) {
+      removePaneWithFocus(layout, fromPaneId);
+    }
+
+    layout.activePaneId = toPaneId;
+    return layout;
+  });
+};
+
+export const patchTab = async (
+  wsId: string,
+  paneId: string,
+  tabId: string,
+  patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand'>>,
+): Promise<ILayoutData | null> =>
+  mutate(wsId, (layout) => {
+    const pane = findPane(layout.root, paneId);
+    if (!pane) return null;
+    const tab = pane.tabs.find((t) => t.id === tabId);
+    if (!tab) return null;
+    if (patch.name !== undefined) tab.name = patch.name;
+    if (patch.panelType !== undefined) tab.panelType = patch.panelType;
+    if (patch.title !== undefined) tab.title = patch.title;
+    if (patch.cwd !== undefined) tab.cwd = patch.cwd;
+    if (patch.lastCommand !== undefined) tab.lastCommand = patch.lastCommand;
+    return layout;
+  });
