@@ -281,7 +281,8 @@ const useTimeline = ({
     return () => clearTimeout(timer);
   }, [rawCliState, lastEntryTs]);
 
-  const cliState = staleBusy ? 'idle' as const : rawCliState;
+  const isStaleBusy = staleBusy || (rawCliState === 'busy' && lastEntryTs > 0 && Date.now() - lastEntryTs >= STALE_BUSY_MS);
+  const cliState = isStaleBusy ? 'idle' as const : rawCliState;
 
   return {
     entries,

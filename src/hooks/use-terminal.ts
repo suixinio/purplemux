@@ -92,6 +92,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
     let resizeRaf = 0;
     let reFitTimer = 0;
     let resizeObserver: ResizeObserver | null = null;
+    let cleanupTouch: (() => void) | null = null;
 
     const FONT_FAMILY =
       "'MesloLGLDZ', 'Apple SD Gothic Neo', 'Pretendard', 'Menlo', 'Monaco', 'Courier New', monospace";
@@ -208,6 +209,42 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       });
 
       resizeObserver.observe(container);
+
+      // 모바일 터치 → 합성 WheelEvent 변환 (tmux 스크롤 지원)
+      const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+
+      if (isTouchDevice) {
+        let lastY = 0;
+
+        const onTouchStart = (e: TouchEvent) => {
+          lastY = e.touches[0].clientY;
+        };
+
+        const onTouchMove = (e: TouchEvent) => {
+          const currentY = e.touches[0].clientY;
+          const deltaY = lastY - currentY;
+          lastY = currentY;
+
+          if (Math.abs(deltaY) < 3) return;
+
+          e.preventDefault();
+          container.dispatchEvent(
+            new WheelEvent('wheel', {
+              deltaY,
+              clientX: e.touches[0].clientX,
+              clientY: e.touches[0].clientY,
+              bubbles: true,
+            })
+          );
+        };
+
+        container.addEventListener('touchstart', onTouchStart, { passive: true });
+        container.addEventListener('touchmove', onTouchMove, { passive: false });
+        cleanupTouch = () => {
+          container.removeEventListener('touchstart', onTouchStart);
+          container.removeEventListener('touchmove', onTouchMove);
+        };
+      }
     });
 
     return () => {
@@ -216,6 +253,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       cancelAnimationFrame(resizeRaf);
       clearTimeout(reFitTimer);
       resizeObserver?.disconnect();
+      cleanupTouch?.();
       terminalInstance.current?.dispose();
       terminalInstance.current = null;
       fitAddonRef.current = null;
