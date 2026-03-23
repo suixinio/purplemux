@@ -20,6 +20,7 @@ export type TTimelineEntryType =
   | 'tool-result'
   | 'agent-group'
   | 'task-notification'
+  | 'plan'
   | 'interrupt'
   | 'session-exit'
   | 'turn-end';
@@ -101,6 +102,14 @@ export interface ITimelineTaskNotification {
   };
 }
 
+export interface ITimelinePlan {
+  id: string;
+  type: 'plan';
+  timestamp: number;
+  markdown: string;
+  filePath?: string;
+}
+
 export interface ITimelineInterrupt {
   id: string;
   type: 'interrupt';
@@ -126,6 +135,7 @@ export type ITimelineEntry =
   | ITimelineToolResult
   | ITimelineAgentGroup
   | ITimelineTaskNotification
+  | ITimelinePlan
   | ITimelineInterrupt
   | ITimelineSessionExit
   | ITimelineTurnEnd;

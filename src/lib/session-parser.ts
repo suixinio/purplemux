@@ -9,6 +9,7 @@ import type {
   ITimelineToolResult,
   ITimelineAgentGroup,
   ITimelineTaskNotification,
+  ITimelinePlan,
   ITimelineInterrupt,
   ITimelineSessionExit,
   ITimelineTurnEnd,
@@ -294,6 +295,17 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
         const input = ('input' in content ? content.input : {}) as Record<string, unknown>;
         const toolName = (content as { name: string }).name;
         const toolUseId = (content as { id: string }).id;
+
+        if (toolName === 'ExitPlanMode' && typeof input.plan === 'string') {
+          entries.push({
+            id: nanoid(),
+            type: 'plan',
+            timestamp,
+            markdown: input.plan,
+            filePath: typeof input.planFilePath === 'string' ? input.planFilePath : undefined,
+          } satisfies ITimelinePlan);
+        }
+
         const summary = summarizeToolCall(toolName, input);
         const { filePath, diff } = extractDiff(toolName, input);
 

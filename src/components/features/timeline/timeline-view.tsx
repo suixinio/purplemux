@@ -16,6 +16,7 @@ import AssistantMessageItem from '@/components/features/timeline/assistant-messa
 import AgentGroupItem from '@/components/features/timeline/agent-group-item';
 import TaskNotificationItem from '@/components/features/timeline/task-notification-item';
 import ToolGroupItem from '@/components/features/timeline/tool-group-item';
+import PlanItem from '@/components/features/timeline/plan-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 
 interface ITimelineViewProps {
@@ -109,6 +110,8 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
       return <AgentGroupItem entry={entry} />;
     case 'task-notification':
       return <TaskNotificationItem entry={entry} />;
+    case 'plan':
+      return <PlanItem entry={entry} />;
     case 'interrupt':
       return <InterruptItem />;
     case 'session-exit':

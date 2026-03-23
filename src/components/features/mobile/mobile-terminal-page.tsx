@@ -12,6 +12,8 @@ import MobileTabHeader from '@/components/features/mobile/mobile-tab-header';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileTabIndicator from '@/components/features/mobile/mobile-tab-indicator';
 import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
+import { dismissTab, reportActiveTab } from '@/hooks/use-claude-status';
+import type { TCliState } from '@/types/timeline';
 import useSync from '@/hooks/use-sync';
 
 const MobileTerminalPage = () => {
@@ -139,6 +141,12 @@ const MobileTerminalPage = () => {
     [layout],
   );
 
+  const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
+
+  const handleCliStateChange = useCallback((state: TCliState) => {
+    setClaudeCliState(state);
+  }, []);
+
   const handleSelectSurface = useCallback(
     (paneId: string, tabId: string) => {
       setSelectedPaneId(paneId);
@@ -152,6 +160,18 @@ const MobileTerminalPage = () => {
   const currentPane = panes.find((p) => p.id === selectedPaneId);
   const currentTab = currentPane?.tabs.find((t) => t.id === selectedTabId);
   const currentPanelType: TPanelType = currentTab?.panelType ?? 'terminal';
+
+  useEffect(() => {
+    if (selectedTabId) dismissTab(selectedTabId);
+  }, [selectedTabId]);
+
+  useEffect(() => {
+    if (!selectedTabId || currentPanelType !== 'claude-code' || claudeCliState === 'inactive') return;
+    reportActiveTab(selectedTabId, claudeCliState);
+    if (claudeCliState === 'idle') {
+      dismissTab(selectedTabId);
+    }
+  }, [selectedTabId, claudeCliState, currentPanelType]);
 
   const tabMetadata = useTabMetadataStore((s) =>
     selectedTabId ? s.metadata[selectedTabId] : undefined,
@@ -301,6 +321,7 @@ const MobileTerminalPage = () => {
             }}
             onRemoveTabLocally={layout.removeTabLocally}
             onUpdateTabPanelType={layout.updateTabPanelType}
+            onCliStateChange={handleCliStateChange}
           />
         )}
 
