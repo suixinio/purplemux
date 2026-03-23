@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { nanoid } from 'nanoid';
-import { createSession, hasSession, killSession, workspaceSessionName } from '@/lib/tmux';
+import { createSession, hasSession, killSession, sendKeys, workspaceSessionName } from '@/lib/tmux';
 import { broadcastSync } from '@/lib/sync-server';
 import {
   collectPanes,
@@ -333,7 +333,7 @@ export const renameTabInPane = async (wsId: string, paneId: string, tabId: strin
     return { ...tab };
   });
 
-export const restartTabSession = async (wsId: string, paneId: string, tabId: string): Promise<boolean> =>
+export const restartTabSession = async (wsId: string, paneId: string, tabId: string, command?: string): Promise<boolean> =>
   withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
     const layout = await readLayoutFile(filePath);
@@ -349,7 +349,10 @@ export const restartTabSession = async (wsId: string, paneId: string, tabId: str
     if (exists) return true;
 
     await createSession(tab.sessionName, 80, 24, tab.cwd);
-    console.log(`[layout] 탭 세션 재시작: pane=${paneId}, tab=${tabId}, session=${tab.sessionName}`);
+    if (command) {
+      await sendKeys(tab.sessionName, command);
+    }
+    console.log(`[layout] 탭 세션 재시작: pane=${paneId}, tab=${tabId}, session=${tab.sessionName}${command ? `, command=${command}` : ''}`);
     return true;
   });
 

@@ -49,7 +49,7 @@ export const createSession = async (
       env: {
         ...Object.fromEntries(
           Object.entries(process.env).filter(([key]) => !key.startsWith('npm_')),
-        ),
+        ) as NodeJS.ProcessEnv,
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor',
       },

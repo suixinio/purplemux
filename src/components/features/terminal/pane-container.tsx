@@ -419,8 +419,8 @@ const PaneContainer = ({
   );
 
   const handleRestartTab = useCallback(
-    async (tabId: string) => {
-      const ok = await useLayoutStore.getState().restartTabInPane(paneId, tabId);
+    async (tabId: string, command?: string) => {
+      const ok = await useLayoutStore.getState().restartTabInPane(paneId, tabId, command);
       if (ok) reconnect();
     },
     [paneId, reconnect],
@@ -612,7 +612,7 @@ const PaneContainer = ({
                   scrollToBottomRef={scrollToBottomRef}
                 />
               )}
-              {isClaudeCode && !showInitialLoading && (
+              {isClaudeCode && !showInitialLoading && claudeInputVisible && (
                 <WebInputBar
                   tabId={activeTabId ?? undefined}
                   cliState={claudeCliState}
@@ -626,7 +626,7 @@ const PaneContainer = ({
                   onSend={handleScrollToBottom}
                 />
               )}
-              {isClaudeCode && !showInitialLoading && (
+              {isClaudeCode && !showInitialLoading && claudeInputVisible && (
                 <QuickPromptBar
                   prompts={quickPrompts}
                   cliState={claudeCliState}
@@ -713,21 +713,33 @@ const PaneContainer = ({
                 '서버에 연결할 수 없습니다'}
             </span>
             {disconnectReason === 'session-not-found' && activeTabId ? (
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handleRestartTab(activeTabId)}
-                >
-                  다시 시작
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDeleteTab(activeTabId)}
-                >
-                  탭 닫기
-                </Button>
+              <div className="flex flex-col items-center gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleRestartTab(activeTabId)}
+                  >
+                    다시 시작
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleDeleteTab(activeTabId)}
+                  >
+                    탭 닫기
+                  </Button>
+                </div>
+                {activeTab?.lastCommand && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => handleRestartTab(activeTabId, activeTab.lastCommand!)}
+                  >
+                    {activeTab.lastCommand} 실행하며 다시 시작
+                  </Button>
+                )}
               </div>
             ) : (
               <Button variant="outline" size="sm" onClick={reconnect}>

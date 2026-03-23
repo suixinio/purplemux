@@ -24,7 +24,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'POST') {
     try {
-      const ok = await restartTabSession(wsId, paneId, tabId);
+      const { command } = req.body ?? {};
+      const ok = await restartTabSession(wsId, paneId, tabId, command);
       if (!ok) {
         return res.status(404).json({ error: '탭을 찾을 수 없습니다' });
       }

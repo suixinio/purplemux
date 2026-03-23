@@ -38,7 +38,7 @@ interface ILayoutState {
   moveTab: (tabId: string, fromPaneId: string, toPaneId: string, toIndex: number) => void;
   createTabInPane: (paneId: string) => Promise<ITab | null>;
   deleteTabInPane: (paneId: string, tabId: string) => Promise<void>;
-  restartTabInPane: (paneId: string, tabId: string) => Promise<boolean>;
+  restartTabInPane: (paneId: string, tabId: string, command?: string) => Promise<boolean>;
   switchTabInPane: (paneId: string, tabId: string) => void;
   renameTabInPane: (paneId: string, tabId: string, name: string) => Promise<void>;
   reorderTabsInPane: (paneId: string, tabIds: string[]) => void;
@@ -327,10 +327,14 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     await get().fetchLayout();
   },
 
-  restartTabInPane: async (paneId, tabId) => {
+  restartTabInPane: async (paneId, tabId, command?) => {
     const { workspaceId } = get();
     try {
-      const res = await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { method: 'POST' });
+      const res = await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), {
+        method: 'POST',
+        headers: command ? { 'Content-Type': 'application/json' } : undefined,
+        body: command ? JSON.stringify({ command }) : undefined,
+      });
       return res.ok;
     } catch {
       return false;
