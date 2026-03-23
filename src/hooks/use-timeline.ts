@@ -247,7 +247,7 @@ const useTimeline = ({
   }, [fetchSession, reconnect]);
 
   const rawCliState = useMemo(
-    () => (isLoading && sessionStatus === 'active') ? 'busy' as const : deriveCliState(sessionStatus, entries),
+    () => isLoading ? 'inactive' as const : deriveCliState(sessionStatus, entries),
     [sessionStatus, entries, isLoading],
   );
 

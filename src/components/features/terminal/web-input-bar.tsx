@@ -22,6 +22,7 @@ interface IWebInputBarProps {
   setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   maxRows?: number;
   onRestartSession?: () => void;
+  onSend?: () => void;
 }
 
 const WebInputBar = ({
@@ -35,6 +36,7 @@ const WebInputBar = ({
   setInputValueRef,
   maxRows = DEFAULT_MAX_ROWS,
   onRestartSession,
+  onSend,
 }: IWebInputBarProps) => {
   const { value, setValue, mode, send, interrupt, textareaRef, focusInput } = useWebInput(
     cliState,
@@ -89,12 +91,14 @@ const WebInputBar = ({
     if (e.key === 'Enter' && !isMobileDevice) {
       if (e.shiftKey) return;
       e.preventDefault();
+      if (hasValue) onSend?.();
       send();
       return;
     }
   };
 
   const handleSendClick = () => {
+    if (hasValue) onSend?.();
     send();
     if (isMobileDevice) {
       textareaRef.current?.blur();

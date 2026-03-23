@@ -54,6 +54,7 @@ const MobileClaudeCodePanel = ({
   const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
+  const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const navigateToTimelineRef = useRef<() => void>(() => {});
 
   const handleResumeStarted = useCallback(() => {
@@ -149,6 +150,10 @@ const MobileClaudeCodePanel = ({
     onInputVisibleChange(isInputVisible);
   }, [isInputVisible, onInputVisibleChange]);
 
+  const handleScrollToBottom = useCallback(() => {
+    scrollToBottomRef.current?.();
+  }, []);
+
   const handleSelectQuickPrompt = useCallback((prompt: string) => {
     setInputValueRef.current?.(prompt);
     focusInputRef.current?.();
@@ -237,6 +242,7 @@ const MobileClaudeCodePanel = ({
           onRetry={retrySession}
           onLoadMore={loadMoreTimeline}
           hasMore={timelineHasMore}
+          scrollToBottomRef={scrollToBottomRef}
         />
       </div>
 
@@ -252,6 +258,7 @@ const MobileClaudeCodePanel = ({
           setInputValueRef={setInputValueRef}
           maxRows={3}
           onRestartSession={onRestartSession}
+          onSend={handleScrollToBottom}
         />
         <QuickPromptBar
           prompts={quickPrompts}

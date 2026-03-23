@@ -23,6 +23,7 @@ interface IClaudeCodePanelProps {
   onNewSession?: () => void;
   isRestarting?: boolean;
   onRestartComplete?: () => void;
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
 const ClaudeCodePanel = ({
@@ -37,6 +38,7 @@ const ClaudeCodePanel = ({
   onNewSession,
   isRestarting,
   onRestartComplete,
+  scrollToBottomRef,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const navigateToTimelineRef = useRef<() => void>(() => {});
@@ -204,6 +206,7 @@ const ClaudeCodePanel = ({
           onRetry={retrySession}
           onLoadMore={loadMoreTimeline}
           hasMore={timelineHasMore}
+          scrollToBottomRef={scrollToBottomRef}
         />
       </div>
     </div>

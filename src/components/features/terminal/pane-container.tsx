@@ -165,6 +165,7 @@ const PaneContainer = ({
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
   const [isClaudeRunning, setIsClaudeRunning] = useState(false);
+  const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
   const [isRestarting, setIsRestarting] = useState(false);
 
@@ -183,6 +184,10 @@ const PaneContainer = ({
       dismissStatusTab(activeTabId);
     }
   }, [activeTabId, isFocused]);
+
+  const handleScrollToBottom = useCallback(() => {
+    scrollToBottomRef.current?.();
+  }, []);
 
   const handleSelectQuickPrompt = useCallback((prompt: string) => {
     setInputValueRef.current?.(prompt);
@@ -604,6 +609,7 @@ const PaneContainer = ({
                   onNewSession={handleNewClaudeSession}
                   isRestarting={isRestarting}
                   onRestartComplete={() => setIsRestarting(false)}
+                  scrollToBottomRef={scrollToBottomRef}
                 />
               )}
               {isClaudeCode && (
@@ -617,6 +623,7 @@ const PaneContainer = ({
                   focusInputRef={focusInputRef}
                   setInputValueRef={setInputValueRef}
                   onRestartSession={handleRestartClaudeSession}
+                  onSend={handleScrollToBottom}
                 />
               )}
               {isClaudeCode && (

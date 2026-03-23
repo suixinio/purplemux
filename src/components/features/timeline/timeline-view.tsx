@@ -31,6 +31,7 @@ interface ITimelineViewProps {
   onRetry: () => void;
   onLoadMore: () => Promise<void>;
   hasMore: boolean;
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
 const ElapsedTime = ({ since }: { since: number }) => {
@@ -216,6 +217,7 @@ const TimelineView = ({
   onRetry,
   onLoadMore,
   hasMore,
+  scrollToBottomRef,
 }: ITimelineViewProps) => {
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
@@ -228,6 +230,12 @@ const TimelineView = ({
     setPrevSessionId(sessionId);
     setSkipAnimation(true);
   }
+
+  useEffect(() => {
+    if (!scrollToBottomRef) return;
+    scrollToBottomRef.current = () => scrollToBottom('smooth');
+    return () => { scrollToBottomRef.current = undefined; };
+  }, [scrollToBottomRef, scrollToBottom]);
 
   const groupedItems = useMemo(() => groupTimelineEntries(entries), [entries]);
   const hasDisplayItems = groupedItems.length > 0;
