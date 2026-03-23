@@ -21,6 +21,7 @@ export type TTimelineEntryType =
   | 'agent-group'
   | 'task-notification'
   | 'plan'
+  | 'ask-user-question'
   | 'interrupt'
   | 'session-exit'
   | 'turn-end';
@@ -110,6 +111,28 @@ export interface ITimelinePlan {
   filePath?: string;
 }
 
+export interface IAskUserQuestionOption {
+  label: string;
+  description: string;
+}
+
+export interface IAskUserQuestionItem {
+  question: string;
+  header: string;
+  options: IAskUserQuestionOption[];
+  multiSelect: boolean;
+}
+
+export interface ITimelineAskUserQuestion {
+  id: string;
+  type: 'ask-user-question';
+  timestamp: number;
+  toolUseId: string;
+  questions: IAskUserQuestionItem[];
+  status: TToolStatus;
+  answer?: string;
+}
+
 export interface ITimelineInterrupt {
   id: string;
   type: 'interrupt';
@@ -136,6 +159,7 @@ export type ITimelineEntry =
   | ITimelineAgentGroup
   | ITimelineTaskNotification
   | ITimelinePlan
+  | ITimelineAskUserQuestion
   | ITimelineInterrupt
   | ITimelineSessionExit
   | ITimelineTurnEnd;

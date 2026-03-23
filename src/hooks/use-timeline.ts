@@ -32,6 +32,10 @@ const deriveCliState = (
     return 'idle';
   }
 
+  if (lastEntry.type === 'ask-user-question' && lastEntry.status === 'pending') {
+    return 'idle';
+  }
+
   return 'busy';
 };
 
@@ -132,12 +136,21 @@ const useTimeline = ({
       const updated = [...prev];
       for (const entry of newEntries) {
         if (entry.type === 'tool-result') {
-          const idx = updated.findIndex(
+          const status = entry.isError ? 'error' as const : 'success' as const;
+          const tcIdx = updated.findIndex(
             (e) => e.type === 'tool-call' && e.toolUseId === entry.toolUseId,
           );
-          if (idx !== -1) {
-            const tc = updated[idx] as ITimelineEntry & { type: 'tool-call'; status: string };
-            updated[idx] = { ...tc, status: entry.isError ? 'error' : 'success' };
+          if (tcIdx !== -1) {
+            const tc = updated[tcIdx] as ITimelineEntry & { type: 'tool-call'; status: string };
+            updated[tcIdx] = { ...tc, status };
+          } else {
+            const aqIdx = updated.findIndex(
+              (e) => e.type === 'ask-user-question' && e.toolUseId === entry.toolUseId,
+            );
+            if (aqIdx !== -1) {
+              const aq = updated[aqIdx] as ITimelineEntry & { type: 'ask-user-question'; status: string; answer?: string };
+              updated[aqIdx] = { ...aq, status, answer: entry.summary || undefined };
+            }
           }
         }
         updated.push(entry);

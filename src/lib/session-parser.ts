@@ -10,6 +10,8 @@ import type {
   ITimelineAgentGroup,
   ITimelineTaskNotification,
   ITimelinePlan,
+  ITimelineAskUserQuestion,
+  IAskUserQuestionItem,
   ITimelineInterrupt,
   ITimelineSessionExit,
   ITimelineTurnEnd,
@@ -306,20 +308,43 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
           } satisfies ITimelinePlan);
         }
 
-        const summary = summarizeToolCall(toolName, input);
-        const { filePath, diff } = extractDiff(toolName, input);
+        if (toolName === 'AskUserQuestion' && Array.isArray(input.questions)) {
+          const questions = (input.questions as Record<string, unknown>[]).map((q) => ({
+            question: String(q.question ?? ''),
+            header: String(q.header ?? ''),
+            options: Array.isArray(q.options)
+              ? (q.options as Record<string, unknown>[]).map((o) => ({
+                  label: String(o.label ?? ''),
+                  description: String(o.description ?? ''),
+                }))
+              : [],
+            multiSelect: Boolean(q.multiSelect),
+          } satisfies IAskUserQuestionItem));
 
-        entries.push({
-          id: nanoid(),
-          type: 'tool-call',
-          timestamp,
-          toolUseId,
-          toolName,
-          summary,
-          filePath,
-          diff,
-          status: 'pending' as TToolStatus,
-        } satisfies ITimelineToolCall);
+          entries.push({
+            id: nanoid(),
+            type: 'ask-user-question',
+            timestamp,
+            toolUseId,
+            questions,
+            status: 'pending' as TToolStatus,
+          } satisfies ITimelineAskUserQuestion);
+        } else {
+          const summary = summarizeToolCall(toolName, input);
+          const { filePath, diff } = extractDiff(toolName, input);
+
+          entries.push({
+            id: nanoid(),
+            type: 'tool-call',
+            timestamp,
+            toolUseId,
+            toolName,
+            summary,
+            filePath,
+            diff,
+            status: 'pending' as TToolStatus,
+          } satisfies ITimelineToolCall);
+        }
       }
     }
 
@@ -402,7 +427,14 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
         } satisfies ITimelineUserMessage);
       } else if (item.type === 'tool_result' && 'tool_use_id' in item) {
         const c = item as { tool_use_id: string; is_error?: boolean; content?: unknown };
-        const summaryText = summarizeToolResult(
+
+        const rawObj = raw as Record<string, unknown>;
+        const toolUseResult = rawObj.toolUseResult as Record<string, unknown> | undefined;
+        const answers = toolUseResult?.answers as Record<string, string> | undefined;
+
+        const summaryText = answers
+          ? Object.values(answers).join(', ')
+          : summarizeToolResult(
           c.content as string | unknown[],
           c.is_error ?? false,
         );
@@ -476,16 +508,21 @@ const createAgentGroup = (
 
 const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
   const toolCallMap = new Map<string, ITimelineToolCall>();
+  const askQuestionMap = new Map<string, ITimelineAskUserQuestion>();
   const result: ITimelineEntry[] = [];
 
   for (const entry of entries) {
     if (entry.type === 'tool-call') {
       toolCallMap.set(entry.toolUseId, entry);
       result.push(entry);
+    } else if (entry.type === 'ask-user-question') {
+      askQuestionMap.set(entry.toolUseId, entry);
+      result.push(entry);
     } else if (entry.type === 'tool-result') {
+      const status = entry.isError ? 'error' as const : 'success' as const;
       const toolCall = toolCallMap.get(entry.toolUseId);
       if (toolCall) {
-        toolCall.status = entry.isError ? 'error' : 'success';
+        toolCall.status = status;
 
         if (entry.summary && !entry.isError) {
           const linesMatch = entry.summary.match(/^(\d+)줄 출력$/);
@@ -496,7 +533,16 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
             toolCall.summary = `${toolCall.summary} → ${count}건`;
           }
         }
+      } else {
+        const askQuestion = askQuestionMap.get(entry.toolUseId);
+        if (askQuestion) {
+          askQuestion.status = status;
+          if (entry.summary) {
+            askQuestion.answer = entry.summary;
+          }
+        }
       }
+
       result.push(entry);
     } else {
       result.push(entry);
