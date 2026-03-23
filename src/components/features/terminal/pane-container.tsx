@@ -602,6 +602,7 @@ const PaneContainer = ({
                   sessionName={activeTab.sessionName}
                   claudeSessionId={activeTab.claudeSessionId}
                   isClaudeRunning={isClaudeRunning}
+                  terminalWsConnected={status === 'connected'}
                   cwd={activeTabCwd}
                   onCliStateChange={handleCliStateChange}
                   onInputVisibleChange={handleInputVisibleChange}

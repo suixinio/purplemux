@@ -15,6 +15,7 @@ interface IClaudeCodePanelProps {
   sessionName: string;
   claudeSessionId?: string | null;
   isClaudeRunning?: boolean;
+  terminalWsConnected?: boolean;
   cwd?: string;
   className?: string;
   onCliStateChange?: (state: TCliState) => void;
@@ -30,6 +31,7 @@ const ClaudeCodePanel = ({
   sessionName,
   claudeSessionId,
   isClaudeRunning,
+  terminalWsConnected,
   cwd,
   className,
   onCliStateChange,
@@ -104,9 +106,10 @@ const ClaudeCodePanel = ({
     }
   }, [isClaudeRunning, sessionStatus, retrySession]);
 
-  const effectiveSessionStatus = sessionStatus === 'active' && isClaudeRunning === false
-    ? 'none' as const
-    : sessionStatus;
+  const effectiveSessionStatus =
+    sessionStatus === 'active' && isClaudeRunning === false && terminalWsConnected
+      ? 'none' as const
+      : sessionStatus;
 
   const {
     sessions,

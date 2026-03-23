@@ -119,9 +119,10 @@ const MobileClaudeCodePanel = ({
     }
   }, [isClaudeRunning, sessionStatus, retrySession]);
 
-  const effectiveSessionStatus = sessionStatus === 'active' && isClaudeRunning === false
-    ? 'none' as const
-    : sessionStatus;
+  const effectiveSessionStatus =
+    sessionStatus === 'active' && isClaudeRunning === false && terminalWsConnected
+      ? 'none' as const
+      : sessionStatus;
 
   const {
     sessions,
