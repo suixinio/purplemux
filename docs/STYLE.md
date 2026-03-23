@@ -15,12 +15,13 @@ Tailwind 기본 팔레트의 높은 채도/명도를 직접 사용하지 않고,
 
 ## 테마 구성
 
-### Base: Neutral
+### Base: Purple-tinted Neutral
 
-shadcn base color로 Neutral을 사용합니다. 완전한 무채색(chroma 0)으로 깔끔하고 중립적입니다.
+shadcn base color로 Neutral을 사용하되, 라이트 모드에서는 hue 287(purple) 방향으로 미세 tint를 적용합니다. "Purple Terminal" 브랜드와의 무의식적 일체감을 위한 설계입니다.
 
-- chroma: 0 (순수 무채색)
-- Primary: 짙은 Neutral (라이트) / 밝은 Neutral (다크) — 튀지 않는 무채색
+- 라이트 모드: chroma 0.003~0.015 (hue 287) — 개별적으로는 거의 인지 불가, 전체적으로 따뜻한 통일감
+- 다크 모드: chroma 0 (순수 무채색) — 다크 모드는 무채색 유지
+- Primary: 짙은 purple-tinted Neutral (라이트) / 밝은 Neutral (다크)
 
 ### Radius: 0.5rem (8px)
 
