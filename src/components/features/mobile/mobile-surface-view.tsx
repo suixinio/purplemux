@@ -324,7 +324,7 @@ const MobileSurfaceView = ({
       />
 
       {!isClaudeCode && ready && (
-        <MobileTerminalToolbar sendStdin={sendStdin} />
+        <MobileTerminalToolbar sendStdin={sendWebStdin} />
       )}
 
       {noTabs && (

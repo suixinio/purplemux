@@ -211,9 +211,11 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       resizeObserver.observe(container);
 
       // 모바일 터치 → 합성 WheelEvent 변환 (tmux 스크롤 지원)
+      // tmux mouse mode 시 xterm.js가 .xterm-screen에 wheel 리스너를 붙이므로 해당 요소에 dispatch
       const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+      const screenEl = container.querySelector('.xterm-screen');
 
-      if (isTouchDevice) {
+      if (isTouchDevice && screenEl) {
         let lastY = 0;
 
         const onTouchStart = (e: TouchEvent) => {
@@ -228,7 +230,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
           if (Math.abs(deltaY) < 3) return;
 
           e.preventDefault();
-          container.dispatchEvent(
+          screenEl.dispatchEvent(
             new WheelEvent('wheel', {
               deltaY,
               clientX: e.touches[0].clientX,
