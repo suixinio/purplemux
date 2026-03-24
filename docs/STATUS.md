@@ -70,7 +70,7 @@ TTFT(Time To First Token)가 긴 경우(P95 ~18초, P99 ~49초) 일시적 오판
 #### 서버 구현 (`checkJsonlIdle` in `status-manager.ts`)
 
 JSONL 파일의 끝 8KB를 읽고 raw 엔트리를 역순 탐색. noise 타입은 어떤 조건에도 매칭되지 않아 자동 스킵.
-`busy` 판정 시 `stat.mtimeMs` 기반 staleness를 추가 확인하여 30초 초과 시 `idle` 반환.
+`busy` 판정 시 및 매칭 엔트리가 없을 때 `stat.mtimeMs` 기반 staleness를 확인하여 30초 초과 시 `idle` 반환.
 
 #### 클라이언트 구현 (`deriveCliState` in `use-timeline.ts`)
 

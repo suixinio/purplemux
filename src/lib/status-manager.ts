@@ -63,7 +63,7 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
         }
       }
 
-      return false;
+      return stale;
     } finally {
       await handle.close();
     }

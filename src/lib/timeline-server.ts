@@ -251,7 +251,6 @@ const watchForJsonlFile = (
   const onJsonlFound = async () => {
     stop();
     pendingJsonlWatchers.delete(sessionName);
-
     await updateTabClaudeSessionId(sessionName, sessionId).catch(() => {});
 
     const wsConns = getSessionConnections(sessionName);
