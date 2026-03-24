@@ -502,6 +502,14 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     await updateTabClaudeSummary(conn.sessionName, null).catch(() => {});
   }
 
+  if (sessionInfo.status === 'active' && sessionInfo.sessionId) {
+    sendJson(ws, {
+      type: 'timeline:session-changed',
+      newSessionId: sessionInfo.sessionId,
+      reason: 'session-waiting',
+    });
+  }
+
   const effectiveSessionId = sessionInfo.jsonlPath
     ? sessionInfo.sessionId
     : (claudeSessionId ?? sessionInfo.sessionId);
@@ -537,12 +545,6 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   const wsKey = sessionName;
   if (!sessionWatchers.has(wsKey)) {
     const sw = watchSessionsDir(panePid, async (newInfo) => {
-      if (newInfo.status === 'active') {
-        const { isSafe } = await checkTerminalProcess(sessionName);
-        if (isSafe) {
-          newInfo = { ...newInfo, status: 'none', sessionId: null, jsonlPath: null, pid: null, cwd: null };
-        }
-      }
       const wsConns = getSessionConnections(sessionName);
       for (const c of wsConns) {
         if (newInfo.jsonlPath && newInfo.jsonlPath !== c.currentJsonlPath) {
