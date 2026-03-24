@@ -38,6 +38,7 @@ const useTerminalWebSocket = ({
   const retryCountRef = useRef(0);
   const sessionNameRef = useRef('');
   const connectIdRef = useRef(0);
+  const initialSizeRef = useRef<{ cols: number; rows: number } | null>(null);
   const callbacksRef = useRef({ onData, onConnected, onSessionEnded });
   const doConnectRef = useRef<(sessionName: string, connectId: number) => void>(() => {});
 
@@ -68,8 +69,10 @@ const useTerminalWebSocket = ({
       setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const size = initialSizeRef.current;
+      const sizeParams = size ? `&cols=${size.cols}&rows=${size.rows}` : '';
       const ws = new WebSocket(
-        `${protocol}//${location.host}/api/terminal?clientId=${clientIdRef.current}&session=${sessionName}`,
+        `${protocol}//${location.host}/api/terminal?clientId=${clientIdRef.current}&session=${sessionName}${sizeParams}`,
       );
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
@@ -147,8 +150,9 @@ const useTerminalWebSocket = ({
   });
 
   const connect = useCallback(
-    (sessionName: string) => {
+    (sessionName: string, cols?: number, rows?: number) => {
       sessionNameRef.current = sessionName;
+      initialSizeRef.current = cols && rows ? { cols, rows } : null;
       retryCountRef.current = 0;
       setRetryCount(0);
       connectIdRef.current++;

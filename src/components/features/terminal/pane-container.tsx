@@ -322,7 +322,8 @@ const PaneContainer = ({
     }
 
     connectedSessionRef.current = tab.sessionName;
-    connect(tab.sessionName);
+    const { cols, rows } = fit();
+    connect(tab.sessionName, cols, rows);
   }, [isReady, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

@@ -87,6 +87,8 @@ export const gracefulShutdown = () => {
 export const handleConnection = async (ws: WebSocket, request: IncomingMessage, sessionId: string | null) => {
   const url = new URL(request.url || '', 'http://localhost');
   const clientId = url.searchParams.get('clientId');
+  const urlCols = parseInt(url.searchParams.get('cols') || '', 10);
+  const urlRows = parseInt(url.searchParams.get('rows') || '', 10);
 
   connections.forEach((conn, key) => {
     if (key.readyState === WebSocket.CLOSED || key.readyState === WebSocket.CLOSING) {
@@ -214,8 +216,8 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
       ws.close(1011, 'Session not found');
       return;
     }
-    const cols = pending.resize?.cols || 80;
-    const rows = pending.resize?.rows || 24;
+    const cols = urlCols > 0 ? urlCols : (pending.resize?.cols || 80);
+    const rows = urlRows > 0 ? urlRows : (pending.resize?.rows || 24);
     try {
       ptyProcess = attachToSession(sessionName, cols, rows);
     } catch (err) {
@@ -226,8 +228,8 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   } else {
     console.log('[terminal] no session param, creating new session');
     sessionName = defaultSessionName();
-    const cols = pending.resize?.cols || 80;
-    const rows = pending.resize?.rows || 24;
+    const cols = urlCols > 0 ? urlCols : (pending.resize?.cols || 80);
+    const rows = urlRows > 0 ? urlRows : (pending.resize?.rows || 24);
     try {
       await createSession(sessionName, cols, rows);
       ptyProcess = attachToSession(sessionName, cols, rows);
