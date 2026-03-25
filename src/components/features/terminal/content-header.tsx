@@ -8,6 +8,7 @@ import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
+import isElectron from '@/hooks/use-is-electron';
 
 const SplitVerticalIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -69,7 +70,11 @@ const ContentHeader = ({
   const paneId = focusedPane?.id;
 
   return (
-    <div className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background px-3">
+    <div className="shrink-0 border-b border-border bg-background">
+      {isElectron && (
+        <div className="h-[38px]" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+      )}
+      <div className="flex h-12 items-center justify-between px-3">
       <div />
       <TooltipProvider>
         <div className="flex items-center gap-1">
@@ -161,6 +166,7 @@ const ContentHeader = ({
           )}
         </div>
       </TooltipProvider>
+      </div>
     </div>
   );
 };

@@ -24,6 +24,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
+import isElectron from '@/hooks/use-is-electron';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
 
@@ -220,6 +221,9 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
         role="navigation"
         aria-label="Workspace 목록"
       >
+        {isElectron && (
+          <div className="h-[38px] shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+        )}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
           <div className="flex items-center gap-1.5">
             <Terminal className="h-4 w-4 text-ui-purple" />
@@ -382,14 +386,19 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
       )}
 
       {collapsed && (
-        <button
-          className="flex shrink-0 flex-col items-center border-r border-sidebar-border bg-sidebar px-1.5 pt-3.5 text-muted-foreground transition-colors hover:bg-sidebar-accent"
-          onClick={handleToggleCollapse}
-          aria-label="사이드바 펼치기"
-          aria-expanded="false"
-        >
-          <Terminal className="h-4 w-4 text-ui-purple" />
-        </button>
+        <div className="flex shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
+          {isElectron && (
+            <div className="h-[38px] shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
+          )}
+          <button
+            className="flex flex-col items-center px-1.5 pt-3.5 text-muted-foreground transition-colors hover:bg-sidebar-accent"
+            onClick={handleToggleCollapse}
+            aria-label="사이드바 펼치기"
+            aria-expanded="false"
+          >
+            <Terminal className="h-4 w-4 text-ui-purple" />
+          </button>
+        </div>
       )}
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
