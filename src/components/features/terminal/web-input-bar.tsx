@@ -76,9 +76,10 @@ const WebInputBar = ({
     const textarea = textareaRef.current;
     if (!textarea) return;
     textarea.style.height = 'auto';
+    if (!value) return;
     const maxHeight = LINE_HEIGHT * maxRows + PADDING_Y;
     textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
-  }, [textareaRef, maxRows]);
+  }, [textareaRef, maxRows, value]);
 
   useEffect(() => {
     adjustHeight();
