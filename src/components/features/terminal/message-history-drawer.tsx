@@ -81,7 +81,7 @@ const MessageHistoryDrawer = ({
           <div className="p-2 pb-0">
             <CommandInput placeholder="히스토리 검색..." value={search} onValueChange={setSearch} />
           </div>
-          <CommandList className="max-h-[50vh] p-2">
+          <CommandList className="max-h-[50vh] p-2" data-vaul-no-drag>
             {isLoading && entries.length === 0 ? (
               <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
                 로딩중..

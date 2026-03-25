@@ -57,6 +57,8 @@ interface IFileWatcher {
   retryCount: number;
   sessionName: string | null;
   summaryResolved: boolean;
+  processing: boolean;
+  pendingChange: boolean;
 }
 
 const connections = new Map<WebSocket, ITimelineConnection>();
@@ -85,28 +87,43 @@ const broadcastToWatcher = (watcherKey: string, msg: TTimelineServerMessage) => 
   }
 };
 
+const processFileChange = async (fw: IFileWatcher) => {
+  if (fw.processing) {
+    fw.pendingChange = true;
+    return;
+  }
+  fw.processing = true;
+  try {
+    const { newEntries, newOffset, pendingBuffer } = await parseIncremental(
+      fw.jsonlPath, fw.offset, fw.pendingBuffer,
+    );
+    fw.pendingBuffer = pendingBuffer;
+    if (newEntries.length > 0) {
+      fw.offset = newOffset;
+      broadcastToWatcher(fw.jsonlPath, { type: 'timeline:append', entries: newEntries });
+
+      if (!fw.summaryResolved && fw.sessionName && newEntries.some((e) => e.type === 'assistant-message')) {
+        fw.summaryResolved = true;
+        const summary = await resolveClaudeSummary(fw.sessionName, undefined);
+        if (summary) {
+          await updateTabClaudeSummary(fw.sessionName, summary).catch(() => {});
+        }
+      }
+    }
+  } finally {
+    fw.processing = false;
+    if (fw.pendingChange) {
+      fw.pendingChange = false;
+      processFileChange(fw);
+    }
+  }
+};
+
 const startFileWatch = (fw: IFileWatcher) => {
   try {
     fw.watcher = watch(fw.jsonlPath, () => {
       if (fw.debounceTimer) clearTimeout(fw.debounceTimer);
-      fw.debounceTimer = setTimeout(async () => {
-        const { newEntries, newOffset, pendingBuffer } = await parseIncremental(
-          fw.jsonlPath, fw.offset, fw.pendingBuffer,
-        );
-        fw.pendingBuffer = pendingBuffer;
-        if (newEntries.length > 0) {
-          fw.offset = newOffset;
-          broadcastToWatcher(fw.jsonlPath, { type: 'timeline:append', entries: newEntries });
-
-          if (!fw.summaryResolved && fw.sessionName && newEntries.some((e) => e.type === 'assistant-message')) {
-            fw.summaryResolved = true;
-            const summary = await resolveClaudeSummary(fw.sessionName, undefined);
-            if (summary) {
-              await updateTabClaudeSummary(fw.sessionName, summary).catch(() => {});
-            }
-          }
-        }
-      }, DEBOUNCE_MS);
+      fw.debounceTimer = setTimeout(() => processFileChange(fw), DEBOUNCE_MS);
     });
 
     fw.watcher.on('error', () => {
@@ -160,6 +177,8 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
       retryCount: 0,
       sessionName: sessionName ?? null,
       summaryResolved: false,
+      processing: false,
+      pendingChange: false,
     };
     fileWatchers.set(jsonlPath, fw);
   }

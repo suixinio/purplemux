@@ -7,6 +7,7 @@ import type {
   ITimelineEntry,
   ITimelineToolCall,
   ITimelineToolResult,
+  ITaskItem,
   TCliState,
   TSessionStatus,
   TTimelineConnectionStatus,
@@ -18,10 +19,13 @@ import TaskNotificationItem from '@/components/features/timeline/task-notificati
 import ToolGroupItem from '@/components/features/timeline/tool-group-item';
 import PlanItem from '@/components/features/timeline/plan-item';
 import AskUserQuestionItem from '@/components/features/timeline/ask-user-question-item';
+import TaskChecklist from '@/components/features/timeline/task-checklist';
+import TaskProgressItem from '@/components/features/timeline/task-progress-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 
 interface ITimelineViewProps {
   entries: ITimelineEntry[];
+  tasks: ITaskItem[];
   sessionId: string | null;
   cliState: TCliState;
   sessionStatus: TSessionStatus;
@@ -116,6 +120,8 @@ const TimelineEntryRenderer = ({ entry }: { entry: ITimelineEntry }) => {
       return <PlanItem entry={entry} />;
     case 'ask-user-question':
       return <AskUserQuestionItem entry={entry} />;
+    case 'task-progress':
+      return <TaskProgressItem entry={entry} />;
     case 'interrupt':
       return <InterruptItem />;
     case 'session-exit':
@@ -207,6 +213,7 @@ const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
 
 const TimelineView = ({
   entries,
+  tasks,
   sessionId,
   cliState,
   sessionStatus,
@@ -291,6 +298,9 @@ const TimelineView = ({
         aria-label="Claude Code 타임라인"
       >
         <div ref={contentRef}>
+          {tasks.length > 0 && (
+            <TaskChecklist tasks={tasks} cliState={cliState} />
+          )}
           {groupedItems.map((item) => (
             <div key={item.id} className="px-4 py-1.5">
               {item.type === 'tool-group' ? (

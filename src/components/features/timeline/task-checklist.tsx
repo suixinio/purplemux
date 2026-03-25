@@ -1,0 +1,139 @@
+import { useState, useEffect } from 'react';
+import { CheckCircle2, ChevronDown, ListChecks } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import type { ITaskItem, TCliState, TTaskStatus } from '@/types/timeline';
+
+interface ITaskChecklistProps {
+  tasks: ITaskItem[];
+  cliState: TCliState;
+}
+
+const StatusIcon = ({ status }: { status: TTaskStatus }) => {
+  if (status === 'completed') {
+    return <CheckCircle2 size={14} className="text-positive" />;
+  }
+  if (status === 'in_progress') {
+    return (
+      <span className="flex h-[14px] w-[14px] items-center justify-center">
+        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-ui-purple" />
+      </span>
+    );
+  }
+  return (
+    <span className="h-[14px] w-[14px] rounded-full border border-muted-foreground/40" />
+  );
+};
+
+const TaskChecklist = ({ tasks, cliState }: ITaskChecklistProps) => {
+  const [collapsed, setCollapsed] = useState(false);
+  const [prevTasks, setPrevTasks] = useState(tasks);
+
+  const completedCount = tasks.filter((t) => t.status === 'completed').length;
+  const allCompleted = tasks.length > 0 && completedCount === tasks.length;
+  const hasInProgress = tasks.some((t) => t.status === 'in_progress');
+
+  if (tasks !== prevTasks) {
+    const changed =
+      tasks.length !== prevTasks.length ||
+      tasks.some((t, i) => prevTasks[i]?.status !== t.status);
+    if (changed && collapsed) {
+      setCollapsed(false);
+    }
+    setPrevTasks(tasks);
+  }
+
+  useEffect(() => {
+    if (!allCompleted || cliState !== 'idle') return;
+
+    const timer = setTimeout(() => setCollapsed(true), 3000);
+    return () => clearTimeout(timer);
+  }, [allCompleted, cliState]);
+
+  const currentSubject = collapsed
+    ? (tasks.find((t) => t.status === 'in_progress')?.subject ??
+      tasks.find((t) => t.status === 'pending')?.subject)
+    : undefined;
+
+  const borderColor = allCompleted
+    ? 'border-positive'
+    : hasInProgress
+      ? 'border-ui-purple'
+      : 'border-muted-foreground/40';
+
+  return (
+    <div
+      className={cn(
+        'sticky top-0 z-10 mx-4 mb-2 border-l-2 bg-muted/80 px-4 py-2',
+        'animate-in fade-in slide-in-from-top-1 duration-200',
+        borderColor,
+      )}
+    >
+      <button
+        type="button"
+        className="flex w-full cursor-pointer items-center gap-2"
+        onClick={() => setCollapsed((v) => !v)}
+        aria-expanded={!collapsed}
+        aria-controls="task-list"
+      >
+        {allCompleted ? (
+          <CheckCircle2 size={14} className="shrink-0 text-positive" />
+        ) : (
+          <ListChecks size={14} className="shrink-0 text-ui-purple" />
+        )}
+        <span
+          className="text-xs font-medium tabular-nums"
+          aria-live="polite"
+        >
+          {completedCount} / {tasks.length}
+        </span>
+        {collapsed && currentSubject && (
+          <span className="ml-1 min-w-0 flex-1 truncate text-left text-xs text-muted-foreground">
+            {currentSubject}
+          </span>
+        )}
+        <ChevronDown
+          size={14}
+          className={cn(
+            'ml-auto shrink-0 text-muted-foreground transition-transform duration-200',
+            collapsed && '-rotate-90',
+          )}
+        />
+      </button>
+
+      {!collapsed && (
+        <div
+          id="task-list"
+          role="list"
+          aria-label="Task 진행 상황"
+          className="mt-1.5 max-h-[240px] overflow-y-auto"
+        >
+          {tasks.map((task) => (
+            <div
+              key={task.taskId}
+              role="listitem"
+              className="flex items-center gap-2 py-0.5"
+            >
+              <span className="flex h-[14px] w-[14px] shrink-0 items-center justify-center">
+                <StatusIcon status={task.status} />
+              </span>
+              <span
+                className={cn(
+                  'min-w-0 truncate text-xs',
+                  task.status === 'completed' &&
+                    'text-muted-foreground line-through',
+                  task.status === 'in_progress' &&
+                    'font-medium text-foreground',
+                  task.status === 'pending' && 'text-muted-foreground',
+                )}
+              >
+                {task.subject}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TaskChecklist;

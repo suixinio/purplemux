@@ -72,6 +72,7 @@ const ClaudeCodePanel = ({
 
   const {
     entries,
+    tasks,
     cliState,
     sessionId,
     sessionSummary,
@@ -210,6 +211,7 @@ const ClaudeCodePanel = ({
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}
+          tasks={tasks}
           sessionId={sessionId}
           cliState={effectiveCliState}
           sessionStatus={sessionStatus}

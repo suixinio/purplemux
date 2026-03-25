@@ -86,6 +86,7 @@ const MobileClaudeCodePanel = ({
 
   const {
     entries,
+    tasks,
     cliState,
     sessionId,
     sessionSummary,
@@ -255,6 +256,7 @@ const MobileClaudeCodePanel = ({
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}
+          tasks={tasks}
           sessionId={sessionId}
           cliState={cliState}
           sessionStatus={sessionStatus}
