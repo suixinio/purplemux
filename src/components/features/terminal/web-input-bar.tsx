@@ -4,7 +4,9 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import useWebInput from '@/hooks/use-web-input';
 import useIsMobileDevice from '@/hooks/use-is-mobile-device';
+import useMessageHistory from '@/hooks/use-message-history';
 import InterruptDialog from '@/components/features/terminal/interrupt-dialog';
+import MessageHistoryPicker from '@/components/features/terminal/message-history-picker';
 import type { TCliState } from '@/types/timeline';
 
 const DEFAULT_MAX_ROWS = 5;
@@ -13,6 +15,7 @@ const PADDING_Y = 16;
 
 interface IWebInputBarProps {
   tabId?: string;
+  wsId?: string;
   cliState: TCliState;
   sendStdin: (data: string) => void;
   terminalWsConnected: boolean;
@@ -27,6 +30,7 @@ interface IWebInputBarProps {
 
 const WebInputBar = ({
   tabId,
+  wsId,
   cliState,
   sendStdin,
   terminalWsConnected,
@@ -38,11 +42,13 @@ const WebInputBar = ({
   onRestartSession,
   onSend,
 }: IWebInputBarProps) => {
+  const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
+    useMessageHistory({ wsId });
   const { value, setValue, mode, send, interrupt, textareaRef, focusInput } = useWebInput(
     cliState,
     sendStdin,
     terminalWsConnected,
-    { tabId, onRestartSession },
+    { tabId, onRestartSession, onMessageSent: addHistory },
   );
   const isMobileDevice = useIsMobileDevice();
 
@@ -118,6 +124,14 @@ const WebInputBar = ({
   const handleFocusIn = () => setIsFocused(true);
   const handleFocusOut = () => setIsFocused(false);
 
+  const handleHistorySelect = useCallback(
+    (message: string) => {
+      setValue(message);
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    },
+    [setValue, textareaRef],
+  );
+
   const isDisabled = mode === 'disabled';
   const hasValue = value.trim().length > 0;
 
@@ -143,6 +157,16 @@ const WebInputBar = ({
             onFocusCapture={handleFocusIn}
             onBlurCapture={handleFocusOut}
           >
+            <MessageHistoryPicker
+              entries={entries}
+              isLoading={isLoading}
+              isError={isError}
+              disabled={isDisabled}
+              onFetch={fetchHistory}
+              onSelect={handleHistorySelect}
+              onDelete={deleteHistory}
+            />
+
             <textarea
               ref={textareaRef}
               value={value}

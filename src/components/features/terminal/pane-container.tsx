@@ -120,6 +120,8 @@ const PaneContainer = ({
     (state) => (activeTabId ? state.metadata[activeTabId]?.cwd : undefined),
   );
 
+  const layoutWsId = useLayoutStore((state) => state.workspaceId);
+
   useEffect(() => {
     const id = requestAnimationFrame(() => setMounted(true));
     return () => {
@@ -620,6 +622,7 @@ const PaneContainer = ({
               {isClaudeCode && !showInitialLoading && claudeInputVisible && (
                 <WebInputBar
                   tabId={activeTabId ?? undefined}
+                  wsId={layoutWsId ?? undefined}
                   cliState={claudeCliState}
                   sendStdin={sendWebStdin}
                   terminalWsConnected={status === 'connected'}

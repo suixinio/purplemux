@@ -50,6 +50,7 @@ interface IUseWebInputReturn {
 interface IUseWebInputOptions {
   tabId?: string;
   onRestartSession?: () => void;
+  onMessageSent?: (message: string) => void;
 }
 
 const useWebInput = (
@@ -68,6 +69,7 @@ const useWebInput = (
   }, [cliState]);
 
   const onRestartSession = options?.onRestartSession;
+  const onMessageSent = options?.onMessageSent;
 
   useEffect(() => {
     if (tabId) saveDraft(tabId, value);
@@ -101,9 +103,14 @@ const useWebInput = (
     } else {
       sendStdin(value + '\r');
     }
+
+    if (!value.trim().startsWith('/')) {
+      onMessageSent?.(value.trim());
+    }
+
     setValue('');
     if (tabId) clearDraft(tabId);
-  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, tabId]);
+  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, onMessageSent, tabId]);
 
   const interrupt = useCallback(() => {
     if (!terminalWsConnected) {
