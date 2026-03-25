@@ -1,14 +1,28 @@
 {
-  "name": "pt",
+  "name": "purple-terminal",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
+  "bin": {
+    "pt": "./bin/pt.js"
+  },
+  "files": [
+    "bin/",
+    "dist/",
+    ".next/BUILD_ID",
+    ".next/*.json",
+    ".next/server/",
+    ".next/static/",
+    "public/",
+    "src/config/tmux.conf"
+  ],
   "scripts": {
     "dev": "tsx watch server.ts",
-    "build": "next build",
+    "build": "next build && tsup",
+    "build:server": "tsup",
     "start": "NODE_ENV=production tsx server.ts",
     "lint": "eslint",
     "ralph": "node ralph-loop.js",
+    "prepublishOnly": "rm -rf .next dist && pnpm build",
     "postinstall": "chmod +x node_modules/.pnpm/node-pty@*/node_modules/node-pty/prebuilds/darwin-*/spawn-helper 2>/dev/null; exit 0"
   },
   "dependencies": {
@@ -64,6 +78,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.0",
     "tailwindcss": "^4",
+    "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^5"
   },

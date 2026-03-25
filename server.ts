@@ -15,7 +15,8 @@ import type { IncomingMessage } from 'http';
 
 const port = parseInt(process.env.PORT || '8022', 10);
 const dev = process.env.NODE_ENV !== 'production';
-const app = next({ dev });
+const appDir = process.env.__PT_APP_DIR || process.cwd();
+const app = next({ dev, dir: appDir });
 const handle = app.getRequestHandler();
 
 const extractCookie = (header: string, name: string): string | undefined => {
