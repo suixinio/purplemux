@@ -1,4 +1,5 @@
-import { X, Plus, BotMessageSquare, Terminal } from 'lucide-react';
+import { X, Plus, Terminal } from 'lucide-react';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,7 +33,7 @@ const MobileTabHeader = ({
     <div className="flex h-10 shrink-0 items-center border-b border-border/50 bg-background">
       <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
         {panelType === 'claude-code' ? (
-          <BotMessageSquare size={14} className="shrink-0 text-muted-foreground" />
+          <ClaudeCodeIcon size={16} />
         ) : (
           <Terminal size={14} className="shrink-0 text-muted-foreground" />
         )}

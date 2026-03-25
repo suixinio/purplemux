@@ -6,8 +6,8 @@ import {
   BarChart3,
   X,
   Terminal,
-  BotMessageSquare,
 } from 'lucide-react';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import {
@@ -123,7 +123,7 @@ const MobileNavigationSheet = ({
             panelType={panelType}
           />
           {isClaudeCode ? (
-            <BotMessageSquare size={14} className={cn('shrink-0 mt-0.5', isTabActive ? 'text-ui-purple' : 'text-muted-foreground')} />
+            <ClaudeCodeIcon size={16} className="mt-0.5" />
           ) : (
             <Terminal size={14} className={cn('shrink-0', isTabActive ? 'text-foreground' : 'text-muted-foreground')} />
           )}

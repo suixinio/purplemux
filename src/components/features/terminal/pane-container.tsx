@@ -161,6 +161,7 @@ const PaneContainer = ({
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
+  const clickedTerminalRef = useRef(false);
 
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
   const [claudeInputVisible, setClaudeInputVisible] = useState(false);
@@ -361,10 +362,12 @@ const PaneContainer = ({
     if (isFocused && isReady && status === 'connected') {
       const { cols, rows } = fit();
       wsActionsRef.current.sendResize(cols, rows);
-      if (isClaudeCode && claudeInputVisible) {
-        focusInputRef.current?.();
-      } else {
+      const targetTerminal = clickedTerminalRef.current;
+      clickedTerminalRef.current = false;
+      if (targetTerminal || !isClaudeCode || !claudeInputVisible) {
         focus();
+      } else {
+        focusInputRef.current?.();
       }
     }
   }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -668,7 +671,7 @@ const PaneContainer = ({
           )}
 
           <Panel id="terminal-area" minSize={0} collapsible collapsedSize={0}>
-            <div className="flex h-full flex-col">
+            <div className="flex h-full flex-col" onMouseDown={() => { clickedTerminalRef.current = true; }}>
               <TerminalContainer
                 ref={terminalRef}
                 className={cn(

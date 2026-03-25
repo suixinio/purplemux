@@ -7,8 +7,8 @@ import {
   AlertTriangle,
   Loader2,
   Terminal,
-  BotMessageSquare,
 } from 'lucide-react';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -373,7 +373,7 @@ const PaneTabBar = ({
                     panelType={tab.panelType}
                   />
                   {tab.panelType === 'claude-code' ? (
-                    <BotMessageSquare className="h-3 w-3 shrink-0 text-ui-purple" />
+                    <ClaudeCodeIcon className="h-3.5 w-3.5" />
                   ) : (
                     <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
                   )}
