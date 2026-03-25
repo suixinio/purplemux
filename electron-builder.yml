@@ -32,6 +32,7 @@ files:
   - .next/*.json
   - .next/server/**/*
   - .next/static/**/*
+  - .next/node_modules/**/*
   - public/**/*
   - src/config/tmux.conf
   - "!node_modules/.cache"
