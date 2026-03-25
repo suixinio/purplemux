@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
@@ -71,9 +71,9 @@ const MessageHistoryPopover = ({
         <Command className="rounded-lg" shouldFilter>
           <CommandInput placeholder="히스토리 검색..." value={search} onValueChange={setSearch} />
           <CommandList className="max-h-[300px]">
-            {isLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+            {isLoading && entries.length === 0 ? (
+              <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+                로딩중..
               </div>
             ) : isError ? (
               <div className="flex flex-col items-center gap-2 py-6 text-sm text-muted-foreground">
@@ -91,7 +91,7 @@ const MessageHistoryPopover = ({
                       key={entry.id}
                       value={entry.message}
                       onSelect={() => handleSelect(entry)}
-                      className="group"
+                      className="group [&>svg.ml-auto]:hidden"
                     >
                       <span className="min-w-0 flex-1 truncate text-sm">
                         {entry.message.split('\n')[0]}
