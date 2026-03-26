@@ -14,6 +14,20 @@ import {
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000];
 const MAX_RETRIES = 5;
 const HEARTBEAT_INTERVAL = 30_000;
+const CLIENT_ID_PREFIX = 'pt-ws-cid-';
+
+const getOrCreateClientId = (sessionName: string): string => {
+  const key = `${CLIENT_ID_PREFIX}${sessionName}`;
+  try {
+    const stored = sessionStorage.getItem(key);
+    if (stored) return stored;
+    const id = nanoid();
+    sessionStorage.setItem(key, id);
+    return id;
+  } catch {
+    return nanoid();
+  }
+};
 
 interface IUseTerminalWebSocketOptions {
   onData?: (data: Uint8Array) => void;
@@ -31,7 +45,6 @@ const useTerminalWebSocket = ({
   const [disconnectReason, setDisconnectReason] =
     useState<TDisconnectReason>(null);
 
-  const clientIdRef = useRef(nanoid());
   const wsRef = useRef<WebSocket | null>(null);
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -69,10 +82,11 @@ const useTerminalWebSocket = ({
       setStatus(retryCountRef.current > 0 ? 'reconnecting' : 'connecting');
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const clientId = getOrCreateClientId(sessionName);
       const size = initialSizeRef.current;
       const sizeParams = size ? `&cols=${size.cols}&rows=${size.rows}` : '';
       const ws = new WebSocket(
-        `${protocol}//${location.host}/api/terminal?clientId=${clientIdRef.current}&session=${sessionName}${sizeParams}`,
+        `${protocol}//${location.host}/api/terminal?clientId=${clientId}&session=${sessionName}${sizeParams}`,
       );
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
@@ -213,6 +227,22 @@ const useTerminalWebSocket = ({
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!sessionNameRef.current) return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        retryCountRef.current = 0;
+        setRetryCount(0);
+        connectIdRef.current++;
+        doConnectRef.current(sessionNameRef.current, connectIdRef.current);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   return {
     status,

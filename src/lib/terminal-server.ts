@@ -223,11 +223,13 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   ws.on('message', handleMessage);
   ws.on('close', () => {
     if (!conn) return;
+    conn.detaching = true;
     cleanup(conn);
   });
   ws.on('error', (err) => {
     console.log(`[terminal] websocket error: ${err.message}`);
     if (!conn) return;
+    conn.detaching = true;
     cleanup(conn);
   });
 
