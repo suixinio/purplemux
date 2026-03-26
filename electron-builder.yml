@@ -13,8 +13,10 @@ mac:
         - x64
   icon: build-resources/icon.icns
   hardenedRuntime: true
+  gatekeeperAssess: false
   entitlements: build-resources/entitlements.mac.plist
   entitlementsInherit: build-resources/entitlements.mac.plist
+  notarize: true
 
 dmg:
   contents:

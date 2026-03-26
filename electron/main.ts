@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, Menu } from 'electron';
+import { app, BrowserWindow, shell, Menu, ipcMain } from 'electron';
 import * as path from 'path';
 import * as net from 'net';
 import * as fs from 'fs';
@@ -311,6 +311,12 @@ const bootstrap = async () => {
 
   updateMenu();
 };
+
+ipcMain.handle('open-external', (_event, url: string) => {
+  if (typeof url === 'string' && /^https?:\/\//.test(url)) {
+    shell.openExternal(url);
+  }
+});
 
 app.on('ready', bootstrap);
 

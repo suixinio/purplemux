@@ -5,6 +5,7 @@ import { WebglAddon } from "@xterm/addon-webgl";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type { ITerminalThemeColors } from "@/lib/terminal-themes";
+import isElectron from "@/hooks/use-is-electron";
 
 interface IUseTerminalOptions {
   theme?: ITerminalThemeColors;
@@ -143,7 +144,13 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
 
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
-      terminal.loadAddon(new WebLinksAddon());
+      terminal.loadAddon(new WebLinksAddon((_event, uri) => {
+        if (isElectron) {
+          (window as unknown as Record<string, { openExternal: (url: string) => void }>).electronAPI.openExternal(uri);
+        } else {
+          window.open(uri, '_blank');
+        }
+      }));
 
       const unicode11Addon = new Unicode11Addon();
       terminal.loadAddon(unicode11Addon);
