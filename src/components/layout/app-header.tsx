@@ -19,8 +19,9 @@ interface IAppHeaderProps {
   onMenuOpen?: () => void;
 }
 
-const handleLogout = () => {
-  signOut({ callbackUrl: `${window.location.origin}/login` });
+const handleLogout = async () => {
+  await signOut({ redirect: false });
+  window.location.href = '/login';
 };
 
 const AppHeader = ({ onMenuOpen }: IAppHeaderProps) => {

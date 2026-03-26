@@ -35,8 +35,9 @@ interface ISidebarProps {
 const MIN_WIDTH = 160;
 const MAX_WIDTH = 480;
 
-const handleLogout = () => {
-  signOut({ callbackUrl: `${window.location.origin}/login` });
+const handleLogout = async () => {
+  await signOut({ redirect: false });
+  window.location.href = '/login';
 };
 
 const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
