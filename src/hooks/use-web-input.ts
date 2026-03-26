@@ -96,6 +96,9 @@ const useWebInput = (
     }
 
     sendStdin(value + '\r');
+    if (value.includes('\n')) {
+      setTimeout(() => sendStdin('\r'), 500);
+    }
 
     if (!value.trim().startsWith('/')) {
       onMessageSent?.(value.trim());
