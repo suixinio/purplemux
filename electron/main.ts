@@ -330,7 +330,10 @@ app.on('window-all-closed', async () => {
   if (serverShutdown) {
     await serverShutdown();
   }
-  app.quit();
+  // app.quit() triggers FreeEnvironment → CleanupHandles which crashes
+  // when node-pty's native ThreadSafeFunction fires during teardown.
+  // app.exit() skips that cleanup and exits immediately.
+  app.exit(0);
 });
 
 app.requestSingleInstanceLock();

@@ -119,7 +119,7 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   });
 
   const shutdown = async () => {
-    gracefulShutdown();
+    await gracefulShutdown();
     gracefulTimelineShutdown();
     gracefulSyncShutdown();
     gracefulStatusShutdown();

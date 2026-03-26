@@ -518,7 +518,7 @@ const PaneContainer = ({
     }
 
     if (paths.length > 0) {
-      wsActionsRef.current.sendStdin(paths.join(' '));
+      wsActionsRef.current.sendStdin(`\x1b[200~${paths.join(' ')}\x1b[201~`);
       focus();
     } else {
       const names = Array.from(files).map((f) => f.name).join(', ');
@@ -531,7 +531,8 @@ const PaneContainer = ({
     setShowPathInput(false);
     setDroppedFileHint('');
     if (value.trim()) {
-      wsActionsRef.current.sendStdin(escapeShellPath(value.trim()));
+      const escaped = escapeShellPath(value.trim());
+      wsActionsRef.current.sendStdin(`\x1b[200~${escaped}\x1b[201~`);
       focus();
     }
   }, [focus]);

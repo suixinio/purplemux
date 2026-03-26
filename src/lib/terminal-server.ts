@@ -81,14 +81,46 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   console.log(`[terminal] client disconnected (active: ${connections.size})`);
 };
 
-export const gracefulShutdown = () => {
+export const gracefulShutdown = (): Promise<void> => {
+  const exitPromises: Promise<void>[] = [];
+
   connections.forEach((conn) => {
+    if (conn.cleaned) return;
+    conn.cleaned = true;
+    conn.detaching = true;
+
+    clearInterval(conn.heartbeatTimer);
+
+    for (const d of conn.disposables) {
+      d.dispose();
+    }
+    conn.disposables = [];
+
     if (conn.ws.readyState === WebSocket.OPEN) {
       conn.ws.close(1001, 'Server shutting down');
     }
-    conn.detaching = true;
-    cleanup(conn);
+
+    exitPromises.push(
+      new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 3000);
+        conn.pty.onExit(() => {
+          clearTimeout(timeout);
+          resolve();
+        });
+      }),
+    );
+
+    try {
+      conn.pty.kill();
+    } catch {
+      // PTY already exited
+    }
+
+    connections.delete(conn.ws);
   });
+
+  if (exitPromises.length === 0) return Promise.resolve();
+  return Promise.all(exitPromises).then(() => {});
 };
 
 export const handleConnection = async (ws: WebSocket, request: IncomingMessage, sessionId: string | null) => {
