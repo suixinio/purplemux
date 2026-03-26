@@ -4,13 +4,16 @@ import { watch, type FSWatcher } from 'fs';
 import { existsSync } from 'fs';
 import { detectActiveSession, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { parseSessionFile, parseIncremental, parseJsonlContent } from './session-parser';
-import { open as fsOpen } from 'fs/promises';
+import { open as fsOpen, stat as fsStat } from 'fs/promises';
+import { createReadStream } from 'fs';
+import { createInterface } from 'readline';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPaneTitle } from './tmux';
 import { cwdToProjectPath } from './session-list';
 import { updateTabClaudeSessionId, updateTabClaudeSummary } from './layout-store';
 import { getDangerouslySkipPermissions } from './workspace-store';
 import { HOOK_SETTINGS_PATH } from './hook-settings';
-import type { TTimelineServerMessage } from '@/types/timeline';
+import { calculateCost } from './format-tokens';
+import type { TTimelineServerMessage, IInitMeta, ITimelineEntry } from '@/types/timeline';
 import path from 'path';
 import { isAllowedJsonlPath } from './path-validation';
 
@@ -202,6 +205,105 @@ const removeFileWatcher = (jsonlPath: string) => {
   fileWatchers.delete(jsonlPath);
 };
 
+const readFirstTimestamp = async (filePath: string): Promise<string | null> => {
+  try {
+    const stream = createReadStream(filePath, { encoding: 'utf-8', start: 0, end: 4096 });
+    const rl = createInterface({ input: stream, crlfDelay: Infinity });
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        const obj = JSON.parse(line);
+        if (obj.timestamp) {
+          rl.close();
+          stream.destroy();
+          return new Date(obj.timestamp).toISOString();
+        }
+      } catch { /* skip malformed line */ }
+      rl.close();
+      stream.destroy();
+      break;
+    }
+  } catch { /* file read error */ }
+  return null;
+};
+
+const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtOverride?: string | null): IInitMeta => {
+  let createdAt: string | null = null;
+  let updatedAt: string | null = null;
+  let lastTimestamp = 0;
+  let userCount = 0;
+  let assistantCount = 0;
+  let inputTokens = 0;
+  let outputTokens = 0;
+  const modelMap = new Map<string, {
+    inputTokens: number;
+    outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
+  }>();
+
+  for (const entry of entries) {
+    if (!createdAt && entry.timestamp) {
+      createdAt = new Date(entry.timestamp).toISOString();
+    }
+    if (entry.timestamp) {
+      lastTimestamp = Math.max(lastTimestamp, entry.timestamp);
+    }
+    updatedAt = new Date(entry.timestamp).toISOString();
+
+    if (entry.type === 'user-message') {
+      userCount++;
+    } else if (entry.type === 'assistant-message') {
+      assistantCount++;
+      if (entry.usage) {
+        const cacheCreation = entry.usage.cache_creation_input_tokens ?? 0;
+        const cacheRead = entry.usage.cache_read_input_tokens ?? 0;
+        inputTokens += entry.usage.input_tokens + cacheCreation + cacheRead;
+        outputTokens += entry.usage.output_tokens;
+
+        const model = entry.model ?? 'unknown';
+        const existing = modelMap.get(model) ?? {
+          inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
+        };
+        existing.inputTokens += entry.usage.input_tokens;
+        existing.outputTokens += entry.usage.output_tokens;
+        existing.cacheCreationTokens += cacheCreation;
+        existing.cacheReadTokens += cacheRead;
+        modelMap.set(model, existing);
+      }
+    }
+  }
+
+  const tokensByModel = Array.from(modelMap.entries())
+    .map(([model, tokens]) => ({
+      model,
+      inputTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
+      outputTokens: tokens.outputTokens,
+      totalTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens + tokens.outputTokens,
+      cost: calculateCost(model, tokens.inputTokens, tokens.outputTokens, tokens.cacheCreationTokens, tokens.cacheReadTokens),
+    }))
+    .sort((a, b) => b.totalTokens - a.totalTokens);
+
+  const totalCost = tokensByModel.reduce<number | null>((sum, m) => {
+    if (m.cost === null) return sum;
+    return (sum ?? 0) + m.cost;
+  }, null);
+
+  return {
+    createdAt: createdAtOverride ?? createdAt,
+    updatedAt,
+    lastTimestamp,
+    fileSize,
+    userCount,
+    assistantCount,
+    inputTokens,
+    outputTokens,
+    totalTokens: inputTokens + outputTokens,
+    totalCost,
+    tokensByModel,
+  };
+};
+
 const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: string, sessionName?: string): Promise<string | undefined> => {
   if (!existsSync(jsonlPath)) {
     sendJson(ws, { type: 'timeline:init', entries: [], sessionId: sessionId ?? '', totalEntries: 0 });
@@ -260,12 +362,21 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
     ? result.entries.slice(-MAX_INIT_ENTRIES)
     : result.entries;
 
+  // Compute metadata from ALL parsed entries (before truncation)
+  // For tail-mode files, read the first line separately for real createdAt
+  const needsFirstLine = result.entries.length > MAX_INIT_ENTRIES;
+  const firstTimestamp = needsFirstLine ? await readFirstTimestamp(jsonlPath) : null;
+  let fileSize = 0;
+  try { fileSize = (await fsStat(jsonlPath)).size; } catch { /* ignore */ }
+  const meta = computeInitMeta(result.entries, fileSize, firstTimestamp);
+
   sendJson(ws, {
     type: 'timeline:init',
     entries,
     sessionId: sessionId ?? '',
     totalEntries: result.entries.length,
     summary: result.summary,
+    meta,
   });
 
   if (!isNewWatcher) {

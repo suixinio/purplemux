@@ -6,19 +6,20 @@ import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
 import useTmuxInfo from '@/hooks/use-tmux-info';
-import type { ITimelineEntry } from '@/types/timeline';
+import type { ITimelineEntry, IInitMeta } from '@/types/timeline';
 
 interface ISessionMetaBarProps {
   entries: ITimelineEntry[];
   sessionName: string;
   sessionId: string | null;
   sessionSummary?: string;
+  initMeta?: IInitMeta;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
 
-const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary }: ISessionMetaBarProps) => {
-  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary);
+const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary, initMeta }: ISessionMetaBarProps) => {
+  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary, initMeta);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, isExpanded);
   const tmuxInfo = useTmuxInfo(sessionName, isExpanded);
@@ -94,6 +95,7 @@ const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary }: ISe
             sessionId={sessionId}
             createdAt={meta.createdAt}
             updatedAt={meta.updatedAt}
+            fileSize={meta.fileSize}
             userCount={meta.userCount}
             assistantCount={meta.assistantCount}
             inputTokens={meta.inputTokens}

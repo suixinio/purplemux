@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ITimelineEntry,
+  IInitMeta,
   TTimelineConnectionStatus,
   TTimelineServerMessage,
 } from '@/types/timeline';
@@ -26,7 +27,7 @@ interface IUseTimelineWebSocketOptions {
   sessionName: string;
   claudeSessionId?: string | null;
   enabled: boolean;
-  onInit: (entries: ITimelineEntry[], totalEntries: number, sessionId: string, summary?: string) => void;
+  onInit: (entries: ITimelineEntry[], totalEntries: number, sessionId: string, summary?: string, meta?: IInitMeta) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
   onSessionChanged: (newSessionId: string, reason: string) => void;
   onError?: (error: { code: string; message: string }) => void;
@@ -113,7 +114,7 @@ const useTimelineWebSocket = ({
           const msg = JSON.parse(event.data) as TTimelineServerMessage;
           switch (msg.type) {
             case 'timeline:init':
-              callbacksRef.current.onInit(msg.entries, msg.totalEntries, msg.sessionId, msg.summary);
+              callbacksRef.current.onInit(msg.entries, msg.totalEntries, msg.sessionId, msg.summary, msg.meta);
               break;
             case 'timeline:append':
               callbacksRef.current.onAppend(msg.entries);

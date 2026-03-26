@@ -7,6 +7,7 @@ interface ISessionMetaData {
   title: string;
   createdAt: string | null;
   updatedAt: string | null;
+  fileSize: number;
   userCount: number;
   assistantCount: number;
   inputTokens: number;
@@ -46,6 +47,7 @@ const MobileMetaSheet = ({
           sessionId={sessionId}
           createdAt={meta.createdAt}
           updatedAt={meta.updatedAt}
+          fileSize={meta.fileSize}
           userCount={meta.userCount}
           assistantCount={meta.assistantCount}
           inputTokens={meta.inputTokens}

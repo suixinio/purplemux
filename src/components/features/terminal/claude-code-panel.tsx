@@ -76,6 +76,7 @@ const ClaudeCodePanel = ({
     cliState,
     sessionId,
     sessionSummary,
+    initMeta,
     sessionStatus,
     wsStatus,
     isLoading: isTimelineLoading,
@@ -205,7 +206,7 @@ const ClaudeCodePanel = ({
 
   return (
     <div className={cn('flex min-h-0 w-full flex-1 flex-col', className)}>
-      <SessionMetaBar entries={entries} sessionName={sessionName} sessionId={sessionId} sessionSummary={sessionSummary} />
+      <SessionMetaBar entries={entries} sessionName={sessionName} sessionId={sessionId} sessionSummary={sessionSummary} initMeta={initMeta} />
       <div className="min-h-0 flex-1">
         <TimelineView
           entries={entries}

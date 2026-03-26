@@ -86,6 +86,7 @@ export interface IMetaDetailProps {
   sessionId: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+  fileSize: number;
   userCount: number;
   assistantCount: number;
   inputTokens: number;
@@ -98,6 +99,13 @@ export interface IMetaDetailProps {
   gitStatus: IGitStatus | null;
   tmuxInfo?: ITmuxInfo | null;
 }
+
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
 
 const shortenPath = (p: string): string => {
   const home = typeof window === 'undefined' ? '' : '';
@@ -113,6 +121,7 @@ export const MetaDetail = ({
   sessionId,
   createdAt,
   updatedAt,
+  fileSize,
   userCount,
   assistantCount,
   inputTokens,
@@ -205,6 +214,15 @@ export const MetaDetail = ({
                 <p className="text-xs">{dayjs(updatedAt).format('YYYY-MM-DD HH:mm:ss')}</p>
               </TooltipContent>
             </Tooltip>
+          </div>
+        )}
+
+        {fileSize > 0 && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-12 shrink-0 text-xs text-muted-foreground/70">JSONL</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {formatFileSize(fileSize)}
+            </span>
           </div>
         )}
       </div>

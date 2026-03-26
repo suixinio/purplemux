@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle2, ChevronDown, ListChecks } from 'lucide-react';
+import { CheckCircle2, ChevronDown, ListChecks, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ITaskItem, TCliState, TTaskStatus } from '@/types/timeline';
 
@@ -30,6 +30,7 @@ const TaskChecklist = ({ tasks, cliState }: ITaskChecklistProps) => {
   const hasInProgress = tasks.some((t) => t.status === 'in_progress');
 
   const [collapsed, setCollapsed] = useState(allCompleted);
+  const [dismissed, setDismissed] = useState(false);
   const [prevTasks, setPrevTasks] = useState(tasks);
 
   if (tasks !== prevTasks) {
@@ -60,10 +61,12 @@ const TaskChecklist = ({ tasks, cliState }: ITaskChecklistProps) => {
       ? 'border-ui-purple'
       : 'border-muted-foreground/40';
 
+  if (dismissed) return null;
+
   return (
     <div
       className={cn(
-        'sticky top-0 z-10 mx-4 mb-2 border-l-2 bg-muted/80 px-4 py-2',
+        'sticky top-0 z-10 mx-4 mb-2 border-l-2 bg-muted/80 px-4 py-2 pr-8 relative',
         'animate-in fade-in slide-in-from-top-1 duration-200',
         borderColor,
       )}
@@ -98,6 +101,14 @@ const TaskChecklist = ({ tasks, cliState }: ITaskChecklistProps) => {
             collapsed && '-rotate-90',
           )}
         />
+      </button>
+      <button
+        type="button"
+        className="absolute top-2 right-2 flex h-5 w-5 cursor-pointer items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+        onClick={() => setDismissed(true)}
+        aria-label="닫기"
+      >
+        <X size={12} />
       </button>
 
       <div

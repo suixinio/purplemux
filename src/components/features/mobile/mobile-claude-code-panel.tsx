@@ -92,6 +92,7 @@ const MobileClaudeCodePanel = ({
     cliState,
     sessionId,
     sessionSummary,
+    initMeta,
     sessionStatus,
     wsStatus,
     isLoading: isTimelineLoading,
@@ -149,7 +150,7 @@ const MobileClaudeCodePanel = ({
     isTimelineLoading,
   );
 
-  const { meta } = useSessionMeta(entries, sessionSummary);
+  const { meta } = useSessionMeta(entries, sessionSummary, initMeta);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, metaSheetOpen);
   const tmuxInfo = useTmuxInfo(sessionName, metaSheetOpen);

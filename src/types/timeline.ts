@@ -196,12 +196,33 @@ export type ITimelineEntry =
   | ITimelineSessionExit
   | ITimelineTurnEnd;
 
+export interface IInitMeta {
+  createdAt: string | null;
+  updatedAt: string | null;
+  lastTimestamp: number;
+  fileSize: number;
+  userCount: number;
+  assistantCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  totalCost: number | null;
+  tokensByModel: {
+    model: string;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    cost: number | null;
+  }[];
+}
+
 export interface ITimelineInitMessage {
   type: 'timeline:init';
   entries: ITimelineEntry[];
   sessionId: string;
   totalEntries: number;
   summary?: string;
+  meta?: IInitMeta;
 }
 
 export interface ITimelineAppendMessage {

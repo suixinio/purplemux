@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type {
   ITimelineEntry,
+  IInitMeta,
   ITaskItem,
   ISessionInfo,
   TSessionStatus,
@@ -59,6 +60,7 @@ interface IUseTimelineReturn {
   cliState: TCliState;
   sessionId: string | null;
   sessionSummary: string | undefined;
+  initMeta: IInitMeta | undefined;
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
@@ -82,6 +84,7 @@ const useTimeline = ({
   const [hasMore, setHasMore] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionSummary, setSessionSummary] = useState<string | undefined>();
+  const [initMeta, setInitMeta] = useState<IInitMeta | undefined>();
 
   const entriesRef = useRef(entries);
   useEffect(() => {
@@ -124,12 +127,13 @@ const useTimeline = ({
     fetchSession();
   }, [fetchSession]);
 
-  const handleInit = useCallback((newEntries: ITimelineEntry[], totalEntries: number, initSessionId: string, summary?: string) => {
+  const handleInit = useCallback((newEntries: ITimelineEntry[], totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta) => {
     wsInitReceivedRef.current = true;
     setEntries(newEntries);
     totalEntriesRef.current = totalEntries;
     setHasMore(newEntries.length < totalEntries);
     setSessionSummary(summary);
+    setInitMeta(meta);
     if (initSessionId) {
       setSessionId(initSessionId);
     }
@@ -171,6 +175,7 @@ const useTimeline = ({
       setIsLoading(false);
       setEntries([]);
       setSessionSummary(undefined);
+      setInitMeta(undefined);
       setHasMore(false);
       return;
     }
@@ -178,6 +183,7 @@ const useTimeline = ({
     setSessionStatus('active');
     setEntries([]);
     setSessionSummary(undefined);
+    setInitMeta(undefined);
     setHasMore(false);
     setIsLoading(true);
   }, []);
@@ -320,6 +326,7 @@ const useTimeline = ({
     cliState,
     sessionId,
     sessionSummary,
+    initMeta,
     sessionStatus,
     wsStatus,
     isLoading,
