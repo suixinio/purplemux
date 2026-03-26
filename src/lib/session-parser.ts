@@ -707,9 +707,7 @@ export const parseSessionFile = async (filePath: string): Promise<IParseResult> 
     }
 
     const content = await fs.readFile(filePath, 'utf-8');
-    const result = parseContent(content);
-    result.lastOffset = stat.size;
-    return result;
+    return parseContent(content);
   } catch {
     return { entries: [], lastOffset: 0, totalLines: 0, errorCount: 0 };
   }
