@@ -33,6 +33,7 @@ interface IActiveConnection {
   heartbeatTimer: ReturnType<typeof setInterval>;
   cleaned: boolean;
   detaching: boolean;
+  disposables: pty.IDisposable[];
 }
 
 const connections = new Map<WebSocket, IActiveConnection>();
@@ -55,6 +56,11 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   conn.cleaned = true;
 
   clearInterval(conn.heartbeatTimer);
+
+  for (const d of conn.disposables) {
+    d.dispose();
+  }
+  conn.disposables = [];
 
   if (sessionExited) {
     if (conn.ws.readyState === WebSocket.OPEN) {
@@ -266,33 +272,39 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
     heartbeatTimer,
     cleaned: false,
     detaching: false,
+    disposables: [],
   };
 
   connections.set(ws, conn);
   console.log(`[terminal] client connected (active: ${connections.size})`);
 
-  ptyProcess.onData((data: string) => {
-    if (ws.readyState !== WebSocket.OPEN) return;
+  conn.disposables.push(
+    ptyProcess.onData((data: string) => {
+      if (conn.cleaned || ws.readyState !== WebSocket.OPEN) return;
 
-    const payload = textEncoder.encode(data);
-    const frame = new Uint8Array(1 + payload.length);
-    frame[0] = MSG_STDOUT;
-    frame.set(payload, 1);
-    ws.send(frame);
+      const payload = textEncoder.encode(data);
+      const frame = new Uint8Array(1 + payload.length);
+      frame[0] = MSG_STDOUT;
+      frame.set(payload, 1);
+      ws.send(frame);
 
-    if (ws.bufferedAmount > BACKPRESSURE_HIGH && !paused) {
-      paused = true;
-      ptyProcess!.pause();
-    } else if (ws.bufferedAmount < BACKPRESSURE_LOW && paused) {
-      paused = false;
-      ptyProcess!.resume();
-    }
-  });
+      if (ws.bufferedAmount > BACKPRESSURE_HIGH && !paused) {
+        paused = true;
+        ptyProcess!.pause();
+      } else if (ws.bufferedAmount < BACKPRESSURE_LOW && paused) {
+        paused = false;
+        ptyProcess!.resume();
+      }
+    }),
+  );
 
-  ptyProcess.onExit(({ exitCode, signal }) => {
-    console.log(
-      `[terminal] pty exited (pid: ${ptyProcess!.pid}, code: ${exitCode}, signal: ${signal}, detaching: ${conn.detaching})`,
-    );
-    cleanup(conn, !conn.detaching);
-  });
+  conn.disposables.push(
+    ptyProcess.onExit(({ exitCode, signal }) => {
+      if (conn.cleaned) return;
+      console.log(
+        `[terminal] pty exited (pid: ${ptyProcess!.pid}, code: ${exitCode}, signal: ${signal}, detaching: ${conn.detaching})`,
+      );
+      cleanup(conn, !conn.detaching);
+    }),
+  );
 };

@@ -22,6 +22,7 @@ import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } fr
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import { reportActiveTab, dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
+import isElectron from '@/hooks/use-is-electron';
 
 const escapeShellPath = (filePath: string): string =>
   filePath.replace(/[ \t\\'"(){}[\]!#$&;`|*?<>~^%]/g, '\\$&');
@@ -504,9 +505,13 @@ const PaneContainer = ({
     const { files } = e.dataTransfer;
     if (files.length === 0) return;
 
+    const electronAPI = isElectron
+      ? (window as unknown as { electronAPI: { getPathForFile: (file: File) => string } }).electronAPI
+      : null;
+
     const paths: string[] = [];
     for (let i = 0; i < files.length; i++) {
-      const filePath = (files[i] as File & { path?: string }).path;
+      const filePath = electronAPI?.getPathForFile(files[i]);
       if (filePath) {
         paths.push(escapeShellPath(filePath));
       }
@@ -872,7 +877,7 @@ const PaneContainer = ({
                 <input
                   ref={pathInputRef}
                   className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
-                  placeholder="파일 경로를 입력하세요"
+                  placeholder="전체 경로를 입력하세요 (예: /Users/...)"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       handlePathInputSubmit(e.currentTarget.value);
