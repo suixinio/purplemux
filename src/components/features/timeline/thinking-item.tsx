@@ -8,19 +8,7 @@ interface IThinkingItemProps {
 }
 
 const ThinkingItem = ({ entry }: IThinkingItemProps) => {
-  const hasContent = Boolean(entry.thinking);
   const [isExpanded, setIsExpanded] = useState(false);
-
-  if (!hasContent) {
-    return (
-      <div className="animate-in fade-in duration-150">
-        <div className="flex items-center gap-1.5 py-1 text-xs text-muted-foreground/60 italic">
-          <BrainCircuit size={12} className="shrink-0" />
-          <span>Thinking...</span>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="animate-in fade-in duration-150">
@@ -36,7 +24,7 @@ const ThinkingItem = ({ entry }: IThinkingItemProps) => {
           )}
         />
         <BrainCircuit size={12} className="shrink-0" />
-        <span>Thinking...</span>
+        <span>사고 과정</span>
       </button>
       {isExpanded && (
         <div className="ml-[7px] mt-0.5 border-l border-border/40 pl-3">
