@@ -6,7 +6,7 @@ import { nanoid } from 'nanoid';
 const execFile = promisify(execFileCb);
 
 const TMUX_SOCKET = 'purple';
-const TMUX_CONFIG_PATH = path.join(process.env.__PT_APP_DIR || process.cwd(), 'src', 'config', 'tmux.conf');
+const TMUX_CONFIG_PATH = path.join(process.env.__PMUX_APP_DIR || process.cwd(), 'src', 'config', 'tmux.conf');
 const CMD_TIMEOUT = 5000;
 
 export const listSessions = async (): Promise<string[]> => {

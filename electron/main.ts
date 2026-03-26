@@ -149,7 +149,7 @@ let cachedStart: ((opts: { port: number }) => Promise<{ port: number; shutdown: 
 
 const startLocalServer = async (): Promise<number> => {
   if (!cachedStart) {
-    const mod = await import(path.join(process.env.__PT_APP_DIR!, 'dist', 'server.js'));
+    const mod = await import(path.join(process.env.__PMUX_APP_DIR!, 'dist', 'server.js'));
     cachedStart = mod.start;
   }
   const port = await findFreePort(8022);
@@ -296,8 +296,8 @@ const bootstrap = async () => {
   }
 
   process.env.NODE_ENV = 'production';
-  process.env.__PT_ELECTRON = '1';
-  process.env.__PT_APP_DIR = isDev ? process.cwd() : app.getAppPath();
+  process.env.__PMUX_ELECTRON = '1';
+  process.env.__PMUX_APP_DIR = isDev ? process.cwd() : app.getAppPath();
 
   serverConfig = readServerConfig();
 

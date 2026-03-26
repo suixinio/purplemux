@@ -4,7 +4,8 @@
   "license": "MIT",
   "main": "dist-electron/main.js",
   "bin": {
-    "pt": "./bin/pt.js"
+    "purplemux": "./bin/purplemux.js",
+    "pmux": "./bin/purplemux.js"
   },
   "files": [
     "bin/",

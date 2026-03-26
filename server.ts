@@ -50,7 +50,7 @@ interface IStartResult {
 
 export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   const port = opts?.port ?? parseInt(process.env.PORT || '8022', 10);
-  const appDir = process.env.__PT_APP_DIR || process.cwd();
+  const appDir = process.env.__PMUX_APP_DIR || process.cwd();
   const app = next({ dev, dir: appDir });
   const handle = app.getRequestHandler();
 
@@ -146,6 +146,6 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   return { port, shutdown };
 };
 
-if (!process.env.__PT_ELECTRON) {
+if (!process.env.__PMUX_ELECTRON) {
   start();
 }
