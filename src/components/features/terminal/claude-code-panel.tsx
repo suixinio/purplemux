@@ -79,7 +79,6 @@ const ClaudeCodePanel = ({
     sessionStatus,
     wsStatus,
     isLoading: isTimelineLoading,
-    isSessionTransitioning,
     error: timelineError,
     loadMore: loadMoreTimeline,
     hasMore: timelineHasMore,
@@ -216,7 +215,6 @@ const ClaudeCodePanel = ({
           sessionStatus={sessionStatus}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
-          isSessionTransitioning={isSessionTransitioning}
           error={timelineError}
           onRetry={retrySession}
           onLoadMore={loadMoreTimeline}

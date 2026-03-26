@@ -30,7 +30,6 @@ interface ITimelineViewProps {
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
-  isSessionTransitioning: boolean;
   error: string | null;
   onRetry: () => void;
   onLoadMore: () => Promise<void>;
@@ -218,7 +217,6 @@ const TimelineView = ({
   sessionStatus,
   wsStatus,
   isLoading,
-  isSessionTransitioning,
   error,
   onRetry,
   onLoadMore,
@@ -285,8 +283,8 @@ const TimelineView = ({
         ref={scrollRef}
         className="flex-1 overflow-y-auto py-2 transition-opacity"
         style={{
-          opacity: isSessionTransitioning || skipAnimation ? 0 : 1,
-          transitionDuration: isSessionTransitioning ? '100ms' : '150ms',
+          opacity: skipAnimation ? 0 : 1,
+          transitionDuration: '150ms',
         }}
         onScroll={handleScroll}
         tabIndex={0}

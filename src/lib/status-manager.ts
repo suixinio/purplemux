@@ -15,7 +15,8 @@ const POLL_INTERVAL_LARGE = 15_000;
 const TAB_COUNT_MEDIUM = 11;
 const TAB_COUNT_LARGE = 21;
 const JSONL_TAIL_SIZE = 8192;
-const JSONL_STALE_MS = 30_000;
+const STALE_MS_INTERRUPTED = 20_000;
+const STALE_MS_AWAITING_API = 90_000;
 
 const CLAUDE_COMMANDS = new Set(['claude']);
 const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
@@ -27,6 +28,7 @@ interface IJsonlIdleCache {
   mtimeMs: number;
   idle: boolean;
   needsStaleRecheck: boolean;
+  staleMs: number;
 }
 
 const jsonlIdleCache = new Map<string, IJsonlIdleCache>();
@@ -40,7 +42,7 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
     if (cached && cached.mtimeMs === stat.mtimeMs) {
       if (cached.idle) return true;
       if (cached.needsStaleRecheck) {
-        return Date.now() - stat.mtimeMs > JSONL_STALE_MS;
+        return Date.now() - stat.mtimeMs > cached.staleMs;
       }
       return false;
     }
@@ -51,11 +53,12 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
       const buffer = Buffer.alloc(readSize);
       await handle.read(buffer, 0, readSize, stat.size - readSize);
 
-      const stale = Date.now() - stat.mtimeMs > JSONL_STALE_MS;
       const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
+      const elapsed = Date.now() - stat.mtimeMs;
 
-      let result = stale;
+      let result = elapsed > STALE_MS_AWAITING_API;
       let needsStaleRecheck = false;
+      let staleMs = STALE_MS_AWAITING_API;
 
       for (let i = lines.length - 1; i >= 0; i--) {
         try {
@@ -69,8 +72,9 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
           if (entry.type === 'assistant') {
             const stopReason = entry.message?.stop_reason;
             if (!stopReason) {
-              result = stale;
-              needsStaleRecheck = !stale;
+              staleMs = STALE_MS_INTERRUPTED;
+              result = elapsed > STALE_MS_INTERRUPTED;
+              needsStaleRecheck = !result;
             } else {
               result = stopReason !== 'tool_use';
             }
@@ -82,8 +86,9 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
             if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
               result = true;
             } else {
-              result = stale;
-              needsStaleRecheck = !stale;
+              staleMs = STALE_MS_AWAITING_API;
+              result = elapsed > STALE_MS_AWAITING_API;
+              needsStaleRecheck = !result;
             }
             break;
           }
@@ -92,7 +97,7 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
         }
       }
 
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: result, needsStaleRecheck });
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: result, needsStaleRecheck, staleMs });
       return result;
     } finally {
       await handle.close();

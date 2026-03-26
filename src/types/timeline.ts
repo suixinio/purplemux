@@ -96,6 +96,7 @@ export interface ITimelineAgentGroup {
   agentType: string;
   description: string;
   entryCount: number;
+  entries: ITimelineEntry[];
 }
 
 export interface ITimelineTaskNotification {

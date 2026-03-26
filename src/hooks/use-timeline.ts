@@ -62,7 +62,6 @@ interface IUseTimelineReturn {
   sessionStatus: TSessionStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
-  isSessionTransitioning: boolean;
   error: string | null;
   loadMore: () => Promise<void>;
   hasMore: boolean;
@@ -92,6 +91,7 @@ const useTimeline = ({
   const jsonlPathRef = useRef<string | null>(null);
   const totalEntriesRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
+  const wsInitReceivedRef = useRef(false);
   const claudeSessionIdRef = useRef(claudeSessionId);
   useEffect(() => {
     claudeSessionIdRef.current = claudeSessionId;
@@ -105,6 +105,7 @@ const useTimeline = ({
       );
       if (!res.ok) throw new Error('세션 정보를 불러올 수 없습니다');
       const info: ISessionInfo = await res.json();
+      if (wsInitReceivedRef.current) return;
       setSessionStatus(info.status);
       jsonlPathRef.current = info.jsonlPath;
       if (info.status !== 'active' && !claudeSessionIdRef.current) {
@@ -112,8 +113,10 @@ const useTimeline = ({
       }
       setError(null);
     } catch (err) {
+      if (wsInitReceivedRef.current) return;
       setError(err instanceof Error ? err.message : '세션 정보를 불러올 수 없습니다');
       setSessionStatus('none');
+      setIsLoading(false);
     }
   }, [enabled, sessionName]);
 
@@ -122,6 +125,7 @@ const useTimeline = ({
   }, [fetchSession]);
 
   const handleInit = useCallback((newEntries: ITimelineEntry[], totalEntries: number, initSessionId: string, summary?: string) => {
+    wsInitReceivedRef.current = true;
     setEntries(newEntries);
     totalEntriesRef.current = totalEntries;
     setHasMore(newEntries.length < totalEntries);
@@ -321,7 +325,6 @@ const useTimeline = ({
     sessionStatus,
     wsStatus,
     isLoading,
-    isSessionTransitioning: false,
     error,
     loadMore,
     hasMore,

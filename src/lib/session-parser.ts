@@ -479,11 +479,17 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
 };
 
 const createAgentGroup = (
-  entries: IRawEntry[],
+  rawEntries: IRawEntry[],
   agentHint: { agentType: string; description: string } | null,
 ): ITimelineAgentGroup => {
-  const first = entries[0].base;
+  const first = rawEntries[0].base;
   const timestamp = first.timestamp ? new Date(first.timestamp).getTime() : Date.now();
+
+  const parsed: ITimelineEntry[] = [];
+  for (const { base, raw } of rawEntries) {
+    parsed.push(...parseSingleEntry(raw, base));
+  }
+  const entries = mergeToolResults(parsed);
 
   if (agentHint) {
     return {
@@ -492,12 +498,13 @@ const createAgentGroup = (
       timestamp,
       agentType: agentHint.agentType,
       description: agentHint.description,
-      entryCount: entries.length,
+      entryCount: rawEntries.length,
+      entries,
     };
   }
 
   let description = '';
-  for (const { raw } of entries) {
+  for (const { raw } of rawEntries) {
     const r = raw as Record<string, unknown>;
     if (r.type === 'user' && r.message) {
       const msg = r.message as Record<string, unknown>;
@@ -525,7 +532,8 @@ const createAgentGroup = (
     timestamp,
     agentType: 'Unknown',
     description: description || '서브에이전트 실행',
-    entryCount: entries.length,
+    entryCount: rawEntries.length,
+    entries,
   };
 };
 
