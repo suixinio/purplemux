@@ -147,7 +147,6 @@ const MobileClaudeCodePanel = ({
     sessions,
     isSessionListLoading,
     sessionListError,
-    claudeSessionId,
     isTimelineLoading,
   );
 

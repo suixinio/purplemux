@@ -131,7 +131,6 @@ const ClaudeCodePanel = ({
     sessions,
     isSessionListLoading,
     sessionListError,
-    claudeSessionId,
     isTimelineLoading,
   );
 
