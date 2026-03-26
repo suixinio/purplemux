@@ -579,6 +579,8 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
   const claudeSessionId = url.searchParams.get('claudeSessionId');
   const sessionInfo = await detectActiveSession(panePid);
 
+  if (conn.cleaned) return;
+
   if (claudeSessionId && sessionInfo.status === 'none') {
     await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});
     await updateTabClaudeSummary(conn.sessionName, null).catch(() => {});
@@ -622,6 +624,8 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       totalEntries: 0,
     });
   }
+
+  if (conn.cleaned) return;
 
   // Watch for new sessions — shared per session key
   const wsKey = sessionName;
@@ -676,7 +680,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
         }
         if (newInfo.sessionId && newInfo.cwd) {
           const hasActiveSubscription = wsConns.some((c) => c.currentJsonlPath !== null);
-          if (!hasActiveSubscription) {
+          if (!hasActiveSubscription && wsConns.length > 0) {
             watchForJsonlFile(sessionName, newInfo.sessionId, newInfo.cwd);
           }
         }

@@ -242,6 +242,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
       ws.close(1011, 'Session not found');
       return;
     }
+    if (ws.readyState !== WebSocket.OPEN) return;
     const cols = urlCols > 0 ? urlCols : (pending.resize?.cols || 80);
     const rows = urlRows > 0 ? urlRows : (pending.resize?.rows || 24);
     try {
@@ -258,6 +259,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
     const rows = urlRows > 0 ? urlRows : (pending.resize?.rows || 24);
     try {
       await createSession(sessionName, cols, rows);
+      if (ws.readyState !== WebSocket.OPEN) return;
       ptyProcess = attachToSession(sessionName, cols, rows);
     } catch (err) {
       console.log(`[terminal] tmux session creation failed: ${err instanceof Error ? err.message : err}`);
