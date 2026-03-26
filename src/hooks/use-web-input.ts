@@ -95,14 +95,7 @@ const useWebInput = (
       return;
     }
 
-    if (mode === 'interrupt') {
-      sendStdin('\x1b\x1b');
-      setTimeout(() => {
-        sendStdin(value + '\r');
-      }, 100);
-    } else {
-      sendStdin(value + '\r');
-    }
+    sendStdin(value + '\r');
 
     if (!value.trim().startsWith('/')) {
       onMessageSent?.(value.trim());

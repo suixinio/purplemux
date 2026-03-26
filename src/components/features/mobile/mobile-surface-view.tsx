@@ -258,6 +258,7 @@ const MobileSurfaceView = ({
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
+    setIsRestarting(true);
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
     sendStdin(`${cmd}\r`);

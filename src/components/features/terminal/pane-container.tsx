@@ -23,6 +23,9 @@ import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import { reportActiveTab, dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
 
+const escapeShellPath = (filePath: string): string =>
+  filePath.replace(/[ \t\\'"(){}[\]!#$&;`|*?<>~^%]/g, '\\$&');
+
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
   'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
   'pty-error': '터미널을 시작할 수 없습니다',
@@ -481,8 +484,62 @@ const PaneContainer = ({
     setShowClaudeModePrompt(true);
   }, [activeTabId, isClaudeRunning, activePanelType]);
 
+  const [showPathInput, setShowPathInput] = useState(false);
+  const [droppedFileHint, setDroppedFileHint] = useState('');
+  const pathInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (showPathInput) pathInputRef.current?.focus();
+  }, [showPathInput]);
+
+  const handleTerminalDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes('Files')) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+  }, []);
+
+  const handleTerminalDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const { files } = e.dataTransfer;
+    if (files.length === 0) return;
+
+    const paths: string[] = [];
+    for (let i = 0; i < files.length; i++) {
+      const filePath = (files[i] as File & { path?: string }).path;
+      if (filePath) {
+        paths.push(escapeShellPath(filePath));
+      }
+    }
+
+    if (paths.length > 0) {
+      wsActionsRef.current.sendStdin(paths.join(' '));
+      focus();
+    } else {
+      const names = Array.from(files).map((f) => f.name).join(', ');
+      setDroppedFileHint(names);
+      setShowPathInput(true);
+    }
+  }, [focus]);
+
+  const handlePathInputSubmit = useCallback((value: string) => {
+    setShowPathInput(false);
+    setDroppedFileHint('');
+    if (value.trim()) {
+      wsActionsRef.current.sendStdin(escapeShellPath(value.trim()));
+      focus();
+    }
+  }, [focus]);
+
+  const handlePathInputDismiss = useCallback(() => {
+    setShowPathInput(false);
+    setDroppedFileHint('');
+    focus();
+  }, [focus]);
+
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected') return;
+    setIsRestarting(true);
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const cmd = dangerous ? 'claude --dangerously-skip-permissions' : 'claude';
     sendStdin(`${cmd}\r`);
@@ -599,7 +656,13 @@ const PaneContainer = ({
         onRetry={() => {}}
       />
 
-      <div role="tabpanel" className="relative min-h-0 flex-1 flex flex-col" style={{ backgroundColor: terminalTheme.colors.background }}>
+      <div
+        role="tabpanel"
+        className="relative min-h-0 flex-1 flex flex-col"
+        style={{ backgroundColor: terminalTheme.colors.background }}
+        onDragOver={handleTerminalDragOver}
+        onDrop={handleTerminalDrop}
+      >
         <Group
           groupRef={splitGroupRef}
           orientation="vertical"
@@ -788,6 +851,38 @@ const PaneContainer = ({
             >
               <X className="h-3.5 w-3.5" />
             </button>
+          </div>
+        )}
+
+        {showPathInput && (
+          <div className="absolute bottom-3 left-3 right-3 z-30 rounded-lg border border-border bg-card shadow-lg animate-[fadeIn_150ms_ease-out]">
+            <div className="flex items-center gap-2 px-3 pt-2.5">
+              <span className="text-xs text-muted-foreground">웹에서는 파일 드래그앤드롭을 지원하지 않습니다</span>
+              <button
+                className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+                onClick={handlePathInputDismiss}
+                aria-label="닫기"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <div className="px-3 pt-1 pb-2.5">
+              <div className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5">
+                <span className="shrink-0 text-xs text-muted-foreground/60">{droppedFileHint}</span>
+                <input
+                  ref={pathInputRef}
+                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
+                  placeholder="파일 경로를 입력하세요"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handlePathInputSubmit(e.currentTarget.value);
+                    } else if (e.key === 'Escape') {
+                      handlePathInputDismiss();
+                    }
+                  }}
+                />
+              </div>
+            </div>
           </div>
         )}
 
