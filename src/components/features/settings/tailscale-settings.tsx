@@ -21,7 +21,7 @@ interface ITailscaleStatus {
 }
 
 const PRESET_SERVES = [
-  { label: 'PT (8022)', httpsPort: '443', localPort: '8022' },
+  { label: 'purplemux (8022)', httpsPort: '443', localPort: '8022' },
   { label: 'Dev (8023)', httpsPort: '2443', localPort: '8023' },
   { label: 'code-server (8080)', httpsPort: '8443', localPort: '8080' },
 ];

@@ -29,7 +29,7 @@ interface IIndexProps {
 
 const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
   const isMobile = useIsMobile();
-  useBrowserTitle('Purple Terminal');
+  useBrowserTitle('purplemux');
   const hydratedRef = useRef(false);
   useEffect(() => {
     if (!hydratedRef.current) {
@@ -44,7 +44,7 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
   const content = isMobile ? (
     <>
       <Head>
-        <title>Purple Terminal</title>
+        <title>purplemux</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
       </Head>
       <div style={{ backgroundColor: '#18181b' }} className="flex h-dvh w-full flex-col overflow-hidden">
@@ -54,7 +54,7 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
   ) : (
     <>
       <Head>
-        <title>Purple Terminal</title>
+        <title>purplemux</title>
       </Head>
       <div style={{ backgroundColor: '#18181b' }} className="flex h-screen w-screen">
         <TerminalPage />

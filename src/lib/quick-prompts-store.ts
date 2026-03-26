@@ -19,7 +19,7 @@ interface IQuickPromptsData {
   custom: IQuickPrompt[];
 }
 
-const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
+const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const FILE_PATH = path.join(BASE_DIR, 'quick-prompts.json');
 
 const BUILTIN_PROMPTS: IQuickPrompt[] = [

@@ -28,7 +28,7 @@ const findFreePort = (startPort: number): Promise<number> =>
     });
   });
 
-// --- Server Config (~/. purple-terminal/config.json) ---
+// --- Server Config (~/.purplemux/config.json) ---
 
 interface IServerConfig {
   mode: 'local' | 'remote';
@@ -39,7 +39,7 @@ interface IAppConfig {
   server?: IServerConfig;
 }
 
-const CONFIG_DIR = path.join(os.homedir(), '.purple-terminal');
+const CONFIG_DIR = path.join(os.homedir(), '.purplemux');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 const readAppConfig = (): IAppConfig => {

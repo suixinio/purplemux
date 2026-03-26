@@ -8,7 +8,7 @@ interface IAuthCredentials {
   secret: string;
 }
 
-const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
+const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const WORKSPACES_FILE = path.join(BASE_DIR, 'workspaces.json');
 
 const generateRandomString = (length: number): string =>

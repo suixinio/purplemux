@@ -29,7 +29,7 @@ const nextWorkspaceName = (workspaces: IWorkspace[]): string => {
   return `${WORKSPACE_PREFIX}${max + 1}`;
 };
 
-const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
+const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const WORKSPACES_FILE = path.join(BASE_DIR, 'workspaces.json');
 const LEGACY_LAYOUT_FILE = path.join(BASE_DIR, 'layout.json');
 const LEGACY_TABS_FILE = path.join(BASE_DIR, 'tabs.json');
@@ -125,7 +125,7 @@ const migrateFromPhase4 = async (): Promise<IWorkspacesData | null> => {
   };
 
   await writeWorkspacesFile(data);
-  console.log(`[purple-terminal] Phase 4 layout.json → Workspace 'default' 마이그레이션 완료`);
+  console.log(`[purplemux] Phase 4 layout.json → Workspace 'default' 마이그레이션 완료`);
   return data;
 };
 
@@ -150,7 +150,7 @@ const migrateFromTabs = async (): Promise<IWorkspacesData | null> => {
     const tmpFile = LEGACY_LAYOUT_FILE + '.tmp';
     await fs.writeFile(tmpFile, JSON.stringify(legacyLayout, null, 2));
     await fs.rename(tmpFile, LEGACY_LAYOUT_FILE);
-    console.log(`[purple-terminal] tabs.json → layout.json 마이그레이션 완료`);
+    console.log(`[purplemux] tabs.json → layout.json 마이그레이션 완료`);
 
     return await migrateFromPhase4();
   } catch {
@@ -161,7 +161,7 @@ const migrateFromTabs = async (): Promise<IWorkspacesData | null> => {
 export const initWorkspaceStore = async (): Promise<void> => {
   await fs.mkdir(path.join(BASE_DIR, 'workspaces'), { recursive: true });
 
-  console.log('[purple-terminal] workspaces.json 로드 중...');
+  console.log('[purplemux] workspaces.json 로드 중...');
 
   let data = await readWorkspacesFile();
 
@@ -184,7 +184,7 @@ export const initWorkspaceStore = async (): Promise<void> => {
       initial.authSecret = process.env.NEXTAUTH_SECRET;
     }
     await writeWorkspacesFile(initial);
-    console.log('[purple-terminal] 초기 workspaces.json 생성 (auth 포함)');
+    console.log('[purplemux] 초기 workspaces.json 생성 (auth 포함)');
     return;
   }
 
@@ -197,11 +197,11 @@ export const initWorkspaceStore = async (): Promise<void> => {
     let layout = await readLayoutFile(layoutFile);
 
     if (!layout) {
-      console.log(`[purple-terminal] Workspace '${ws.name}': layout.json 손상, 기본 Pane으로 초기화`);
+      console.log(`[purplemux] Workspace '${ws.name}': layout.json 손상, 기본 Pane으로 초기화`);
       layout = await createDefaultLayout(ws.id, ws.directories[0]);
       await writeLayoutFile(layout, layoutFile);
       collectAllTabs(layout.root).forEach((t) => console.log(`  - ${t.sessionName}`));
-      console.log(`[purple-terminal] Workspace '${ws.name}': tmux 정합성 체크 — 1 세션 확인, 0 orphan`);
+      console.log(`[purplemux] Workspace '${ws.name}': tmux 정합성 체크 — 1 세션 확인, 0 orphan`);
       continue;
     }
 
@@ -219,15 +219,15 @@ export const initWorkspaceStore = async (): Promise<void> => {
         await writeLayoutFile(layout, layoutFile);
       }
     } catch (err) {
-      console.log(`[purple-terminal] Workspace '${ws.name}': tmux 정합성 체크 실패: ${err instanceof Error ? err.message : err}`);
+      console.log(`[purplemux] Workspace '${ws.name}': tmux 정합성 체크 실패: ${err instanceof Error ? err.message : err}`);
     }
 
     const finalTabs = collectAllTabs(layout.root);
     const orphanCount = relevantTmuxSessions.filter((s) => !wsSessionNames.includes(s)).length;
-    console.log(`[purple-terminal] Workspace '${ws.name}': tmux 정합성 체크 — ${finalTabs.length} 세션 확인, ${orphanCount} orphan`);
+    console.log(`[purplemux] Workspace '${ws.name}': tmux 정합성 체크 — ${finalTabs.length} 세션 확인, ${orphanCount} orphan`);
   }
 
-  console.log(`[purple-terminal] Workspace ${data.workspaces.length}개 로드 완료`);
+  console.log(`[purplemux] Workspace ${data.workspaces.length}개 로드 완료`);
 };
 
 export const getWorkspaces = async (): Promise<{

@@ -1,5 +1,5 @@
-appId: com.subicura.purple-terminal
-productName: Purple Terminal
+appId: com.subicura.purplemux
+productName: purplemux
 directories:
   buildResources: build-resources
   output: release

@@ -16,7 +16,7 @@ import {
 import type { ITab, TLayoutNode, IPaneNode, ILayoutData } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 
-const BASE_DIR = path.join(os.homedir(), '.purple-terminal');
+const BASE_DIR = path.join(os.homedir(), '.purplemux');
 
 const g = globalThis as unknown as {
   __ptLayoutLock?: Promise<void>;

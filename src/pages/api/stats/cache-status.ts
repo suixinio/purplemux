@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 
-const CACHE_PATH = path.join(os.homedir(), '.purple-terminal', 'stats', 'cache.json');
+const CACHE_PATH = path.join(os.homedir(), '.purplemux', 'stats', 'cache.json');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 
 const countJsonlFiles = async (): Promise<number> => {

@@ -174,7 +174,7 @@ const StatsPage = () => {
   return (
     <>
       <Head>
-        <title>사용량 통계 — Purple Terminal</title>
+        <title>사용량 통계 — purplemux</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
       </Head>
       <div className="flex h-screen w-screen flex-col bg-background">

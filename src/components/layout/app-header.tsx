@@ -37,7 +37,7 @@ const AppHeader = ({ onMenuOpen }: IAppHeaderProps) => {
           </button>
         )}
         <Terminal className="h-4 w-4 text-ui-purple" />
-        <span className="text-sm font-semibold text-ui-purple">PT</span>
+        <span className="text-sm font-semibold text-ui-purple">purplemux</span>
       </div>
 
       <TooltipProvider>

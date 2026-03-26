@@ -13,7 +13,7 @@ import type {
 } from '@/types/stats';
 
 const CACHE_VERSION = 1;
-const CACHE_DIR = path.join(os.homedir(), '.purple-terminal', 'stats');
+const CACHE_DIR = path.join(os.homedir(), '.purplemux', 'stats');
 const CACHE_PATH = path.join(CACHE_DIR, 'cache.json');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
 const CONCURRENCY_LIMIT = 10;

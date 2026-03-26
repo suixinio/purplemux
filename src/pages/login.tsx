@@ -13,7 +13,7 @@ const LoginPage = () => {
   return (
     <>
       <Head>
-        <title>로그인 - Purple Terminal</title>
+        <title>로그인 - purplemux</title>
       </Head>
       <div className="flex min-h-svh items-center justify-center p-6">
         <div className="w-full max-w-xs">
