@@ -59,6 +59,7 @@ interface IFileWatcher {
   summaryResolved: boolean;
   processing: boolean;
   pendingChange: boolean;
+  initOffsets: Map<WebSocket, number>;
 }
 
 const connections = new Map<WebSocket, ITimelineConnection>();
@@ -100,7 +101,20 @@ const processFileChange = async (fw: IFileWatcher) => {
     fw.pendingBuffer = pendingBuffer;
     if (newEntries.length > 0) {
       fw.offset = newOffset;
-      broadcastToWatcher(fw.jsonlPath, { type: 'timeline:append', entries: newEntries });
+
+      const msg: TTimelineServerMessage = { type: 'timeline:append', entries: newEntries };
+      const str = JSON.stringify(msg);
+      for (const ws of fw.connections) {
+        if (ws.readyState !== WebSocket.OPEN) continue;
+        const initOffset = fw.initOffsets.get(ws);
+        if (initOffset !== undefined) {
+          if (newOffset <= initOffset) {
+            continue;
+          }
+          fw.initOffsets.delete(ws);
+        }
+        ws.send(str);
+      }
 
       if (!fw.summaryResolved && fw.sessionName && newEntries.some((e) => e.type === 'assistant-message')) {
         fw.summaryResolved = true;
@@ -179,6 +193,7 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
       summaryResolved: false,
       processing: false,
       pendingChange: false,
+      initOffsets: new Map(),
     };
     fileWatchers.set(jsonlPath, fw);
   }
@@ -218,6 +233,10 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
     summary: result.summary,
   });
 
+  if (!isNewWatcher) {
+    fw.initOffsets.set(ws, result.lastOffset);
+  }
+
   return result.summary;
 };
 
@@ -225,6 +244,7 @@ const unsubscribeFromFile = (ws: WebSocket, jsonlPath: string) => {
   const fw = fileWatchers.get(jsonlPath);
   if (!fw) return;
   fw.connections.delete(ws);
+  fw.initOffsets.delete(ws);
   if (fw.connections.size === 0) {
     removeFileWatcher(jsonlPath);
   }
