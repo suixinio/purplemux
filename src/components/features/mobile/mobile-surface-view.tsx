@@ -89,6 +89,7 @@ const MobileSurfaceView = ({
   const wsActionsRef = useRef<IWsActions>(NOOP_WS_ACTIONS);
   const connectedSessionRef = useRef<string | null>(null);
   const prevConnectedTabIdRef = useRef<string | null>(null);
+  const [attemptedTabId, setAttemptedTabId] = useState<string | null>(null);
 
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
@@ -190,6 +191,7 @@ const MobileSurfaceView = ({
     onData: (data) => termActionsRef.current.write(data),
     onConnected: () => {
       setHasEverConnected(true);
+      setAttemptedTabId(activeTabIdRef.current);
       prevConnectedTabIdRef.current = activeTabIdRef.current;
       const { cols, rows } = termActionsRef.current.fit();
       wsActionsRef.current.sendResize(cols, rows);
@@ -217,6 +219,12 @@ const MobileSurfaceView = ({
     connectedSessionRef.current = tab.sessionName;
     connect(tab.sessionName);
   }, [isReady, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (status === 'disconnected' && hasEverConnected) {
+      setAttemptedTabId(activeTabIdRef.current);
+    }
+  }, [status, hasEverConnected]);
 
   useEffect(() => {
     if (
@@ -284,9 +292,11 @@ const MobileSurfaceView = ({
 
   const noTabs = tabs.length === 0;
   const ready = isReady && status === 'connected' && !noTabs;
+  const isFirstConnectionForTab =
+    activeTabId !== null && attemptedTabId !== activeTabId;
   const showInitialLoading =
     !noTabs &&
-    (!isReady || (isReady && status === 'connecting' && !hasEverConnected));
+    (!isReady || (isReady && isFirstConnectionForTab && status !== 'connected'));
 
   return (
     <div
@@ -352,7 +362,7 @@ const MobileSurfaceView = ({
         </div>
       )}
 
-      {!noTabs && status === 'disconnected' && (
+      {!noTabs && status === 'disconnected' && !isFirstConnectionForTab && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
           <WifiOff className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm text-muted-foreground">

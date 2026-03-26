@@ -176,12 +176,10 @@ const useTimeline = ({
     }
     setSessionId(newSessionId || null);
     setSessionStatus('active');
-    if (reason !== 'session-waiting') {
-      setEntries([]);
-      setSessionSummary(undefined);
-      setHasMore(false);
-      setIsLoading(true);
-    }
+    setEntries([]);
+    setSessionSummary(undefined);
+    setHasMore(false);
+    setIsLoading(true);
   }, []);
 
   const loadMore = useCallback(async () => {

@@ -72,7 +72,11 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   }
 
   try {
-    conn.pty.kill();
+    if ('destroy' in conn.pty) {
+      (conn.pty as pty.IPty & { destroy: () => void }).destroy();
+    } else {
+      conn.pty.kill();
+    }
   } catch {
     // PTY already exited
   }
@@ -99,7 +103,11 @@ export const gracefulShutdown = () => {
     }
 
     try {
-      conn.pty.kill();
+      if ('destroy' in conn.pty) {
+        (conn.pty as pty.IPty & { destroy: () => void }).destroy();
+      } else {
+        conn.pty.kill();
+      }
     } catch {
       // PTY already exited
     }
