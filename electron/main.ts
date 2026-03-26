@@ -330,10 +330,12 @@ app.on('window-all-closed', () => {
   if (serverShutdown) {
     serverShutdown();
   }
-  // app.exit() still runs FreeEnvironment → CleanupHandles, which crashes
-  // when node-pty's native ThreadSafeFunction fires during teardown.
-  // process.exit() bypasses all Node.js/Electron cleanup entirely.
-  process.exit(0);
+  // process.exit()는 FreeEnvironment → CleanupHandles를 실행하며,
+  // 이때 node-pty의 pending ThreadSafeFunction 콜백이 이미 해제 중인
+  // 환경에서 JS 예외를 throw → C++ abort() 발생.
+  // shutdown으로 PTY kill 후 이벤트 루프를 돌려 pending 콜백을 소비하고,
+  // SIGKILL로 cleanup 없이 즉시 종료하여 native 크래시를 완전 회피.
+  setTimeout(() => process.kill(process.pid, 'SIGKILL'), 100);
 });
 
 app.requestSingleInstanceLock();

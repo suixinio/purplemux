@@ -126,14 +126,12 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
     server.close();
   };
 
-  process.on('SIGTERM', () => {
+  const exitGracefully = () => {
     shutdown();
-    process.exit(0);
-  });
-  process.on('SIGINT', () => {
-    shutdown();
-    process.exit(0);
-  });
+    setTimeout(() => process.kill(process.pid, 'SIGKILL'), 100);
+  };
+  process.on('SIGTERM', exitGracefully);
+  process.on('SIGINT', exitGracefully);
 
   await new Promise<void>((resolve) => {
     server.listen(port, () => {
