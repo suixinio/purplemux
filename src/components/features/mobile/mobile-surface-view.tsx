@@ -79,6 +79,7 @@ const MobileSurfaceView = ({
   const activeTabCwd = useTabMetadataStore(
     (state) => (activeTabId ? state.metadata[activeTabId]?.cwd : undefined),
   );
+  const layoutWsId = useLayoutStore((state) => state.workspaceId);
 
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
@@ -295,6 +296,7 @@ const MobileSurfaceView = ({
       {isClaudeCode && activeTab && (
         <MobileClaudeCodePanel
           tabId={activeTabId ?? undefined}
+          wsId={layoutWsId ?? undefined}
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
           isClaudeRunning={isClaudeRunning}

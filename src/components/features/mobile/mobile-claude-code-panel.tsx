@@ -21,6 +21,7 @@ import type { TCliState } from '@/types/timeline';
 
 interface IMobileClaudeCodePanelProps {
   tabId?: string;
+  wsId?: string;
   sessionName: string;
   claudeSessionId?: string | null;
   isClaudeRunning?: boolean;
@@ -40,6 +41,7 @@ interface IMobileClaudeCodePanelProps {
 
 const MobileClaudeCodePanel = ({
   tabId,
+  wsId,
   sessionName,
   claudeSessionId,
   isClaudeRunning,
@@ -274,6 +276,7 @@ const MobileClaudeCodePanel = ({
       <div className="shrink-0 pb-3">
         <WebInputBar
           tabId={tabId}
+          wsId={wsId}
           cliState={cliState}
           sendStdin={sendStdin}
           terminalWsConnected={terminalWsConnected}
