@@ -255,19 +255,27 @@ const TimelineView = ({
   }, [skipAnimation, entries.length, scrollToBottom]);
 
   const isLoadingMoreRef = useRef(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
+  const triggerLoadMore = useCallback(() => {
+    if (!hasMore || isLoadingMoreRef.current) return;
+    isLoadingMoreRef.current = true;
+    setIsLoadingMore(true);
+    onLoadMore().finally(() => {
+      requestAnimationFrame(() => {
+        isLoadingMoreRef.current = false;
+        setIsLoadingMore(false);
+      });
+    });
+  }, [hasMore, onLoadMore]);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !hasMore || isLoadingMoreRef.current) return;
-    if (el.scrollTop < 100) {
-      isLoadingMoreRef.current = true;
-      onLoadMore().finally(() => {
-        requestAnimationFrame(() => {
-          isLoadingMoreRef.current = false;
-        });
-      });
+    if (el.scrollTop < 200) {
+      triggerLoadMore();
     }
-  }, [scrollRef, hasMore, onLoadMore]);
+  }, [scrollRef, hasMore, triggerLoadMore]);
 
   if (isLoading) {
     return <SkeletonLoader />;
@@ -299,6 +307,19 @@ const TimelineView = ({
         aria-label="Claude Code 타임라인"
       >
         <div ref={contentRef}>
+          {hasMore && !isLoadingMore && (
+            <div className="flex justify-center py-2">
+              <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={triggerLoadMore}>
+                <Loader2 size={12} className="mr-1" />
+                이전 내용 더보기
+              </Button>
+            </div>
+          )}
+          {isLoadingMore && (
+            <div className="flex items-center justify-center py-2">
+              <Loader2 size={14} className="animate-spin text-muted-foreground" />
+            </div>
+          )}
           {tasks.length > 0 && (
             <TaskChecklist tasks={tasks} cliState={cliState} />
           )}
