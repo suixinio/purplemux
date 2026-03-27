@@ -15,6 +15,7 @@ const POLL_INTERVAL_LARGE = 15_000;
 const TAB_COUNT_MEDIUM = 11;
 const TAB_COUNT_LARGE = 21;
 const JSONL_TAIL_SIZE = 8192;
+const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
 
@@ -33,6 +34,47 @@ interface IJsonlIdleCache {
 
 const jsonlIdleCache = new Map<string, IJsonlIdleCache>();
 
+interface IScanResult {
+  matched: boolean;
+  idle: boolean;
+  needsStaleRecheck: boolean;
+  staleMs: number;
+}
+
+const scanLines = (lines: string[], elapsed: number): IScanResult => {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const entry = JSON.parse(lines[i]);
+
+      if (entry.type === 'system' && (entry.subtype === 'stop_hook_summary' || entry.subtype === 'turn_duration')) {
+        return { matched: true, idle: true, needsStaleRecheck: false, staleMs: 0 };
+      }
+
+      if (entry.type === 'assistant') {
+        const stopReason = entry.message?.stop_reason;
+        if (!stopReason) {
+          const idle = elapsed > STALE_MS_INTERRUPTED;
+          return { matched: true, idle, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED };
+        }
+        return { matched: true, idle: stopReason !== 'tool_use', needsStaleRecheck: false, staleMs: 0 };
+      }
+
+      if (entry.type === 'user') {
+        const content = entry.message?.content;
+        if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
+          return { matched: true, idle: true, needsStaleRecheck: false, staleMs: 0 };
+        }
+        const idle = elapsed > STALE_MS_AWAITING_API;
+        return { matched: true, idle, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API };
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API };
+};
+
 const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
   try {
     const stat = await fs.stat(jsonlPath);
@@ -49,56 +91,25 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
 
     const handle = await fs.open(jsonlPath, 'r');
     try {
+      const elapsed = Date.now() - stat.mtimeMs;
+
       const readSize = Math.min(stat.size, JSONL_TAIL_SIZE);
       const buffer = Buffer.alloc(readSize);
       await handle.read(buffer, 0, readSize, stat.size - readSize);
-
       const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
-      const elapsed = Date.now() - stat.mtimeMs;
 
-      let result = elapsed > STALE_MS_AWAITING_API;
-      let needsStaleRecheck = !result;
-      let staleMs = STALE_MS_AWAITING_API;
+      let scan = scanLines(lines, elapsed);
 
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          const entry = JSON.parse(lines[i]);
-
-          if (entry.type === 'system' && (entry.subtype === 'stop_hook_summary' || entry.subtype === 'turn_duration')) {
-            result = true;
-            break;
-          }
-
-          if (entry.type === 'assistant') {
-            const stopReason = entry.message?.stop_reason;
-            if (!stopReason) {
-              staleMs = STALE_MS_INTERRUPTED;
-              result = elapsed > STALE_MS_INTERRUPTED;
-              needsStaleRecheck = !result;
-            } else {
-              result = stopReason !== 'tool_use';
-            }
-            break;
-          }
-
-          if (entry.type === 'user') {
-            const content = entry.message?.content;
-            if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
-              result = true;
-            } else {
-              staleMs = STALE_MS_AWAITING_API;
-              result = elapsed > STALE_MS_AWAITING_API;
-              needsStaleRecheck = !result;
-            }
-            break;
-          }
-        } catch {
-          continue;
-        }
+      if (!scan.matched && stat.size > JSONL_TAIL_SIZE) {
+        const extSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
+        const extBuffer = Buffer.alloc(extSize);
+        await handle.read(extBuffer, 0, extSize, stat.size - extSize);
+        const extLines = extBuffer.toString('utf-8').split('\n').filter((l) => l.trim());
+        scan = scanLines(extLines, elapsed);
       }
 
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: result, needsStaleRecheck, staleMs });
-      return result;
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs });
+      return scan.idle;
     } finally {
       await handle.close();
     }
