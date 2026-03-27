@@ -707,6 +707,7 @@ const PaneContainer = ({
               )}
               {isClaudeCode && !showInitialLoading && claudeInputVisible && (
                 <WebInputBar
+                  key={activeTabId}
                   tabId={activeTabId ?? undefined}
                   wsId={layoutWsId ?? undefined}
                   cliState={claudeCliState}

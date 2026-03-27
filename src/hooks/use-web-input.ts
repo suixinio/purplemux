@@ -71,14 +71,6 @@ const useWebInput = (
   const onRestartSession = options?.onRestartSession;
   const onMessageSent = options?.onMessageSent;
 
-  const prevTabIdRef = useRef(tabId);
-  useEffect(() => {
-    if (prevTabIdRef.current !== tabId) {
-      prevTabIdRef.current = tabId;
-      setValue(tabId ? loadDraft(tabId) : '');
-    }
-  }, [tabId]);
-
   useEffect(() => {
     if (tabId) saveDraft(tabId, value);
   }, [tabId, value]);
