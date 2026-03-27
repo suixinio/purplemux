@@ -264,7 +264,9 @@ const TimelineView = ({
       isLoadingMoreRef.current = true;
       prevScrollHeightRef.current = el.scrollHeight;
       onLoadMore().finally(() => {
-        isLoadingMoreRef.current = false;
+        requestAnimationFrame(() => {
+          isLoadingMoreRef.current = false;
+        });
       });
     }
   }, [scrollRef, hasMore, onLoadMore]);
@@ -277,6 +279,7 @@ const TimelineView = ({
       el.scrollTop += heightDiff;
     }
     prevScrollHeightRef.current = 0;
+    isLoadingMoreRef.current = false;
   }, [groupedItems]);
 
   if (isLoading) {

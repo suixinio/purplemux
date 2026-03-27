@@ -139,10 +139,10 @@ const ClaudeCodePanel = ({
   });
 
   useEffect(() => {
-    if (isRestarting && effectiveSessionStatus === 'active') {
+    if (isRestarting && effectiveSessionStatus === 'active' && !isTimelineLoading) {
       onRestartComplete?.();
     }
-  }, [isRestarting, effectiveSessionStatus, onRestartComplete]);
+  }, [isRestarting, effectiveSessionStatus, isTimelineLoading, onRestartComplete]);
 
   const isInputVisible = view === 'timeline';
 
@@ -167,7 +167,7 @@ const ClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (isRestarting && view !== 'timeline') {
+  if (isRestarting && (view !== 'timeline' || isTimelineLoading)) {
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />

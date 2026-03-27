@@ -180,6 +180,11 @@ const useTimeline = ({
       setHasMore(false);
       return;
     }
+    if (reason === 'session-waiting') {
+      setSessionStatus('active');
+      if (newSessionId) setSessionId(newSessionId);
+      return;
+    }
     setSessionId(newSessionId || null);
     setSessionStatus('active');
     setEntries([]);
