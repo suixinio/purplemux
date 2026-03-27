@@ -182,6 +182,7 @@ const ClaudeCodePanel = ({
   );
 
   if (isRestarting) {
+    console.log(sessionId + " - isRestarting");
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -211,7 +212,6 @@ const ClaudeCodePanel = ({
           onSelectSession={handleSelectSession}
           onRefresh={refetchSessions}
           onLoadMore={loadMoreSessions}
-          onClose={onClose}
           onNewSession={onNewSession}
         />
       </div>

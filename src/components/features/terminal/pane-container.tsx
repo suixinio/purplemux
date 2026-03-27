@@ -182,7 +182,7 @@ const PaneContainer = ({
   const [showClaudeModePrompt, setShowClaudeModePrompt] = useState(false);
 
   useEffect(() => {
-    if (!activeTabId || !isClaudeCode || claudeCliState === 'inactive') return;
+    if (!activeTabId || !isClaudeCode) return;
     reportActiveTab(activeTabId, claudeCliState);
     if (isFocused && claudeCliState === 'idle') {
       dismissStatusTab(activeTabId);

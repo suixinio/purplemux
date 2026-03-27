@@ -83,6 +83,25 @@ const sendJson = (ws: WebSocket, msg: TTimelineServerMessage) => {
   }
 };
 
+const sendEmptyInit = (ws: WebSocket, sessionId = '') => {
+  sendJson(ws, {
+    type: 'timeline:init',
+    entries: [],
+    sessionId,
+    totalEntries: 0,
+    startByteOffset: 0,
+    hasMore: false,
+  });
+};
+
+const subscribeAndUpdateSummary = async (
+  ws: WebSocket, jsonlPath: string, sessionId: string | undefined, sessionName: string,
+) => {
+  const jsonlSummary = await subscribeToFile(ws, jsonlPath, sessionId, sessionName);
+  const summary = await resolveClaudeSummary(sessionName, jsonlSummary);
+  await updateTabClaudeSummary(sessionName, summary).catch(() => {});
+};
+
 const broadcastToWatcher = (watcherKey: string, msg: TTimelineServerMessage) => {
   const fw = fileWatchers.get(watcherKey);
   if (!fw) return;
@@ -440,14 +459,7 @@ const watchForJsonlFile = (
           unsubscribeFromFile(c.ws, c.currentJsonlPath);
         }
         c.currentJsonlPath = expectedJsonlPath;
-        sendJson(c.ws, {
-          type: 'timeline:session-changed',
-          newSessionId: sessionId,
-          reason: 'new-session-started',
-        });
-        const jsonlSummary = await subscribeToFile(c.ws, expectedJsonlPath, sessionId, sessionName);
-        const summary = await resolveClaudeSummary(sessionName, jsonlSummary);
-        await updateTabClaudeSummary(sessionName, summary).catch(() => {});
+        await subscribeAndUpdateSummary(c.ws, expectedJsonlPath, sessionId, sessionName);
       }
     }
   };
@@ -571,18 +583,9 @@ const handleResumeMessage = async (
         unsubscribeFromFile(ws, conn.currentJsonlPath);
       }
       conn.currentJsonlPath = jsonlPath;
-      const jsonlSummary = await subscribeToFile(ws, jsonlPath, sessionId, conn.sessionName);
-      const summary = await resolveClaudeSummary(conn.sessionName, jsonlSummary);
-      await updateTabClaudeSummary(conn.sessionName, summary).catch(() => {});
+      await subscribeAndUpdateSummary(ws, jsonlPath, sessionId, conn.sessionName);
     } else {
-      sendJson(ws, {
-        type: 'timeline:init',
-        entries: [],
-        sessionId,
-        totalEntries: 0,
-        startByteOffset: 0,
-        hasMore: false,
-      });
+      sendEmptyInit(ws, sessionId);
       const cwd = await getSessionCwd(tmuxSession);
       if (cwd) {
         watchForJsonlFile(conn.sessionName, sessionId, cwd);
@@ -612,7 +615,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   const panePid = await getSessionPanePid(sessionName);
   if (!panePid) {
-    sendJson(ws, { type: 'timeline:init', entries: [], sessionId: '', totalEntries: 0, startByteOffset: 0, hasMore: false });
+    sendEmptyInit(ws);
     ws.close(1000, 'Cannot resolve pane pid');
     return;
   }
@@ -688,7 +691,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   if (sessionInfo.status === 'not-installed') {
     sendJson(ws, { type: 'timeline:error', code: 'not-installed', message: 'Claude CLI is not installed' });
-    sendJson(ws, { type: 'timeline:init', entries: [], sessionId: '', totalEntries: 0, startByteOffset: 0, hasMore: false });
+    sendEmptyInit(ws);
     return;
   }
 
@@ -723,31 +726,20 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   if (sessionInfo.jsonlPath) {
     conn.currentJsonlPath = sessionInfo.jsonlPath;
-    const jsonlSummary = await subscribeToFile(ws, sessionInfo.jsonlPath, sessionInfo.sessionId ?? undefined, conn.sessionName);
     if (sessionInfo.sessionId) {
       await updateTabClaudeSessionId(conn.sessionName, sessionInfo.sessionId).catch(() => {});
     }
-    const summary = await resolveClaudeSummary(conn.sessionName, jsonlSummary);
-    await updateTabClaudeSummary(conn.sessionName, summary).catch(() => {});
+    await subscribeAndUpdateSummary(ws, sessionInfo.jsonlPath, sessionInfo.sessionId ?? undefined, conn.sessionName);
   } else if (effectiveSessionId) {
     const jsonlPath = await resolveJsonlPath(sessionName, effectiveSessionId);
     if (jsonlPath) {
       conn.currentJsonlPath = jsonlPath;
-      const jsonlSummary = await subscribeToFile(ws, jsonlPath, effectiveSessionId, conn.sessionName);
-      const summary = await resolveClaudeSummary(conn.sessionName, jsonlSummary);
-      await updateTabClaudeSummary(conn.sessionName, summary).catch(() => {});
+      await subscribeAndUpdateSummary(ws, jsonlPath, effectiveSessionId, conn.sessionName);
     } else {
-      sendJson(ws, { type: 'timeline:init', entries: [], sessionId: effectiveSessionId, totalEntries: 0, startByteOffset: 0, hasMore: false });
+      sendEmptyInit(ws, effectiveSessionId);
     }
   } else if (!isClaudeStarting) {
-    sendJson(ws, {
-      type: 'timeline:init',
-      entries: [],
-      sessionId: '',
-      totalEntries: 0,
-      startByteOffset: 0,
-      hasMore: false,
-    });
+    sendEmptyInit(ws);
   }
 
   if (conn.cleaned) return;
@@ -775,9 +767,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
             reason: 'new-session-started',
           });
 
-          const jsonlSummary = await subscribeToFile(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined, sessionName);
-          const summary = await resolveClaudeSummary(sessionName, jsonlSummary);
-          await updateTabClaudeSummary(sessionName, summary).catch(() => {});
+          await subscribeAndUpdateSummary(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined, sessionName);
         } else if (!newInfo.jsonlPath && newInfo.status === 'none') {
           cancelJsonlWatcher(sessionName);
           if (c.currentJsonlPath) {
@@ -797,6 +787,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       if (newInfo.status === 'active' && !newInfo.jsonlPath) {
         for (const c of wsConns) {
           if (c.currentJsonlPath) continue;
+          if (pendingJsonlWatchers.has(sessionName)) continue;
           sendJson(c.ws, {
             type: 'timeline:session-changed',
             newSessionId: newInfo.sessionId ?? '',
@@ -816,6 +807,39 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
 
   if (sessionInfo.status === 'active' && !sessionInfo.jsonlPath && sessionInfo.sessionId && sessionInfo.cwd) {
     watchForJsonlFile(sessionName, sessionInfo.sessionId, sessionInfo.cwd);
+  }
+
+  // isClaudeStarting 레이스 컨디션 보완:
+  // detectActiveSession → await getPaneCurrentCommand 사이에 PID 파일이 생성되면
+  // 초기 감지도 놓치고 watchSessionsDir도 이미 존재하는 파일이라 이벤트가 안 옴.
+  // watcher 설정 후 재확인하여 그 틈을 메운다.
+  if (isClaudeStarting) {
+    const recheckInfo = await detectActiveSession(panePid);
+    if (conn.cleaned) return;
+
+    if (recheckInfo.status === 'active' && recheckInfo.sessionId && !conn.currentJsonlPath) {
+      await updateTabClaudeSessionId(sessionName, recheckInfo.sessionId).catch(() => {});
+
+      if (recheckInfo.jsonlPath) {
+        conn.currentJsonlPath = recheckInfo.jsonlPath;
+        sendJson(ws, {
+          type: 'timeline:session-changed',
+          newSessionId: recheckInfo.sessionId,
+          reason: 'new-session-started',
+        });
+        await subscribeAndUpdateSummary(ws, recheckInfo.jsonlPath, recheckInfo.sessionId, sessionName);
+      } else if (recheckInfo.cwd) {
+        sendJson(ws, {
+          type: 'timeline:session-changed',
+          newSessionId: recheckInfo.sessionId,
+          reason: 'session-waiting',
+        });
+        sendEmptyInit(ws, recheckInfo.sessionId);
+        watchForJsonlFile(sessionName, recheckInfo.sessionId, recheckInfo.cwd);
+      }
+    } else {
+      sendEmptyInit(ws);
+    }
   }
 };
 

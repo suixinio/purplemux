@@ -1,5 +1,5 @@
-import { useCallback, useRef, useState } from 'react';
-import { Loader2, Plus, RefreshCw, X } from 'lucide-react';
+import { useCallback, useRef } from 'react';
+import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import SessionListItem from '@/components/features/terminal/session-list-item';
@@ -15,7 +15,6 @@ interface ISessionListViewProps {
   onSelectSession: (sessionId: string) => void;
   onRefresh: () => Promise<void>;
   onLoadMore: () => Promise<void>;
-  onClose?: () => void;
   onNewSession?: () => void;
 }
 
@@ -61,16 +60,12 @@ const SessionListView = ({
   onSelectSession,
   onRefresh,
   onLoadMore,
-  onClose,
   onNewSession,
 }: ISessionListViewProps) => {
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const handleRefresh = useCallback(async () => {
-    setIsRefreshing(true);
     await onRefresh();
-    setTimeout(() => setIsRefreshing(false), 600);
     if (scrollRef.current) {
       scrollRef.current.scrollTop = 0;
     }
@@ -89,50 +84,21 @@ const SessionListView = ({
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-2">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium">
-            세션
-            {sessions.length > 0 &&
-              `(${sessions.length}${hasMore ? '+' : ''})`}
-          </span>
-          {onNewSession && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 gap-1 px-1.5 text-sm text-muted-foreground"
-              onClick={onNewSession}
-            >
-              <Plus size={12} />
-              새 대화
-            </Button>
-          )}
-        </div>
-        <div className="flex items-center gap-0.5">
+        <span className="text-sm font-medium">
+          세션
+          {sessions.length > 0 &&
+            `(${sessions.length}${hasMore ? '+' : ''})`}
+        </span>
+        {onNewSession && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
-            className="h-7 w-7 p-0 text-muted-foreground"
-            onClick={handleRefresh}
-            disabled={isLoading || isRefreshing}
-            aria-label="새로고침"
+            onClick={onNewSession}
           >
-            <RefreshCw
-              size={14}
-              className={isRefreshing ? 'animate-spin' : undefined}
-            />
+            <Plus size={12} />
+            새 대화
           </Button>
-          {onClose && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 w-7 p-0 text-muted-foreground"
-              onClick={onClose}
-              aria-label="닫기"
-            >
-              <X size={14} />
-            </Button>
-          )}
-        </div>
+        )}
       </div>
 
       {isLoading ? (
