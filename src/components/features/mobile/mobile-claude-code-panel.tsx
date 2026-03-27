@@ -179,7 +179,7 @@ const MobileClaudeCodePanel = ({
     }
   }, [isRestarting, effectiveSessionStatus, cliState, onRestartComplete]);
 
-  const isInputVisible = view === 'timeline';
+  const isInputVisible = view === 'timeline' && !isTimelineLoading;
 
   useEffect(() => {
     onCliStateChange(cliState);

@@ -158,7 +158,7 @@ const ClaudeCodePanel = ({
     }
   }, [isRestarting, effectiveSessionStatus, cliState, onRestartComplete]);
 
-  const isInputVisible = view === 'timeline';
+  const isInputVisible = view === 'timeline' && !isTimelineLoading;
 
   const effectiveCliState = effectiveSessionStatus === 'none' && cliState !== 'inactive'
     ? 'inactive' as const
