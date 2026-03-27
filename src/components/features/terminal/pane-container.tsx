@@ -690,6 +690,7 @@ const PaneContainer = ({
             <div className={cn('flex h-full flex-col bg-card', isTerminalCollapsed && 'pb-3')}>
               {isClaudeCode && activeTab && !showInitialLoading && (
                 <ClaudeCodePanel
+                  key={activeTab.sessionName}
                   sessionName={activeTab.sessionName}
                   claudeSessionId={activeTab.claudeSessionId}
                   isClaudeRunning={isClaudeRunning}

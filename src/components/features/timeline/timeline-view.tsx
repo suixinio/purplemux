@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { Terminal, RefreshCw, Loader2, OctagonX, LogOut } from 'lucide-react';
 import { useStickToBottom } from 'use-stick-to-bottom';
 import { Button } from '@/components/ui/button';
@@ -223,7 +223,7 @@ const TimelineView = ({
   hasMore,
   scrollToBottomRef,
 }: ITimelineViewProps) => {
-  const { scrollRef, contentRef, scrollToBottom, isAtBottom, state: stickyState } = useStickToBottom({
+  const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
   });
@@ -255,14 +255,12 @@ const TimelineView = ({
   }, [skipAnimation, entries.length, scrollToBottom]);
 
   const isLoadingMoreRef = useRef(false);
-  const prevScrollHeightRef = useRef(0);
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current;
     if (!el || !hasMore || isLoadingMoreRef.current) return;
     if (el.scrollTop < 100) {
       isLoadingMoreRef.current = true;
-      prevScrollHeightRef.current = el.scrollHeight;
       onLoadMore().finally(() => {
         requestAnimationFrame(() => {
           isLoadingMoreRef.current = false;
@@ -270,17 +268,6 @@ const TimelineView = ({
       });
     }
   }, [scrollRef, hasMore, onLoadMore]);
-
-  useLayoutEffect(() => {
-    const el = scrollRef.current;
-    if (!el || prevScrollHeightRef.current === 0) return;
-    const heightDiff = el.scrollHeight - prevScrollHeightRef.current;
-    if (heightDiff > 0) {
-      // eslint-disable-next-line react-hooks/immutability
-      stickyState.scrollTop = el.scrollTop + heightDiff;
-    }
-    prevScrollHeightRef.current = 0;
-  }, [groupedItems, stickyState]);
 
   if (isLoading) {
     return <SkeletonLoader />;

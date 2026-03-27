@@ -138,11 +138,14 @@ const useTimeline = ({
       setSessionId(initSessionId);
     }
 
-    setIsLoading(false);
+    if (newEntries.length > 0 || !initSessionId) {
+      setIsLoading(false);
+    }
     setError(null);
   }, []);
 
   const handleAppend = useCallback((newEntries: ITimelineEntry[]) => {
+    setIsLoading(false);
     setEntries((prev) => {
       const updated = [...prev];
       for (const entry of newEntries) {
@@ -182,6 +185,7 @@ const useTimeline = ({
     }
     if (reason === 'session-waiting') {
       setSessionStatus('active');
+      setIsLoading(true);
       if (newSessionId) setSessionId(newSessionId);
       return;
     }
