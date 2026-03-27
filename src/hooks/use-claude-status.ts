@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
-import useClaudeStatusStore from '@/hooks/use-claude-status-store';
-import type { TCliState } from '@/types/timeline';
+import useTabStore from '@/hooks/use-tab-store';
 import type { TStatusServerMessage } from '@/types/status';
 
 const RECONNECT_BASE = 1_000;
@@ -9,16 +8,9 @@ const RECONNECT_MAX = 30_000;
 let sharedWs: WebSocket | null = null;
 
 export const dismissTab = (tabId: string) => {
-  useClaudeStatusStore.getState().dismissTabLocal(tabId);
+  useTabStore.getState().setDismissed(tabId, true);
   if (sharedWs?.readyState === WebSocket.OPEN) {
     sharedWs.send(JSON.stringify({ type: 'status:tab-dismissed', tabId }));
-  }
-};
-
-export const reportActiveTab = (tabId: string, cliState: TCliState) => {
-  useClaudeStatusStore.getState().updateCliStateLocal(tabId, cliState);
-  if (sharedWs?.readyState === WebSocket.OPEN) {
-    sharedWs.send(JSON.stringify({ type: 'status:tab-active-report', tabId, cliState }));
   }
 };
 
@@ -26,8 +18,6 @@ const useClaudeStatus = () => {
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
-
-  const { syncAll, updateTab, setConnected } = useClaudeStatusStore();
 
   useEffect(() => {
     mountedRef.current = true;
@@ -42,7 +32,7 @@ const useClaudeStatus = () => {
       ws.onopen = () => {
         if (!mountedRef.current) return;
         retryCountRef.current = 0;
-        setConnected(true);
+        useTabStore.getState().setStatusWsConnected(true);
       };
 
       ws.onmessage = (event) => {
@@ -52,20 +42,16 @@ const useClaudeStatus = () => {
 
           switch (msg.type) {
             case 'status:sync':
-              syncAll(msg.tabs);
+              useTabStore.getState().syncAllFromServer(msg.tabs);
               break;
 
             case 'status:update':
-              if (msg.cliState === null) {
-                updateTab(msg.tabId, null);
-              } else {
-                updateTab(msg.tabId, {
-                  cliState: msg.cliState,
-                  dismissed: msg.dismissed,
-                  workspaceId: msg.workspaceId,
-                  tabName: msg.tabName,
-                });
-              }
+              useTabStore.getState().updateFromServer(msg.tabId, {
+                cliState: msg.cliState,
+                dismissed: msg.dismissed,
+                workspaceId: msg.workspaceId,
+                tabName: msg.tabName,
+              });
               break;
           }
         } catch {
@@ -75,7 +61,7 @@ const useClaudeStatus = () => {
 
       ws.onclose = () => {
         if (!mountedRef.current) return;
-        setConnected(false);
+        useTabStore.getState().setStatusWsConnected(false);
         sharedWs = null;
 
         const delay = Math.min(
@@ -104,7 +90,7 @@ const useClaudeStatus = () => {
         sharedWs = null;
       }
     };
-  }, [syncAll, updateTab, setConnected]);
+  }, []);
 };
 
 export default useClaudeStatus;

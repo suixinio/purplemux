@@ -1,5 +1,5 @@
 import { Loader2 } from 'lucide-react';
-import useClaudeStatusStore, { getTabStatus } from '@/hooks/use-claude-status-store';
+import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { TPanelType } from '@/types/terminal';
 
 interface ITabStatusIndicatorProps {
@@ -8,8 +8,8 @@ interface ITabStatusIndicatorProps {
 }
 
 const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
-  const status = useClaudeStatusStore(
-    (state) => getTabStatus(state.tabs, tabId),
+  const status = useTabStore(
+    (state) => selectTabDisplayStatus(state.tabs, tabId),
   );
 
   if (panelType !== 'claude-code') return null;

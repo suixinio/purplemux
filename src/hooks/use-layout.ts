@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import type { ILayoutData, ITab, IPaneNode, TPanelType } from '@/types/terminal';
 import { clearInputDraft } from '@/hooks/use-web-input';
-import useClaudeStatusStore from '@/hooks/use-claude-status-store';
+import useTabStore from '@/hooks/use-tab-store';
 import {
   collectPanes,
   findPane,
@@ -524,7 +524,7 @@ const useLayout = ({ workspaceId, onFetchError }: { workspaceId: string | null; 
       const wsId = state.workspaceId;
       if (!wsId || !state.layout?.root) return;
       const tabIds = collectPanes(state.layout.root).flatMap((p) => p.tabs.map((t) => t.id));
-      useClaudeStatusStore.getState().setTabOrder(wsId, tabIds);
+      useTabStore.getState().setTabOrder(wsId, tabIds);
     });
   }, []);
 

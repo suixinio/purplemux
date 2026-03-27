@@ -1,9 +1,8 @@
-import { useEffect, useMemo } from 'react';
-import useClaudeStatusStore, { getGlobalStatus } from '@/hooks/use-claude-status-store';
+import { useEffect } from 'react';
+import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 
 const useBrowserTitle = (baseTitle: string) => {
-  const tabs = useClaudeStatusStore((state) => state.tabs);
-  const { attentionCount } = useMemo(() => getGlobalStatus(tabs), [tabs]);
+  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
 
   useEffect(() => {
     try {

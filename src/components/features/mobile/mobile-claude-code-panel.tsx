@@ -4,7 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useSessionView from '@/hooks/use-session-view';
+import useTimelineStoreSync from '@/hooks/use-timeline-store-sync';
+import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
@@ -24,7 +25,6 @@ interface IMobileClaudeCodePanelProps {
   wsId?: string;
   sessionName: string;
   claudeSessionId?: string | null;
-  isClaudeRunning?: boolean;
   cwd?: string;
   sendStdin: (data: string) => void;
   terminalWsConnected: boolean;
@@ -44,7 +44,6 @@ const MobileClaudeCodePanel = ({
   wsId,
   sessionName,
   claudeSessionId,
-  isClaudeRunning,
   cwd,
   sendStdin,
   terminalWsConnected,
@@ -62,12 +61,13 @@ const MobileClaudeCodePanel = ({
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
-  const navigateToTimelineRef = useRef<() => void>(() => {});
+
+  const isClaudeRunning = useTabStore((s) => tabId ? s.tabs[tabId]?.isClaudeRunning ?? false : false);
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
-    navigateToTimelineRef.current();
-  }, []);
+    if (tabId) useTabStore.getState().navigateToTimeline(tabId);
+  }, [tabId]);
 
   const handleResumeBlocked = useCallback(
     (payload: { reason: string; processName?: string }) => {
@@ -112,21 +112,7 @@ const MobileClaudeCodePanel = ({
     },
   });
 
-  const prevClaudeRunningRef = useRef(isClaudeRunning);
-
-  useEffect(() => {
-    const wasRunning = prevClaudeRunningRef.current;
-    prevClaudeRunningRef.current = isClaudeRunning;
-
-    if (!wasRunning && isClaudeRunning && sessionStatus !== 'active') {
-      retrySession();
-    }
-  }, [isClaudeRunning, sessionStatus, retrySession]);
-
-  const effectiveSessionStatus =
-    sessionStatus === 'active' && isClaudeRunning === false && terminalWsConnected
-      ? 'none' as const
-      : sessionStatus;
+  const effectiveSessionStatus = useTabStore((s) => tabId ? selectEffectiveSessionStatus(s.tabs, tabId) : sessionStatus);
 
   const {
     sessions,
@@ -142,22 +128,23 @@ const MobileClaudeCodePanel = ({
     cwd,
   });
 
-  const { view, navigateToTimeline } = useSessionView(
-    effectiveSessionStatus,
-    sessions,
-    isSessionListLoading,
-    sessionListError,
+  useTimelineStoreSync({
+    tabId,
+    sessionStatus,
+    cliState,
     isTimelineLoading,
-  );
+    wsStatus,
+    sessionsCount: sessions.length,
+    isClaudeRunning,
+    retrySession,
+  });
+
+  const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'empty' as const);
 
   const { meta } = useSessionMeta(entries, sessionSummary, initMeta);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, metaSheetOpen);
   const tmuxInfo = useTmuxInfo(sessionName, metaSheetOpen);
-
-  useEffect(() => {
-    navigateToTimelineRef.current = navigateToTimeline;
-  });
 
   const restartNeedsExitRef = useRef(false);
   const prevIsRestartingRef = useRef(false);
@@ -179,7 +166,7 @@ const MobileClaudeCodePanel = ({
     }
   }, [isRestarting, effectiveSessionStatus, cliState, onRestartComplete]);
 
-  const isInputVisible = view === 'timeline' && !isTimelineLoading;
+  const isInputVisible = view === 'timeline';
 
   useEffect(() => {
     onCliStateChange(cliState);
@@ -207,7 +194,7 @@ const MobileClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (isRestarting) {
+  if (view === 'restarting') {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -239,6 +226,14 @@ const MobileClaudeCodePanel = ({
           onLoadMore={loadMoreSessions}
           onNewSession={onNewSession}
         />
+      </div>
+    );
+  }
+
+  if (view === 'loading') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }

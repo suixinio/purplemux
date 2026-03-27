@@ -20,9 +20,9 @@ import useQuickPrompts from '@/hooks/use-quick-prompts';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
-import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
-import { reportActiveTab, dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
+import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
+import { dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
 import isElectron from '@/hooks/use-is-electron';
 
 const escapeShellPath = (filePath: string): string =>
@@ -156,12 +156,13 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
   const clickedTerminalRef = useRef(false);
 
-  const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
-  const [claudeInputVisible, setClaudeInputVisible] = useState(false);
-  const [isClaudeRunning, setIsClaudeRunning] = useState<boolean | undefined>(undefined);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
-  const [isRestarting, setIsRestarting] = useState(false);
+
+  const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
+  const isClaudeRunning = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.isClaudeRunning ?? false : false);
+  const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'empty');
+  const claudeInputVisible = sessionView === 'timeline';
 
   const { prompts: quickPrompts } = useQuickPrompts();
 
@@ -170,7 +171,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   useEffect(() => {
     if (!activeTabId || !isClaudeCode) return;
-    reportActiveTab(activeTabId, claudeCliState);
     if (isFocused && claudeCliState === 'idle') {
       dismissStatusTab(activeTabId);
     }
@@ -191,13 +191,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     focusInputRef.current?.();
   }, []);
 
-  const handleCliStateChange = useCallback((state: TCliState) => {
-    setClaudeCliState(state);
-  }, []);
-
-  const handleInputVisibleChange = useCallback((visible: boolean) => {
-    setClaudeInputVisible(visible);
-  }, []);
 
   const handleCustomKeyEvent = useCallback((event: KeyboardEvent): boolean => {
     if (isAppShortcut(event)) {
@@ -224,7 +217,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       if (!tabId) return;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
-      setIsClaudeRunning(isClaudeProcess(title));
+      useTabStore.getState().setClaudeRunning(tabId, isClaudeProcess(title));
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,
@@ -287,6 +280,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     onConnected: () => {
       setHasEverConnected(true);
       prevConnectedTabIdRef.current = activeTabIdRef.current;
+      const tabId = activeTabIdRef.current;
+      if (tabId) useTabStore.getState().setTerminalConnected(tabId, true);
       const { cols, rows } = termActionsRef.current.fit();
       wsActionsRef.current.sendResize(cols, rows);
       if (isFocusedRef.current) {
@@ -318,10 +313,25 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       reset();
     }
 
+    // 탭 전환 시 스토어 초기화 (layout.json 값 + 터미널 리셋)
+    useTabStore.getState().initTab(activeTabId, {
+      cliState: tab.cliState ?? 'inactive',
+      dismissed: tab.dismissed ?? true,
+      terminalConnected: false,
+      isClaudeRunning: false,
+    });
+
     connectedSessionRef.current = tab.sessionName;
     const { cols, rows } = fit();
     connect(tab.sessionName, cols, rows);
   }, [isReady, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const tabId = activeTabIdRef.current;
+    if (tabId) {
+      useTabStore.getState().setTerminalConnected(tabId, status === 'connected');
+    }
+  }, [status]);
 
   useEffect(() => {
     if (
@@ -531,20 +541,20 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [focus]);
 
   const handleNewClaudeSession = useCallback(() => {
-    if (status !== 'connected') return;
-    setIsRestarting(true);
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setRestarting(activeTabId, true);
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
-  }, [status, sendStdin]);
+  }, [status, sendStdin, activeTabId]);
 
   const handleRestartClaudeSession = useCallback(() => {
-    if (status !== 'connected') return;
+    if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = true;
-    setIsRestarting(true);
+    useTabStore.getState().setRestarting(activeTabId, true);
     sendStdin('/exit\r');
-  }, [status, sendStdin]);
+  }, [status, sendStdin, activeTabId]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || isClaudeRunning) return;
@@ -675,20 +685,15 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             disabled={!isClaudeCode}
           >
             <div className={cn('flex h-full flex-col bg-card', isTerminalCollapsed && 'pb-3')}>
-              {isClaudeCode && activeTab && !showInitialLoading && (
+              {isClaudeCode && activeTab && !showInitialLoading && activeTabId && (
                 <ClaudeCodePanel
                   key={activeTab.sessionName}
+                  tabId={activeTabId}
                   sessionName={activeTab.sessionName}
                   claudeSessionId={activeTab.claudeSessionId}
-                  isClaudeRunning={isClaudeRunning}
-                  terminalWsConnected={status === 'connected'}
                   cwd={activeTabCwd}
-                  onCliStateChange={handleCliStateChange}
-                  onInputVisibleChange={handleInputVisibleChange}
                   onClose={handleTogglePanelType}
                   onNewSession={handleNewClaudeSession}
-                  isRestarting={isRestarting}
-                  onRestartComplete={() => setIsRestarting(false)}
                   scrollToBottomRef={scrollToBottomRef}
                 />
               )}
@@ -708,7 +713,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onSend={handleScrollToBottom}
                 />
               )}
-              {isClaudeCode && !showInitialLoading && claudeInputVisible && (
+              {isClaudeCode && !showInitialLoading && claudeInputVisible && activeTabId && (
                 <QuickPromptBar
                   prompts={quickPrompts}
                   cliState={claudeCliState}

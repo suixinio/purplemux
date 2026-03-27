@@ -4,53 +4,46 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useSessionView from '@/hooks/use-session-view';
+import useTimelineStoreSync from '@/hooks/use-timeline-store-sync';
+import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import SessionMetaBar from '@/components/features/terminal/session-meta-bar';
-import type { TCliState } from '@/types/timeline';
 
 interface IClaudeCodePanelProps {
+  tabId: string;
   sessionName: string;
   claudeSessionId?: string | null;
-  isClaudeRunning?: boolean;
-  terminalWsConnected?: boolean;
   cwd?: string;
   className?: string;
-  onCliStateChange?: (state: TCliState) => void;
-  onInputVisibleChange?: (visible: boolean) => void;
   onClose?: () => void;
   onNewSession?: () => void;
-  isRestarting?: boolean;
-  onRestartComplete?: () => void;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
 const ClaudeCodePanel = ({
+  tabId,
   sessionName,
   claudeSessionId,
-  isClaudeRunning,
-  terminalWsConnected,
   cwd,
   className,
-  onCliStateChange,
-  onInputVisibleChange,
   onClose,
   onNewSession,
-  isRestarting,
-  onRestartComplete,
   scrollToBottomRef,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
-  const navigateToTimelineRef = useRef<() => void>(() => {});
+
+  const isClaudeRunning = useTabStore((s) => s.tabs[tabId]?.isClaudeRunning ?? false);
+  const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
+  const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
 
   const handleResumeStarted = useCallback(
     () => {
       setResumingSessionId(null);
-      navigateToTimelineRef.current();
+      useTabStore.getState().navigateToTimeline(tabId);
     },
-    [],
+    [tabId],
   );
 
   const handleResumeBlocked = useCallback(
@@ -96,21 +89,7 @@ const ClaudeCodePanel = ({
     },
   });
 
-  const prevClaudeRunningRef = useRef(isClaudeRunning);
-
-  useEffect(() => {
-    const wasRunning = prevClaudeRunningRef.current;
-    prevClaudeRunningRef.current = isClaudeRunning;
-
-    if (!wasRunning && isClaudeRunning && sessionStatus !== 'active') {
-      retrySession();
-    }
-  }, [isClaudeRunning, sessionStatus, retrySession]);
-
-  const effectiveSessionStatus =
-    sessionStatus === 'active' && isClaudeRunning === false && terminalWsConnected
-      ? 'none' as const
-      : sessionStatus;
+  const effectiveSessionStatus = useTabStore((s) => selectEffectiveSessionStatus(s.tabs, tabId));
 
   const {
     sessions,
@@ -126,18 +105,18 @@ const ClaudeCodePanel = ({
     cwd,
   });
 
-  const { view, navigateToTimeline } = useSessionView(
-    effectiveSessionStatus,
-    sessions,
-    isSessionListLoading,
-    sessionListError,
+  useTimelineStoreSync({
+    tabId,
+    sessionStatus,
+    cliState,
     isTimelineLoading,
-  );
-
-  useEffect(() => {
-    navigateToTimelineRef.current = navigateToTimeline;
+    wsStatus,
+    sessionsCount: sessions.length,
+    isClaudeRunning,
+    retrySession,
   });
 
+  // 재시작 완료 감지
   const restartNeedsExitRef = useRef(false);
   const prevIsRestartingRef = useRef(false);
 
@@ -145,7 +124,7 @@ const ClaudeCodePanel = ({
     if (isRestarting && !prevIsRestartingRef.current) {
       restartNeedsExitRef.current = effectiveSessionStatus === 'active';
     }
-    prevIsRestartingRef.current = !!isRestarting;
+    prevIsRestartingRef.current = isRestarting;
 
     if (!isRestarting) return;
 
@@ -154,35 +133,25 @@ const ClaudeCodePanel = ({
     }
 
     if (cliState === 'idle' && !restartNeedsExitRef.current) {
-      onRestartComplete?.();
+      useTabStore.getState().setRestarting(tabId, false);
     }
-  }, [isRestarting, effectiveSessionStatus, cliState, onRestartComplete]);
+  }, [isRestarting, effectiveSessionStatus, cliState, tabId]);
 
-  const isInputVisible = view === 'timeline' && !isTimelineLoading;
-
+  // effectiveCliState for TimelineView
   const effectiveCliState = effectiveSessionStatus === 'none' && cliState !== 'inactive'
     ? 'inactive' as const
     : cliState;
 
-  useEffect(() => {
-    onCliStateChange?.(effectiveCliState);
-  }, [effectiveCliState, onCliStateChange]);
-
-  useEffect(() => {
-    onInputVisibleChange?.(isInputVisible);
-  }, [isInputVisible, onInputVisibleChange]);
-
   const handleSelectSession = useCallback(
-    (sessionId: string) => {
+    (sid: string) => {
       if (resumingSessionId) return;
-      setResumingSessionId(sessionId);
-      sendResume(sessionId, sessionName);
+      setResumingSessionId(sid);
+      sendResume(sid, sessionName);
     },
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (isRestarting) {
-    console.log(sessionId + " - isRestarting");
+  if (view === 'restarting') {
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -214,6 +183,14 @@ const ClaudeCodePanel = ({
           onLoadMore={loadMoreSessions}
           onNewSession={onNewSession}
         />
+      </div>
+    );
+  }
+
+  if (view === 'loading') {
+    return (
+      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }

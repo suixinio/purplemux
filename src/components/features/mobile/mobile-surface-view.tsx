@@ -14,6 +14,7 @@ import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
+import useTabStore from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 
@@ -115,9 +116,9 @@ const MobileSurfaceView = ({
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
-  const [isClaudeRunning, setIsClaudeRunning] = useState<boolean | undefined>(undefined);
   const pendingRestartRef = useRef(false);
-  const [isRestarting, setIsRestarting] = useState(false);
+  const isClaudeRunning = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.isClaudeRunning ?? false : false);
+  const isRestarting = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.isRestarting ?? false : false);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
@@ -151,7 +152,7 @@ const MobileSurfaceView = ({
       if (!tabId) return;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
-      setIsClaudeRunning(isClaudeProcess(title));
+      useTabStore.getState().setClaudeRunning(tabId, isClaudeProcess(title));
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,
@@ -265,20 +266,20 @@ const MobileSurfaceView = ({
   }, [paneId, onCreateTab]);
 
   const handleNewClaudeSession = useCallback(() => {
-    if (status !== 'connected') return;
-    setIsRestarting(true);
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setRestarting(activeTabId, true);
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
-  }, [status, sendStdin]);
+  }, [status, sendStdin, activeTabId]);
 
   const handleRestartClaudeSession = useCallback(() => {
-    if (status !== 'connected') return;
+    if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = true;
-    setIsRestarting(true);
+    useTabStore.getState().setRestarting(activeTabId, true);
     sendStdin('/exit\r');
-  }, [status, sendStdin]);
+  }, [status, sendStdin, activeTabId]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || isClaudeRunning) return;
@@ -312,7 +313,6 @@ const MobileSurfaceView = ({
           wsId={layoutWsId ?? undefined}
           sessionName={activeTab.sessionName}
           claudeSessionId={activeTab.claudeSessionId}
-          isClaudeRunning={isClaudeRunning}
           cwd={activeTabCwd}
           sendStdin={sendWebStdin}
           terminalWsConnected={status === 'connected'}
@@ -324,7 +324,7 @@ const MobileSurfaceView = ({
           onRestartSession={handleRestartClaudeSession}
           onNewSession={handleNewClaudeSession}
           isRestarting={isRestarting}
-          onRestartComplete={() => setIsRestarting(false)}
+          onRestartComplete={() => { if (activeTabId) useTabStore.getState().setRestarting(activeTabId, false); }}
         />
       )}
 

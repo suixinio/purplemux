@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import useClaudeStatusStore, { getTabStatus } from '@/hooks/use-claude-status-store';
+import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { TTabDisplayStatus } from '@/types/status';
 
 interface IWorkspaceStatusIndicatorProps {
@@ -41,9 +41,9 @@ const DotByStatus = ({ status }: { status: TTabDisplayStatus }) => {
 };
 
 const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProps) => {
-  const tabs = useClaudeStatusStore((state) => state.tabs);
-  const tabOrder = useClaudeStatusStore((state) => state.tabOrders[workspaceId]);
-  const wsConnected = useClaudeStatusStore((state) => state.wsConnected);
+  const tabs = useTabStore((state) => state.tabs);
+  const tabOrder = useTabStore((state) => state.tabOrders[workspaceId]);
+  const wsConnected = useTabStore((state) => state.statusWsConnected);
 
   const tabEntries = useMemo(() => {
     const statusTabIds = new Set<string>();
@@ -60,7 +60,7 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
 
     return ordered.map((tabId) => ({
       tabId,
-      status: getTabStatus(tabs, tabId),
+      status: selectTabDisplayStatus(tabs, tabId),
     }));
   }, [tabs, tabOrder, workspaceId]);
 

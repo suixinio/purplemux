@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
-import useClaudeStatusStore, { getTabStatus } from '@/hooks/use-claude-status-store';
+import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { IWorkspace, IPaneNode } from '@/types/terminal';
 
 interface IMobileWorkspaceTabBarProps {
@@ -27,7 +27,7 @@ const MobileWorkspaceTabBar = ({
   onSelect,
 }: IMobileWorkspaceTabBarProps) => {
   const activeRef = useRef<HTMLButtonElement>(null);
-  const statusTabs = useClaudeStatusStore((s) => s.tabs);
+  const statusTabs = useTabStore((s) => s.tabs);
 
   const items = useMemo(() => {
     const result: (ITabDot | 'divider')[] = [];
@@ -79,7 +79,7 @@ const MobileWorkspaceTabBar = ({
             item.workspaceId === activeWorkspaceId &&
             item.paneId === selectedPaneId &&
             item.tabId === selectedTabId;
-          const status = getTabStatus(statusTabs, item.tabId);
+          const status = selectTabDisplayStatus(statusTabs, item.tabId);
 
           return (
             <button
