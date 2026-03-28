@@ -694,17 +694,17 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     return;
   }
 
-  if (claudeSessionId && sessionInfo.status === 'none') {
+  if (claudeSessionId && sessionInfo.status === 'not-running') {
     await updateTabClaudeSessionId(conn.sessionName, null).catch(() => {});
     await updateTabClaudeSummary(conn.sessionName, null).catch(() => {});
   }
 
   // PID 파일 생성 전이지만 pane에서 claude 프로세스가 실행 중인지 확인
-  const isClaudeStarting = sessionInfo.status === 'none'
+  const isClaudeStarting = sessionInfo.status === 'not-running'
     && !claudeSessionId
     && await isClaudeRunning(panePid);
 
-  if (sessionInfo.status === 'active' && sessionInfo.sessionId) {
+  if (sessionInfo.status === 'running' && sessionInfo.sessionId) {
     sendJson(ws, {
       type: 'timeline:session-changed',
       newSessionId: sessionInfo.sessionId,
@@ -764,7 +764,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           });
 
           await subscribeAndUpdateSummary(c.ws, newInfo.jsonlPath, newInfo.sessionId ?? undefined, sessionName);
-        } else if (!newInfo.jsonlPath && newInfo.status === 'none') {
+        } else if (!newInfo.jsonlPath && newInfo.status === 'not-running') {
           cancelJsonlWatcher(sessionName);
           if (c.currentJsonlPath) {
             unsubscribeFromFile(c.ws, c.currentJsonlPath);
@@ -780,7 +780,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
         }
       }
 
-      if (newInfo.status === 'active' && !newInfo.jsonlPath) {
+      if (newInfo.status === 'running' && !newInfo.jsonlPath) {
         for (const c of wsConns) {
           if (c.currentJsonlPath) continue;
           if (pendingJsonlWatchers.has(sessionName)) continue;
@@ -801,7 +801,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     sessionWatchers.set(wsKey, sw);
   }
 
-  if (sessionInfo.status === 'active' && !sessionInfo.jsonlPath && sessionInfo.sessionId && sessionInfo.cwd) {
+  if (sessionInfo.status === 'running' && !sessionInfo.jsonlPath && sessionInfo.sessionId && sessionInfo.cwd) {
     watchForJsonlFile(sessionName, sessionInfo.sessionId, sessionInfo.cwd);
   }
 
@@ -813,7 +813,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     const recheckInfo = await detectActiveSession(panePid);
     if (conn.cleaned) return;
 
-    if (recheckInfo.status === 'active' && recheckInfo.sessionId && !conn.currentJsonlPath) {
+    if (recheckInfo.status === 'running' && recheckInfo.sessionId && !conn.currentJsonlPath) {
       await updateTabClaudeSessionId(sessionName, recheckInfo.sessionId).catch(() => {});
 
       if (recheckInfo.jsonlPath) {

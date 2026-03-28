@@ -3,7 +3,7 @@ import type {
   ITimelineEntry,
   IInitMeta,
   ITaskItem,
-  TClaudeSession,
+  TClaudeStatus,
   TTimelineConnectionStatus,
   TCliState,
 } from '@/types/timeline';
@@ -13,10 +13,10 @@ import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
 const STALE_BUSY_MS = 30_000;
 
 const deriveCliState = (
-  claudeSession: TClaudeSession,
+  claudeStatus: TClaudeStatus,
   entries: ITimelineEntry[],
 ): TCliState => {
-  if (claudeSession !== 'active') {
+  if (claudeStatus !== 'running') {
     return 'inactive';
   }
 
@@ -47,7 +47,7 @@ interface IResumeCallbacks {
 }
 
 export interface ITimelineSyncState {
-  claudeSession: TClaudeSession;
+  claudeStatus: TClaudeStatus;
   cliState: TCliState;
   isLoading: boolean;
   wsStatus: TTimelineConnectionStatus;
@@ -68,7 +68,7 @@ interface IUseTimelineReturn {
   sessionId: string | null;
   sessionSummary: string | undefined;
   initMeta: IInitMeta | undefined;
-  claudeSession: TClaudeSession;
+  claudeStatus: TClaudeStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -86,7 +86,7 @@ const useTimeline = ({
   onSync,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
-  const [claudeSession, setSessionStatus] = useState<TClaudeSession>('none');
+  const [claudeStatus, setClaudeSession] = useState<TClaudeStatus>('unknown');
   const [wsInitReceived, setWsInitReceived] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -117,7 +117,7 @@ const useTimeline = ({
     }
     if (initSessionId) {
       setSessionId(initSessionId);
-      setSessionStatus('active');
+      setClaudeSession('running');
     }
     setError(null);
   }, []);
@@ -152,7 +152,7 @@ const useTimeline = ({
 
   const handleSessionChanged = useCallback((newSessionId: string, reason: string) => {
     if (reason === 'session-ended') {
-      setSessionStatus('none');
+      setClaudeSession('not-running');
       setWsInitReceived(true);
       setEntries([]);
       setSessionSummary(undefined);
@@ -161,13 +161,13 @@ const useTimeline = ({
       return;
     }
     if (reason === 'session-waiting') {
-      setSessionStatus('active');
+      setClaudeSession('running');
       setWsInitReceived(false);
       if (newSessionId) setSessionId(newSessionId);
       return;
     }
     setSessionId(newSessionId || null);
-    setSessionStatus('active');
+    setClaudeSession('running');
     setEntries([]);
     setSessionSummary(undefined);
     setInitMeta(undefined);
@@ -198,7 +198,7 @@ const useTimeline = ({
 
   const handleError = useCallback((err: { code: string; message: string }) => {
     if (err.code === 'not-installed') {
-      setSessionStatus('not-installed');
+      setClaudeSession('not-installed');
       return;
     }
     console.warn(`[timeline] WebSocket error: ${err.code} — ${err.message}`);
@@ -215,7 +215,7 @@ const useTimeline = ({
         jsonlPathRef.current = payload.jsonlPath;
       }
       setSessionId(payload.sessionId);
-      setSessionStatus('active');
+      setClaudeSession('running');
       setEntries([]);
       setWsInitReceived(false);
       resumeCallbacksRef.current?.onResumeStarted?.(payload);
@@ -256,8 +256,8 @@ const useTimeline = ({
   }, [reconnect]);
 
   const rawCliState = useMemo(
-    () => isLoading ? 'inactive' as const : deriveCliState(claudeSession, entries),
-    [claudeSession, entries, isLoading],
+    () => isLoading ? 'inactive' as const : deriveCliState(claudeStatus, entries),
+    [claudeStatus, entries, isLoading],
   );
 
   const lastEntryTs = entries.length > 0 ? entries[entries.length - 1].timestamp : 0;
@@ -284,8 +284,8 @@ const useTimeline = ({
   useEffect(() => { onSyncRef.current = onSync; });
 
   useEffect(() => {
-    onSyncRef.current?.({ claudeSession, cliState, isLoading, wsStatus });
-  }, [claudeSession, cliState, isLoading, wsStatus]);
+    onSyncRef.current?.({ claudeStatus, cliState, isLoading, wsStatus });
+  }, [claudeStatus, cliState, isLoading, wsStatus]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];
@@ -320,7 +320,7 @@ const useTimeline = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeSession,
+    claudeStatus,
     wsStatus,
     isLoading,
     error,

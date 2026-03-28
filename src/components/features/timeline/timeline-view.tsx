@@ -8,7 +8,7 @@ import type {
   ITimelineToolResult,
   ITaskItem,
   TCliState,
-  TClaudeSession,
+  TClaudeStatus,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
@@ -27,7 +27,7 @@ interface ITimelineViewProps {
   tasks: ITaskItem[];
   sessionId: string | null;
   cliState: TCliState;
-  claudeSession: TClaudeSession;
+  claudeStatus: TClaudeStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -174,8 +174,8 @@ const DisconnectedBanner = ({ onRetry }: { onRetry: () => void }) => (
   </div>
 );
 
-const EmptyState = ({ claudeSession }: { claudeSession: TClaudeSession }) => {
-  if (claudeSession === 'not-installed') {
+const EmptyState = ({ claudeStatus }: { claudeStatus: TClaudeStatus }) => {
+  if (claudeStatus === 'not-installed') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
         <Terminal size={32} className="opacity-40" />
@@ -187,7 +187,7 @@ const EmptyState = ({ claudeSession }: { claudeSession: TClaudeSession }) => {
     );
   }
 
-  if (claudeSession === 'active') {
+  if (claudeStatus === 'running') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
         <Terminal size={32} className="opacity-40" />
@@ -214,7 +214,7 @@ const TimelineView = ({
   tasks,
   sessionId,
   cliState,
-  claudeSession,
+  claudeStatus,
   wsStatus,
   isLoading,
   error,
@@ -286,7 +286,7 @@ const TimelineView = ({
   }
 
   if (!hasDisplayItems) {
-    return <EmptyState claudeSession={claudeSession} />;
+    return <EmptyState claudeStatus={claudeStatus} />;
   }
 
   const isReconnecting = wsStatus === 'reconnecting';

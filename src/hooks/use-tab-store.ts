@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { resolveDismissed } from '@/lib/resolve-dismissed';
-import type { TCliState, TClaudeSession, TTimelineConnectionStatus } from '@/types/timeline';
+import type { TCliState, TClaudeStatus, TTimelineConnectionStatus } from '@/types/timeline';
 import type { TTabDisplayStatus } from '@/types/status';
 
 export type TSessionView =
@@ -11,36 +11,25 @@ export type TSessionView =
   | 'list'
   | 'empty';
 
-export type TClaudeProcess = 'unknown' | 'running' | 'not-running';
-
 export interface ITabState {
-  // 터미널 WS
   terminalConnected: boolean;
-  claudeProcess: TClaudeProcess;
-
-  // 타임라인 WS
-  claudeSession: TClaudeSession;
+  claudeStatus: TClaudeStatus;
+  claudeStatusCheckedAt: number;
   cliState: TCliState;
   isTimelineLoading: boolean;
   timelineWsStatus: TTimelineConnectionStatus;
-
-  // 세션 목록
   hasSessions: boolean;
-
-  // 사용자 액션 / 네비게이션
   isRestarting: boolean;
   dismissed: boolean;
   manualView: 'list' | 'timeline' | null;
-
-  // 메타
   workspaceId: string;
   tabName: string;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
   terminalConnected: false,
-  claudeProcess: 'unknown',
-  claudeSession: 'none',
+  claudeStatus: 'unknown',
+  claudeStatusCheckedAt: 0,
   cliState: 'inactive',
   isTimelineLoading: true,
   timelineWsStatus: 'disconnected',
@@ -57,37 +46,22 @@ interface ITabStore {
   tabOrders: Record<string, string[]>;
   statusWsConnected: boolean;
 
-  // 탭 생명주기
   initTab: (tabId: string, initial?: Partial<ITabState>) => void;
   removeTab: (tabId: string) => void;
 
-  // 터미널 WS
   setTerminalConnected: (tabId: string, connected: boolean) => void;
-  setClaudeProcess: (tabId: string, status: TClaudeProcess) => void;
-
-  // 타임라인 WS
-  setSessionStatus: (tabId: string, status: TClaudeSession) => void;
+  setClaudeStatus: (tabId: string, status: TClaudeStatus, checkedAt: number) => void;
   setCliState: (tabId: string, state: TCliState) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
   setTimelineWsStatus: (tabId: string, status: TTimelineConnectionStatus) => void;
-
-  // 세션 목록
   setHasSessions: (tabId: string, has: boolean) => void;
-
-  // 사용자 액션
   setRestarting: (tabId: string, restarting: boolean) => void;
   setDismissed: (tabId: string, dismissed: boolean) => void;
   navigateToList: (tabId: string) => void;
   navigateToTimeline: (tabId: string) => void;
-
-  // 메타
   setTabMeta: (tabId: string, workspaceId: string, tabName: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
-
-  // status WS 연결
   setStatusWsConnected: (connected: boolean) => void;
-
-  // 서버 status 동기화 (기존 useClaudeStatusStore 대체)
   syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; dismissed: boolean; workspaceId: string; tabName: string }>) => void;
   updateFromServer: (tabId: string, update: { cliState: TCliState | null; dismissed: boolean; workspaceId: string; tabName: string }) => void;
 }
@@ -128,20 +102,13 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { terminalConnected: connected }) };
     }),
 
-  setClaudeProcess: (tabId, status) =>
+  setClaudeStatus: (tabId, status, checkedAt) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.claudeProcess === status) return state;
-      return { tabs: updateTab(state.tabs, tabId, { claudeProcess: status }) };
-    }),
-
-  setSessionStatus: (tabId, status) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.claudeSession === status) return state;
-      const patch: Partial<ITabState> = { claudeSession: status };
-      // active→none 전환 시 manualView === 'timeline'이면 리셋
-      if (prev.claudeSession === 'active' && status !== 'active' && prev.manualView === 'timeline') {
+      if (!prev || prev.claudeStatusCheckedAt > checkedAt) return state;
+      if (prev.claudeStatus === status) return state;
+      const patch: Partial<ITabState> = { claudeStatus: status, claudeStatusCheckedAt: checkedAt };
+      if (prev.claudeStatus === 'running' && status !== 'running' && prev.manualView === 'timeline') {
         patch.manualView = null;
       }
       return { tabs: updateTab(state.tabs, tabId, patch) };
@@ -255,24 +222,14 @@ const useTabStore = create<ITabStore>((set) => ({
 
 // --- 파생 selectors ---
 
-const isEffectivelyActive = (tab: ITabState): boolean =>
-  tab.claudeSession === 'active'
-  && tab.claudeProcess !== 'not-running';
-
-export const selectEffectiveSessionStatus = (tabs: Record<string, ITabState>, tabId: string): 'active' | 'none' | 'not-installed' => {
-  const tab = tabs[tabId];
-  if (!tab) return 'none';
-  return isEffectivelyActive(tab) ? tab.claudeSession : (tab.claudeSession === 'active' ? 'none' : tab.claudeSession);
-};
-
 export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string): TSessionView => {
   const tab = tabs[tabId];
   if (!tab) return 'empty';
 
   if (tab.isRestarting) return 'restarting';
-  if (tab.claudeSession === 'not-installed') return 'not-installed';
+  if (tab.claudeStatus === 'not-installed') return 'not-installed';
 
-  if (isEffectivelyActive(tab)) {
+  if (tab.claudeStatus === 'running') {
     return tab.isTimelineLoading ? 'loading' : 'timeline';
   }
 

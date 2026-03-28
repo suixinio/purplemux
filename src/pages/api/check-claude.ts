@@ -13,18 +13,20 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: 'session 파라미터 필수' });
   }
 
+  const checkedAt = Date.now();
+
   const exists = await hasSession(session);
   if (!exists) {
-    return res.status(200).json({ running: false });
+    return res.status(200).json({ running: false, checkedAt });
   }
 
   const panePid = await getSessionPanePid(session);
   if (!panePid) {
-    return res.status(200).json({ running: false });
+    return res.status(200).json({ running: false, checkedAt });
   }
 
   const running = await isClaudeRunning(panePid);
-  return res.status(200).json({ running });
+  return res.status(200).json({ running, checkedAt });
 };
 
 export default handler;

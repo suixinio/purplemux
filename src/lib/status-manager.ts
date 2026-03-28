@@ -164,7 +164,7 @@ class StatusManager {
     if (!claudeRunning) return 'inactive';
 
     const session = await detectActiveSession(paneInfo.pid);
-    if (session.status !== 'active') return 'idle';
+    if (session.status !== 'running') return 'idle';
 
     if (!session.jsonlPath) return 'idle';
 

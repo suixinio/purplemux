@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
+import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
@@ -33,7 +33,7 @@ const ClaudeCodePanel = ({
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
 
-  const claudeProcess = useTabStore((s) => s.tabs[tabId]?.claudeProcess ?? 'unknown');
+  const claudeStatus = useTabStore((s) => s.tabs[tabId]?.claudeStatus ?? 'unknown');
   const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
 
@@ -69,7 +69,7 @@ const ClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeSession,
+    claudeStatus: claudeStatusFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -87,14 +87,12 @@ const ClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: (state) => {
-      useTabStore.getState().setSessionStatus(tabId, state.claudeSession);
+      useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
       useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
     },
   });
-
-  const effectiveSessionStatus = useTabStore((s) => selectEffectiveSessionStatus(s.tabs, tabId));
 
   const {
     sessions,
@@ -106,7 +104,7 @@ const ClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && effectiveSessionStatus !== 'active',
+    enabled: !!sessionName && claudeStatus !== 'running',
     cwd,
   });
 
@@ -114,38 +112,36 @@ const ClaudeCodePanel = ({
     useTabStore.getState().setHasSessions(tabId, sessions.length > 0);
   }, [tabId, sessions.length]);
 
-  const prevClaudeProcessRef = useRef(claudeProcess);
+  const prevClaudeStatusRef = useRef(claudeStatus);
   useEffect(() => {
-    const prev = prevClaudeProcessRef.current;
-    prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== 'running' && claudeProcess === 'running' && claudeSession !== 'active') {
+    const prev = prevClaudeStatusRef.current;
+    prevClaudeStatusRef.current = claudeStatus;
+    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running') {
       retrySession();
     }
-  }, [claudeProcess, claudeSession, retrySession]);
+  }, [claudeStatus, claudeStatusFromTimeline, retrySession]);
 
-  // 재시작 완료 감지
   const restartNeedsExitRef = useRef(false);
   const prevIsRestartingRef = useRef(false);
 
   useEffect(() => {
     if (isRestarting && !prevIsRestartingRef.current) {
-      restartNeedsExitRef.current = effectiveSessionStatus === 'active';
+      restartNeedsExitRef.current = claudeStatus === 'running';
     }
     prevIsRestartingRef.current = isRestarting;
 
     if (!isRestarting) return;
 
-    if (restartNeedsExitRef.current && effectiveSessionStatus !== 'active') {
+    if (restartNeedsExitRef.current && claudeStatus !== 'running') {
       restartNeedsExitRef.current = false;
     }
 
     if (cliState === 'idle' && !restartNeedsExitRef.current) {
       useTabStore.getState().setRestarting(tabId, false);
     }
-  }, [isRestarting, effectiveSessionStatus, cliState, tabId]);
+  }, [isRestarting, claudeStatus, cliState, tabId]);
 
-  // effectiveCliState for TimelineView
-  const effectiveCliState = effectiveSessionStatus === 'none' && cliState !== 'inactive'
+  const effectiveCliState = claudeStatus !== 'running' && cliState !== 'inactive'
     ? 'inactive' as const
     : cliState;
 
@@ -211,7 +207,7 @@ const ClaudeCodePanel = ({
           tasks={tasks}
           sessionId={sessionId}
           cliState={effectiveCliState}
-          claudeSession={claudeSession}
+          claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}

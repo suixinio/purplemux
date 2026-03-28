@@ -114,7 +114,7 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
   const childPids = await getChildPids(panePid);
 
   if (childPids.length === 0) {
-    return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
+    return { status: 'not-running', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
   const childPidSet = new Set(childPids);
@@ -160,7 +160,7 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
       }
 
       return {
-        status: 'active',
+        status: 'running',
         sessionId: effectiveSessionId,
         jsonlPath,
         pid: data.pid,
@@ -180,7 +180,7 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
       const projectDir = path.join(PROJECTS_DIR, projectName);
       const jsonlPath = await findJsonlPath(projectDir, fromArgs.sessionId);
       return {
-        status: 'active',
+        status: 'running',
         sessionId: fromArgs.sessionId,
         jsonlPath,
         pid: fromArgs.pid,
@@ -190,7 +190,7 @@ export const detectActiveSession = async (panePid: number): Promise<ISessionInfo
     }
   }
 
-  return { status: 'none', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
+  return { status: 'not-running', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
 };
 
 export interface ISessionWatcher {

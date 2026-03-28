@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
+import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
@@ -61,7 +61,7 @@ const MobileClaudeCodePanel = ({
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
-  const claudeProcess = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeProcess ?? 'unknown' : 'unknown');
+  const claudeStatus = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeStatus ?? 'unknown' : 'unknown');
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
@@ -92,7 +92,7 @@ const MobileClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeSession,
+    claudeStatus: claudeStatusFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -110,14 +110,16 @@ const MobileClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: tabId ? (state) => {
-      useTabStore.getState().setSessionStatus(tabId, state.claudeSession);
+      useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
       useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
     } : undefined,
   });
 
-  const effectiveSessionStatus = useTabStore((s) => tabId ? selectEffectiveSessionStatus(s.tabs, tabId) : claudeSession);
+  const effectiveClaudeStatus = tabId
+    ? claudeStatus
+    : claudeStatusFromTimeline;
 
   const {
     sessions,
@@ -129,7 +131,7 @@ const MobileClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && effectiveSessionStatus !== 'active',
+    enabled: !!sessionName && effectiveClaudeStatus !== 'running',
     cwd,
   });
 
@@ -138,14 +140,14 @@ const MobileClaudeCodePanel = ({
     useTabStore.getState().setHasSessions(tabId, sessions.length > 0);
   }, [tabId, sessions.length]);
 
-  const prevClaudeProcessRef = useRef(claudeProcess);
+  const prevClaudeStatusRef = useRef(claudeStatus);
   useEffect(() => {
-    const prev = prevClaudeProcessRef.current;
-    prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== 'running' && claudeProcess === 'running' && claudeSession !== 'active') {
+    const prev = prevClaudeStatusRef.current;
+    prevClaudeStatusRef.current = claudeStatus;
+    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running') {
       retrySession();
     }
-  }, [claudeProcess, claudeSession, retrySession]);
+  }, [claudeStatus, claudeStatusFromTimeline, retrySession]);
 
   const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'empty' as const);
 
@@ -159,20 +161,20 @@ const MobileClaudeCodePanel = ({
 
   useEffect(() => {
     if (isRestarting && !prevIsRestartingRef.current) {
-      restartNeedsExitRef.current = effectiveSessionStatus === 'active';
+      restartNeedsExitRef.current = effectiveClaudeStatus === 'running';
     }
     prevIsRestartingRef.current = !!isRestarting;
 
     if (!isRestarting) return;
 
-    if (restartNeedsExitRef.current && effectiveSessionStatus !== 'active') {
+    if (restartNeedsExitRef.current && effectiveClaudeStatus !== 'running') {
       restartNeedsExitRef.current = false;
     }
 
     if (cliState === 'idle' && !restartNeedsExitRef.current) {
       onRestartComplete?.();
     }
-  }, [isRestarting, effectiveSessionStatus, cliState, onRestartComplete]);
+  }, [isRestarting, effectiveClaudeStatus, cliState, onRestartComplete]);
 
   const isInputVisible = view === 'timeline';
 
@@ -277,7 +279,7 @@ const MobileClaudeCodePanel = ({
           tasks={tasks}
           sessionId={sessionId}
           cliState={cliState}
-          claudeSession={claudeSession}
+          claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}

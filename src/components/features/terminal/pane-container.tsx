@@ -158,9 +158,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
+  const lastTitleRef = useRef('');
 
   const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
-  const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? 'unknown' : 'unknown');
+  const claudeStatus = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeStatus ?? 'unknown' : 'unknown');
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'empty');
   const claudeInputVisible = sessionView === 'timeline';
 
@@ -215,14 +216,16 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     onTitleChange: (title) => {
       const tabId = activeTabIdRef.current;
       if (!tabId) return;
+      if (title === lastTitleRef.current) return;
+      lastTitleRef.current = title;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         fetch(`/api/check-claude?session=${tab.sessionName}`)
           .then((res) => res.json())
-          .then(({ running }) => {
-            useTabStore.getState().setClaudeProcess(tabId, running ? 'running' : 'not-running');
+          .then(({ running, checkedAt }) => {
+            useTabStore.getState().setClaudeStatus(tabId, running ? 'running' : 'not-running', checkedAt);
           })
           .catch(() => {});
       }
@@ -326,7 +329,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       cliState: tab.cliState ?? 'inactive',
       dismissed: tab.dismissed ?? true,
       terminalConnected: false,
-      claudeProcess: 'unknown',
+      claudeStatus: 'unknown',
     });
 
     connectedSessionRef.current = tab.sessionName;
@@ -338,9 +341,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     const tabId = activeTabIdRef.current;
     if (!tabId) return;
     useTabStore.getState().setTerminalConnected(tabId, status === 'connected');
-    if (status !== 'connected') {
-      useTabStore.getState().setClaudeProcess(tabId, 'unknown');
-    }
   }, [status]);
 
   useEffect(() => {
@@ -482,7 +482,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [paneId, activeTabId, tabs, updateTabPanelType]);
 
   useEffect(() => {
-    if (!activeTabId || claudeProcess !== 'running' || activePanelType !== 'terminal') {
+    if (!activeTabId || claudeStatus !== 'running' || activePanelType !== 'terminal') {
       setShowClaudeModePrompt(false);
       return;
     }
@@ -490,7 +490,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
     claudeModeShownTabsRef.current.add(activeTabId);
     setShowClaudeModePrompt(true);
-  }, [activeTabId, claudeProcess, activePanelType]);
+  }, [activeTabId, claudeStatus, activePanelType]);
 
   const [showPathInput, setShowPathInput] = useState(false);
   const [droppedFileHint, setDroppedFileHint] = useState('');
@@ -567,14 +567,14 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [status, sendStdin, activeTabId]);
 
   useEffect(() => {
-    if (!pendingRestartRef.current || claudeProcess === 'running') return;
+    if (!pendingRestartRef.current || claudeStatus === 'running') return;
     pendingRestartRef.current = false;
     if (status !== 'connected') return;
     const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
-  }, [claudeProcess, status, sendStdin]);
+  }, [claudeStatus, status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);
