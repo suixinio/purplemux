@@ -290,6 +290,7 @@ const MobileTerminalPage = () => {
         {currentPane && selectedTabId && (
           <MobileTabHeader
             key={selectedTabId}
+            tabId={selectedTabId}
             tabName={currentTabName}
             panelType={currentPanelType}
             onToggleClaude={handleToggleClaude}

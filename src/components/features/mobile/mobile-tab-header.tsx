@@ -1,5 +1,6 @@
 import { X, Plus, Terminal } from 'lucide-react';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { TPanelType } from '@/types/terminal';
 
 interface IMobileTabHeaderProps {
+  tabId: string;
   tabName: string;
   panelType: TPanelType;
   onToggleClaude: () => void;
@@ -23,6 +25,7 @@ interface IMobileTabHeaderProps {
 }
 
 const MobileTabHeader = ({
+  tabId,
   tabName,
   panelType,
   onToggleClaude,
@@ -32,6 +35,7 @@ const MobileTabHeader = ({
   return (
     <div className="flex h-10 shrink-0 items-center border-b border-border/50 bg-background">
       <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
+        <TabStatusIndicator tabId={tabId} panelType={panelType} />
         {panelType === 'claude-code' ? (
           <ClaudeCodeIcon size={16} />
         ) : (
