@@ -256,8 +256,8 @@ const useTimeline = ({
   }, [reconnect]);
 
   const rawCliState = useMemo(
-    () => isLoading ? 'inactive' as const : deriveCliState(claudeStatus, entries),
-    [claudeStatus, entries, isLoading],
+    () => deriveCliState(claudeStatus, entries),
+    [claudeStatus, entries],
   );
 
   const lastEntryTs = entries.length > 0 ? entries[entries.length - 1].timestamp : 0;
