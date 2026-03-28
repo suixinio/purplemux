@@ -61,7 +61,7 @@ interface IMobileSurfaceViewProps {
   onCliStateChange?: (state: TCliState) => void;
 }
 
-const MOBILE_FONT_SIZE = 12;
+const MOBILE_FONT_SIZE = 11;
 
 const MobileSurfaceView = ({
   paneId,
