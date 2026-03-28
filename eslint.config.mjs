@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     // Build artifacts
     "bin/**",
     "dist/**",
+    "dist-electron/**",
   ]),
 ]);
 
