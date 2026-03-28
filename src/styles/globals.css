@@ -253,6 +253,14 @@ body {
   to { opacity: 1; }
 }
 
+.animate-delayed-fade-in {
+  animation: fadeIn 300ms ease-out 200ms both;
+}
+
+.animate-delayed-fade-in-long {
+  animation: fadeIn 300ms ease-out 500ms both;
+}
+
 @keyframes timeline-fade-in {
   from {
     opacity: 0;

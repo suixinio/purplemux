@@ -788,7 +788,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         )}
 
         {closingTabId && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-background/80 animate-[fadeIn_400ms_ease-out_200ms_both]">
+          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-background/80 animate-delayed-fade-in">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             <span className="text-sm text-muted-foreground">프로세스 정리 중...</span>
           </div>

@@ -49,7 +49,6 @@ const useClaudeStatus = () => {
               useTabStore.getState().updateFromServer(msg.tabId, {
                 cliState: msg.cliState,
                 workspaceId: msg.workspaceId,
-                tabName: msg.tabName,
               });
               break;
           }

@@ -22,7 +22,7 @@ const ConnectionStatus = ({
     <div
       className={cn(
         'absolute top-3 right-3 z-10 flex items-center gap-2 rounded-md bg-terminal-bg/90 px-3 py-2 text-sm transition-opacity duration-150',
-        isVisible ? 'opacity-100' : 'pointer-events-none opacity-0',
+        isVisible ? 'animate-delayed-fade-in-long' : 'pointer-events-none opacity-0',
       )}
     >
       {status === 'connecting' && (

@@ -175,7 +175,7 @@ const TerminalPage = () => {
 
         <div className="relative min-h-0 flex-1">
           {showSwitching && (
-            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background animate-[fadeIn_300ms_ease-out_150ms_both]">
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-background animate-delayed-fade-in">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
           )}

@@ -18,7 +18,6 @@ export interface ITabState {
   isRestarting: boolean;
   isResuming: boolean;
   workspaceId: string;
-  tabName: string;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -30,7 +29,6 @@ const DEFAULT_TAB_STATE: ITabState = {
   isRestarting: false,
   isResuming: false,
   workspaceId: '',
-  tabName: '',
 };
 
 interface ITabStore {
@@ -48,11 +46,11 @@ interface ITabStore {
   setRestarting: (tabId: string, restarting: boolean) => void;
   dismissTab: (tabId: string) => void;
   setResuming: (tabId: string, resuming: boolean) => void;
-  setTabMeta: (tabId: string, workspaceId: string, tabName: string) => void;
+  setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; tabName: string }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; tabName: string }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string }) => void;
 }
 
 const updateTab = (
@@ -141,11 +139,11 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { isResuming: resuming }) };
     }),
 
-  setTabMeta: (tabId, workspaceId, tabName) =>
+  setWorkspaceId: (tabId, workspaceId) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || (prev.workspaceId === workspaceId && prev.tabName === tabName)) return state;
-      return { tabs: updateTab(state.tabs, tabId, { workspaceId, tabName }) };
+      if (!prev || prev.workspaceId === workspaceId) return state;
+      return { tabs: updateTab(state.tabs, tabId, { workspaceId }) };
     }),
 
   setTabOrder: (workspaceId, tabIds) =>
@@ -164,9 +162,9 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = next[tabId];
         if (existing) {
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId };
         }
       }
       return { tabs: next };
@@ -180,12 +178,12 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId },
         },
       };
     }),
