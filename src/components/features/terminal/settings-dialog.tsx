@@ -352,8 +352,8 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
         showCloseButton={false}
       >
         <div className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden md:h-[520px] md:flex-row">
-          <div className="flex shrink-0 flex-col border-b bg-muted/30 p-3 md:w-48 md:border-b-0 md:border-r">
-            <div className="mb-4 flex items-center justify-between px-2">
+          <div className="flex shrink-0 flex-col border-b bg-muted/30 px-3 pt-3 pb-0 md:p-3 md:w-48 md:border-b-0 md:border-r">
+            <div className="mb-2 flex items-center justify-between px-2 md:mb-4">
               <DialogTitle className="text-base font-semibold">설정</DialogTitle>
               <Button
                 variant="ghost"
@@ -365,7 +365,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
                 <span className="sr-only">닫기</span>
               </Button>
             </div>
-            <nav className="flex gap-1 overflow-x-auto pb-1 md:flex-col md:pb-0">
+            <nav className="flex gap-1 overflow-x-auto px-1 pb-2 md:flex-col md:px-0 md:pb-0">
               {settingsItems.map((item) => (
                 <Button
                   key={item.id}
