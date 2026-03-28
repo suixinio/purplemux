@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
 import { getAllPanesInfo } from '@/lib/tmux';
-import { detectActiveSession } from '@/lib/session-detection';
+import { detectActiveSession, isClaudeRunning } from '@/lib/session-detection';
 import { INTERRUPT_PREFIX } from '@/lib/session-parser';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
@@ -19,11 +19,6 @@ const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
 
-const CLAUDE_COMMANDS = new Set(['claude']);
-const VERSION_PATTERN = /^\d+\.\d+\.\d+$/;
-
-const isClaudeCommand = (cmd: string): boolean =>
-  CLAUDE_COMMANDS.has(cmd) || VERSION_PATTERN.test(cmd);
 
 interface IJsonlIdleCache {
   mtimeMs: number;

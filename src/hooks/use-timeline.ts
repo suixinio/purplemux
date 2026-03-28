@@ -46,11 +46,19 @@ interface IResumeCallbacks {
   onResumeError?: (payload: { message: string }) => void;
 }
 
+export interface ITimelineSyncState {
+  sessionStatus: TSessionStatus;
+  cliState: TCliState;
+  isLoading: boolean;
+  wsStatus: TTimelineConnectionStatus;
+}
+
 interface IUseTimelineOptions {
   sessionName: string;
   claudeSessionId?: string | null;
   enabled: boolean;
   resumeCallbacks?: IResumeCallbacks;
+  onSync?: (state: ITimelineSyncState) => void;
 }
 
 interface IUseTimelineReturn {
@@ -75,6 +83,7 @@ const useTimeline = ({
   claudeSessionId,
   enabled,
   resumeCallbacks,
+  onSync,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
   const [sessionStatus, setSessionStatus] = useState<TSessionStatus>('none');
@@ -270,6 +279,13 @@ const useTimeline = ({
 
   const isStaleBusy = staleBusy || (rawCliState === 'busy' && lastEntryTs > 0 && Date.now() - lastEntryTs >= STALE_BUSY_MS);
   const cliState = isStaleBusy ? 'idle' as const : rawCliState;
+
+  const onSyncRef = useRef(onSync);
+  useEffect(() => { onSyncRef.current = onSync; });
+
+  useEffect(() => {
+    onSyncRef.current?.({ sessionStatus, cliState, isLoading, wsStatus });
+  }, [sessionStatus, cliState, isLoading, wsStatus]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];

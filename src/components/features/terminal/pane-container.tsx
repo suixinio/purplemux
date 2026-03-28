@@ -18,7 +18,7 @@ import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
-import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
@@ -217,7 +217,15 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       if (!tabId) return;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
-      useTabStore.getState().setClaudeProcess(tabId, isClaudeProcess(title) ? 'running' : 'not-running');
+      const tab = tabsRef.current.find((t) => t.id === tabId);
+      if (tab) {
+        fetch(`/api/check-claude?session=${tab.sessionName}`)
+          .then((res) => res.json())
+          .then(({ running }) => {
+            useTabStore.getState().setClaudeProcess(tabId, running ? 'running' : 'not-running');
+          })
+          .catch(() => {});
+      }
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,

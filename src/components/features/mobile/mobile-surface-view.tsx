@@ -10,7 +10,7 @@ import TerminalContainer from '@/components/features/terminal/terminal-container
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
 import MobileTerminalToolbar from '@/components/features/mobile/mobile-terminal-toolbar';
-import { formatTabTitle, isClaudeProcess } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
@@ -152,7 +152,15 @@ const MobileSurfaceView = ({
       if (!tabId) return;
       const formatted = formatTabTitle(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
-      useTabStore.getState().setClaudeProcess(tabId, isClaudeProcess(title) ? 'running' : 'not-running');
+      const tab = tabsRef.current.find((t) => t.id === tabId);
+      if (tab) {
+        fetch(`/api/check-claude?session=${tab.sessionName}`)
+          .then((res) => res.json())
+          .then(({ running }) => {
+            useTabStore.getState().setClaudeProcess(tabId, running ? 'running' : 'not-running');
+          })
+          .catch(() => {});
+      }
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,

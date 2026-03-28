@@ -4,7 +4,6 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useTimelineStoreSync from '@/hooks/use-timeline-store-sync';
 import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
@@ -87,6 +86,12 @@ const ClaudeCodePanel = ({
       onResumeBlocked: handleResumeBlocked,
       onResumeError: handleResumeError,
     },
+    onSync: (state) => {
+      useTabStore.getState().setSessionStatus(tabId, state.sessionStatus);
+      useTabStore.getState().setCliState(tabId, state.cliState);
+      useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
+      useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
+    },
   });
 
   const effectiveSessionStatus = useTabStore((s) => selectEffectiveSessionStatus(s.tabs, tabId));
@@ -105,16 +110,18 @@ const ClaudeCodePanel = ({
     cwd,
   });
 
-  useTimelineStoreSync({
-    tabId,
-    sessionStatus,
-    cliState,
-    isTimelineLoading,
-    wsStatus,
-    sessionsCount: sessions.length,
-    claudeProcess,
-    retrySession,
-  });
+  useEffect(() => {
+    useTabStore.getState().setHasSessions(tabId, sessions.length > 0);
+  }, [tabId, sessions.length]);
+
+  const prevClaudeProcessRef = useRef(claudeProcess);
+  useEffect(() => {
+    const prev = prevClaudeProcessRef.current;
+    prevClaudeProcessRef.current = claudeProcess;
+    if (prev !== 'running' && claudeProcess === 'running' && sessionStatus !== 'active') {
+      retrySession();
+    }
+  }, [claudeProcess, sessionStatus, retrySession]);
 
   // 재시작 완료 감지
   const restartNeedsExitRef = useRef(false);

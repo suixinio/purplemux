@@ -4,7 +4,6 @@ import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
-import useTimelineStoreSync from '@/hooks/use-timeline-store-sync';
 import useTabStore, { selectSessionView, selectEffectiveSessionStatus } from '@/hooks/use-tab-store';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
@@ -110,6 +109,12 @@ const MobileClaudeCodePanel = ({
       onResumeBlocked: handleResumeBlocked,
       onResumeError: handleResumeError,
     },
+    onSync: tabId ? (state) => {
+      useTabStore.getState().setSessionStatus(tabId, state.sessionStatus);
+      useTabStore.getState().setCliState(tabId, state.cliState);
+      useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
+      useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
+    } : undefined,
   });
 
   const effectiveSessionStatus = useTabStore((s) => tabId ? selectEffectiveSessionStatus(s.tabs, tabId) : sessionStatus);
@@ -128,16 +133,19 @@ const MobileClaudeCodePanel = ({
     cwd,
   });
 
-  useTimelineStoreSync({
-    tabId,
-    sessionStatus,
-    cliState,
-    isTimelineLoading,
-    wsStatus,
-    sessionsCount: sessions.length,
-    claudeProcess,
-    retrySession,
-  });
+  useEffect(() => {
+    if (!tabId) return;
+    useTabStore.getState().setHasSessions(tabId, sessions.length > 0);
+  }, [tabId, sessions.length]);
+
+  const prevClaudeProcessRef = useRef(claudeProcess);
+  useEffect(() => {
+    const prev = prevClaudeProcessRef.current;
+    prevClaudeProcessRef.current = claudeProcess;
+    if (prev !== 'running' && claudeProcess === 'running' && sessionStatus !== 'active') {
+      retrySession();
+    }
+  }, [claudeProcess, sessionStatus, retrySession]);
 
   const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'empty' as const);
 

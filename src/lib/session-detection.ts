@@ -91,6 +91,19 @@ const findJsonlPath = async (projectDir: string, sessionId: string): Promise<str
   }
 };
 
+export const isClaudeRunning = async (panePid: number): Promise<boolean> => {
+  const childPids = await getChildPids(panePid);
+  for (const pid of childPids) {
+    try {
+      const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'args=']);
+      if (stdout.trim().includes('claude')) return true;
+    } catch {
+      continue;
+    }
+  }
+  return false;
+};
+
 export const detectActiveSession = async (panePid: number): Promise<ISessionInfo> => {
   try {
     await fs.access(CLAUDE_DIR);
