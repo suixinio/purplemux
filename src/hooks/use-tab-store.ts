@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { resolveDismissed } from '@/lib/resolve-dismissed';
-import type { TCliState, TClaudeStatus, TTimelineConnectionStatus } from '@/types/timeline';
+import type { TCliState, TClaudeStatus } from '@/types/timeline';
 import type { TTabDisplayStatus } from '@/types/status';
 
 export type TSessionView =
@@ -8,8 +8,7 @@ export type TSessionView =
   | 'restarting'
   | 'not-installed'
   | 'timeline'
-  | 'list'
-  | 'empty';
+  | 'inactive';
 
 export interface ITabState {
   terminalConnected: boolean;
@@ -17,8 +16,6 @@ export interface ITabState {
   claudeStatusCheckedAt: number;
   cliState: TCliState;
   isTimelineLoading: boolean;
-  timelineWsStatus: TTimelineConnectionStatus;
-  hasSessions: boolean;
   isRestarting: boolean;
   dismissed: boolean;
   manualView: 'list' | 'timeline' | null;
@@ -32,8 +29,6 @@ const DEFAULT_TAB_STATE: ITabState = {
   claudeStatusCheckedAt: 0,
   cliState: 'inactive',
   isTimelineLoading: true,
-  timelineWsStatus: 'disconnected',
-  hasSessions: false,
   isRestarting: false,
   dismissed: true,
   manualView: null,
@@ -53,8 +48,8 @@ interface ITabStore {
   setClaudeStatus: (tabId: string, status: TClaudeStatus, checkedAt: number) => void;
   setCliState: (tabId: string, state: TCliState) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
-  setTimelineWsStatus: (tabId: string, status: TTimelineConnectionStatus) => void;
-  setHasSessions: (tabId: string, has: boolean) => void;
+
+
   setRestarting: (tabId: string, restarting: boolean) => void;
   setDismissed: (tabId: string, dismissed: boolean) => void;
   navigateToList: (tabId: string) => void;
@@ -129,19 +124,7 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { isTimelineLoading: loading }) };
     }),
 
-  setTimelineWsStatus: (tabId, status) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.timelineWsStatus === status) return state;
-      return { tabs: updateTab(state.tabs, tabId, { timelineWsStatus: status }) };
-    }),
 
-  setHasSessions: (tabId, has) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.hasSessions === has) return state;
-      return { tabs: updateTab(state.tabs, tabId, { hasSessions: has }) };
-    }),
 
   setRestarting: (tabId, restarting) =>
     set((state) => {
@@ -224,7 +207,7 @@ const useTabStore = create<ITabStore>((set) => ({
 
 export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string): TSessionView => {
   const tab = tabs[tabId];
-  if (!tab) return 'empty';
+  if (!tab) return 'inactive';
 
   if (tab.isRestarting) return 'restarting';
   if (tab.claudeStatus === 'not-installed') return 'not-installed';
@@ -233,10 +216,10 @@ export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string
     return tab.isTimelineLoading ? 'loading' : 'timeline';
   }
 
-  if (tab.manualView === 'list') return 'list';
+  if (tab.manualView === 'list') return 'inactive';
   if (tab.manualView === 'timeline' || tab.isTimelineLoading) return 'loading';
 
-  return tab.hasSessions ? 'list' : 'empty';
+  return 'inactive';
 };
 
 export const selectTabDisplayStatus = (tabs: Record<string, ITabState>, tabId: string): TTabDisplayStatus => {

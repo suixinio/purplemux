@@ -90,7 +90,6 @@ const ClaudeCodePanel = ({
       useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
-      useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
     },
   });
 
@@ -107,10 +106,6 @@ const ClaudeCodePanel = ({
     enabled: !!sessionName && claudeStatus !== 'running',
     cwd,
   });
-
-  useEffect(() => {
-    useTabStore.getState().setHasSessions(tabId, sessions.length > 0);
-  }, [tabId, sessions.length]);
 
   const prevClaudeStatusRef = useRef(claudeStatus);
   useEffect(() => {
@@ -163,7 +158,7 @@ const ClaudeCodePanel = ({
     );
   }
 
-  if (view === 'empty') {
+  if (view === 'inactive' && sessions.length === 0) {
     return (
       <div className={cn('h-full w-full', className)}>
         <SessionEmptyView onClose={onClose} onNewSession={onNewSession} />
@@ -171,7 +166,7 @@ const ClaudeCodePanel = ({
     );
   }
 
-  if (view === 'list') {
+  if (view === 'inactive') {
     return (
       <div className={cn('h-full w-full', className)}>
         <SessionListView

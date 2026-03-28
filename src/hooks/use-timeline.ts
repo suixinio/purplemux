@@ -50,7 +50,6 @@ export interface ITimelineSyncState {
   claudeStatus: TClaudeStatus;
   cliState: TCliState;
   isLoading: boolean;
-  wsStatus: TTimelineConnectionStatus;
 }
 
 interface IUseTimelineOptions {
@@ -284,8 +283,8 @@ const useTimeline = ({
   useEffect(() => { onSyncRef.current = onSync; });
 
   useEffect(() => {
-    onSyncRef.current?.({ claudeStatus, cliState, isLoading, wsStatus });
-  }, [claudeStatus, cliState, isLoading, wsStatus]);
+    onSyncRef.current?.({ claudeStatus, cliState, isLoading });
+  }, [claudeStatus, cliState, isLoading]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];
