@@ -286,7 +286,7 @@ const MobileSurfaceView = ({
       const timer = setTimeout(() => {
         const { cols, rows } = fit();
         wsActionsRef.current.sendResize(cols, rows);
-        setShowTerminal(true);
+        setTimeout(() => setShowTerminal(true), 200);
       }, 50);
       return () => clearTimeout(timer);
     }
@@ -365,7 +365,7 @@ const MobileSurfaceView = ({
       <TerminalContainer
         ref={terminalRef}
         className={cn(
-          'transition-opacity duration-150',
+          !isClaudeCode && 'transition-opacity duration-150',
           isClaudeCode ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
           !isClaudeCode && ready && showTerminal ? 'opacity-100' : '',
           !isClaudeCode && (!ready || !showTerminal) ? 'opacity-0' : '',
