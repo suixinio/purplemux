@@ -127,8 +127,8 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
       <div className="flex flex-col gap-14">
         <div className="flex items-center justify-center gap-2.5">
           <Terminal className="h-6 w-6 text-ui-purple" />
-          <span className="animate-shimmer inline-block bg-[length:400%_200%] bg-clip-text text-xl font-semibold text-transparent bg-[linear-gradient(90deg,var(--color-ui-purple)_calc(50%-4em),var(--color-foreground)_50%,var(--color-ui-purple)_calc(50%+4em))] bg-no-repeat">
-            purplemux
+          <span className="animate-shimmer inline-block bg-[length:400%_200%] bg-clip-text text-xl text-transparent bg-[linear-gradient(90deg,var(--color-ui-purple)_calc(50%-4em),var(--color-foreground)_50%,var(--color-ui-purple)_calc(50%+4em))] bg-no-repeat">
+            <span className="font-bold">purple</span><span className="font-light">mux</span>
           </span>
         </div>
         {checking ? (
