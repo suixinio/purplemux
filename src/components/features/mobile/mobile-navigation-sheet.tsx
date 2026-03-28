@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Plus,
   BarChart3,
+  Settings,
   X,
   Terminal,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ interface IMobileNavigationSheetProps {
   activeTabId: string | null;
   onSelectSurface: (workspaceId: string, paneId: string, tabId: string) => void;
   onCreateWorkspace: () => Promise<void>;
+  onOpenSettings: () => void;
 }
 
 const MobileNavigationSheet = ({
@@ -44,6 +46,7 @@ const MobileNavigationSheet = ({
   activeTabId,
   onSelectSurface,
   onCreateWorkspace,
+  onOpenSettings,
 }: IMobileNavigationSheetProps) => {
   const router = useRouter();
   const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
@@ -245,6 +248,16 @@ const MobileNavigationSheet = ({
           >
             <BarChart3 size={16} />
             통계
+          </button>
+          <button
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            onClick={() => {
+              onOpenChange(false);
+              onOpenSettings();
+            }}
+          >
+            <Settings size={16} />
+            설정
           </button>
         </div>
       </SheetContent>

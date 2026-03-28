@@ -158,22 +158,22 @@ const ClaudeCodePanel = ({
     );
   }
 
-  if (view === 'inactive' && sessions.length === 0) {
-    if (isSessionListLoading) {
-      return (
-        <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-        </div>
-      );
-    }
+  if (view === 'loading' || (view === 'inactive' && sessions.length === 0 && isSessionListLoading)) {
     return (
-      <div className={cn('h-full w-full', className)}>
-        <SessionEmptyView onClose={onClose} onNewSession={onNewSession} />
+      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
+        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   if (view === 'inactive') {
+    if (sessions.length === 0 && !sessionListError) {
+      return (
+        <div className={cn('h-full w-full', className)}>
+          <SessionEmptyView onClose={onClose} onNewSession={onNewSession} />
+        </div>
+      );
+    }
     return (
       <div className={cn('h-full w-full', className)}>
         <SessionListView
@@ -188,14 +188,6 @@ const ClaudeCodePanel = ({
           onLoadMore={loadMoreSessions}
           onNewSession={onNewSession}
         />
-      </div>
-    );
-  }
-
-  if (view === 'loading') {
-    return (
-      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
-        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }

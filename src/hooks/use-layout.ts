@@ -373,6 +373,12 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       if (!res.ok) throw new Error();
       const newTab: ITab = await res.json();
 
+      applyPaneUpdate(set, get, paneId, (pane) => ({
+        ...pane,
+        tabs: [...pane.tabs, newTab],
+        activeTabId: newTab.id,
+      }));
+
       await get().fetchLayout(undefined, false);
       return newTab;
     } catch {

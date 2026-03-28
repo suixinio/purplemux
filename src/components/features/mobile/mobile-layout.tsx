@@ -5,6 +5,7 @@ import MobileNavigationSheet from '@/components/features/mobile/mobile-navigatio
 import MobileWorkspaceTabBar from '@/components/features/mobile/mobile-workspace-tab-bar';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { useLayoutStore, collectPanes } from '@/hooks/use-layout';
+import SettingsDialog from '@/components/features/terminal/settings-dialog';
 import type { ILayoutData, IPaneNode } from '@/types/terminal';
 
 interface IMobileLayoutProps {
@@ -24,6 +25,7 @@ const MobileLayout = ({
 }: IMobileLayoutProps) => {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -200,7 +202,9 @@ const MobileLayout = ({
         activeTabId={selectedTabId ?? activeTabId}
         onSelectSurface={handleSelectSurface}
         onCreateWorkspace={handleCreateWorkspace}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </>
   );
 };

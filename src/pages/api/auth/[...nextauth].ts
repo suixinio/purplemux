@@ -73,7 +73,7 @@ export const authOptions: AuthOptions = {
         httpOnly: true,
         sameSite: 'strict' as const,
         path: '/',
-        secure: process.env.NODE_ENV === 'production',
+        secure: false,
       },
     },
   },

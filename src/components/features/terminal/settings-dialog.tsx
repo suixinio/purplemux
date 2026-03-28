@@ -69,7 +69,7 @@ const GeneralTab = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-sm font-medium">테마</p>
           <p className="text-sm text-muted-foreground">화면 테마를 선택합니다.</p>
@@ -123,7 +123,7 @@ const ThemeGrid = ({
   selectedId: string;
   onSelect: (id: string) => void;
 }) => (
-  <div className="grid grid-cols-3 gap-2">
+  <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
     {list.map((t) => (
       <button
         key={t.id}
@@ -348,10 +348,10 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[calc(100%-2rem)] gap-0 overflow-hidden p-0 md:min-w-3xl md:max-w-3xl"
+        className="inset-0 max-w-none sm:max-w-none translate-x-0 translate-y-0 gap-0 overflow-hidden rounded-none p-0 md:inset-auto md:top-1/2 md:left-1/2 md:h-auto md:w-[calc(100%-2rem)] md:min-w-3xl md:max-w-3xl md:-translate-x-1/2 md:-translate-y-1/2 md:rounded-xl"
         showCloseButton={false}
       >
-        <div className="flex h-[520px] flex-col md:flex-row">
+        <div className="flex h-full min-h-0 min-w-0 w-full flex-col overflow-hidden md:h-[520px] md:flex-row">
           <div className="flex shrink-0 flex-col border-b bg-muted/30 p-3 md:w-48 md:border-b-0 md:border-r">
             <div className="mb-4 flex items-center justify-between px-2">
               <DialogTitle className="text-base font-semibold">설정</DialogTitle>
@@ -385,7 +385,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             </nav>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto p-6">
+          <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-6">
             <h2 className="mb-6 text-lg font-semibold">{activeItem?.label}</h2>
             {activeTab === 'general' && <GeneralTab />}
             {activeTab === 'terminal' && <TerminalTab />}
