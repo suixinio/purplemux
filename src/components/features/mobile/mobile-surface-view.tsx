@@ -381,12 +381,6 @@ const MobileSurfaceView = ({
         </div>
       )}
 
-      {showInitialLoading && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
-          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">연결 중...</span>
-        </div>
-      )}
 
       {!noTabs && status === 'disconnected' && !isFirstConnectionForTab && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">

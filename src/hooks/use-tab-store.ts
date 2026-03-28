@@ -16,7 +16,7 @@ export interface ITabState {
   cliState: TCliState;
   isTimelineLoading: boolean;
   isRestarting: boolean;
-  manualView: 'list' | 'timeline' | null;
+  isResuming: boolean;
   workspaceId: string;
   tabName: string;
 }
@@ -28,7 +28,7 @@ const DEFAULT_TAB_STATE: ITabState = {
   cliState: 'inactive',
   isTimelineLoading: true,
   isRestarting: false,
-  manualView: null,
+  isResuming: false,
   workspaceId: '',
   tabName: '',
 };
@@ -47,8 +47,7 @@ interface ITabStore {
   setTimelineLoading: (tabId: string, loading: boolean) => void;
   setRestarting: (tabId: string, restarting: boolean) => void;
   dismissTab: (tabId: string) => void;
-  navigateToList: (tabId: string) => void;
-  navigateToTimeline: (tabId: string) => void;
+  setResuming: (tabId: string, resuming: boolean) => void;
   setTabMeta: (tabId: string, workspaceId: string, tabName: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
@@ -98,8 +97,8 @@ const useTabStore = create<ITabStore>((set) => ({
       if (!prev || prev.claudeStatusCheckedAt > checkedAt) return state;
       if (prev.claudeStatus === status) return state;
       const patch: Partial<ITabState> = { claudeStatus: status, claudeStatusCheckedAt: checkedAt };
-      if (prev.claudeStatus === 'running' && status !== 'running' && prev.manualView === 'timeline') {
-        patch.manualView = null;
+      if (prev.claudeStatus === 'running' && status !== 'running' && prev.isResuming) {
+        patch.isResuming = false;
       }
       return { tabs: updateTab(state.tabs, tabId, patch) };
     }),
@@ -135,18 +134,11 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { cliState: 'idle' }) };
     }),
 
-  navigateToList: (tabId) =>
+  setResuming: (tabId, resuming) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.manualView === 'list') return state;
-      return { tabs: updateTab(state.tabs, tabId, { manualView: 'list' }) };
-    }),
-
-  navigateToTimeline: (tabId) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.manualView === 'timeline') return state;
-      return { tabs: updateTab(state.tabs, tabId, { manualView: 'timeline' }) };
+      if (!prev || prev.isResuming === resuming) return state;
+      return { tabs: updateTab(state.tabs, tabId, { isResuming: resuming }) };
     }),
 
   setTabMeta: (tabId, workspaceId, tabName) =>
@@ -217,8 +209,7 @@ export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string
     return tab.isTimelineLoading ? 'loading' : 'timeline';
   }
 
-  if (tab.manualView === 'list') return 'inactive';
-  if (tab.manualView === 'timeline' || tab.isTimelineLoading) return 'loading';
+  if (tab.isResuming || tab.isTimelineLoading) return 'loading';
 
   return 'inactive';
 };

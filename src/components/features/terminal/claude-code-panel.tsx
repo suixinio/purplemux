@@ -40,7 +40,7 @@ const ClaudeCodePanel = ({
   const handleResumeStarted = useCallback(
     () => {
       setResumingSessionId(null);
-      useTabStore.getState().navigateToTimeline(tabId);
+      useTabStore.getState().setResuming(tabId, true);
     },
     [tabId],
   );

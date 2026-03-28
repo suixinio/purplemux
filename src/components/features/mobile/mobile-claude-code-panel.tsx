@@ -65,7 +65,7 @@ const MobileClaudeCodePanel = ({
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
-    if (tabId) useTabStore.getState().navigateToTimeline(tabId);
+    if (tabId) useTabStore.getState().setResuming(tabId, true);
   }, [tabId]);
 
   const handleResumeBlocked = useCallback(
