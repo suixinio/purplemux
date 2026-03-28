@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, Menu, ipcMain, session } from 'electron';
+import { app, BrowserWindow, shell, Menu, ipcMain, session, screen } from 'electron';
 import * as path from 'path';
 import * as net from 'net';
 import * as fs from 'fs';
@@ -35,8 +35,18 @@ interface IServerConfig {
   remoteUrl?: string;
 }
 
+interface IWindowState {
+  x?: number;
+  y?: number;
+  width: number;
+  height: number;
+  isMaximized?: boolean;
+  isFullScreen?: boolean;
+}
+
 interface IAppConfig {
   server?: IServerConfig;
+  windowState?: IWindowState;
 }
 
 const CONFIG_DIR = path.join(os.homedir(), '.purplemux');
@@ -73,6 +83,32 @@ const writeServerConfig = (server: IServerConfig) => {
   const cfg = readAppConfig();
   cfg.server = server;
   writeAppConfig(cfg);
+};
+
+// --- Window State ---
+
+const DEFAULT_WINDOW_STATE: IWindowState = { width: 1280, height: 800 };
+
+const readWindowState = (): IWindowState => {
+  const cfg = readAppConfig();
+  return cfg.windowState || DEFAULT_WINDOW_STATE;
+};
+
+const writeWindowState = (state: IWindowState) => {
+  const cfg = readAppConfig();
+  cfg.windowState = state;
+  writeAppConfig(cfg);
+};
+
+const isVisibleOnAnyDisplay = (bounds: { x: number; y: number; width: number; height: number }): boolean => {
+  const displays = screen.getAllDisplays();
+  const MIN_OVERLAP = 50;
+  return displays.some((display) => {
+    const { x, y, width, height } = display.workArea;
+    const overlapX = Math.max(0, Math.min(bounds.x + bounds.width, x + width) - Math.max(bounds.x, x));
+    const overlapY = Math.max(0, Math.min(bounds.y + bounds.height, y + height) - Math.max(bounds.y, y));
+    return overlapX >= MIN_OVERLAP && overlapY >= MIN_OVERLAP;
+  });
 };
 
 // --- Prompt Window ---
@@ -258,9 +294,14 @@ const handleSwitchToRemote = async () => {
 // --- Window ---
 
 const createWindow = (url: string) => {
+  const saved = readWindowState();
+  const hasPosition = saved.x != null && saved.y != null;
+  const positionValid = hasPosition && isVisibleOnAnyDisplay({ x: saved.x!, y: saved.y!, width: saved.width, height: saved.height });
+
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: saved.width,
+    height: saved.height,
+    ...(positionValid ? { x: saved.x, y: saved.y } : {}),
     minWidth: 800,
     minHeight: 500,
     titleBarStyle: 'hiddenInset',
@@ -273,11 +314,53 @@ const createWindow = (url: string) => {
     },
   });
 
+  if (saved.isMaximized) mainWindow.maximize();
+  if (saved.isFullScreen) mainWindow.setFullScreen(true);
+
   mainWindow.loadURL(url);
 
   mainWindow.webContents.setWindowOpenHandler(({ url: linkUrl }) => {
     shell.openExternal(linkUrl);
     return { action: 'deny' };
+  });
+
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  const saveWindowState = () => {
+    if (!mainWindow) return;
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      if (!mainWindow) return;
+      const bounds = mainWindow.getNormalBounds();
+      writeWindowState({
+        x: bounds.x,
+        y: bounds.y,
+        width: bounds.width,
+        height: bounds.height,
+        isMaximized: mainWindow.isMaximized(),
+        isFullScreen: mainWindow.isFullScreen(),
+      });
+    }, 500);
+  };
+
+  mainWindow.on('resize', saveWindowState);
+  mainWindow.on('move', saveWindowState);
+  mainWindow.on('maximize', saveWindowState);
+  mainWindow.on('unmaximize', saveWindowState);
+  mainWindow.on('enter-full-screen', saveWindowState);
+  mainWindow.on('leave-full-screen', saveWindowState);
+
+  mainWindow.on('close', () => {
+    if (!mainWindow) return;
+    if (saveTimer) clearTimeout(saveTimer);
+    const bounds = mainWindow.getNormalBounds();
+    writeWindowState({
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: mainWindow.isMaximized(),
+      isFullScreen: mainWindow.isFullScreen(),
+    });
   });
 
   mainWindow.on('closed', () => {
