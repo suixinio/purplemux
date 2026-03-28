@@ -225,22 +225,28 @@ export const getPaneCurrentCommand = async (
 export interface IPaneInfo {
   command: string;
   pid: number;
+  windowActivity: number;
 }
 
 export const getAllPanesInfo = async (): Promise<Map<string, IPaneInfo>> => {
   try {
     const { stdout } = await execFile(
       'tmux',
-      ['-L', TMUX_SOCKET, 'list-panes', '-a', '-F', '#{session_name}\t#{pane_current_command}\t#{pane_pid}'],
+      ['-L', TMUX_SOCKET, 'list-panes', '-a', '-F', '#{session_name}\t#{pane_current_command}\t#{pane_pid}\t#{window_activity}'],
       { timeout: CMD_TIMEOUT },
     );
     const result = new Map<string, IPaneInfo>();
     for (const line of stdout.trim().split('\n')) {
       if (!line) continue;
-      const [session, command, pidStr] = line.split('\t');
+      const [session, command, pidStr, activityStr] = line.split('\t');
       if (session && command) {
         const pid = parseInt(pidStr, 10);
-        result.set(session, { command, pid: Number.isNaN(pid) ? 0 : pid });
+        const windowActivity = parseInt(activityStr, 10);
+        result.set(session, {
+          command,
+          pid: Number.isNaN(pid) ? 0 : pid,
+          windowActivity: Number.isNaN(windowActivity) ? 0 : windowActivity,
+        });
       }
     }
     return result;

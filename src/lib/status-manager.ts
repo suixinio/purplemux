@@ -20,6 +20,7 @@ const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
 const TERMINAL_OUTPUT_STALE_MS = 5_000;
+const WINDOW_ACTIVITY_STALE_MS = 10_000;
 
 
 interface IJsonlIdleCache {
@@ -183,9 +184,15 @@ class StatusManager {
     if (!stale) return jsonlIdle ? 'idle' : 'busy';
 
     const lastOutput = getLastTerminalOutput(tmuxSession);
-    if (lastOutput === undefined) return jsonlIdle ? 'idle' : 'busy';
+    if (lastOutput !== undefined) {
+      return Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
+    }
 
-    return Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
+    if (paneInfo?.windowActivity) {
+      return Date.now() - paneInfo.windowActivity * 1000 < WINDOW_ACTIVITY_STALE_MS ? 'busy' : 'idle';
+    }
+
+    return jsonlIdle ? 'idle' : 'busy';
   }
 
   private getPollingInterval(): number {
