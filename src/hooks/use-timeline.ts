@@ -3,7 +3,7 @@ import type {
   ITimelineEntry,
   IInitMeta,
   ITaskItem,
-  TSessionStatus,
+  TClaudeSession,
   TTimelineConnectionStatus,
   TCliState,
 } from '@/types/timeline';
@@ -13,10 +13,10 @@ import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
 const STALE_BUSY_MS = 30_000;
 
 const deriveCliState = (
-  sessionStatus: TSessionStatus,
+  claudeSession: TClaudeSession,
   entries: ITimelineEntry[],
 ): TCliState => {
-  if (sessionStatus !== 'active') {
+  if (claudeSession !== 'active') {
     return 'inactive';
   }
 
@@ -47,7 +47,7 @@ interface IResumeCallbacks {
 }
 
 export interface ITimelineSyncState {
-  sessionStatus: TSessionStatus;
+  claudeSession: TClaudeSession;
   cliState: TCliState;
   isLoading: boolean;
   wsStatus: TTimelineConnectionStatus;
@@ -68,7 +68,7 @@ interface IUseTimelineReturn {
   sessionId: string | null;
   sessionSummary: string | undefined;
   initMeta: IInitMeta | undefined;
-  sessionStatus: TSessionStatus;
+  claudeSession: TClaudeSession;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -86,7 +86,7 @@ const useTimeline = ({
   onSync,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
-  const [sessionStatus, setSessionStatus] = useState<TSessionStatus>('none');
+  const [claudeSession, setSessionStatus] = useState<TClaudeSession>('none');
   const [wsInitReceived, setWsInitReceived] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -256,8 +256,8 @@ const useTimeline = ({
   }, [reconnect]);
 
   const rawCliState = useMemo(
-    () => isLoading ? 'inactive' as const : deriveCliState(sessionStatus, entries),
-    [sessionStatus, entries, isLoading],
+    () => isLoading ? 'inactive' as const : deriveCliState(claudeSession, entries),
+    [claudeSession, entries, isLoading],
   );
 
   const lastEntryTs = entries.length > 0 ? entries[entries.length - 1].timestamp : 0;
@@ -284,8 +284,8 @@ const useTimeline = ({
   useEffect(() => { onSyncRef.current = onSync; });
 
   useEffect(() => {
-    onSyncRef.current?.({ sessionStatus, cliState, isLoading, wsStatus });
-  }, [sessionStatus, cliState, isLoading, wsStatus]);
+    onSyncRef.current?.({ claudeSession, cliState, isLoading, wsStatus });
+  }, [claudeSession, cliState, isLoading, wsStatus]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];
@@ -320,7 +320,7 @@ const useTimeline = ({
     sessionId,
     sessionSummary,
     initMeta,
-    sessionStatus,
+    claudeSession,
     wsStatus,
     isLoading,
     error,

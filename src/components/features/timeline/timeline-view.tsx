@@ -8,7 +8,7 @@ import type {
   ITimelineToolResult,
   ITaskItem,
   TCliState,
-  TSessionStatus,
+  TClaudeSession,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
@@ -27,7 +27,7 @@ interface ITimelineViewProps {
   tasks: ITaskItem[];
   sessionId: string | null;
   cliState: TCliState;
-  sessionStatus: TSessionStatus;
+  claudeSession: TClaudeSession;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -174,8 +174,8 @@ const DisconnectedBanner = ({ onRetry }: { onRetry: () => void }) => (
   </div>
 );
 
-const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
-  if (sessionStatus === 'not-installed') {
+const EmptyState = ({ claudeSession }: { claudeSession: TClaudeSession }) => {
+  if (claudeSession === 'not-installed') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
         <Terminal size={32} className="opacity-40" />
@@ -187,7 +187,7 @@ const EmptyState = ({ sessionStatus }: { sessionStatus: TSessionStatus }) => {
     );
   }
 
-  if (sessionStatus === 'active') {
+  if (claudeSession === 'active') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
         <Terminal size={32} className="opacity-40" />
@@ -214,7 +214,7 @@ const TimelineView = ({
   tasks,
   sessionId,
   cliState,
-  sessionStatus,
+  claudeSession,
   wsStatus,
   isLoading,
   error,
@@ -250,7 +250,7 @@ const TimelineView = ({
   useEffect(() => {
     if (skipAnimation && entries.length > 0) {
       scrollToBottom('instant');
-      setSkipAnimation(false);
+      requestAnimationFrame(() => setSkipAnimation(false));
     }
   }, [skipAnimation, entries.length, scrollToBottom]);
 
@@ -286,7 +286,7 @@ const TimelineView = ({
   }
 
   if (!hasDisplayItems) {
-    return <EmptyState sessionStatus={sessionStatus} />;
+    return <EmptyState claudeSession={claudeSession} />;
   }
 
   const isReconnecting = wsStatus === 'reconnecting';

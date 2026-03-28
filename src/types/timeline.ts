@@ -1,11 +1,11 @@
-export type TSessionStatus = 'active' | 'none' | 'not-installed';
+export type TClaudeSession = 'active' | 'none' | 'not-installed';
 
 export type TCliState = 'idle' | 'busy' | 'inactive';
 
 export type TTimelineConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 export interface ISessionInfo {
-  status: TSessionStatus;
+  status: TClaudeSession;
   sessionId: string | null;
   jsonlPath: string | null;
   pid: number | null;

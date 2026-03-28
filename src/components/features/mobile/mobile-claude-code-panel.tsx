@@ -92,7 +92,7 @@ const MobileClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    sessionStatus,
+    claudeSession,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -110,14 +110,14 @@ const MobileClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: tabId ? (state) => {
-      useTabStore.getState().setSessionStatus(tabId, state.sessionStatus);
+      useTabStore.getState().setSessionStatus(tabId, state.claudeSession);
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
       useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
     } : undefined,
   });
 
-  const effectiveSessionStatus = useTabStore((s) => tabId ? selectEffectiveSessionStatus(s.tabs, tabId) : sessionStatus);
+  const effectiveSessionStatus = useTabStore((s) => tabId ? selectEffectiveSessionStatus(s.tabs, tabId) : claudeSession);
 
   const {
     sessions,
@@ -142,10 +142,10 @@ const MobileClaudeCodePanel = ({
   useEffect(() => {
     const prev = prevClaudeProcessRef.current;
     prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== 'running' && claudeProcess === 'running' && sessionStatus !== 'active') {
+    if (prev !== 'running' && claudeProcess === 'running' && claudeSession !== 'active') {
       retrySession();
     }
-  }, [claudeProcess, sessionStatus, retrySession]);
+  }, [claudeProcess, claudeSession, retrySession]);
 
   const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'empty' as const);
 
@@ -277,7 +277,7 @@ const MobileClaudeCodePanel = ({
           tasks={tasks}
           sessionId={sessionId}
           cliState={cliState}
-          sessionStatus={sessionStatus}
+          claudeSession={claudeSession}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}

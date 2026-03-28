@@ -16,6 +16,7 @@ const eslintConfig = defineConfig([
     "bin/**",
     "dist/**",
     "dist-electron/**",
+    "electron/**",
   ]),
 ]);
 

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { resolveDismissed } from '@/lib/resolve-dismissed';
-import type { TCliState, TSessionStatus, TTimelineConnectionStatus } from '@/types/timeline';
+import type { TCliState, TClaudeSession, TTimelineConnectionStatus } from '@/types/timeline';
 import type { TTabDisplayStatus } from '@/types/status';
 
 export type TSessionView =
@@ -19,7 +19,7 @@ export interface ITabState {
   claudeProcess: TClaudeProcess;
 
   // 타임라인 WS
-  sessionStatus: TSessionStatus;
+  claudeSession: TClaudeSession;
   cliState: TCliState;
   isTimelineLoading: boolean;
   timelineWsStatus: TTimelineConnectionStatus;
@@ -40,7 +40,7 @@ export interface ITabState {
 const DEFAULT_TAB_STATE: ITabState = {
   terminalConnected: false,
   claudeProcess: 'unknown',
-  sessionStatus: 'none',
+  claudeSession: 'none',
   cliState: 'inactive',
   isTimelineLoading: true,
   timelineWsStatus: 'disconnected',
@@ -66,7 +66,7 @@ interface ITabStore {
   setClaudeProcess: (tabId: string, status: TClaudeProcess) => void;
 
   // 타임라인 WS
-  setSessionStatus: (tabId: string, status: TSessionStatus) => void;
+  setSessionStatus: (tabId: string, status: TClaudeSession) => void;
   setCliState: (tabId: string, state: TCliState) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
   setTimelineWsStatus: (tabId: string, status: TTimelineConnectionStatus) => void;
@@ -138,10 +138,10 @@ const useTabStore = create<ITabStore>((set) => ({
   setSessionStatus: (tabId, status) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.sessionStatus === status) return state;
-      const patch: Partial<ITabState> = { sessionStatus: status };
+      if (!prev || prev.claudeSession === status) return state;
+      const patch: Partial<ITabState> = { claudeSession: status };
       // active→none 전환 시 manualView === 'timeline'이면 리셋
-      if (prev.sessionStatus === 'active' && status !== 'active' && prev.manualView === 'timeline') {
+      if (prev.claudeSession === 'active' && status !== 'active' && prev.manualView === 'timeline') {
         patch.manualView = null;
       }
       return { tabs: updateTab(state.tabs, tabId, patch) };
@@ -256,13 +256,13 @@ const useTabStore = create<ITabStore>((set) => ({
 // --- 파생 selectors ---
 
 const isEffectivelyActive = (tab: ITabState): boolean =>
-  tab.sessionStatus === 'active'
+  tab.claudeSession === 'active'
   && tab.claudeProcess !== 'not-running';
 
 export const selectEffectiveSessionStatus = (tabs: Record<string, ITabState>, tabId: string): 'active' | 'none' | 'not-installed' => {
   const tab = tabs[tabId];
   if (!tab) return 'none';
-  return isEffectivelyActive(tab) ? tab.sessionStatus : (tab.sessionStatus === 'active' ? 'none' : tab.sessionStatus);
+  return isEffectivelyActive(tab) ? tab.claudeSession : (tab.claudeSession === 'active' ? 'none' : tab.claudeSession);
 };
 
 export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string): TSessionView => {
@@ -270,7 +270,7 @@ export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string
   if (!tab) return 'empty';
 
   if (tab.isRestarting) return 'restarting';
-  if (tab.sessionStatus === 'not-installed') return 'not-installed';
+  if (tab.claudeSession === 'not-installed') return 'not-installed';
 
   if (isEffectivelyActive(tab)) {
     return tab.isTimelineLoading ? 'loading' : 'timeline';

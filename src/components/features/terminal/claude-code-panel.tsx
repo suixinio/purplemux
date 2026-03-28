@@ -69,7 +69,7 @@ const ClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    sessionStatus,
+    claudeSession,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -87,7 +87,7 @@ const ClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: (state) => {
-      useTabStore.getState().setSessionStatus(tabId, state.sessionStatus);
+      useTabStore.getState().setSessionStatus(tabId, state.claudeSession);
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
       useTabStore.getState().setTimelineWsStatus(tabId, state.wsStatus);
@@ -118,10 +118,10 @@ const ClaudeCodePanel = ({
   useEffect(() => {
     const prev = prevClaudeProcessRef.current;
     prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== 'running' && claudeProcess === 'running' && sessionStatus !== 'active') {
+    if (prev !== 'running' && claudeProcess === 'running' && claudeSession !== 'active') {
       retrySession();
     }
-  }, [claudeProcess, sessionStatus, retrySession]);
+  }, [claudeProcess, claudeSession, retrySession]);
 
   // 재시작 완료 감지
   const restartNeedsExitRef = useRef(false);
@@ -211,7 +211,7 @@ const ClaudeCodePanel = ({
           tasks={tasks}
           sessionId={sessionId}
           cliState={effectiveCliState}
-          sessionStatus={sessionStatus}
+          claudeSession={claudeSession}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}
