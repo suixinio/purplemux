@@ -24,7 +24,7 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
 };
 
-const getModelPricing = (model: string): { input: number; output: number } => {
+export const getModelPricing = (model: string): { input: number; output: number } => {
   if (MODEL_PRICING[model]) return MODEL_PRICING[model];
   const lower = model.toLowerCase();
   if (lower.includes('opus')) return { input: 15, output: 75 };

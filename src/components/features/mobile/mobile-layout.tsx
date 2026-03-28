@@ -54,7 +54,6 @@ const MobileLayout = ({
     if (initialFetchDone.current || workspaces.length === 0) return;
     initialFetchDone.current = true;
 
-    let cancelled = false;
     const fetchAll = async () => {
       const results = await Promise.all(
         workspaces.map(async (ws) => {
@@ -69,7 +68,6 @@ const MobileLayout = ({
         }),
       );
 
-      if (cancelled) return;
       setLayoutCache((prev) => {
         const next = { ...prev };
         for (const r of results) {
@@ -79,7 +77,6 @@ const MobileLayout = ({
       });
     };
     fetchAll();
-    return () => { cancelled = true; };
   }, [workspaces]);
 
   // 메뉴 열릴 때 모든 workspace 레이아웃 refresh
@@ -164,6 +161,11 @@ const MobileLayout = ({
 
       setMenuOpen(false);
       if (router.pathname !== '/') {
+        try {
+          sessionStorage.setItem(`pt-active-pane-${workspaceId}`, paneId);
+          sessionStorage.setItem(`pt-active-tab-${paneId}`, tabId);
+        } catch { /* */ }
+        useLayoutStore.getState().clearLayout();
         router.push('/');
       }
     },

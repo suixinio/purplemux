@@ -123,3 +123,30 @@ export interface IHistoryResponse {
   hourlyPattern: Record<string, number>;
   totalEntries: number;
 }
+
+// --- Daily Report ---
+
+export interface IDailyReportDay {
+  date: string;
+  brief: string;
+  detail: string;
+  generatedAt: string;
+}
+
+export interface IDailyReportCacheResponse {
+  days: Record<string, IDailyReportDay>;
+}
+
+export interface IDailyReportListItem {
+  date: string;
+  sessionCount: number;
+  cost: number;
+  report: IDailyReportDay | null;
+}
+
+export interface IDailyReportListResponse {
+  days: IDailyReportListItem[];
+  total: number;
+  offset: number;
+  limit: number;
+}

@@ -37,7 +37,7 @@ interface IPtCache {
 
 // --- JSONL parsing ---
 
-const collectJsonlFiles = async (): Promise<string[]> => {
+export const collectJsonlFiles = async (): Promise<string[]> => {
   const result: string[] = [];
   try {
     const projectDirs = await fs.readdir(PROJECTS_DIR);

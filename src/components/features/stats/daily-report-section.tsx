@@ -1,0 +1,164 @@
+import { useState, useCallback } from 'react';
+import dayjs from 'dayjs';
+import ReactMarkdown from 'react-markdown';
+import { Loader2, Sparkles, ChevronDown, ChevronRight, RefreshCw } from 'lucide-react';
+import { toast } from 'sonner';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import type { IDailyReportDay, IDailyReportCacheResponse } from '@/types/stats';
+import { WEEKDAY_LABELS, formatCostWithComma } from '@/components/features/stats/stats-utils';
+
+interface IDayMeta {
+  date: string;
+  sessionCount: number;
+  cost: number;
+}
+
+interface IDailyReportSectionProps {
+  days: IDayMeta[];
+  cache: IDailyReportCacheResponse | null;
+  onCacheUpdate: (date: string, report: IDailyReportDay) => void;
+}
+
+const markdownClass = 'prose prose-sm prose-invert max-w-none text-foreground/80 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-foreground/90 [&_ul]:my-0.5 [&_ul]:pl-4 [&_li]:my-0 [&_li]:text-xs [&_p]:text-xs [&_p]:my-1 [&_p]:leading-relaxed';
+
+const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionProps) => {
+  const [generating, setGenerating] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const handleGenerate = useCallback(async (date: string) => {
+    setGenerating(date);
+    try {
+      const res = await fetch('/api/stats/daily-report/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: 'unknown error' }));
+        throw new Error(err.message ?? `HTTP ${res.status}`);
+      }
+      const report = (await res.json()) as IDailyReportDay;
+      onCacheUpdate(date, report);
+      toast.success('요약이 생성되었습니다');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '요약 생성에 실패했습니다');
+    } finally {
+      setGenerating(null);
+    }
+  }, [onCacheUpdate]);
+
+  const toggleExpand = useCallback((date: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(date)) next.delete(date);
+      else next.add(date);
+      return next;
+    });
+  }, []);
+
+  const today = dayjs().format('YYYY-MM-DD');
+
+  return (
+    <div className="space-y-2">
+      {days.map((day) => {
+        const d = dayjs(day.date);
+        const weekday = WEEKDAY_LABELS[d.day()];
+        const isToday = day.date === today;
+        const report = cache?.days[day.date] ?? null;
+        const isGenerating = generating === day.date;
+        const isExpanded = expanded.has(day.date);
+
+        return (
+          <Card key={day.date} size="sm">
+            <CardContent className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">
+                    {day.date} ({weekday})
+                  </span>
+                  {isToday && (
+                    <span className="rounded bg-ui-teal/15 px-1.5 py-0.5 text-[10px] font-medium text-ui-teal">
+                      오늘
+                    </span>
+                  )}
+                </div>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  세션 {day.sessionCount} · {formatCostWithComma(day.cost)}
+                </span>
+              </div>
+
+              {isGenerating && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>요약 생성 중...</span>
+                </div>
+              )}
+
+              {!report && !isGenerating && (
+                <Button
+                  variant="outline"
+                  size="xs"
+                  onClick={() => handleGenerate(day.date)}
+                  disabled={generating !== null}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  요약하기
+                </Button>
+              )}
+
+              {report && !isGenerating && (
+                <>
+                  <div className={markdownClass}>
+                    <ReactMarkdown>{report.brief}</ReactMarkdown>
+                  </div>
+                  {report.detail && (
+                    <>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => toggleExpand(day.date)}
+                          className="text-muted-foreground"
+                        >
+                          {isExpanded ? (
+                            <><ChevronDown className="h-3 w-3" />접기</>
+                          ) : (
+                            <><ChevronRight className="h-3 w-3" />더보기</>
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => handleGenerate(day.date)}
+                          disabled={generating !== null}
+                          className="text-muted-foreground"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          새로 만들기
+                        </Button>
+                      </div>
+                      {isExpanded && (
+                        <div className="border-t pt-2">
+                          <div className={markdownClass}>
+                            <ReactMarkdown>{report.detail}</ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {days.length === 0 && (
+        <p className="py-4 text-center text-xs text-muted-foreground">활동 내역이 없습니다</p>
+      )}
+    </div>
+  );
+};
+
+export default DailyReportSection;

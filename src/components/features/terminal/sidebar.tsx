@@ -5,6 +5,7 @@ import {
   Plus,
   Settings,
   BarChart3,
+  FileText,
   Terminal,
   Bell,
   LogOut,
@@ -335,6 +336,13 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
                 aria-label="사용량 통계"
               >
                 <BarChart3 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
+                onClick={() => router.push('/reports')}
+                aria-label="일별 보고"
+              >
+                <FileText className="h-3.5 w-3.5" />
               </button>
             </div>
             <button

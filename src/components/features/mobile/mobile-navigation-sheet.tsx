@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Plus,
   BarChart3,
+  FileText,
   Settings,
   X,
   Terminal,
@@ -248,6 +249,16 @@ const MobileNavigationSheet = ({
           >
             <BarChart3 size={16} />
             통계
+          </button>
+          <button
+            className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+            onClick={() => {
+              onOpenChange(false);
+              router.push('/reports');
+            }}
+          >
+            <FileText size={16} />
+            보고
           </button>
           <button
             className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
