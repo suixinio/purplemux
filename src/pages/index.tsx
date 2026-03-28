@@ -47,7 +47,7 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
         <title>purplemux</title>
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
       </Head>
-      <div style={{ backgroundColor: '#18181b' }} className="flex h-dvh w-full flex-col overflow-hidden">
+      <div style={{ backgroundColor: 'var(--terminal-bg)' }} className="flex h-dvh w-full flex-col overflow-hidden">
         <MobileTerminalPage />
       </div>
     </>
@@ -56,7 +56,7 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
       <Head>
         <title>purplemux</title>
       </Head>
-      <div style={{ backgroundColor: '#18181b' }} className="flex h-screen w-screen">
+      <div style={{ backgroundColor: 'var(--terminal-bg)' }} className="flex h-screen w-screen">
         <TerminalPage />
       </div>
     </>

@@ -85,6 +85,7 @@ const MobileSurfaceView = ({
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(true);
 
   const termActionsRef = useRef<ITermActions>(NOOP_TERM_ACTIONS);
   const wsActionsRef = useRef<IWsActions>(NOOP_WS_ACTIONS);
@@ -276,13 +277,20 @@ const MobileSurfaceView = ({
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (isClaudeCode) {
+      setShowTerminal(false);
+      return;
+    }
     if (isReady && status === 'connected') {
+      setShowTerminal(false);
       const timer = setTimeout(() => {
         const { cols, rows } = fit();
         wsActionsRef.current.sendResize(cols, rows);
-      }, 150);
+        setShowTerminal(true);
+      }, 50);
       return () => clearTimeout(timer);
     }
+    setShowTerminal(true);
   }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateTab = useCallback(async () => {
@@ -358,9 +366,9 @@ const MobileSurfaceView = ({
         ref={terminalRef}
         className={cn(
           'transition-opacity duration-150',
-          isClaudeCode ? 'absolute h-0 w-0 overflow-hidden opacity-0' : 'min-h-0 flex-1',
-          !isClaudeCode && ready ? 'opacity-100' : '',
-          !isClaudeCode && !ready ? 'opacity-0' : '',
+          isClaudeCode ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
+          !isClaudeCode && ready && showTerminal ? 'opacity-100' : '',
+          !isClaudeCode && (!ready || !showTerminal) ? 'opacity-0' : '',
         )}
       />
 
