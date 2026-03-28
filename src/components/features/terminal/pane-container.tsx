@@ -222,9 +222,24 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
+        const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;
         fetch(`/api/check-claude?session=${tab.sessionName}`)
           .then((res) => res.json())
           .then(({ running, checkedAt }) => {
+            const current = useTabStore.getState().tabs[tabId];
+            if (current && current.claudeStatusCheckedAt !== prevCheckedAt) {
+              if (current.claudeStatus !== (running ? 'running' : 'not-running')) {
+                setTimeout(() => {
+                  fetch(`/api/check-claude?session=${tab.sessionName}`)
+                    .then((r) => r.json())
+                    .then(({ running, checkedAt }) => {
+                      useTabStore.getState().setClaudeStatus(tabId, running ? 'running' : 'not-running', checkedAt);
+                    })
+                    .catch(() => {});
+                }, 500);
+              }
+              return;
+            }
             useTabStore.getState().setClaudeStatus(tabId, running ? 'running' : 'not-running', checkedAt);
           })
           .catch(() => {});

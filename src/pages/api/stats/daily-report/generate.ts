@@ -7,13 +7,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).json({ error: 'method-not-allowed' });
   }
 
-  const { date } = req.body as { date?: string };
+  const { date, force } = req.body as { date?: string; force?: boolean };
   if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
     return res.status(400).json({ error: 'invalid-date', message: 'date must be YYYY-MM-DD' });
   }
 
   try {
-    const report = await generateDailyReport(date);
+    const report = await generateDailyReport(date, !!force);
     return res.status(200).json(report);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown error';

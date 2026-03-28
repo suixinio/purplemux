@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, Menu, ipcMain } from 'electron';
+import { app, BrowserWindow, shell, Menu, ipcMain, session } from 'electron';
 import * as path from 'path';
 import * as net from 'net';
 import * as fs from 'fs';
@@ -329,13 +329,21 @@ app.on('activate', () => {
 app.on('window-all-closed', () => {
   if (serverShutdown) {
     serverShutdown();
+    serverShutdown = null;
   }
-  // process.exit()는 FreeEnvironment → CleanupHandles를 실행하며,
-  // 이때 node-pty의 pending ThreadSafeFunction 콜백이 이미 해제 중인
-  // 환경에서 JS 예외를 throw → C++ abort() 발생.
-  // shutdown으로 PTY kill 후 이벤트 루프를 돌려 pending 콜백을 소비하고,
-  // SIGKILL로 cleanup 없이 즉시 종료하여 native 크래시를 완전 회피.
-  setTimeout(() => process.kill(process.pid, 'SIGKILL'), 100);
+  // 세션 쿠키를 디스크에 flush한 뒤 SIGKILL로 종료.
+  // flush 없이 SIGKILL하면 Chromium 쿠키 DB가 기록되지 않아 로그인이 풀림.
+  session.defaultSession.cookies.flushStore().finally(() => {
+    setTimeout(() => process.kill(process.pid, 'SIGKILL'), 100);
+  });
+});
+
+// Electron의 will-quit → process exit → FreeEnvironment → CleanupHandles 과정에서
+// node-pty의 pending ThreadSafeFunction 콜백이 이미 해제 중인 환경에서 JS 예외를
+// throw → C++ abort() 발생. preventDefault()로 Electron의 정상 종료 경로를 차단하여
+// 위의 SIGKILL 타이머가 확실히 먼저 실행되도록 보장.
+app.on('will-quit', (event) => {
+  event.preventDefault();
 });
 
 app.requestSingleInstanceLock();

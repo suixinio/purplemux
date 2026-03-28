@@ -52,15 +52,14 @@ interface ISessionData {
   firstMessage: string;
 }
 
-const getShortProjectName = (raw: string): string => {
-  return raw
-    .replace(/-Users-y-Workspace-github-com-/g, '')
-    .replace(/-Users-y-Workspace-gitlab-kolonfnc-com-/g, 'gitlab/')
-    .replace(/-Users-y-Documents-/g, 'docs/')
-    .replace(/-Users-y-Downloads/g, 'Downloads')
-    .replace(/-Users-y-Workspace/g, 'Workspace')
-    .replace(/-Users-y--claude-projects--Users-y-Workspace-github-com-/g, '')
-    .replace(/-/g, '/');
+const shortenCwd = (cwd: string): string => {
+  const home = os.homedir();
+  const rel = cwd.startsWith(home) ? cwd.slice(home.length + 1) : cwd;
+  return rel
+    .replace(/^Workspace\/github\.com\//g, '')
+    .replace(/^Workspace\/gitlab\.kolonfnc\.com\//g, 'gitlab/')
+    .replace(/^Documents\//g, 'docs/')
+    .replace(/^Downloads/g, 'Downloads');
 };
 
 const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[]> => {
@@ -68,12 +67,10 @@ const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[
   const sessions: ISessionData[] = [];
 
   for (const filePath of files) {
-    const projectDir = path.basename(path.dirname(filePath));
-    const projectShort = getShortProjectName(projectDir);
-
     const userMessages: { time: string; text: string }[] = [];
     const timestamps: string[] = [];
     let toolCount = 0;
+    let cwd = '';
 
     try {
       const stream = createReadStream(filePath, { encoding: 'utf-8' });
@@ -88,6 +85,10 @@ const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[
 
           timestamps.push(ts);
           const type = String(entry.type ?? '');
+
+          if (!cwd && typeof entry.cwd === 'string') {
+            cwd = entry.cwd;
+          }
 
           if (type === 'user') {
             const message = entry.message as Record<string, unknown> | undefined;
@@ -138,8 +139,9 @@ const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[
     }
 
     if (timestamps.length > 0 && userMessages.length > 0) {
+      const project = cwd ? shortenCwd(cwd) : path.basename(path.dirname(filePath));
       sessions.push({
-        project: projectShort,
+        project,
         start: Math.min(...timestamps.map((t) => new Date(t).getTime())).toString(),
         msgCount: userMessages.length,
         toolCount,
@@ -182,30 +184,42 @@ const callClaudeCli = (input: string, systemPrompt: string): Promise<string> => 
 };
 
 const SUMMARY_PROMPT = (date: string) =>
-  `다음은 ${date}의 전체 프로젝트 Claude 세션 내역입니다.
-두 가지 형태로 요약해주세요:
+  `${date}의 Claude 세션 내역을 요약해주세요.
+
+출력 형식 (반드시 이 형식만 사용):
 
 [BRIEF]
-2-3줄로 하루 전체를 간결하게 요약
+하루 전체를 2-3줄로 요약. 개조식 명사형 종결. 순수 텍스트만 작성. 마크다운 헤딩(#), 구분선(---) 사용 금지.
 
 [DETAIL]
-프로젝트별 → 카테고리별로 그룹핑하여 항목별 한줄 설명. markdown ### 헤딩과 - 리스트 사용.
+## 프로젝트명
+### 주요 기능/영역
+- 작업 항목 한줄 요약
+- 작업 항목 한줄 요약
+### 다른 기능/영역
+- 작업 항목 한줄 요약
 
 규칙:
-- 프로젝트가 여러개면 프로젝트별로 구분
+- [BRIEF]와 [DETAIL] 태그는 각각 정확히 한 번만, 줄 맨 앞에 작성
+- 태그 외의 메타 텍스트(구분선, 번호, 설명) 삽입 금지
+- 프로젝트가 1개면 ## 프로젝트 헤딩 생략, ### 기능 헤딩부터 시작
 - 각 항목은 한 줄 — 파일명, 코드 없이
+- 개조식 명사형 종결 (예: "로그인 로직 수정", "모바일 레이아웃 개선"). "-다", "-했다", "-시작" 등 서술형 금지
 - WHAT 중심 (HOW 아님)
 - 사소한 대화(인사, 1회성 질문, 커밋 명령)는 생략
 - 한글로 작성
 
 데이터:`;
 
+const stripTrailingMarkdownNoise = (text: string): string =>
+  text.replace(/[\s#\-]*$/, '').trim();
+
 const parseSummaryResponse = (response: string): { brief: string; detail: string } => {
   const briefMatch = response.match(/\[BRIEF\]\s*\n([\s\S]*?)(?=\[DETAIL\])/);
   const detailMatch = response.match(/\[DETAIL\]\s*\n([\s\S]*?)$/);
 
   return {
-    brief: briefMatch ? briefMatch[1].trim() : response.slice(0, 500),
+    brief: briefMatch ? stripTrailingMarkdownNoise(briefMatch[1]) : response.slice(0, 500),
     detail: detailMatch ? detailMatch[1].trim() : '',
   };
 };

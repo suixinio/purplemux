@@ -20,7 +20,7 @@ interface IDailyReportSectionProps {
   onCacheUpdate: (date: string, report: IDailyReportDay) => void;
 }
 
-const markdownClass = 'prose prose-sm prose-invert max-w-none text-foreground/80 [&_h3]:mt-3 [&_h3]:mb-1 [&_h3]:text-xs [&_h3]:font-semibold [&_h3]:text-foreground/90 [&_ul]:my-0.5 [&_ul]:pl-4 [&_li]:my-0 [&_li]:text-xs [&_p]:text-xs [&_p]:my-1 [&_p]:leading-relaxed';
+const markdownClass = 'prose prose-sm prose-invert max-w-none text-foreground/80 [&_h2]:mt-4 [&_h2]:mb-1 [&_h2]:text-xs [&_h2]:font-semibold [&_h2]:text-foreground [&_h3]:mt-2 [&_h3]:mb-0.5 [&_h3]:text-xs [&_h3]:font-medium [&_h3]:text-foreground/80 [&_ul]:my-0.5 [&_ul]:pl-4 [&_li]:my-0 [&_li]:text-xs [&_p]:text-xs [&_p]:my-1 [&_p]:leading-relaxed';
 
 const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionProps) => {
   const [generating, setGenerating] = useState<string | null>(null);
@@ -84,15 +84,15 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
                   )}
                 </div>
                 <div className="flex items-center gap-1.5">
-                  {report && !isGenerating && (
+                  {report && (
                     <Button
                       variant="ghost"
                       size="icon-xs"
-                      onClick={() => handleGenerate(day.date)}
+                      onClick={() => handleGenerate(day.date, true)}
                       disabled={generating !== null}
                       className="text-muted-foreground"
                     >
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className={`h-3 w-3${isGenerating ? ' animate-spin' : ''}`} />
                     </Button>
                   )}
                   <span className="text-xs tabular-nums text-muted-foreground">
@@ -100,13 +100,6 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
                   </span>
                 </div>
               </div>
-
-              {isGenerating && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>요약 생성 중...</span>
-                </div>
-              )}
 
               {!report && !isGenerating && (
                 <Button
@@ -120,9 +113,23 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
                 </Button>
               )}
 
-              {report && !isGenerating && (
+              {!report && isGenerating && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <span>요약 생성 중...</span>
+                </div>
+              )}
+
+              {report && (
                 <>
-                  <div className={markdownClass}>
+                  {isGenerating && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      <span>요약 생성 중...</span>
+                    </div>
+                  )}
+                  <div className={isGenerating ? 'opacity-40' : undefined}>
+                    <div className={markdownClass}>
                     <ReactMarkdown>{report.brief}</ReactMarkdown>
                   </div>
                   {report.detail && (
@@ -132,6 +139,7 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
                         size="xs"
                         onClick={() => toggleExpand(day.date)}
                         className="text-muted-foreground"
+                        disabled={isGenerating}
                       >
                         {isExpanded ? (
                           <><ChevronDown className="h-3 w-3" />접기</>
@@ -148,6 +156,7 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
                       )}
                     </>
                   )}
+                  </div>
                 </>
               )}
             </CardContent>
