@@ -3,6 +3,7 @@ import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
 import { getAllPanesInfo } from '@/lib/tmux';
 import { detectActiveSession, isClaudeRunning } from '@/lib/session-detection';
+import { getLastTerminalOutput } from '@/lib/terminal-server';
 import { INTERRUPT_PREFIX } from '@/lib/session-parser';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
@@ -18,11 +19,13 @@ const JSONL_TAIL_SIZE = 8192;
 const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
+const TERMINAL_OUTPUT_STALE_MS = 5_000;
 
 
 interface IJsonlIdleCache {
   mtimeMs: number;
   idle: boolean;
+  stale: boolean;
   needsStaleRecheck: boolean;
   staleMs: number;
 }
@@ -32,6 +35,7 @@ const jsonlIdleCache = new Map<string, IJsonlIdleCache>();
 interface IScanResult {
   matched: boolean;
   idle: boolean;
+  stale: boolean;
   needsStaleRecheck: boolean;
   staleMs: number;
 }
@@ -44,46 +48,52 @@ const scanLines = (lines: string[], elapsed: number): IScanResult => {
       if (entry.isSidechain) continue;
 
       if (entry.type === 'system' && (entry.subtype === 'stop_hook_summary' || entry.subtype === 'turn_duration')) {
-        return { matched: true, idle: true, needsStaleRecheck: false, staleMs: 0 };
+        return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0 };
       }
 
       if (entry.type === 'assistant') {
         const stopReason = entry.message?.stop_reason;
         if (!stopReason) {
           const idle = elapsed > STALE_MS_INTERRUPTED;
-          return { matched: true, idle, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED };
+          return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED };
         }
-        return { matched: true, idle: stopReason !== 'tool_use', needsStaleRecheck: false, staleMs: 0 };
+        return { matched: true, idle: stopReason !== 'tool_use', stale: false, needsStaleRecheck: false, staleMs: 0 };
       }
 
       if (entry.type === 'user') {
         const content = entry.message?.content;
         if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
-          return { matched: true, idle: true, needsStaleRecheck: false, staleMs: 0 };
+          return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0 };
         }
         const idle = elapsed > STALE_MS_AWAITING_API;
-        return { matched: true, idle, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API };
+        return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API };
       }
     } catch {
       continue;
     }
   }
 
-  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API };
+  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, stale: true, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API };
 };
 
-const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
+interface IJsonlCheckResult {
+  idle: boolean;
+  stale: boolean;
+}
+
+const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => {
   try {
     const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return true;
+    if (stat.size === 0) return { idle: true, stale: false };
 
     const cached = jsonlIdleCache.get(jsonlPath);
     if (cached && cached.mtimeMs === stat.mtimeMs) {
-      if (cached.idle) return true;
+      if (cached.idle) return { idle: true, stale: cached.stale };
       if (cached.needsStaleRecheck) {
-        return Date.now() - stat.mtimeMs > cached.staleMs;
+        const idle = Date.now() - stat.mtimeMs > cached.staleMs;
+        return { idle, stale: true };
       }
-      return false;
+      return { idle: false, stale: false };
     }
 
     const handle = await fs.open(jsonlPath, 'r');
@@ -105,13 +115,13 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<boolean> => {
         scan = scanLines(extLines, elapsed);
       }
 
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs });
-      return scan.idle;
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs });
+      return { idle: scan.idle, stale: scan.stale };
     } finally {
       await handle.close();
     }
   } catch {
-    return false;
+    return { idle: false, stale: false };
   }
 };
 
@@ -168,8 +178,14 @@ class StatusManager {
 
     if (!session.jsonlPath) return 'idle';
 
-    const idle = await checkJsonlIdle(session.jsonlPath);
-    return idle ? 'idle' : 'busy';
+    const { idle: jsonlIdle, stale } = await checkJsonlIdle(session.jsonlPath);
+
+    if (!stale) return jsonlIdle ? 'idle' : 'busy';
+
+    const lastOutput = getLastTerminalOutput(tmuxSession);
+    if (lastOutput === undefined) return jsonlIdle ? 'idle' : 'busy';
+
+    return Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
   }
 
   private getPollingInterval(): number {

@@ -93,6 +93,9 @@ const MobileSurfaceView = ({
   const prevConnectedTabIdRef = useRef<string | null>(null);
   const [attemptedTabId, setAttemptedTabId] = useState<string | null>(null);
 
+  const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const waitingForResizeRef = useRef(false);
+
   const tabsRef = useRef(tabs);
   const activeTabIdRef = useRef(activeTabId);
 
@@ -148,7 +151,16 @@ const MobileSurfaceView = ({
     theme: terminalTheme.colors,
     fontSize: isClaudeCode ? undefined : MOBILE_FONT_SIZE,
     onInput: (data) => wsActionsRef.current.sendStdin(data),
-    onResize: (cols, rows) => wsActionsRef.current.sendResize(cols, rows),
+    onResize: (cols, rows) => {
+      wsActionsRef.current.sendResize(cols, rows);
+      if (waitingForResizeRef.current) {
+        if (showTimerRef.current) clearTimeout(showTimerRef.current);
+        showTimerRef.current = setTimeout(() => {
+          waitingForResizeRef.current = false;
+          setShowTerminal(true);
+        }, 200);
+      }
+    },
     onTitleChange: (title) => {
       const tabId = activeTabIdRef.current;
       if (!tabId) return;
@@ -279,16 +291,21 @@ const MobileSurfaceView = ({
   useEffect(() => {
     if (isClaudeCode) {
       setShowTerminal(false);
+      waitingForResizeRef.current = false;
+      if (showTimerRef.current) clearTimeout(showTimerRef.current);
       return;
     }
     if (isReady && status === 'connected') {
       setShowTerminal(false);
-      const timer = setTimeout(() => {
-        const { cols, rows } = fit();
-        wsActionsRef.current.sendResize(cols, rows);
-        setTimeout(() => setShowTerminal(true), 200);
-      }, 50);
-      return () => clearTimeout(timer);
+      waitingForResizeRef.current = true;
+      showTimerRef.current = setTimeout(() => {
+        waitingForResizeRef.current = false;
+        setShowTerminal(true);
+      }, 200);
+      return () => {
+        if (showTimerRef.current) clearTimeout(showTimerRef.current);
+        waitingForResizeRef.current = false;
+      };
     }
     setShowTerminal(true);
   }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps

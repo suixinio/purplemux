@@ -60,6 +60,7 @@ const EMPTY_CACHE: IStatsCache = {
   longestSession: { sessionId: '', duration: 0, messageCount: 0, timestamp: '' },
   firstSessionDate: '',
   hourCounts: {},
+  dayHourCounts: {},
   totalSpeculationTimeSavedMs: 0,
 };
 
@@ -144,6 +145,7 @@ export const readStatsCache = async (): Promise<IStatsCache> => {
       longestSession: safeParseLongestSession(raw.longestSession),
       firstSessionDate: String(raw.firstSessionDate ?? ''),
       hourCounts: safeParseHourCounts(raw.hourCounts),
+      dayHourCounts: safeParseHourCounts(raw.dayHourCounts),
       totalSpeculationTimeSavedMs: Number(raw.totalSpeculationTimeSavedMs ?? 0),
     };
   } catch {
@@ -233,6 +235,38 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
     .filter((d) => d.date >= startOfMonth)
     .reduce((sum, d) => sum + d.messageCount, 0);
 
+  const totalCost = Object.values(modelTokens).reduce((sum, m) => sum + m.cost, 0);
+
+  const estimateCostForDates = (dates: IStatsCacheDailyTokens[]): number => {
+    let cost = 0;
+    for (const day of dates) {
+      for (const [model, total] of Object.entries(day.tokensByModel)) {
+        const usage = cache.modelUsage[model];
+        if (!usage) continue;
+        const allTimeTotal = usage.inputTokens + usage.outputTokens
+          + usage.cacheReadInputTokens + usage.cacheCreationInputTokens;
+        if (allTimeTotal > 0) {
+          const allTimeCost = estimateCostFromUsage(
+            model, usage.inputTokens, usage.outputTokens,
+            usage.cacheReadInputTokens, usage.cacheCreationInputTokens,
+          );
+          cost += allTimeCost * (total / allTimeTotal);
+        }
+      }
+    }
+    return cost;
+  };
+
+  const todayCost = estimateCostForDates(
+    cache.dailyModelTokens.filter((d) => d.date === today),
+  );
+  const thisMonthCost = estimateCostForDates(
+    cache.dailyModelTokens.filter((d) => d.date >= startOfMonth),
+  );
+  const previousCost = estimateCostForDates(
+    getPreviousPeriodTokens(cache.dailyModelTokens, period),
+  );
+
   return {
     totalSessions,
     totalMessages,
@@ -244,25 +278,44 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
     dailyTokens,
     todayMessages,
     thisMonthMessages,
+    totalCost,
+    todayCost,
+    thisMonthCost,
+    previousCost,
     hourlyDistribution: cache.hourCounts,
+    dayHourDistribution: cache.dayHourCounts,
     firstSessionDate: cache.firstSessionDate,
     lastComputedDate: cache.lastComputedDate,
     computedAt: new Date().toISOString(),
   };
 };
 
+const getPreviousPeriodRange = (period: TPeriod): { prevStart: dayjs.Dayjs; prevEnd: dayjs.Dayjs } | null => {
+  if (period === 'all' || period === 'today') return null;
+  const days = period === '7d' ? 7 : 30;
+  return {
+    prevStart: dayjs().subtract(days * 2, 'day').startOf('day'),
+    prevEnd: dayjs().subtract(days, 'day').startOf('day'),
+  };
+};
+
+const isInPreviousPeriod = (dateStr: string, period: TPeriod): boolean => {
+  const range = getPreviousPeriodRange(period);
+  if (!range) return false;
+  const date = dayjs(dateStr);
+  return (date.isAfter(range.prevStart) || date.isSame(range.prevStart)) && date.isBefore(range.prevEnd);
+};
+
 const getPreviousPeriodDaily = (
   allDaily: IStatsCacheDailyActivity[],
   period: TPeriod,
 ): IStatsCacheDailyActivity[] => {
-  if (period === 'all' || period === 'today') return [];
+  return allDaily.filter((d) => isInPreviousPeriod(d.date, period));
+};
 
-  const days = period === '7d' ? 7 : 30;
-  const prevStart = dayjs().subtract(days * 2, 'day').startOf('day');
-  const prevEnd = dayjs().subtract(days, 'day').startOf('day');
-
-  return allDaily.filter((d) => {
-    const date = dayjs(d.date);
-    return (date.isAfter(prevStart) || date.isSame(prevStart)) && date.isBefore(prevEnd);
-  });
+const getPreviousPeriodTokens = (
+  allTokens: IStatsCacheDailyTokens[],
+  period: TPeriod,
+): IStatsCacheDailyTokens[] => {
+  return allTokens.filter((d) => isInPreviousPeriod(d.date, period));
 };

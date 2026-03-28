@@ -43,6 +43,7 @@ export interface IStatsCache {
   longestSession: IStatsCacheLongestSession;
   firstSessionDate: string;
   hourCounts: Record<string, number>;
+  dayHourCounts: Record<string, number>;
   totalSpeculationTimeSavedMs: number;
 }
 
@@ -58,8 +59,13 @@ export interface IOverviewResponse {
   modelTokens: Record<string, { input: number; output: number; cache: number; cost: number }>;
   dailyTokens: { date: string; input: number; output: number }[];
   hourlyDistribution: Record<string, number>;
+  dayHourDistribution: Record<string, number>;
   todayMessages: number;
   thisMonthMessages: number;
+  totalCost: number;
+  todayCost: number;
+  thisMonthCost: number;
+  previousCost: number;
   firstSessionDate: string;
   lastComputedDate: string;
   computedAt: string;

@@ -15,13 +15,13 @@ const MobileTabIndicator = ({
 
   return (
     <div
-      className="flex h-10 shrink-0 items-center justify-center gap-1.5 border-t bg-background"
+      className="flex h-10 shrink-0 items-center justify-center border-t bg-background"
       style={{ borderTopWidth: '0.5px' }}
     >
       {Array.from({ length: count }, (_, i) => (
         <button
           key={i}
-          className="flex h-6 w-6 items-center justify-center"
+          className="flex h-8 w-8 items-center justify-center"
           onClick={() => onSelect(i)}
           aria-label={`Surface ${i + 1}`}
           aria-current={i === activeIndex ? 'true' : undefined}

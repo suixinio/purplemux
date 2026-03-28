@@ -361,6 +361,7 @@ const buildStatsCacheFromPt = (
   const dailyModelTokens: IStatsCacheDailyTokens[] = [];
   const modelUsage: Record<string, IStatsCacheModelUsage> = {};
   const hourCounts: Record<string, number> = {};
+  const dayHourCounts: Record<string, number> = {};
   let totalSessions = 0;
   let totalMessages = 0;
   let firstSessionDate = '';
@@ -409,8 +410,11 @@ const buildStatsCacheFromPt = (
 
     dailyModelTokens.push({ date, tokensByModel });
 
+    const dow = new Date(date).getDay();
     for (const [hour, count] of Object.entries(day.hourCounts)) {
       hourCounts[hour] = (hourCounts[hour] ?? 0) + count;
+      const dhKey = `${dow}-${hour}`;
+      dayHourCounts[dhKey] = (dayHourCounts[dhKey] ?? 0) + count;
     }
 
     totalSessions += day.sessionCount;
@@ -440,6 +444,7 @@ const buildStatsCacheFromPt = (
     longestSession,
     firstSessionDate,
     hourCounts,
+    dayHourCounts,
     totalSpeculationTimeSavedMs: 0,
   };
 };

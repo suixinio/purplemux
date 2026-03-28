@@ -38,6 +38,11 @@ interface IActiveConnection {
 
 const connections = new Map<WebSocket, IActiveConnection>();
 
+const terminalOutputTimestamps = new Map<string, number>();
+
+export const getLastTerminalOutput = (sessionName: string): number | undefined =>
+  terminalOutputTimestamps.get(sessionName);
+
 const attachToSession = (sessionName: string, cols: number, rows: number): pty.IPty =>
   pty.spawn('tmux', ['-L', TMUX_SOCKET, 'attach-session', '-t', sessionName], {
     name: 'xterm-256color',
@@ -54,6 +59,7 @@ const attachToSession = (sessionName: string, cols: number, rows: number): pty.I
 const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   if (conn.cleaned) return;
   conn.cleaned = true;
+  terminalOutputTimestamps.delete(conn.sessionName);
 
   clearInterval(conn.heartbeatTimer);
 
@@ -90,6 +96,7 @@ export const gracefulShutdown = () => {
     if (conn.cleaned) return;
     conn.cleaned = true;
     conn.detaching = true;
+    terminalOutputTimestamps.delete(conn.sessionName);
 
     clearInterval(conn.heartbeatTimer);
 
@@ -310,6 +317,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   conn.disposables.push(
     ptyProcess.onData((data: string) => {
       if (conn.cleaned || ws.readyState !== WebSocket.OPEN) return;
+      terminalOutputTimestamps.set(sessionName, Date.now());
 
       const payload = textEncoder.encode(data);
       const frame = new Uint8Array(1 + payload.length);

@@ -62,7 +62,7 @@ const MobileWorkspaceTabBar = ({
   return (
     <div className="shrink-0 border-t bg-background">
       <div
-        className="flex h-10 items-center justify-center gap-1.5 overflow-x-auto px-4"
+        className="flex h-10 items-center justify-center overflow-x-auto px-4"
         style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}
       >
         {items.map((item, i) => {
@@ -85,7 +85,7 @@ const MobileWorkspaceTabBar = ({
             <button
               key={item.tabId}
               ref={isActive ? activeRef : undefined}
-              className="flex h-6 w-6 shrink-0 items-center justify-center"
+              className="flex h-8 w-8 shrink-0 items-center justify-center"
               onClick={() => onSelect(item.workspaceId, item.paneId, item.tabId)}
               aria-current={isActive ? 'true' : undefined}
             >

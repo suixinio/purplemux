@@ -1,12 +1,12 @@
 import { useMemo } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
-import { Activity, MessageSquare, CalendarDays, TrendingUp } from 'lucide-react';
+import { Activity, DollarSign, CalendarDays, TrendingUp } from 'lucide-react';
 import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import type { IOverviewResponse } from '@/types/stats';
-import { formatNumberWithComma, formatDate, formatAxisTick, getChangeRate } from '@/components/features/stats/stats-utils';
+import { formatNumberWithComma, formatCostWithComma, formatDate, formatAxisTick, getChangeRate } from '@/components/features/stats/stats-utils';
 
 interface IOverviewSectionProps {
   data: IOverviewResponse;
@@ -29,13 +29,13 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
   }, [data.dailyActivity]);
 
   const sessionChange = getChangeRate(data.totalSessions, data.previousSessions);
-  const messageChange = getChangeRate(data.totalMessages, data.previousMessages);
+  const costChange = getChangeRate(data.totalCost, data.previousCost);
 
   const cards = [
     { label: '총 세션 수', value: formatNumberWithComma(data.totalSessions), icon: Activity, change: sessionChange },
-    { label: '총 메시지 수', value: formatNumberWithComma(data.totalMessages), icon: MessageSquare, change: messageChange },
-    { label: '오늘 메시지 수', value: formatNumberWithComma(data.todayMessages), icon: CalendarDays, change: null },
-    { label: '이번 달 메시지 수', value: formatNumberWithComma(data.thisMonthMessages), icon: TrendingUp, change: null },
+    { label: '총 비용', value: formatCostWithComma(data.totalCost), icon: DollarSign, change: costChange },
+    { label: '오늘 비용', value: formatCostWithComma(data.todayCost), icon: CalendarDays, change: null },
+    { label: '이번 달 비용', value: formatCostWithComma(data.thisMonthCost), icon: TrendingUp, change: null },
   ];
 
   return (
