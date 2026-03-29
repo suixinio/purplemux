@@ -57,8 +57,6 @@ const attachToSession = (sessionName: string, cols: number, rows: number): pty.I
     },
   });
 
-let resetting = false;
-
 const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   if (conn.cleaned) return;
   conn.cleaned = true;
@@ -70,8 +68,6 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
     d.dispose();
   }
   conn.disposables = [];
-
-  if (resetting) sessionExited = false;
 
   if (sessionExited) {
     if (conn.ws.readyState === WebSocket.OPEN) {
@@ -96,9 +92,6 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   console.log(`[terminal] client disconnected (active: ${connections.size})`);
 };
 
-export const setResetting = (active: boolean): void => {
-  resetting = active;
-};
 
 export const gracefulShutdown = (): Promise<void> => {
   if (connections.size === 0) return Promise.resolve();

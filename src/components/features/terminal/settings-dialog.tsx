@@ -352,19 +352,8 @@ const AuthTab = () => {
 };
 
 const SystemTab = () => {
-  const [isResetting, setIsResetting] = useState(false);
-
-  const handleReset = async () => {
-    setIsResetting(true);
-    try {
-      const res = await fetch('/api/tmux/reset', { method: 'POST' });
-      if (!res.ok) throw new Error();
-      toast.success('tmux가 초기화되었습니다. 페이지를 새로고침합니다.');
-      setTimeout(() => window.location.reload(), 500);
-    } catch {
-      toast.error('tmux 초기화에 실패했습니다.');
-      setIsResetting(false);
-    }
+  const handleReset = () => {
+    window.location.href = '/reset';
   };
 
   return (
@@ -380,8 +369,8 @@ const SystemTab = () => {
         <AlertDialog>
           <AlertDialogTrigger
             render={
-              <Button variant="destructive" size="sm" className="gap-1.5 shrink-0" disabled={isResetting}>
-                {isResetting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
+              <Button variant="destructive" size="sm" className="gap-1.5 shrink-0">
+                <RotateCcw className="h-3.5 w-3.5" />
                 초기화
               </Button>
             }
