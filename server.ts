@@ -233,7 +233,8 @@ const startProd = async (port: number, appDir: string): Promise<IStartResult> =>
   process.env.PORT = String(internalPort);
   process.env.HOSTNAME = '127.0.0.1';
 
-  const standalonePath = path.join(appDir, '.next', 'standalone', 'server.js');
+  const standaloneDir = process.env.__PMUX_APP_DIR_UNPACKED || appDir;
+  const standalonePath = path.join(standaloneDir, '.next', 'standalone', 'server.js');
   require(standalonePath); // eslint-disable-line @typescript-eslint/no-require-imports
 
   process.env.PORT = savedPort;

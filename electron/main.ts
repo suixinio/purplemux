@@ -186,7 +186,8 @@ let cachedStart: ((opts: { port: number }) => Promise<{ port: number; shutdown: 
 const startLocalServer = async (): Promise<number> => {
   if (!cachedStart) {
     const appDir = process.env.__PMUX_APP_DIR!;
-    const standaloneMods = path.join(appDir, '.next', 'standalone', 'node_modules');
+    const appDirUnpacked = process.env.__PMUX_APP_DIR_UNPACKED || appDir;
+    const standaloneMods = path.join(appDirUnpacked, '.next', 'standalone', 'node_modules');
     process.env.NODE_PATH = [standaloneMods, process.env.NODE_PATH].filter(Boolean).join(':');
     require('module').Module._initPaths(); // eslint-disable-line @typescript-eslint/no-require-imports
     const mod = await import(path.join(appDir, 'dist', 'server.js'));
@@ -384,7 +385,9 @@ const bootstrap = async () => {
 
   process.env.NODE_ENV = 'production';
   process.env.__PMUX_ELECTRON = '1';
-  process.env.__PMUX_APP_DIR = isDev ? process.cwd() : app.getAppPath();
+  const appPath = app.getAppPath();
+  process.env.__PMUX_APP_DIR = isDev ? process.cwd() : appPath;
+  process.env.__PMUX_APP_DIR_UNPACKED = isDev ? process.cwd() : appPath.replace('app.asar', 'app.asar.unpacked');
 
   serverConfig = readServerConfig();
 
