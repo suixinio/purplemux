@@ -202,6 +202,10 @@ class StatusManager {
     return POLL_INTERVAL_SMALL;
   }
 
+  async rescan(): Promise<void> {
+    await this.scanAll();
+  }
+
   startPolling(): void {
     this.stopPolling();
     const interval = this.getPollingInterval();

@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { listSessions, killServer } from '@/lib/tmux';
+import { listSessions, killServer, scanSessions, applyConfig } from '@/lib/tmux';
+import { initWorkspaceStore } from '@/lib/workspace-store';
+import { autoResumeOnStartup } from '@/lib/auto-resume';
+import { getStatusManager } from '@/lib/status-manager';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -11,6 +14,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const sessions = await listSessions();
     console.log(`[terminal] tmux reset requested — killing ${sessions.length} session(s)`);
     await killServer();
+
+    await scanSessions();
+    await applyConfig();
+    await initWorkspaceStore();
+    await autoResumeOnStartup();
+    await getStatusManager().rescan();
+
+    console.log('[terminal] tmux re-initialized after reset');
     return res.status(200).json({ killed: sessions.length });
   } catch (err) {
     console.error(`[terminal] tmux reset failed: ${err instanceof Error ? err.message : err}`);
