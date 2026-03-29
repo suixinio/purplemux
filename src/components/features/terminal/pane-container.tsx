@@ -741,7 +741,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
               {isClaudeCode && !showInitialLoading && claudeInputVisible && activeTabId && (
                 <QuickPromptBar
                   prompts={quickPrompts}
-                  cliState={claudeCliState}
                   visible
                   onSelect={handleSelectQuickPrompt}
                 />

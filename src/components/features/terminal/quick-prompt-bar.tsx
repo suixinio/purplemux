@@ -1,28 +1,22 @@
 import { useCallback, useRef, type KeyboardEvent } from 'react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { IQuickPrompt } from '@/hooks/use-quick-prompts';
-import type { TCliState } from '@/types/timeline';
-import { isCliIdle } from '@/hooks/use-tab-store';
 
 interface IQuickPromptBarProps {
   prompts: IQuickPrompt[];
-  cliState: TCliState;
   visible: boolean;
   onSelect: (prompt: string) => void;
 }
 
-const QuickPromptBar = ({ prompts, cliState, visible, onSelect }: IQuickPromptBarProps) => {
+const QuickPromptBar = ({ prompts, visible, onSelect }: IQuickPromptBarProps) => {
   const barRef = useRef<HTMLDivElement>(null);
-  const isDisabled = !isCliIdle(cliState);
   const hasPrompts = prompts.length > 0;
 
   const handleClick = useCallback(
     (prompt: string) => {
-      if (isDisabled) return;
       onSelect(prompt);
     },
-    [isDisabled, onSelect],
+    [onSelect],
   );
 
   const handleKeyDown = useCallback(
@@ -63,11 +57,7 @@ const QuickPromptBar = ({ prompts, cliState, visible, onSelect }: IQuickPromptBa
           variant="outline"
           size="sm"
           tabIndex={0}
-          disabled={isDisabled}
-          className={cn(
-            'shrink-0 rounded-full px-3 py-1 text-xs text-muted-foreground hover:border-foreground/30 hover:text-foreground',
-            isDisabled && 'pointer-events-none opacity-50',
-          )}
+          className="shrink-0 rounded-full px-3 py-1 text-xs text-muted-foreground hover:border-foreground/30 hover:text-foreground"
           onClick={() => handleClick(p.prompt)}
         >
           {p.name}

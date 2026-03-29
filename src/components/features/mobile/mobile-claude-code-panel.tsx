@@ -300,7 +300,6 @@ const MobileClaudeCodePanel = ({
         />
         <QuickPromptBar
           prompts={quickPrompts}
-          cliState={cliState}
           visible={isInputVisible}
           onSelect={handleSelectQuickPrompt}
         />
