@@ -111,10 +111,10 @@ const ClaudeCodePanel = ({
   useEffect(() => {
     const prev = prevClaudeStatusRef.current;
     prevClaudeStatusRef.current = claudeStatus;
-    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running') {
+    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running' && !isRestarting) {
       retrySession();
     }
-  }, [claudeStatus, claudeStatusFromTimeline, retrySession]);
+  }, [claudeStatus, claudeStatusFromTimeline, retrySession, isRestarting]);
 
   const restartNeedsExitRef = useRef(false);
   const prevIsRestartingRef = useRef(false);
