@@ -57,6 +57,8 @@ const attachToSession = (sessionName: string, cols: number, rows: number): pty.I
     },
   });
 
+let resetting = false;
+
 const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   if (conn.cleaned) return;
   conn.cleaned = true;
@@ -68,6 +70,8 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
     d.dispose();
   }
   conn.disposables = [];
+
+  if (resetting) sessionExited = false;
 
   if (sessionExited) {
     if (conn.ws.readyState === WebSocket.OPEN) {
@@ -92,15 +96,8 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   console.log(`[terminal] client disconnected (active: ${connections.size})`);
 };
 
-export const detachAll = (): void => {
-  connections.forEach((conn) => {
-    if (conn.cleaned) return;
-    conn.detaching = true;
-    cleanup(conn);
-    if (conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.close(1001, 'tmux reset');
-    }
-  });
+export const setResetting = (active: boolean): void => {
+  resetting = active;
 };
 
 export const gracefulShutdown = (): Promise<void> => {

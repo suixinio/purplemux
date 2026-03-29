@@ -17,6 +17,7 @@ import {
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
+  workspaceName?: string;
 }
 
 const handleLogout = async () => {
@@ -24,21 +25,27 @@ const handleLogout = async () => {
   window.location.href = '/login';
 };
 
-const AppHeader = ({ onMenuOpen }: IAppHeaderProps) => {
+const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-background px-3">
-      <div className="flex items-center gap-1.5">
+      <div className="flex min-w-0 items-center gap-1.5">
         {onMenuOpen && (
           <button
-            className="flex h-8 w-8 items-center justify-center text-foreground"
+            className="flex h-8 w-8 shrink-0 items-center justify-center text-foreground"
             onClick={onMenuOpen}
             aria-label="메뉴 열기"
           >
             <Menu className="h-5 w-5" />
           </button>
         )}
-        <Terminal className="h-4 w-4 text-ui-purple" />
-        <span className="text-sm text-ui-purple"><span className="font-bold">purple</span><span className="font-normal">mux</span></span>
+        <Terminal className="h-4 w-4 shrink-0 text-ui-purple" />
+        <span className="shrink-0 text-sm text-ui-purple"><span className="font-bold">purple</span><span className="font-normal">mux</span></span>
+        {workspaceName && (
+          <>
+            <span className="text-muted-foreground/40 text-sm">/</span>
+            <span className="truncate text-sm text-muted-foreground">{workspaceName}</span>
+          </>
+        )}
       </div>
 
       <TooltipProvider>

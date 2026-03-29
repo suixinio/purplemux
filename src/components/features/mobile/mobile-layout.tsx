@@ -183,7 +183,10 @@ const MobileLayout = ({
   return (
     <>
       <div style={{ paddingTop: 'env(safe-area-inset-top)' }} className="shrink-0">
-        <AppHeader onMenuOpen={() => setMenuOpen(true)} />
+        <AppHeader
+          onMenuOpen={() => setMenuOpen(true)}
+          workspaceName={workspaces.find((ws) => ws.id === activeWorkspaceId)?.name}
+        />
       </div>
       {children}
       <MobileWorkspaceTabBar
