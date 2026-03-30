@@ -71,9 +71,10 @@ export const authOptions: AuthOptions = {
       name: 'next-auth.session-token',
       options: {
         httpOnly: true,
-        sameSite: 'strict' as const,
+        sameSite: 'lax' as const,
         path: '/',
         secure: false,
+        maxAge: 7 * 86400,
       },
     },
   },
