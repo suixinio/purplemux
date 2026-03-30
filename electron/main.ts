@@ -177,6 +177,7 @@ input.onkeydown=function(e){
 
 let mainWindow: BrowserWindow | null = null;
 let serverShutdown: (() => Promise<void>) | null = null;
+let isQuitting = false;
 let serverConfig: IServerConfig = { mode: 'local' };
 let localPort: number | null = null;
 let cachedStart: ((opts: { port: number }) => Promise<{ port: number; shutdown: () => Promise<void> }>) | null = null;
@@ -354,7 +355,7 @@ const createWindow = (url: string) => {
   mainWindow.on('enter-full-screen', saveWindowState);
   mainWindow.on('leave-full-screen', saveWindowState);
 
-  mainWindow.on('close', () => {
+  mainWindow.on('close', (e) => {
     if (!mainWindow) return;
     if (saveTimer) clearTimeout(saveTimer);
     const bounds = mainWindow.getNormalBounds();
@@ -366,6 +367,11 @@ const createWindow = (url: string) => {
       isMaximized: mainWindow.isMaximized(),
       isFullScreen: mainWindow.isFullScreen(),
     });
+
+    if (process.platform === 'darwin' && !isQuitting) {
+      e.preventDefault();
+      mainWindow.hide();
+    }
   });
 
   mainWindow.on('closed', () => {
@@ -411,12 +417,16 @@ ipcMain.handle('open-external', (_event, url: string) => {
 app.on('ready', bootstrap);
 
 app.on('activate', () => {
-  if (mainWindow === null && !devUrl) {
+  if (mainWindow) {
+    mainWindow.show();
+  } else if (!devUrl) {
     bootstrap();
   }
 });
 
 app.on('window-all-closed', async () => {
+  if (process.platform === 'darwin') return;
+
   // 안전장치: 전체 종료가 3초 이내에 완료되지 않으면 강제 종료
   const forceExit = setTimeout(() => app.exit(1), 3000);
 
@@ -438,6 +448,10 @@ app.on('window-all-closed', async () => {
 
 // Cmd+Q 등으로 will-quit이 먼저 도달하는 경우,
 // window-all-closed와 동일한 graceful shutdown 수행.
+app.on('before-quit', () => {
+  isQuitting = true;
+});
+
 app.on('will-quit', async (event) => {
   event.preventDefault();
   const forceExit = setTimeout(() => app.exit(1), 3000);
