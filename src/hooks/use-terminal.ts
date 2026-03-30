@@ -1,7 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { WebglAddon } from "@xterm/addon-webgl";
+
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type { ITerminalThemeColors } from "@/lib/terminal-themes";
@@ -129,7 +129,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       const terminal = new Terminal({
         fontFamily: FONT_FAMILY,
         fontWeight: "400",
-        fontWeightBold: "600",
+        fontWeightBold: "700",
         fontSize: callbacksRef.current.fontSize,
         lineHeight: 1.1,
         letterSpacing: 0,
@@ -157,16 +157,6 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       terminal.unicode.activeVersion = "11";
 
       terminal.open(container);
-
-      try {
-        const webglAddon = new WebglAddon();
-        webglAddon.onContextLoss(() => {
-          webglAddon.dispose();
-        });
-        terminal.loadAddon(webglAddon);
-      } catch {
-        // WebGL not supported, canvas fallback
-      }
 
       terminalInstance.current = terminal;
       fitAddonRef.current = fitAddon;
