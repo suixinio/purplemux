@@ -134,12 +134,20 @@ export interface ITimelineTaskProgress {
   status: TTaskStatus;
 }
 
+export interface IPlanAllowedPrompt {
+  tool: string;
+  prompt: string;
+}
+
 export interface ITimelinePlan {
   id: string;
   type: 'plan';
   timestamp: number;
+  toolUseId: string;
   markdown: string;
   filePath?: string;
+  allowedPrompts?: IPlanAllowedPrompt[];
+  status: TToolStatus;
 }
 
 export interface IAskUserQuestionOption {

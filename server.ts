@@ -145,6 +145,26 @@ const getFreePort = (): Promise<number> =>
     srv.on('error', reject);
   });
 
+const listenWithFallback = (server: import('http').Server, port: number): Promise<number> =>
+  new Promise((resolve, reject) => {
+    const onError = (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        console.log(`> Port ${port} is in use, finding an available port...`);
+        server.removeListener('error', onError);
+        server.on('error', reject);
+        server.listen(0, () => {
+          resolve((server.address() as { port: number }).port);
+        });
+      } else {
+        reject(err);
+      }
+    };
+    server.on('error', onError);
+    server.listen(port, () => {
+      resolve((server.address() as { port: number }).port);
+    });
+  });
+
 const waitForPort = (port: number, timeoutMs = 10_000): Promise<void> =>
   new Promise((resolve, reject) => {
     const deadline = Date.now() + timeoutMs;
@@ -221,12 +241,7 @@ const startDev = async (port: number, appDir: string): Promise<IStartResult> => 
   process.on('SIGTERM', exitGracefully);
   process.on('SIGINT', exitGracefully);
 
-  await new Promise<void>((resolve, reject) => {
-    server.on('error', reject);
-    server.listen(port, () => resolve());
-  });
-
-  const actualPort = (server.address() as { port: number }).port;
+  const actualPort = await listenWithFallback(server, port);
   return { port: actualPort, shutdown };
 };
 
@@ -280,12 +295,7 @@ const startProd = async (port: number, appDir: string): Promise<IStartResult> =>
   process.on('SIGTERM', exitGracefully);
   process.on('SIGINT', exitGracefully);
 
-  await new Promise<void>((resolve, reject) => {
-    server.on('error', reject);
-    server.listen(port, () => resolve());
-  });
-
-  const actualPort = (server.address() as { port: number }).port;
+  const actualPort = await listenWithFallback(server, port);
   return { port: actualPort, shutdown };
 };
 

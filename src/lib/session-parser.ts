@@ -314,8 +314,16 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
             id: nanoid(),
             type: 'plan',
             timestamp,
+            toolUseId,
             markdown: input.plan,
             filePath: typeof input.planFilePath === 'string' ? input.planFilePath : undefined,
+            allowedPrompts: Array.isArray(input.allowedPrompts)
+              ? (input.allowedPrompts as { tool?: string; prompt?: string }[]).map((p) => ({
+                  tool: String(p.tool ?? ''),
+                  prompt: String(p.prompt ?? ''),
+                }))
+              : undefined,
+            status: 'pending' as TToolStatus,
           } satisfies ITimelinePlan);
         }
 
@@ -551,6 +559,7 @@ const createAgentGroup = (
 const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
   const toolCallMap = new Map<string, ITimelineToolCall>();
   const askQuestionMap = new Map<string, ITimelineAskUserQuestion>();
+  const planMap = new Map<string, ITimelinePlan>();
   const taskCreateMap = new Map<string, ITimelineTaskProgress>();
   const result: ITimelineEntry[] = [];
 
@@ -560,6 +569,9 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
       result.push(entry);
     } else if (entry.type === 'ask-user-question') {
       askQuestionMap.set(entry.toolUseId, entry);
+      result.push(entry);
+    } else if (entry.type === 'plan') {
+      planMap.set(entry.toolUseId, entry);
       result.push(entry);
     } else if (entry.type === 'tool-result') {
       const status = entry.isError ? 'error' as const : 'success' as const;
@@ -590,6 +602,11 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
           askQuestion.status = status;
           if (entry.summary) {
             askQuestion.answer = entry.summary;
+          }
+        } else {
+          const plan = planMap.get(entry.toolUseId);
+          if (plan) {
+            plan.status = status;
           }
         }
       }
