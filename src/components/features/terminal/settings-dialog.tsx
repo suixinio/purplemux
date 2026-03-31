@@ -294,13 +294,23 @@ const AuthTab = () => {
   const authPassword = useWorkspaceStore((state) => state.authPassword);
   const authSecret = useWorkspaceStore((state) => state.authSecret);
   const setAuthCredentials = useWorkspaceStore((state) => state.setAuthCredentials);
-  const [localPassword, setLocalPassword] = useState(authPassword);
+  const [localPassword, setLocalPassword] = useState('');
   const [localSecret, setLocalSecret] = useState(authSecret);
+  const [passwordTouched, setPasswordTouched] = useState(false);
 
-  const isDirty = localPassword.trim() !== authPassword || localSecret.trim() !== authSecret;
+  const hasStoredPassword = !!authPassword;
+  const secretDirty = localSecret.trim() !== authSecret;
+  const isDirty = passwordTouched || secretDirty;
+
+  const handlePasswordChange = (value: string) => {
+    setLocalPassword(value);
+    setPasswordTouched(true);
+  };
 
   const handleSave = () => {
     setAuthCredentials(localPassword.trim(), localSecret.trim());
+    setLocalPassword('');
+    setPasswordTouched(false);
     toast.success('저장되었습니다. 서버 재시작 후 적용됩니다.');
   };
 
@@ -308,15 +318,17 @@ const AuthTab = () => {
     <div className="space-y-6">
       <Field>
         <FieldLabel htmlFor="auth-password">비밀번호</FieldLabel>
-        <FieldDescription>로그인 시 사용할 비밀번호입니다.</FieldDescription>
+        <FieldDescription>
+          로그인 시 사용할 비밀번호입니다. {hasStoredPassword ? '(SHA-512로 암호화되어 저장됨)' : ''}
+        </FieldDescription>
         <div className="flex gap-2">
           <Input
             id="auth-password"
-            placeholder="비워두면 랜덤 생성"
+            placeholder={hasStoredPassword ? '새 비밀번호 입력 시 변경' : '비워두면 랜덤 생성'}
             value={localPassword}
-            onChange={(e) => setLocalPassword(e.target.value)}
+            onChange={(e) => handlePasswordChange(e.target.value)}
           />
-          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalPassword(randomHex(8))}>
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => handlePasswordChange(randomHex(8))}>
             <Dices className="h-4 w-4" />
           </Button>
         </div>
@@ -339,7 +351,7 @@ const AuthTab = () => {
       </Field>
 
       <FieldDescription>
-        두 값 모두 입력해야 고정됩니다. 비워두면 서버 시작 시 매번 랜덤 생성됩니다.
+        비밀번호는 SHA-512로 해싱되어 저장됩니다. 비워두면 서버 시작 시 매번 랜덤 생성됩니다.
       </FieldDescription>
 
       <div className="flex justify-end">

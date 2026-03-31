@@ -8,8 +8,16 @@ interface IAuthCredentials {
   secret: string;
 }
 
+const SHA512_HEX_LENGTH = 128;
+
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const WORKSPACES_FILE = path.join(BASE_DIR, 'workspaces.json');
+
+export const hashPassword = (plain: string): string =>
+  crypto.createHash('sha512').update(plain).digest('hex');
+
+const isHashed = (value: string): boolean =>
+  value.length === SHA512_HEX_LENGTH && /^[0-9a-f]+$/.test(value);
 
 const generateRandomString = (length: number): string =>
   crypto.randomBytes(length).toString('hex').slice(0, length);
@@ -49,24 +57,34 @@ const saveWorkspacesAuth = (credentials: IAuthCredentials): void => {
   }
 };
 
-export const initAuthCredentials = (): IAuthCredentials & { fixed: boolean } => {
+export const initAuthCredentials = (): IAuthCredentials & { fixed: boolean; plainPassword?: string } => {
   // 1. 환경변수 우선
   if (process.env.AUTH_PASSWORD && process.env.NEXTAUTH_SECRET) {
-    return { password: process.env.AUTH_PASSWORD, secret: process.env.NEXTAUTH_SECRET, fixed: true };
+    const envPw = process.env.AUTH_PASSWORD;
+    const hashed = isHashed(envPw) ? envPw : hashPassword(envPw);
+    return { password: hashed, secret: process.env.NEXTAUTH_SECRET, fixed: true };
   }
 
   // 2. workspaces.json에 저장된 인증 정보
   const stored = readWorkspacesAuth();
   if (stored) {
+    if (!isHashed(stored.password)) {
+      // 평문 → SHA-512 마이그레이션
+      const hashed = hashPassword(stored.password);
+      saveWorkspacesAuth({ password: hashed, secret: stored.secret });
+      return { password: hashed, secret: stored.secret, fixed: true };
+    }
     return { ...stored, fixed: true };
   }
 
   // 3. 신규 생성 → workspaces.json에 영구 저장
+  const plain = generateRandomString(8);
+  const hashed = hashPassword(plain);
   const credentials: IAuthCredentials = {
-    password: generateRandomString(8),
+    password: hashed,
     secret: generateRandomString(64),
   };
 
   saveWorkspacesAuth(credentials);
-  return { ...credentials, fixed: false };
+  return { ...credentials, fixed: false, plainPassword: plain };
 };

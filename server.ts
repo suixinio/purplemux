@@ -304,7 +304,7 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   const result = dev ? await startDev(port, appDir) : await startProd(port, appDir);
 
   console.log(`> Server listening at http://localhost:${result.port} as ${dev ? 'development' : process.env.NODE_ENV}`);
-  console.log(`> Auth password: ${credentials.password}${credentials.fixed ? ' (fixed)' : ''}`);
+  console.log(`> Auth password: ${credentials.plainPassword ?? '(stored)'}${credentials.fixed ? ' (fixed)' : ''}`);
 
   return result;
 };

@@ -1,6 +1,7 @@
 import NextAuth from 'next-auth';
 import type { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import { hashPassword } from '@/lib/auth-credentials';
 
 const MAX_FAILURES = 16;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -53,7 +54,7 @@ export const authOptions: AuthOptions = {
           throw new Error('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
         }
 
-        if (credentials?.password !== process.env.AUTH_PASSWORD) {
+        if (!credentials?.password || hashPassword(credentials.password) !== process.env.AUTH_PASSWORD) {
           recordFailure(ip);
           return null;
         }
