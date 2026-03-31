@@ -18,7 +18,7 @@ const getShellPath = (): string => {
   }
 };
 
-const shellPath = getShellPath();
+export const shellPath = getShellPath();
 const MIN_TMUX_VERSION = 2.9;
 
 interface IToolStatus {
