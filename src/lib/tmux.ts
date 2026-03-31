@@ -45,6 +45,7 @@ export const createSession = async (
   await execFile(
     'tmux',
     [
+      '-u',
       '-L', TMUX_SOCKET,
       '-f', TMUX_CONFIG_PATH,
       'new-session', '-d',

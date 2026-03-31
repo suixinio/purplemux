@@ -7,7 +7,7 @@ import * as os from 'os';
 const isDev = process.env.NODE_ENV === 'development';
 const devUrl = process.env.ELECTRON_DEV_URL;
 
-const fixPath = () => {
+const fixEnv = () => {
   const additions = ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin'];
   const current = process.env.PATH || '';
   const parts = current.split(':');
@@ -15,6 +15,11 @@ const fixPath = () => {
     if (!parts.includes(dir)) parts.unshift(dir);
   }
   process.env.PATH = parts.join(':');
+
+  // Finder/Dock에서 실행 시 locale 환경변수가 없어 Nerd Font 글리프가 깨짐
+  if (!process.env.LANG) {
+    process.env.LANG = 'en_US.UTF-8';
+  }
 };
 
 const findFreePort = (startPort: number): Promise<number> =>
@@ -383,7 +388,7 @@ const createWindow = (url: string) => {
 // --- Bootstrap ---
 
 const bootstrap = async () => {
-  fixPath();
+  fixEnv();
 
   if (devUrl) {
     createWindow(devUrl);

@@ -45,7 +45,7 @@ export const getLastTerminalOutput = (sessionName: string): number | undefined =
   terminalOutputTimestamps.get(sessionName);
 
 const attachToSession = (sessionName: string, cols: number, rows: number): pty.IPty =>
-  pty.spawn('tmux', ['-L', TMUX_SOCKET, 'attach-session', '-t', sessionName], {
+  pty.spawn('tmux', ['-u', '-L', TMUX_SOCKET, 'attach-session', '-t', sessionName], {
     name: 'xterm-256color',
     cols,
     rows,
