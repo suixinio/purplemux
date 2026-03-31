@@ -308,6 +308,7 @@ const MobileSurfaceView = ({
       setShowTerminal(false);
       waitingForResizeRef.current = false;
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
+      fetchAndUpdateCwd();
       return;
     }
     if (isReady && status === 'connected') {

@@ -109,7 +109,21 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
   },
 
   hydrate: (data) => {
-    set({ metadata: data });
+    set((state) => {
+      const merged: Record<string, ITabMetadata> = {};
+      for (const [id, incoming] of Object.entries(data)) {
+        const existing = state.metadata[id];
+        if (existing) {
+          merged[id] = {
+            ...incoming,
+            ...(existing.cwd ? { cwd: existing.cwd } : {}),
+          };
+        } else {
+          merged[id] = incoming;
+        }
+      }
+      return { metadata: merged };
+    });
     _prevCwdsKey = '';
   },
 

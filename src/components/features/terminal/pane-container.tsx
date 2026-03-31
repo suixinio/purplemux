@@ -618,6 +618,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     if (isClaudeCode) {
       setIsTerminalCollapsed(false);
       splitGroupRef.current.setLayout({ timeline: 70, 'terminal-area': 30 });
+      fetchAndUpdateCwd();
     } else {
       splitGroupRef.current.setLayout({ timeline: 0, 'terminal-area': 100 });
     }
