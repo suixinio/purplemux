@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useReducer } from 'react';
 import { useRouter } from 'next/router';
-import type { TPeriod, IOverviewResponse, IProjectsResponse, ISessionsResponse, IFacetsResponse, IHistoryResponse } from '@/types/stats';
+import type { TPeriod, IOverviewResponse, IProjectsResponse, ISessionsResponse, IFacetsResponse, IHistoryResponse, IUptimeResponse } from '@/types/stats';
 
 interface IStatsState {
   overview: IOverviewResponse | null;
@@ -9,18 +9,21 @@ interface IStatsState {
   sessions: ISessionsResponse | null;
   facets: IFacetsResponse | null;
   history: IHistoryResponse | null;
+  uptime: IUptimeResponse | null;
   overviewLoading: boolean;
   allOverviewLoading: boolean;
   projectsLoading: boolean;
   sessionsLoading: boolean;
   facetsLoading: boolean;
   historyLoading: boolean;
+  uptimeLoading: boolean;
   overviewError: string | null;
   allOverviewError: string | null;
   projectsError: string | null;
   sessionsError: string | null;
   facetsError: string | null;
   historyError: string | null;
+  uptimeError: string | null;
 }
 
 type TStatsAction =
@@ -36,7 +39,9 @@ type TStatsAction =
   | { type: 'FACETS_OK'; data: IFacetsResponse }
   | { type: 'FACETS_ERR'; error: string }
   | { type: 'HISTORY_OK'; data: IHistoryResponse }
-  | { type: 'HISTORY_ERR'; error: string };
+  | { type: 'HISTORY_ERR'; error: string }
+  | { type: 'UPTIME_OK'; data: IUptimeResponse }
+  | { type: 'UPTIME_ERR'; error: string };
 
 const initialState: IStatsState = {
   overview: null,
@@ -45,18 +50,21 @@ const initialState: IStatsState = {
   sessions: null,
   facets: null,
   history: null,
+  uptime: null,
   overviewLoading: true,
   allOverviewLoading: true,
   projectsLoading: true,
   sessionsLoading: true,
   facetsLoading: true,
   historyLoading: true,
+  uptimeLoading: true,
   overviewError: null,
   allOverviewError: null,
   projectsError: null,
   sessionsError: null,
   facetsError: null,
   historyError: null,
+  uptimeError: null,
 };
 
 const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
@@ -70,12 +78,14 @@ const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
         sessionsLoading: true,
         facetsLoading: true,
         historyLoading: true,
+        uptimeLoading: true,
         overviewError: null,
         allOverviewError: null,
         projectsError: null,
         sessionsError: null,
         facetsError: null,
         historyError: null,
+        uptimeError: null,
       };
     case 'OVERVIEW_OK':
       return { ...state, overview: action.data, overviewLoading: false };
@@ -101,6 +111,10 @@ const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
       return { ...state, history: action.data, historyLoading: false };
     case 'HISTORY_ERR':
       return { ...state, historyError: action.error, historyLoading: false };
+    case 'UPTIME_OK':
+      return { ...state, uptime: action.data, uptimeLoading: false };
+    case 'UPTIME_ERR':
+      return { ...state, uptimeError: action.error, uptimeLoading: false };
   }
 };
 
@@ -187,6 +201,10 @@ const useStats = (): IUseStatsReturn => {
     fetchJson<IHistoryResponse>(`/api/stats/history${q}&limit=10`, signal)
       .then((data) => dispatch({ type: 'HISTORY_OK', data }))
       .catch((e) => { if (!signal.aborted) dispatch({ type: 'HISTORY_ERR', error: e.message }); });
+
+    fetchJson<IUptimeResponse>('/api/stats/uptime', signal)
+      .then((data) => dispatch({ type: 'UPTIME_OK', data }))
+      .catch((e) => { if (!signal.aborted) dispatch({ type: 'UPTIME_ERR', error: e.message }); });
 
     return () => controller.abort();
   }, [period, fetchKey]);

@@ -137,22 +137,7 @@ const MobileLayout = ({
   const activeTabId = activePane?.activeTabId ?? null;
 
   const handleSelectSurface = useCallback(
-    async (workspaceId: string, paneId: string, tabId: string) => {
-      const wsParam = `?workspace=${workspaceId}`;
-
-      // 서버에 activePaneId + activeTabId만 PATCH (root 전송 없음)
-      fetch(`/api/layout${wsParam}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activePaneId: paneId }),
-      }).catch(() => {});
-
-      fetch(`/api/layout/pane/${paneId}${wsParam}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activeTabId: tabId }),
-      }).catch(() => {});
-
+    (workspaceId: string, paneId: string, tabId: string) => {
       if (workspaceId !== activeWorkspaceId) {
         onSelectWorkspace(workspaceId);
       }

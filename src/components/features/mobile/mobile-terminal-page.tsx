@@ -110,9 +110,6 @@ const MobileTerminalPage = () => {
     if (!currentPane) {
       setSelectedPaneId(firstPane.id);
       setSelectedTabId(firstPane.activeTabId);
-    } else if (activePaneId && activePaneId !== selectedPaneId && targetPane) {
-      setSelectedPaneId(targetPane.id);
-      setSelectedTabId(targetPane.activeTabId);
     } else if (selectedTabId && !currentPane.tabs.find((t) => t.id === selectedTabId)) {
       const sorted = [...currentPane.tabs].sort((a, b) => a.order - b.order);
       const adjacent = sorted[0];
@@ -137,9 +134,10 @@ const MobileTerminalPage = () => {
 
   const handleSurfaceSelected = useCallback(
     (workspaceId: string, paneId: string, tabId: string) => {
+      setSelectedPaneId(paneId);
+      setSelectedTabId(tabId);
       if (workspaceId === activeWorkspaceId) {
-        setSelectedPaneId(paneId);
-        setSelectedTabId(tabId);
+        layout.focusPane(paneId);
         layout.switchTabInPane(paneId, tabId);
       }
     },

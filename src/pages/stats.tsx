@@ -16,6 +16,7 @@ import TokenSection from '@/components/features/stats/token-section';
 import ActivitySection from '@/components/features/stats/activity-section';
 import ProjectSection from '@/components/features/stats/project-section';
 import SessionSection from '@/components/features/stats/session-section';
+import UptimeSection from '@/components/features/stats/uptime-section';
 
 const SectionError = ({ onRetry }: { onRetry: () => void }) => (
   <div className="flex flex-col items-center justify-center gap-3 rounded-xl bg-card py-12 ring-1 ring-foreground/10">
@@ -59,6 +60,8 @@ const StatsPage = () => {
     allOverviewError,
     projectsError,
     sessionsError,
+    uptime,
+    uptimeLoading,
     refetch,
     initializing,
     fileCount,
@@ -128,6 +131,14 @@ const StatsPage = () => {
               <SectionError onRetry={refetch} />
             ) : overview ? (
               <TokenSection data={overview} />
+            ) : null}
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary sectionName="가동률">
+            {uptimeLoading ? (
+              <SectionSkeleton cardCount={4} hasChart />
+            ) : uptime ? (
+              <UptimeSection data={uptime} />
             ) : null}
           </SectionErrorBoundary>
 

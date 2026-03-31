@@ -326,6 +326,7 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
             timestamp,
             action: 'create',
             taskId: '',
+            toolUseId,
             subject: typeof input.subject === 'string' ? input.subject : '',
             description: typeof input.description === 'string' ? input.description : undefined,
             status: 'pending',
@@ -550,6 +551,7 @@ const createAgentGroup = (
 const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
   const toolCallMap = new Map<string, ITimelineToolCall>();
   const askQuestionMap = new Map<string, ITimelineAskUserQuestion>();
+  const taskCreateMap = new Map<string, ITimelineTaskProgress>();
   const result: ITimelineEntry[] = [];
 
   for (const entry of entries) {
@@ -561,6 +563,14 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
       result.push(entry);
     } else if (entry.type === 'tool-result') {
       const status = entry.isError ? 'error' as const : 'success' as const;
+
+      const pendingTask = taskCreateMap.get(entry.toolUseId);
+      if (pendingTask && entry.summary) {
+        const idMatch = entry.summary.match(/^Task #(\d+)/);
+        if (idMatch) pendingTask.taskId = idMatch[1];
+        taskCreateMap.delete(entry.toolUseId);
+      }
+
       const toolCall = toolCallMap.get(entry.toolUseId);
       if (toolCall) {
         toolCall.status = status;
@@ -586,6 +596,9 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
 
       result.push(entry);
     } else {
+      if (entry.type === 'task-progress' && entry.action === 'create' && entry.toolUseId) {
+        taskCreateMap.set(entry.toolUseId, entry);
+      }
       result.push(entry);
     }
   }

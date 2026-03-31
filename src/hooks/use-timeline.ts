@@ -289,7 +289,7 @@ const useTimeline = ({
       if (entry.action === 'create') {
         createIndex++;
         items.push({
-          taskId: String(createIndex),
+          taskId: entry.taskId || String(createIndex),
           subject: entry.subject ?? '',
           description: entry.description,
           status: entry.status,

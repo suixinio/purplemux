@@ -124,6 +124,39 @@ export interface IHistoryResponse {
   totalEntries: number;
 }
 
+// --- Uptime ---
+
+export interface IStreak {
+  startMs: number;
+  endMs: number;
+  durationMinutes: number;
+  maxConcurrent: number;
+  active: boolean;
+}
+
+export interface IStreakSegment {
+  startMinuteOfDay: number;
+  durationMinutes: number;
+  maxConcurrent: number;
+}
+
+export interface IStreakDay {
+  date: string;
+  segments: IStreakSegment[];
+}
+
+export interface IUptimeResponse {
+  streaks: IStreak[];
+  days: IStreakDay[];
+  longestStreakMinutes: number;
+  averageStreakMinutes: number;
+  totalStreaks: number;
+  totalActiveMinutes: number;
+  currentStreak: { active: boolean; minutes: number; maxConcurrent: number };
+  comboMinutes: Record<number, number>;
+  maxConcurrent: number;
+}
+
 // --- Daily Report ---
 
 export interface IDailyReportDay {

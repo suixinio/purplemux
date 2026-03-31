@@ -132,6 +132,89 @@ const runWithConcurrency = async <T>(
   return results;
 };
 
+const parseJsonlTimestampsByDay = async (
+  filePath: string,
+  targetDates: Set<string>,
+): Promise<Map<string, Map<string, number[]>>> => {
+  const days = new Map<string, Map<string, number[]>>();
+
+  try {
+    const stream = createReadStream(filePath, { encoding: 'utf-8' });
+    const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+    for await (const line of rl) {
+      if (!line.trim()) continue;
+      try {
+        const entry = JSON.parse(line) as Record<string, unknown>;
+        const timestamp = String(entry.timestamp ?? '');
+        if (!timestamp) continue;
+
+        const date = timestamp.slice(0, 10);
+        if (!targetDates.has(date)) continue;
+
+        const sessionId = String(entry.sessionId ?? '');
+        if (!sessionId) continue;
+
+        const type = String(entry.type ?? '');
+        if (type !== 'user' && type !== 'assistant') continue;
+
+        const ts = new Date(timestamp).getTime();
+        if (isNaN(ts)) continue;
+
+        let daySessions = days.get(date);
+        if (!daySessions) {
+          daySessions = new Map();
+          days.set(date, daySessions);
+        }
+
+        const existing = daySessions.get(sessionId);
+        if (existing) {
+          existing.push(ts);
+        } else {
+          daySessions.set(sessionId, [ts]);
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+  } catch {
+    // file read error
+  }
+
+  return days;
+};
+
+export const parseTimestampsByDay = async (
+  targetDates: Set<string>,
+): Promise<Map<string, Map<string, number[]>>> => {
+  const files = await collectJsonlFiles();
+  if (files.length === 0) return new Map();
+
+  const tasks = files.map((f) => () => parseJsonlTimestampsByDay(f.filePath, targetDates));
+  const allResults = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+
+  const merged = new Map<string, Map<string, number[]>>();
+  for (const result of allResults) {
+    for (const [date, daySessions] of result) {
+      let existing = merged.get(date);
+      if (!existing) {
+        existing = new Map();
+        merged.set(date, existing);
+      }
+      for (const [sessionId, timestamps] of daySessions) {
+        const existingTs = existing.get(sessionId);
+        if (existingTs) {
+          existingTs.push(...timestamps);
+        } else {
+          existing.set(sessionId, [...timestamps]);
+        }
+      }
+    }
+  }
+
+  return merged;
+};
+
 export const parseAllProjects = async (period: TPeriod): Promise<IProjectStats[]> => {
   const files = await collectJsonlFiles();
   if (files.length === 0) return [];

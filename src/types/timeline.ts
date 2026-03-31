@@ -128,6 +128,7 @@ export interface ITimelineTaskProgress {
   timestamp: number;
   action: 'create' | 'update';
   taskId: string;
+  toolUseId?: string;
   subject?: string;
   description?: string;
   status: TTaskStatus;
