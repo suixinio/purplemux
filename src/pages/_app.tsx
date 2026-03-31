@@ -39,7 +39,7 @@ const ElectronTitlebar = () => {
 
 export default function App({ Component, pageProps: { session, ...pageProps } }: AppProps) {
   return (
-    <SessionProvider session={session} refetchInterval={300}>
+    <SessionProvider session={session}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <main className="font-sans antialiased">
           <ElectronTitlebar />
