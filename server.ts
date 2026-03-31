@@ -134,13 +134,14 @@ const proxyUpgrade = (req: IncomingMessage, socket: import('stream').Duplex, hea
   socket.on('error', () => proxySocket.destroy());
 };
 
-const findFreePort = (startPort: number): Promise<number> =>
-  new Promise((resolve) => {
+const getFreePort = (): Promise<number> =>
+  new Promise((resolve, reject) => {
     const srv = createServer();
-    srv.listen(startPort, '127.0.0.1', () => {
-      srv.close(() => resolve(startPort));
+    srv.listen(0, '127.0.0.1', () => {
+      const { port } = srv.address() as { port: number };
+      srv.close(() => resolve(port));
     });
-    srv.on('error', () => resolve(findFreePort(startPort + 1)));
+    srv.on('error', reject);
   });
 
 const waitForPort = (port: number, timeoutMs = 10_000): Promise<void> =>
@@ -223,11 +224,12 @@ const startDev = async (port: number, appDir: string): Promise<IStartResult> => 
     server.listen(port, () => resolve());
   });
 
-  return { port, shutdown };
+  const actualPort = (server.address() as { port: number }).port;
+  return { port: actualPort, shutdown };
 };
 
 const startProd = async (port: number, appDir: string): Promise<IStartResult> => {
-  const internalPort = await findFreePort(port + 10000);
+  const internalPort = await getFreePort();
 
   const savedPort = process.env.PORT;
   process.env.PORT = String(internalPort);
@@ -280,7 +282,8 @@ const startProd = async (port: number, appDir: string): Promise<IStartResult> =>
     server.listen(port, () => resolve());
   });
 
-  return { port, shutdown };
+  const actualPort = (server.address() as { port: number }).port;
+  return { port: actualPort, shutdown };
 };
 
 export const start = async (opts?: IStartOptions): Promise<IStartResult> => {

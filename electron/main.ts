@@ -1,6 +1,5 @@
 import { app, BrowserWindow, shell, Menu, ipcMain, session, screen } from 'electron';
 import * as path from 'path';
-import * as net from 'net';
 import * as fs from 'fs';
 import * as os from 'os';
 
@@ -21,17 +20,6 @@ const fixEnv = () => {
     process.env.LANG = 'en_US.UTF-8';
   }
 };
-
-const findFreePort = (startPort: number): Promise<number> =>
-  new Promise((resolve) => {
-    const server = net.createServer();
-    server.listen(startPort, () => {
-      server.close(() => resolve(startPort));
-    });
-    server.on('error', () => {
-      resolve(findFreePort(startPort + 1));
-    });
-  });
 
 // --- Server Config (~/.purplemux/config.json) ---
 
@@ -199,8 +187,7 @@ const startLocalServer = async (): Promise<number> => {
     const mod = await import(path.join(appDir, 'dist', 'server.js'));
     cachedStart = mod.start;
   }
-  const port = await findFreePort(8022);
-  const result = await cachedStart!({ port });
+  const result = await cachedStart!({ port: 0 });
   serverShutdown = result.shutdown;
   localPort = result.port;
   process.title = 'purplemux';
