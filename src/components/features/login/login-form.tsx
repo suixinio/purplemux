@@ -162,7 +162,7 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
                   비밀번호를 잊으셨나요?
                   <HelpCircle className="h-3 w-3" />
                 </PopoverTrigger>
-                <PopoverContent className="w-72 text-xs" side="top">
+                <PopoverContent className="w-72 text-xs" side="bottom">
                   <p className="font-medium mb-1">비밀번호 초기화</p>
                   <p className="text-muted-foreground">
                     아래 파일을 삭제하고 서버를 재시작하면 온보딩 화면에서 새 비밀번호를 설정할 수 있습니다.
