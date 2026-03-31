@@ -22,12 +22,14 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!tab) {
       return res.status(404).json({ error: 'Pane을 찾을 수 없습니다' });
     }
-    getStatusManager().registerTab(tab.id, {
-      cliState: 'inactive',
-      workspaceId: wsId,
-      tabName: tab.name,
-      tmuxSession: tab.sessionName,
-    });
+    if (tab.panelType !== 'web-browser') {
+      getStatusManager().registerTab(tab.id, {
+        cliState: 'inactive',
+        workspaceId: wsId,
+        tabName: tab.name,
+        tmuxSession: tab.sessionName,
+      });
+    }
     return res.status(200).json(tab);
   } catch (err) {
     console.log(`[layout] tab creation failed: ${err instanceof Error ? err.message : err}`);

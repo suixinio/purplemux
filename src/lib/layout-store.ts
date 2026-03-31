@@ -251,12 +251,16 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     const pane = collectPanes(layout.root).find((p) => p.id === paneId);
     if (!pane) return null;
 
+    const isWebBrowser = panelType === 'web-browser';
     const tabId = generateTabId();
     const sessionName = workspaceSessionName(wsId, paneId, tabId);
-    await createSession(sessionName, 80, 24, cwd);
+    if (!isWebBrowser) {
+      await createSession(sessionName, 80, 24, cwd);
+    }
 
     const nextOrder = pane.tabs.length > 0 ? Math.max(...pane.tabs.map((t) => t.order)) + 1 : 0;
-    const tabName = name?.trim() || nextTabName(pane.tabs);
+    const defaultName = isWebBrowser ? 'Web Browser' : undefined;
+    const tabName = name?.trim() || defaultName || nextTabName(pane.tabs);
     const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}), ...(panelType ? { panelType: panelType as ITab['panelType'] } : {}) };
 
     pane.tabs.push(tab);
@@ -270,7 +274,7 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
   });
 
 export const removeTabFromPane = async (wsId: string, paneId: string, tabId: string): Promise<boolean> => {
-  const sessionName = await withLock(async () => {
+  const tabInfo = await withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
     const layout = await readLayoutFile(filePath);
     if (!layout) return null;
@@ -279,12 +283,15 @@ export const removeTabFromPane = async (wsId: string, paneId: string, tabId: str
     if (!pane) return null;
 
     const tab = pane.tabs.find((t) => t.id === tabId);
-    return tab?.sessionName ?? null;
+    if (!tab) return null;
+    return { sessionName: tab.sessionName, panelType: tab.panelType };
   });
 
-  if (!sessionName) return false;
+  if (!tabInfo) return false;
 
-  await killSession(sessionName);
+  if (tabInfo.panelType !== 'web-browser') {
+    await killSession(tabInfo.sessionName);
+  }
 
   return withLock(async () => {
     const filePath = resolveLayoutFile(wsId);
@@ -514,13 +521,17 @@ export const splitPaneInLayout = async (
   cwd?: string,
   panelType?: string,
 ): Promise<ILayoutData | null> => {
+  const isWebBrowser = panelType === 'web-browser';
   const paneId = generatePaneId();
   const tabId = generateTabId();
   const sessionName = workspaceSessionName(wsId, paneId, tabId);
 
-  await createSession(sessionName, 80, 24, cwd);
+  if (!isWebBrowser) {
+    await createSession(sessionName, 80, 24, cwd);
+  }
 
-  const tab: ITab = { id: tabId, sessionName, name: 'Terminal 1', order: 0, ...(cwd ? { cwd } : {}) };
+  const defaultName = isWebBrowser ? 'Web Browser' : 'Terminal 1';
+  const tab: ITab = { id: tabId, sessionName, name: defaultName, order: 0, ...(cwd ? { cwd } : {}) };
   if (panelType) tab.panelType = panelType as ITab['panelType'];
 
   const newPane: IPaneNode = { type: 'pane', id: paneId, tabs: [tab], activeTabId: tabId };
@@ -543,7 +554,7 @@ export const splitPaneInLayout = async (
     return layout;
   });
 
-  if (!result) {
+  if (!result && !isWebBrowser) {
     await killSession(sessionName).catch(() => {});
   }
 
@@ -633,7 +644,7 @@ export const patchTab = async (
   wsId: string,
   paneId: string,
   tabId: string,
-  patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand'>>,
+  patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand' | 'webUrl'>>,
 ): Promise<ILayoutData | null> =>
   mutate(wsId, (layout) => {
     const pane = findPane(layout.root, paneId);
@@ -645,5 +656,6 @@ export const patchTab = async (
     if (patch.title !== undefined) tab.title = patch.title;
     if (patch.cwd !== undefined) tab.cwd = patch.cwd;
     if (patch.lastCommand !== undefined) tab.lastCommand = patch.lastCommand;
+    if (patch.webUrl !== undefined) tab.webUrl = patch.webUrl;
     return layout;
   });

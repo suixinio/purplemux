@@ -16,6 +16,7 @@ import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
 import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
+import WebBrowserPanel from '@/components/features/terminal/web-browser-panel';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle } from '@/lib/tab-title';
@@ -87,6 +88,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
   const isClaudeCode = activePanelType === 'claude-code';
+  const isWebBrowser = activePanelType === 'web-browser';
 
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
@@ -333,6 +335,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     if (!isReady || !activeTabId) return;
     const tab = tabs.find((t) => t.id === activeTabId);
     if (!tab) return;
+    if (tab.panelType === 'web-browser') {
+      connectedSessionRef.current = null;
+      return;
+    }
     if (connectedSessionRef.current === tab.sessionName) return;
 
     if (connectedSessionRef.current !== null) {
@@ -412,15 +418,15 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     [paneId, activeTabId, switchTabInPane],
   );
 
-  const handleCreateTab = useCallback(async () => {
+  const handleCreateTab = useCallback(async (panelType?: TPanelType) => {
     setIsCreating(true);
-    const newTab = await createTabInPane(paneId);
+    const newTab = await createTabInPane(paneId, panelType);
     if (newTab) {
       const currentTabId = activeTabIdRef.current;
       const currentTitle = currentTabId
         ? useTabMetadataStore.getState().metadata[currentTabId]?.title
         : null;
-      if (currentTitle) {
+      if (currentTitle && panelType !== 'web-browser') {
         useTabMetadataStore.getState().setTitle(newTab.id, currentTitle);
       }
     }
@@ -496,6 +502,15 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     setIsPanelTransitioning(true);
     updateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, tabs, updateTabPanelType]);
+
+  const handleWebUrlChange = useCallback((url: string) => {
+    if (!activeTabId || !layoutWsId) return;
+    fetch(`/api/layout/pane/${paneId}/tabs/${activeTabId}?workspace=${layoutWsId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ webUrl: url }),
+    }).catch(() => {});
+  }, [activeTabId, paneId, layoutWsId]);
 
   useEffect(() => {
     if (!activeTabId || claudeStatus !== 'running' || activePanelType !== 'terminal') {
@@ -691,11 +706,19 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       <div
         role="tabpanel"
         className="relative min-h-0 flex-1 flex flex-col"
-        style={{ backgroundColor: terminalTheme.colors.background }}
-        onDragOver={handleTerminalDragOver}
-        onDrop={handleTerminalDrop}
+        style={isWebBrowser ? undefined : { backgroundColor: terminalTheme.colors.background }}
+        onDragOver={isWebBrowser ? undefined : handleTerminalDragOver}
+        onDrop={isWebBrowser ? undefined : handleTerminalDrop}
       >
-        <Group
+        {isWebBrowser && activeTabId && (
+          <WebBrowserPanel
+            key={activeTabId}
+            initialUrl={activeTab?.webUrl}
+            onUrlChange={handleWebUrlChange}
+          />
+        )}
+
+        {!isWebBrowser && <Group
           groupRef={splitGroupRef}
           orientation="vertical"
           defaultLayout={isClaudeCode
@@ -789,11 +812,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
               />
             </div>
           </Panel>
-        </Group>
+        </Group>}
 
         {noTabs && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
-            <Button className="gap-1.5" onClick={handleCreateTab} disabled={isCreating}>
+            <Button className="gap-1.5" onClick={() => handleCreateTab()} disabled={isCreating}>
               {isCreating ? (
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (

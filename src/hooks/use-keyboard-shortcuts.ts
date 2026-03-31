@@ -8,7 +8,7 @@ import {
   TAB_NUMBER_KEYS,
   WORKSPACE_NUMBER_KEYS,
 } from '@/lib/keyboard-shortcuts';
-import type { ILayoutData, IPaneNode, ITab } from '@/types/terminal';
+import type { ILayoutData, IPaneNode, ITab, TPanelType } from '@/types/terminal';
 
 interface ILayoutActions {
   layout: ILayoutData | null;
@@ -17,7 +17,7 @@ interface ILayoutActions {
   splitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => Promise<void>;
   closePane: (paneId: string) => Promise<void>;
   focusPane: (paneId: string) => void;
-  createTabInPane: (paneId: string) => Promise<ITab | null>;
+  createTabInPane: (paneId: string, panelType?: TPanelType) => Promise<ITab | null>;
   deleteTabInPane: (paneId: string, tabId: string) => Promise<void>;
   switchTabInPane: (paneId: string, tabId: string) => void;
 }

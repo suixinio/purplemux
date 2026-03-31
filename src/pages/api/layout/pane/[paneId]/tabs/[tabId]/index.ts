@@ -37,10 +37,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'PATCH') {
-    const { name, panelType, title, cwd, lastCommand } = req.body ?? {};
+    const { name, panelType, title, cwd, lastCommand, webUrl } = req.body ?? {};
 
-    if (name !== undefined || panelType !== undefined || title !== undefined || cwd !== undefined || lastCommand !== undefined) {
-      const patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand'>> = {};
+    if (name !== undefined || panelType !== undefined || title !== undefined || cwd !== undefined || lastCommand !== undefined || webUrl !== undefined) {
+      const patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand' | 'webUrl'>> = {};
       if (name !== undefined) {
         if (typeof name !== 'string' || !name.trim()) {
           return res.status(400).json({ error: 'name은 빈 문자열일 수 없습니다' });
@@ -51,6 +51,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       if (title !== undefined) patch.title = title;
       if (cwd !== undefined) patch.cwd = cwd;
       if (lastCommand !== undefined) patch.lastCommand = lastCommand;
+      if (webUrl !== undefined) patch.webUrl = webUrl;
 
       const result = await patchTab(wsId, paneId, tabId, patch);
       if (!result) {

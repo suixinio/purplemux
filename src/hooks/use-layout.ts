@@ -63,7 +63,7 @@ interface ILayoutState {
   focusPane: (paneId: string) => void;
   updateRatio: (path: number[], ratio: number) => void;
   moveTab: (tabId: string, fromPaneId: string, toPaneId: string, toIndex: number) => void;
-  createTabInPane: (paneId: string) => Promise<ITab | null>;
+  createTabInPane: (paneId: string, panelType?: TPanelType) => Promise<ITab | null>;
   deleteTabInPane: (paneId: string, tabId: string) => Promise<void>;
   restartTabInPane: (paneId: string, tabId: string, command?: string) => Promise<boolean>;
   switchTabInPane: (paneId: string, tabId: string) => void;
@@ -348,21 +348,21 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     }).catch(() => get().fetchLayout(undefined, false));
   },
 
-  createTabInPane: async (paneId) => {
+  createTabInPane: async (paneId, explicitPanelType?) => {
     const { layout, workspaceId } = get();
     try {
       let cwd: string | undefined;
-      let panelType: TPanelType | undefined;
-      if (layout) {
-        const pane = findPane(layout.root, paneId);
-        const activeTab = pane?.tabs.find((t) => t.id === pane.activeTabId);
-        if (activeTab) {
-          panelType = activeTab.panelType;
-          try {
-            const cwdRes = await fetch(wsQuery(`/api/layout/cwd?session=${activeTab.sessionName}`, workspaceId));
-            if (cwdRes.ok) cwd = (await cwdRes.json()).cwd;
-          } catch { /* fallback */ }
-        }
+      let panelType: TPanelType | undefined = explicitPanelType;
+      const pane = layout ? findPane(layout.root, paneId) : undefined;
+      const activeTab = pane?.tabs.find((t) => t.id === pane.activeTabId);
+      if (!panelType && activeTab) {
+        panelType = activeTab.panelType;
+      }
+      if (panelType !== 'web-browser' && activeTab) {
+        try {
+          const cwdRes = await fetch(wsQuery(`/api/layout/cwd?session=${activeTab.sessionName}`, workspaceId));
+          if (cwdRes.ok) cwd = (await cwdRes.json()).cwd;
+        } catch { /* fallback */ }
       }
 
       const res = await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs`, workspaceId), {

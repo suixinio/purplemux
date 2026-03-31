@@ -7,12 +7,14 @@ import {
   AlertTriangle,
   Loader2,
   Terminal,
+  Globe,
 } from 'lucide-react';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ITab } from '@/types/terminal';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import type { ITab, TPanelType } from '@/types/terminal';
 import { isAutoTabName } from '@/lib/tab-title';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 
@@ -27,7 +29,7 @@ interface IPaneTabBarProps {
   paneCount: number;
   isSplitting: boolean;
   onSwitchTab: (tabId: string) => void;
-  onCreateTab: () => void;
+  onCreateTab: (panelType?: TPanelType) => void;
   onDeleteTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
   onReorderTabs: (tabIds: string[]) => void;
@@ -374,6 +376,8 @@ const PaneTabBar = ({
                   />
                   {tab.panelType === 'claude-code' ? (
                     <ClaudeCodeIcon className="h-3.5 w-3.5" />
+                  ) : tab.panelType === 'web-browser' ? (
+                    <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
                   ) : (
                     <Terminal className="h-3 w-3 shrink-0 text-muted-foreground" />
                   )}
@@ -427,13 +431,12 @@ const PaneTabBar = ({
         <div className="flex shrink-0 items-stretch">
           {/* 탭 추가 */}
           <div className="flex items-center border-l border-r border-border px-0.5">
-            <Tooltip>
-              <TooltipTrigger
+            <Popover>
+              <PopoverTrigger
                 className={cn(
                   'flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground',
                   isCreating && 'pointer-events-none opacity-50',
                 )}
-                onClick={onCreateTab}
                 disabled={isCreating}
                 aria-label="새 탭"
               >
@@ -442,9 +445,24 @@ const PaneTabBar = ({
                 ) : (
                   <Plus className="h-3.5 w-3.5" />
                 )}
-              </TooltipTrigger>
-              <TooltipContent side="bottom">새 탭</TooltipContent>
-            </Tooltip>
+              </PopoverTrigger>
+              <PopoverContent side="bottom" align="start" className="w-40 p-1">
+                {([
+                  { type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
+                  { type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: 'Claude' },
+                  { type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
+                ] as const).map((item) => (
+                  <button
+                    key={item.type}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-xs text-foreground hover:bg-accent"
+                    onClick={() => onCreateTab(item.type)}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
           </div>
 
           {paneCount >= 2 && (

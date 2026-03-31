@@ -9,7 +9,7 @@ export type TConnectionStatus =
 
 export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-found' | null;
 
-export type TPanelType = 'terminal' | 'claude-code';
+export type TPanelType = 'terminal' | 'claude-code' | 'web-browser';
 
 export interface ITab {
   id: string;
@@ -24,6 +24,7 @@ export interface ITab {
   claudeSummary?: string | null;
   lastCommand?: string | null;
   cliState?: TCliState;
+  webUrl?: string | null;
 }
 
 export interface ISplitNode {
