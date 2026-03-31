@@ -9,7 +9,7 @@ import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { useLayoutStore } from '@/hooks/use-layout';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useConfigStore from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
 import TerminalContainer from '@/components/features/terminal/terminal-container';
 import ClaudeCodePanel from '@/components/features/terminal/claude-code-panel';
@@ -569,7 +569,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     useTabStore.getState().setRestarting(activeTabId, true);
-    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
@@ -586,7 +586,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     if (!pendingRestartRef.current || claudeStatus === 'running') return;
     pendingRestartRef.current = false;
     if (status !== 'connected') return;
-    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);

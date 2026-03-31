@@ -12,11 +12,6 @@ export interface IWorkspaceInitialData {
   workspaces: IWorkspace[];
   sidebarCollapsed: boolean;
   sidebarWidth: number;
-  terminalTheme: { light: string; dark: string } | null;
-  dangerouslySkipPermissions: boolean;
-  editorUrl: string;
-  authPassword: string;
-  authSecret: string;
 }
 
 interface IWorkspaceState {
@@ -24,10 +19,6 @@ interface IWorkspaceState {
   activeWorkspaceId: string | null;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
-  dangerouslySkipPermissions: boolean;
-  editorUrl: string;
-  authPassword: string;
-  authSecret: string;
   isLoading: boolean;
   error: string | null;
 
@@ -44,9 +35,6 @@ interface IWorkspaceState {
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
-  setDangerouslySkipPermissions: (enabled: boolean) => void;
-  setEditorUrl: (url: string) => void;
-  setAuthCredentials: (password: string, secret: string) => void;
   validateDirectory: (directory: string) => Promise<IValidateResponse>;
 }
 
@@ -81,10 +69,6 @@ const resolveActiveWorkspaceId = (workspaces: IWorkspace[]): string | null => {
 const saveActive = (updates: {
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
-  dangerouslySkipPermissions?: boolean;
-  editorUrl?: string;
-  authPassword?: string;
-  authSecret?: string;
 }) => {
   fetch('/api/workspace/active', {
     method: 'PATCH',
@@ -100,10 +84,6 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   activeWorkspaceId: null,
   sidebarCollapsed: false,
   sidebarWidth: 200,
-  dangerouslySkipPermissions: false,
-  editorUrl: '',
-  authPassword: '',
-  authSecret: '',
   isLoading: true,
   error: null,
 
@@ -115,10 +95,6 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       activeWorkspaceId,
       sidebarCollapsed: data.sidebarCollapsed,
       sidebarWidth: data.sidebarWidth,
-      dangerouslySkipPermissions: data.dangerouslySkipPermissions,
-      editorUrl: data.editorUrl,
-      authPassword: data.authPassword,
-      authSecret: data.authSecret,
       isLoading: false,
       error: null,
     });
@@ -137,10 +113,6 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         activeWorkspaceId,
         sidebarCollapsed: data.sidebarCollapsed ?? false,
         sidebarWidth: data.sidebarWidth ?? 200,
-        dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
-        editorUrl: data.editorUrl ?? '',
-        authPassword: data.authPassword ?? '',
-        authSecret: data.authSecret ?? '',
         isLoading: false,
       });
     } catch {
@@ -273,22 +245,6 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
 
   saveSidebarWidth: (width) => {
     saveActive({ sidebarWidth: width });
-  },
-
-  setDangerouslySkipPermissions: (enabled) => {
-    set({ dangerouslySkipPermissions: enabled });
-    saveActive({ dangerouslySkipPermissions: enabled });
-  },
-
-  setEditorUrl: (url) => {
-    if (get().editorUrl === url) return;
-    set({ editorUrl: url });
-    saveActive({ editorUrl: url });
-  },
-
-  setAuthCredentials: (password, secret) => {
-    set({ authPassword: password, authSecret: secret });
-    saveActive({ authPassword: password, authSecret: secret });
   },
 
   validateDirectory: async (directory) => {

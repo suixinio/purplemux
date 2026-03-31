@@ -15,7 +15,7 @@ const useThemeIdStore = create<IThemeIdState>((set) => ({
   setTheme: (mode, id) => {
     set((state) => {
       const next = { ...state.themeIds, [mode]: id };
-      fetch('/api/workspace/active', {
+      fetch('/api/config', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ terminalTheme: next }),

@@ -59,10 +59,5 @@ export interface IWorkspacesData {
   workspaces: IWorkspace[];
   sidebarCollapsed: boolean;
   sidebarWidth: number;
-  terminalTheme?: { light: string; dark: string };
-  dangerouslySkipPermissions?: boolean;
-  editorUrl?: string;
-  authPassword?: string;
-  authSecret?: string;
   updatedAt: string;
 }

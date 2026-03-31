@@ -2,9 +2,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { AlertTriangle, Check, Lock, X } from 'lucide-react';
+import { AlertTriangle, Check, HelpCircle, Lock, X } from 'lucide-react';
 import { signIn } from 'next-auth/react';
 import AppLogo from '@/components/layout/app-logo';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useEffect, useState } from 'react';
 
 interface IToolStatus {
@@ -155,9 +156,21 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
               <Lock className="size-4" />
               {isLoading ? '로그인 중...' : '로그인'}
             </Button>
-            <p className="text-center text-muted-foreground text-xs">
-              비밀번호는 서버 로그에서 확인할 수 있습니다
-            </p>
+            <div className="flex items-center justify-center gap-1">
+              <Popover>
+                <PopoverTrigger className="flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground transition-colors">
+                  비밀번호를 잊으셨나요?
+                  <HelpCircle className="h-3 w-3" />
+                </PopoverTrigger>
+                <PopoverContent className="w-72 text-xs" side="top">
+                  <p className="font-medium mb-1">비밀번호 초기화</p>
+                  <p className="text-muted-foreground">
+                    아래 파일을 삭제하고 서버를 재시작하면 온보딩 화면에서 새 비밀번호를 설정할 수 있습니다.
+                  </p>
+                  <code className="mt-2 block rounded bg-muted px-2 py-1 font-mono">~/.purplemux/config.json</code>
+                </PopoverContent>
+              </Popover>
+            </div>
           </form>
         )}
       </div>

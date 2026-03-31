@@ -10,7 +10,7 @@ import { createInterface } from 'readline';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPaneTitle } from './tmux';
 import { cwdToProjectPath } from './session-list';
 import { updateTabClaudeSessionId, updateTabClaudeSummary } from './layout-store';
-import { getDangerouslySkipPermissions } from './workspace-store';
+import { getDangerouslySkipPermissions } from './config-store';
 import { HOOK_SETTINGS_PATH } from './hook-settings';
 import { calculateCost } from './format-tokens';
 import type { TTimelineServerMessage, IInitMeta, ITimelineEntry } from '@/types/timeline';

@@ -90,8 +90,8 @@ const readWorkspacesFile = async (): Promise<IWorkspacesData | null> => {
 };
 
 const writeWorkspacesFile = async (data: IWorkspacesData): Promise<void> => {
-  const { workspaces, sidebarCollapsed, sidebarWidth, terminalTheme, dangerouslySkipPermissions, editorUrl, authPassword, authSecret } = data;
-  const contentKey = JSON.stringify({ workspaces, sidebarCollapsed, sidebarWidth, terminalTheme, dangerouslySkipPermissions, editorUrl, authPassword, authSecret });
+  const { workspaces, sidebarCollapsed, sidebarWidth } = data;
+  const contentKey = JSON.stringify({ workspaces, sidebarCollapsed, sidebarWidth });
 
   if (g.__ptWorkspacesContentCache === contentKey) return;
 
@@ -178,13 +178,8 @@ export const initWorkspaceStore = async (): Promise<void> => {
   }
 
   if (!data) {
-    const initial = emptyState();
-    if (process.env.AUTH_PASSWORD && process.env.NEXTAUTH_SECRET) {
-      initial.authPassword = process.env.AUTH_PASSWORD;
-      initial.authSecret = process.env.NEXTAUTH_SECRET;
-    }
-    await writeWorkspacesFile(initial);
-    console.log('[purplemux] 초기 workspaces.json 생성 (auth 포함)');
+    await writeWorkspacesFile(emptyState());
+    console.log('[purplemux] 초기 workspaces.json 생성');
     return;
   }
 
@@ -234,35 +229,14 @@ export const getWorkspaces = async (): Promise<{
   workspaces: IWorkspace[];
   sidebarCollapsed: boolean;
   sidebarWidth: number;
-  terminalTheme: { light: string; dark: string } | null;
-  dangerouslySkipPermissions: boolean;
-  editorUrl: string;
-  authPassword: string;
-  authSecret: string;
 }> => {
   const data = await readWorkspacesFile();
-  if (!data) return { workspaces: [], sidebarCollapsed: false, sidebarWidth: 200, terminalTheme: null, dangerouslySkipPermissions: false, editorUrl: '', authPassword: '', authSecret: '' };
-
-  let theme = data.terminalTheme ?? null;
-
-  // Migration: terminalThemeId (string) → terminalTheme (object)
-  const legacy = data as unknown as { terminalThemeId?: string };
-  if (!theme && legacy.terminalThemeId) {
-    theme = { light: 'catppuccin-latte', dark: legacy.terminalThemeId };
-    data.terminalTheme = theme;
-    delete legacy.terminalThemeId;
-    await writeWorkspacesFile(data);
-  }
+  if (!data) return { workspaces: [], sidebarCollapsed: false, sidebarWidth: 200 };
 
   return {
     workspaces: data.workspaces,
     sidebarCollapsed: data.sidebarCollapsed,
     sidebarWidth: data.sidebarWidth,
-    terminalTheme: theme,
-    dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
-    editorUrl: data.editorUrl ?? '',
-    authPassword: data.authPassword ?? '',
-    authSecret: data.authSecret ?? '',
   };
 };
 
@@ -356,21 +330,11 @@ export const renameWorkspace = async (workspaceId: string, name: string): Promis
 export const updateActive = async (updates: {
   sidebarCollapsed?: boolean;
   sidebarWidth?: number;
-  terminalTheme?: { light: string; dark: string };
-  dangerouslySkipPermissions?: boolean;
-  editorUrl?: string;
-  authPassword?: string;
-  authSecret?: string;
 }): Promise<void> =>
   withLock(async () => {
     const data = (await readWorkspacesFile()) ?? emptyState();
     if (updates.sidebarCollapsed !== undefined) data.sidebarCollapsed = updates.sidebarCollapsed;
     if (updates.sidebarWidth !== undefined) data.sidebarWidth = updates.sidebarWidth;
-    if (updates.terminalTheme !== undefined) data.terminalTheme = updates.terminalTheme;
-    if (updates.dangerouslySkipPermissions !== undefined) data.dangerouslySkipPermissions = updates.dangerouslySkipPermissions;
-    if (updates.editorUrl !== undefined) data.editorUrl = updates.editorUrl;
-    if (updates.authPassword !== undefined) data.authPassword = updates.authPassword || undefined;
-    if (updates.authSecret !== undefined) data.authSecret = updates.authSecret || undefined;
     await writeWorkspacesFile(data);
   });
 
@@ -385,11 +349,6 @@ export const updateWorkspaceDirectories = async (workspaceId: string, directorie
     ws.directories = directories;
     await writeWorkspacesFile(data);
   });
-
-export const getDangerouslySkipPermissions = async (): Promise<boolean> => {
-  const data = await readWorkspacesFile();
-  return data?.dangerouslySkipPermissions ?? false;
-};
 
 export const reorderWorkspaces = async (workspaceIds: string[]): Promise<boolean> =>
   withLock(async () => {

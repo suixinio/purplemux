@@ -16,7 +16,7 @@ import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useConfigStore from '@/hooks/use-config-store';
 
 const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
   'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
@@ -334,7 +334,7 @@ const MobileSurfaceView = ({
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     useTabStore.getState().setRestarting(activeTabId, true);
-    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
@@ -351,7 +351,7 @@ const MobileSurfaceView = ({
     if (!pendingRestartRef.current || claudeStatus === 'running') return;
     pendingRestartRef.current = false;
     if (status !== 'connected') return;
-    const dangerous = useWorkspaceStore.getState().dangerouslySkipPermissions;
+    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);

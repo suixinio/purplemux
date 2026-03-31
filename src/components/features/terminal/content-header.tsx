@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useConfigStore from '@/hooks/use-config-store';
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -62,7 +62,7 @@ const ContentHeader = ({
     (state) => (activeTab?.id ? state.metadata[activeTab.id]?.cwd : undefined),
   );
 
-  const editorUrl = useWorkspaceStore((state) => state.editorUrl);
+  const editorUrl = useConfigStore((state) => state.editorUrl);
 
   const handlePanelSwitch = (value: string) => {
     if (isToggling || !focusedPane || !activeTab) return;

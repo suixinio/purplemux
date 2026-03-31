@@ -3,10 +3,13 @@ import dynamic from 'next/dynamic';
 import type { GetServerSideProps } from 'next';
 import { SWRConfig } from 'swr';
 import { getWorkspaces } from '@/lib/workspace-store';
+import { getConfig } from '@/lib/config-store';
 import { readQuickPrompts } from '@/lib/quick-prompts-store';
 import type { IQuickPromptsData } from '@/lib/quick-prompts-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import type { IWorkspaceInitialData } from '@/hooks/use-workspace-store';
+import useConfigStore from '@/hooks/use-config-store';
+import type { IConfigInitialData } from '@/hooks/use-config-store';
 import { initTerminalTheme } from '@/hooks/use-terminal-theme';
 import { useEffect, useRef } from 'react';
 import useIsMobile from '@/hooks/use-is-mobile';
@@ -24,10 +27,11 @@ const MobileTerminalPage = dynamic(
 
 interface IIndexProps {
   initialWorkspace: IWorkspaceInitialData;
+  initialConfig: IConfigInitialData;
   initialQuickPrompts: IQuickPromptsData;
 }
 
-const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
+const Index = ({ initialWorkspace, initialConfig, initialQuickPrompts }: IIndexProps) => {
   const isMobile = useIsMobile();
   useBrowserTitle('purplemux');
   const hydratedRef = useRef(false);
@@ -35,11 +39,12 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
     if (!hydratedRef.current) {
       hydratedRef.current = true;
       useWorkspaceStore.getState().hydrate(initialWorkspace);
-      if (initialWorkspace.terminalTheme) {
-        initTerminalTheme(initialWorkspace.terminalTheme);
+      useConfigStore.getState().hydrate(initialConfig);
+      if (initialConfig.terminalTheme) {
+        initTerminalTheme(initialConfig.terminalTheme);
       }
     }
-  }, [initialWorkspace]);
+  }, [initialWorkspace, initialConfig]);
 
   const content = isMobile ? (
     <>
@@ -70,8 +75,8 @@ const Index = ({ initialWorkspace, initialQuickPrompts }: IIndexProps) => {
 };
 
 export const getServerSideProps: GetServerSideProps<IIndexProps> = async () => {
-  const [data, quickPrompts] = await Promise.all([getWorkspaces(), readQuickPrompts()]);
-  return { props: { initialWorkspace: data, initialQuickPrompts: quickPrompts } };
+  const [data, configData, quickPrompts] = await Promise.all([getWorkspaces(), getConfig(), readQuickPrompts()]);
+  return { props: { initialWorkspace: data, initialConfig: configData, initialQuickPrompts: quickPrompts } };
 };
 
 export default Index;

@@ -15,6 +15,7 @@ import { scanSessions, applyConfig } from './src/lib/tmux';
 import { initWorkspaceStore } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
 import { initAuthCredentials } from './src/lib/auth-credentials';
+import { initConfigStore } from './src/lib/config-store';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -290,9 +291,13 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   const port = opts?.port ?? parseInt(process.env.PORT || '8022', 10);
   const appDir = process.env.__PMUX_APP_DIR || process.cwd();
 
+  await initConfigStore();
+
   const credentials = initAuthCredentials();
-  process.env.AUTH_PASSWORD = credentials.password;
-  process.env.NEXTAUTH_SECRET = credentials.secret;
+  if (credentials) {
+    process.env.AUTH_PASSWORD = credentials.password;
+    process.env.NEXTAUTH_SECRET = credentials.secret;
+  }
 
   await scanSessions();
   await applyConfig();
@@ -304,7 +309,7 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   const result = dev ? await startDev(port, appDir) : await startProd(port, appDir);
 
   console.log(`> Server listening at http://localhost:${result.port} as ${dev ? 'development' : process.env.NODE_ENV}`);
-  console.log(`> Auth password: ${credentials.plainPassword ?? '(stored)'}${credentials.fixed ? ' (fixed)' : ''}`);
+  console.log(`> Auth: ${credentials ? 'configured' : '온보딩 대기 (http://localhost:' + result.port + '/login)'}`);
 
   return result;
 };

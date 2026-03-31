@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useConfigStore from '@/hooks/use-config-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
@@ -199,8 +199,8 @@ const TerminalTab = () => {
 };
 
 const EditorTab = () => {
-  const editorUrl = useWorkspaceStore((state) => state.editorUrl);
-  const setEditorUrl = useWorkspaceStore((state) => state.setEditorUrl);
+  const editorUrl = useConfigStore((state) => state.editorUrl);
+  const setEditorUrl = useConfigStore((state) => state.setEditorUrl);
   const [localEditorUrl, setLocalEditorUrl] = useState(editorUrl);
 
   const isDirty = localEditorUrl.trim() !== editorUrl;
@@ -261,7 +261,8 @@ const EditorTab = () => {
 };
 
 const ClaudeTab = () => {
-  const { dangerouslySkipPermissions, setDangerouslySkipPermissions } = useWorkspaceStore();
+  const dangerouslySkipPermissions = useConfigStore((state) => state.dangerouslySkipPermissions);
+  const setDangerouslySkipPermissions = useConfigStore((state) => state.setDangerouslySkipPermissions);
 
   return (
     <div className="space-y-4">
@@ -291,16 +292,13 @@ const randomHex = (length: number): string => {
 };
 
 const AuthTab = () => {
-  const authPassword = useWorkspaceStore((state) => state.authPassword);
-  const authSecret = useWorkspaceStore((state) => state.authSecret);
-  const setAuthCredentials = useWorkspaceStore((state) => state.setAuthCredentials);
+  const authPassword = useConfigStore((state) => state.authPassword);
+  const setAuthCredentials = useConfigStore((state) => state.setAuthCredentials);
   const [localPassword, setLocalPassword] = useState('');
-  const [localSecret, setLocalSecret] = useState(authSecret);
   const [passwordTouched, setPasswordTouched] = useState(false);
 
   const hasStoredPassword = !!authPassword;
-  const secretDirty = localSecret.trim() !== authSecret;
-  const isDirty = passwordTouched || secretDirty;
+  const isDirty = passwordTouched && localPassword.trim().length >= 4;
 
   const handlePasswordChange = (value: string) => {
     setLocalPassword(value);
@@ -308,7 +306,8 @@ const AuthTab = () => {
   };
 
   const handleSave = () => {
-    setAuthCredentials(localPassword.trim(), localSecret.trim());
+    const newSecret = randomHex(64);
+    setAuthCredentials(localPassword.trim(), newSecret);
     setLocalPassword('');
     setPasswordTouched(false);
     toast.success('저장되었습니다. 서버 재시작 후 적용됩니다.');
@@ -317,14 +316,14 @@ const AuthTab = () => {
   return (
     <div className="space-y-6">
       <Field>
-        <FieldLabel htmlFor="auth-password">비밀번호</FieldLabel>
+        <FieldLabel htmlFor="auth-password">비밀번호 변경</FieldLabel>
         <FieldDescription>
-          로그인 시 사용할 비밀번호입니다. {hasStoredPassword ? '(SHA-512로 암호화되어 저장됨)' : ''}
+          새 비밀번호를 입력하면 SHA-512로 해싱되어 저장됩니다.
         </FieldDescription>
         <div className="flex gap-2">
           <Input
             id="auth-password"
-            placeholder={hasStoredPassword ? '새 비밀번호 입력 시 변경' : '비워두면 랜덤 생성'}
+            placeholder={hasStoredPassword ? '새 비밀번호 입력 (4자 이상)' : '비밀번호 입력 (4자 이상)'}
             value={localPassword}
             onChange={(e) => handlePasswordChange(e.target.value)}
           />
@@ -334,24 +333,8 @@ const AuthTab = () => {
         </div>
       </Field>
 
-      <Field>
-        <FieldLabel htmlFor="auth-secret">시크릿</FieldLabel>
-        <FieldDescription>JWT 서명에 사용되는 시크릿입니다.</FieldDescription>
-        <div className="flex gap-2">
-          <Input
-            id="auth-secret"
-            placeholder="비워두면 랜덤 생성"
-            value={localSecret}
-            onChange={(e) => setLocalSecret(e.target.value)}
-          />
-          <Button variant="outline" size="icon" className="shrink-0" onClick={() => setLocalSecret(randomHex(64))}>
-            <Dices className="h-4 w-4" />
-          </Button>
-        </div>
-      </Field>
-
       <FieldDescription>
-        비밀번호는 SHA-512로 해싱되어 저장됩니다. 비워두면 서버 시작 시 매번 랜덤 생성됩니다.
+        초기화하려면 ~/.purplemux/config.json 파일을 삭제하고 서버를 재시작하세요.
       </FieldDescription>
 
       <div className="flex justify-end">

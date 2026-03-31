@@ -2,7 +2,8 @@ import { WebSocket } from 'ws';
 
 type TSyncEvent =
   | { type: 'workspace' }
-  | { type: 'layout'; workspaceId: string };
+  | { type: 'layout'; workspaceId: string }
+  | { type: 'config' };
 
 const g = globalThis as unknown as { __ptSyncClients?: Set<WebSocket> };
 if (!g.__ptSyncClients) g.__ptSyncClients = new Set();

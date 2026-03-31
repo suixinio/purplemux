@@ -1,6 +1,7 @@
 import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-store';
 import { hasSession, createSession, getPaneCurrentCommand, sendKeys } from '@/lib/tmux';
-import { getWorkspaces, getDangerouslySkipPermissions } from '@/lib/workspace-store';
+import { getWorkspaces } from '@/lib/workspace-store';
+import { getDangerouslySkipPermissions } from '@/lib/config-store';
 import { HOOK_SETTINGS_PATH } from '@/lib/hook-settings';
 
 const RESUME_INTERVAL_MS = 2_000;
