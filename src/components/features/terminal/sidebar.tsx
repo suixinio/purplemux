@@ -27,7 +27,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
-import isElectron from '@/hooks/use-is-electron';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
 
@@ -233,9 +232,6 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
         role="navigation"
         aria-label="Workspace 목록"
       >
-        {isElectron && (
-          <div className="h-titlebar shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
-        )}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border px-3">
           <AppLogo shimmer={hasBusy} />
           <div className="flex items-center gap-0.5">
@@ -403,9 +399,6 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
 
       {collapsed && (
         <div className="flex w-8 shrink-0 flex-col border-r border-sidebar-border bg-sidebar">
-          {isElectron && (
-            <div className="h-titlebar shrink-0" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
-          )}
           <button
             className="flex flex-1 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent"
             onClick={handleToggleCollapse}

@@ -8,7 +8,6 @@ import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
-import isElectron from '@/hooks/use-is-electron';
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -78,9 +77,6 @@ const ContentHeader = ({
 
   return (
     <div className="shrink-0 border-b border-border bg-background">
-      {isElectron && (
-        <div className="h-titlebar" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties} />
-      )}
       <div className="flex h-12 items-center justify-between px-3">
       <div />
       <TooltipProvider>
