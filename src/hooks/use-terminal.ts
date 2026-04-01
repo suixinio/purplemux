@@ -30,7 +30,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
 
   useEffect(() => {
     callbacksRef.current = { theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler };
-  });
+  }, [theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler]);
 
   const write = useCallback((data: Uint8Array) => {
     writeQueueRef.current.push(data);

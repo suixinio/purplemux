@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect, type RefObject } from 'react';
 import { toast } from 'sonner';
 import type { TCliState } from '@/types/timeline';
 import { isCliIdle } from '@/hooks/use-tab-store';
@@ -72,8 +72,14 @@ const useWebInput = (
   const onRestartSession = options?.onRestartSession;
   const onMessageSent = options?.onMessageSent;
 
+  const draftTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => {
-    if (tabId) saveDraft(tabId, value);
+    if (!tabId) return;
+    if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    draftTimerRef.current = setTimeout(() => saveDraft(tabId, value), 300);
+    return () => {
+      if (draftTimerRef.current) clearTimeout(draftTimerRef.current);
+    };
   }, [tabId, value]);
 
   const send = useCallback(() => {

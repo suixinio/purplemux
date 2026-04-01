@@ -51,7 +51,7 @@ const useKeyboardShortcuts = ({
   useEffect(() => {
     layoutRef.current = layout;
     onSelectWorkspaceRef.current = onSelectWorkspace;
-  });
+  }, [layout, onSelectWorkspace]);
 
   useHotkeys(
     KEY_MAP.SPLIT_VERTICAL,

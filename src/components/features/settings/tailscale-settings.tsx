@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
-import { Check, Copy, ExternalLink, Loader2, Plus, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { Check, Copy, ExternalLink, Info, Loader2, Plus, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,11 +20,7 @@ interface ITailscaleStatus {
   serveEntries: IServeEntry[];
 }
 
-const PRESET_SERVES = [
-  { label: 'purplemux (8022)', httpsPort: '443', localPort: '8022' },
-  { label: 'Dev (8023)', httpsPort: '2443', localPort: '8023' },
-  { label: 'code-server (8080)', httpsPort: '8443', localPort: '8080' },
-];
+const DEFAULT_PORT = 8022;
 
 const CopyButton = ({ text }: { text: string }) => {
   const [copied, setCopied] = useState(false);
@@ -186,7 +182,10 @@ const TailscaleSettings = () => {
   }
 
   const activeEntries = status.serveEntries;
-  const activeHttpsPorts = new Set(activeEntries.map((e) => e.httpsPort));
+  const currentPort = typeof window !== 'undefined'
+    ? parseInt(window.location.port || '443', 10)
+    : DEFAULT_PORT;
+  const isNonDefaultPort = currentPort !== DEFAULT_PORT;
 
   return (
     <div className="space-y-6">
@@ -198,7 +197,7 @@ const TailscaleSettings = () => {
           </Button>
         </div>
         <div className="rounded-md border p-3 text-sm">
-          <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1.5">
+          <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-1.5">
             <span className="text-muted-foreground">호스트</span>
             <span className="font-mono text-xs">{status.hostname}</span>
             <span className="text-muted-foreground">DNS</span>
@@ -216,6 +215,28 @@ const TailscaleSettings = () => {
           </div>
         </div>
       </div>
+
+      {isNonDefaultPort && (
+        <div className="flex items-start gap-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-4">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+          <div className="space-y-2">
+            <p className="text-sm font-medium">
+              현재 서버가 포트 {currentPort}에서 실행 중입니다
+            </p>
+            <p className="text-sm text-muted-foreground">
+              기본 포트({DEFAULT_PORT})가 사용 중이어서 자동으로 다른 포트가 할당되었습니다.
+              자동 할당된 포트는 서버 재시작 시 변경될 수 있으므로, Tailscale Serve 설정 시 로컬 포트를{' '}
+              <span className="font-mono font-medium text-foreground">{currentPort}</span> 대신{' '}
+              <span className="font-mono font-medium text-foreground">{DEFAULT_PORT}</span>로 설정하는 것을 권장합니다.
+            </p>
+            <div className="rounded-md bg-muted p-2.5 font-mono text-xs leading-relaxed">
+              <p className="text-muted-foreground/60"># 고정 포트({DEFAULT_PORT})를 사용하려면</p>
+              <p>PORT={DEFAULT_PORT} purplemux</p>
+              <p className="mt-1.5 text-muted-foreground/60"># 또는 기존 {DEFAULT_PORT} 포트를 점유한 프로세스를 종료 후 재시작</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-3">
         <p className="text-sm font-medium">Serve 상태</p>
@@ -279,34 +300,7 @@ const TailscaleSettings = () => {
       </div>
 
       <div className="space-y-3">
-        <p className="text-sm font-medium">빠른 추가</p>
-        <div className="flex flex-wrap gap-2">
-          {PRESET_SERVES.map((preset) => {
-            const isActive = activeHttpsPorts.has(preset.httpsPort);
-            return (
-              <Button
-                key={preset.httpsPort}
-                variant={isActive ? 'secondary' : 'outline'}
-                size="sm"
-                disabled={isActive || actionLoading !== null}
-                onClick={() => handleAdd(preset.httpsPort, preset.localPort)}
-              >
-                {actionLoading === `add-${preset.httpsPort}` ? (
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                ) : isActive ? (
-                  <Check className="mr-1.5 h-3.5 w-3.5" />
-                ) : (
-                  <Plus className="mr-1.5 h-3.5 w-3.5" />
-                )}
-                {preset.label}
-              </Button>
-            );
-          })}
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <p className="text-sm font-medium">직접 추가</p>
+        <p className="text-sm font-medium">Serve 추가</p>
         <div className="flex items-end gap-2">
           <div className="space-y-1">
             <Label htmlFor="ts-https-port" className="text-xs text-muted-foreground">

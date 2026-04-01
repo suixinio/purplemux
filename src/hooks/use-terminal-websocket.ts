@@ -57,7 +57,7 @@ const useTerminalWebSocket = ({
 
   useEffect(() => {
     callbacksRef.current = { onData, onConnected, onSessionEnded };
-  });
+  }, [onData, onConnected, onSessionEnded]);
 
   const clearTimers = useCallback(() => {
     if (heartbeatRef.current) {
@@ -163,7 +163,7 @@ const useTerminalWebSocket = ({
 
   useEffect(() => {
     doConnectRef.current = doConnect;
-  });
+  }, [doConnect]);
 
   const connect = useCallback(
     (sessionName: string, cols?: number, rows?: number) => {

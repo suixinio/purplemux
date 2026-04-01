@@ -93,7 +93,7 @@ const useTimeline = ({
   const entriesRef = useRef(entries);
   useEffect(() => {
     entriesRef.current = entries;
-  });
+  }, [entries]);
 
   const jsonlPathRef = useRef<string | null>(null);
   const startByteOffsetRef = useRef(0);
@@ -219,7 +219,7 @@ const useTimeline = ({
   const resumeCallbacksRef = useRef(resumeCallbacks);
   useEffect(() => {
     resumeCallbacksRef.current = resumeCallbacks;
-  });
+  }, [resumeCallbacks]);
 
   const handleResumeStarted = useCallback(
     (payload: { sessionId: string; jsonlPath: string | null }) => {
@@ -273,7 +273,7 @@ const useTimeline = ({
   );
 
   const onSyncRef = useRef(onSync);
-  useEffect(() => { onSyncRef.current = onSync; });
+  useEffect(() => { onSyncRef.current = onSync; }, [onSync]);
 
   useEffect(() => {
     onSyncRef.current?.({ claudeStatus, cliState, isLoading });

@@ -73,7 +73,7 @@ const useTimelineWebSocket = ({
       onInit, onAppend, onSessionChanged, onError,
       onResumeStarted, onResumeBlocked, onResumeError,
     };
-  });
+  }, [onInit, onAppend, onSessionChanged, onError, onResumeStarted, onResumeBlocked, onResumeError]);
 
   const doConnectRef = useRef<(connectId: number) => void>(() => {});
 
@@ -172,7 +172,7 @@ const useTimelineWebSocket = ({
 
   useEffect(() => {
     doConnectRef.current = doConnect;
-  });
+  }, [doConnect]);
 
   useEffect(() => {
     if (!enabled) {
