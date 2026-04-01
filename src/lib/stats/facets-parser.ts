@@ -24,35 +24,53 @@ const parseSingleFacet = (raw: Record<string, unknown>, sessionId: string): IFac
   summary: String(raw.brief_summary ?? ''),
 });
 
-export const parseAllFacets = async (period: TPeriod): Promise<IFacetEntry[]> => {
-  const facets: IFacetEntry[] = [];
+const runWithConcurrency = async <T>(
+  tasks: (() => Promise<T>)[],
+  limit: number,
+): Promise<T[]> => {
+  const results: T[] = [];
+  let index = 0;
 
-  try {
-    const files = await fs.readdir(FACETS_DIR);
-
-    for (const file of files) {
-      if (!file.endsWith('.json')) continue;
-      try {
-        const filePath = path.join(FACETS_DIR, file);
-        const [content, stat] = await Promise.all([
-          fs.readFile(filePath, 'utf-8'),
-          fs.stat(filePath),
-        ]);
-
-        if (!isWithinPeriod(stat.mtime, period)) continue;
-
-        const raw = JSON.parse(content) as Record<string, unknown>;
-        const sessionId = String(raw.session_id ?? file.replace('.json', ''));
-        facets.push(parseSingleFacet(raw, sessionId));
-      } catch {
-        // skip malformed files
-      }
+  const run = async () => {
+    while (index < tasks.length) {
+      const i = index++;
+      results[i] = await tasks[i]();
     }
-  } catch {
-    // facets dir doesn't exist
-  }
+  };
 
-  return facets;
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => run()));
+  return results;
+};
+
+export const parseAllFacets = async (period: TPeriod): Promise<IFacetEntry[]> => {
+  try {
+    const files = (await fs.readdir(FACETS_DIR)).filter((f) => f.endsWith('.json'));
+
+    const results = await runWithConcurrency(
+      files.map((file) => async () => {
+        try {
+          const filePath = path.join(FACETS_DIR, file);
+          const [content, stat] = await Promise.all([
+            fs.readFile(filePath, 'utf-8'),
+            fs.stat(filePath),
+          ]);
+
+          if (!isWithinPeriod(stat.mtime, period)) return null;
+
+          const raw = JSON.parse(content) as Record<string, unknown>;
+          const sessionId = String(raw.session_id ?? file.replace('.json', ''));
+          return parseSingleFacet(raw, sessionId);
+        } catch {
+          return null;
+        }
+      }),
+      20,
+    );
+
+    return results.filter((entry): entry is IFacetEntry => entry !== null);
+  } catch {
+    return [];
+  }
 };
 
 export const aggregateFacets = (facets: IFacetEntry[]): {

@@ -145,20 +145,8 @@ export const hasSession = async (name: string): Promise<boolean> => {
   }
 };
 
-export const cleanDeadSessions = async (): Promise<void> => {
-  const sessions = await listSessions();
-  for (const name of sessions) {
-    const alive = await hasSession(name);
-    if (!alive) {
-      try {
-        await killSession(name);
-        console.log(`[terminal] cleaned dead tmux session: ${name}`);
-      } catch {
-        // session already gone
-      }
-    }
-  }
-};
+// tmux는 remain-on-exit 미설정 시 죽은 세션을 자동 정리하므로 별도 처리 불필요
+export const cleanDeadSessions = async (): Promise<void> => {};
 
 export const scanSessions = async (): Promise<void> => {
   await cleanDeadSessions();

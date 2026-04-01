@@ -115,7 +115,7 @@ const WorkspaceItem = ({
         {isEditing ? (
           <input
             ref={inputRef}
-            className="w-full border-b border-accent-color bg-transparent text-sm text-foreground outline-none"
+            className="w-full border-b border-accent-color bg-transparent p-0 text-sm font-medium leading-tight text-foreground outline-none"
             value={editValue}
             onChange={(e) => setEditValue(e.target.value)}
             onKeyDown={handleKeyDown}
