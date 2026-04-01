@@ -286,10 +286,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       switchTabInPane(paneId, adjacent.id);
     }
 
+    closingTabIdRef.current = currentActiveTabId;
     setClosingTabId(currentActiveTabId);
     try {
       await deleteTabInPane(paneId, currentActiveTabId);
     } finally {
+      closingTabIdRef.current = null;
       setClosingTabId(null);
     }
   }, [paneId, switchTabInPane, deleteTabInPane, closePane]);
