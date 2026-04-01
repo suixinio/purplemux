@@ -1,6 +1,17 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, RotateCw, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import isElectron from '@/hooks/use-is-electron';
+
+interface IElectronWebview extends HTMLElement {
+  loadURL(url: string): Promise<void>;
+  getURL(): string;
+  goBack(): void;
+  goForward(): void;
+  reload(): void;
+  canGoBack(): boolean;
+  canGoForward(): boolean;
+}
 
 interface IWebBrowserPanelProps {
   initialUrl?: string | null;
@@ -19,7 +30,6 @@ const ensureProtocol = (input: string): string => {
 
 const checkSameOrigin = (iframe: HTMLIFrameElement): boolean => {
   try {
-    // cross-origin이면 접근 시 예외 발생
     const href = iframe.contentWindow?.location.href;
     return href !== undefined && href !== 'about:blank';
   } catch {
@@ -30,11 +40,64 @@ const checkSameOrigin = (iframe: HTMLIFrameElement): boolean => {
 const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => {
   const [url, setUrl] = useState(initialUrl || '');
   const [addressValue, setAddressValue] = useState(initialUrl || '');
-  const [canNavigate, setCanNavigate] = useState(false);
+  const [canNavigate, setCanNavigate] = useState(isElectron);
+  const [canGoBack, setCanGoBack] = useState(false);
+  const [canGoForward, setCanGoForward] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const webviewRef = useRef<IElectronWebview | null>(null);
+  const webviewContainerRef = useRef<HTMLDivElement>(null);
+  const onUrlChangeRef = useRef(onUrlChange);
+  onUrlChangeRef.current = onUrlChange;
 
+  // Electron webview: 생성 및 이벤트 바인딩
   useEffect(() => {
-    if (!iframeRef.current || !url) return;
+    if (!isElectron || !url || !webviewContainerRef.current) return;
+
+    const container = webviewContainerRef.current;
+    let wv = container.querySelector('webview') as IElectronWebview | null;
+
+    if (!wv) {
+      wv = document.createElement('webview') as unknown as IElectronWebview;
+      wv.setAttribute('partition', 'persist:web-browser');
+      wv.style.width = '100%';
+      wv.style.height = '100%';
+      wv.style.border = 'none';
+      wv.setAttribute('src', url);
+      container.appendChild(wv);
+    }
+
+    webviewRef.current = wv;
+
+    const handleNavigate = (e: Event) => {
+      const detail = e as Event & { url: string };
+      setAddressValue(detail.url);
+      setCanGoBack(wv!.canGoBack());
+      setCanGoForward(wv!.canGoForward());
+      onUrlChangeRef.current?.(detail.url);
+    };
+
+    const handleNavigateInPage = (e: Event) => {
+      const detail = e as Event & { url: string; isMainFrame: boolean };
+      if (!detail.isMainFrame) return;
+      const currentUrl = wv!.getURL();
+      setAddressValue(currentUrl);
+      setCanGoBack(wv!.canGoBack());
+      setCanGoForward(wv!.canGoForward());
+      onUrlChangeRef.current?.(currentUrl);
+    };
+
+    wv.addEventListener('did-navigate', handleNavigate);
+    wv.addEventListener('did-navigate-in-page', handleNavigateInPage);
+
+    return () => {
+      wv!.removeEventListener('did-navigate', handleNavigate);
+      wv!.removeEventListener('did-navigate-in-page', handleNavigateInPage);
+    };
+  }, [url]);
+
+  // iframe: src 설정
+  useEffect(() => {
+    if (isElectron || !iframeRef.current || !url) return;
     iframeRef.current.src = url;
   }, [url]);
 
@@ -52,13 +115,17 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
           setAddressValue(currentHref);
           onUrlChange?.(currentHref);
         }
-      } catch { /* cross-origin 전환 시 발생 가능 */ }
+      } catch { /* cross-origin */ }
     }
   }, [onUrlChange]);
 
   const navigate = useCallback((targetUrl: string) => {
     const full = ensureProtocol(targetUrl);
     if (!full) return;
+
+    if (isElectron && webviewRef.current) {
+      webviewRef.current.loadURL(full);
+    }
     setUrl(full);
     setAddressValue(full);
     onUrlChange?.(full);
@@ -71,18 +138,30 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
   };
 
   const handleGoBack = () => {
+    if (isElectron) {
+      webviewRef.current?.goBack();
+      return;
+    }
     try {
       iframeRef.current?.contentWindow?.history.back();
     } catch { /* cross-origin */ }
   };
 
   const handleGoForward = () => {
+    if (isElectron) {
+      webviewRef.current?.goForward();
+      return;
+    }
     try {
       iframeRef.current?.contentWindow?.history.forward();
     } catch { /* cross-origin */ }
   };
 
   const handleRefresh = () => {
+    if (isElectron) {
+      webviewRef.current?.reload();
+      return;
+    }
     try {
       iframeRef.current?.contentWindow?.location.reload();
     } catch {
@@ -94,21 +173,31 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
     }
   };
 
+  const showNavButtons = isElectron || canNavigate;
+
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
-        {canNavigate && (
+        {showNavButtons && (
           <>
             <button
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
+                isElectron && !canGoBack ? 'text-muted-foreground/30' : 'text-muted-foreground hover:text-foreground',
+              )}
               onClick={handleGoBack}
+              disabled={isElectron && !canGoBack}
               aria-label="뒤로"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
             </button>
             <button
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+              className={cn(
+                'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
+                isElectron && !canGoForward ? 'text-muted-foreground/30' : 'text-muted-foreground hover:text-foreground',
+              )}
               onClick={handleGoForward}
+              disabled={isElectron && !canGoForward}
               aria-label="앞으로"
             >
               <ArrowRight className="h-3.5 w-3.5" />
@@ -140,14 +229,18 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
       </div>
 
       {url ? (
-        <iframe
-          ref={iframeRef}
-          className="min-h-0 flex-1 border-0"
-          sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
-          allow="clipboard-read; clipboard-write"
-          title="Web Browser"
-          onLoad={handleIframeLoad}
-        />
+        isElectron ? (
+          <div ref={webviewContainerRef} className="min-h-0 flex-1" />
+        ) : (
+          <iframe
+            ref={iframeRef}
+            className="min-h-0 flex-1 border-0"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+            allow="clipboard-read; clipboard-write"
+            title="Web Browser"
+            onLoad={handleIframeLoad}
+          />
+        )
       ) : (
         <div className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-3 text-muted-foreground">
