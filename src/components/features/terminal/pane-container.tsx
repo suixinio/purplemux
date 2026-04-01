@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
-import { ChevronDown, ChevronUp, Loader2, Plus, TerminalSquare, WifiOff, X } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Plus, TerminalSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { ITab, TDisconnectReason, TPanelType } from '@/types/terminal';
+import type { ITab, TPanelType } from '@/types/terminal';
 import { findPane } from '@/lib/layout-tree';
 import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
@@ -17,23 +17,18 @@ import WebInputBar from '@/components/features/terminal/web-input-bar';
 import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/terminal/connection-status';
 import WebBrowserPanel from '@/components/features/terminal/web-browser-panel';
+import PaneDisconnectedOverlay from '@/components/features/terminal/pane-disconnected-overlay';
+import PaneClaudeModePrompt from '@/components/features/terminal/pane-claude-mode-prompt';
+import PanePathInputOverlay from '@/components/features/terminal/pane-path-input-overlay';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
+import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
 import { dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
-import isElectron from '@/hooks/use-is-electron';
 
-const escapeShellPath = (filePath: string): string =>
-  filePath.replace(/[ \t\\'"(){}[\]!#$&;`|*?<>~^%]/g, '\\$&');
-
-const DISCONNECT_MESSAGES: Record<NonNullable<TDisconnectReason>, string> = {
-  'max-connections': '동시 접속 수를 초과했습니다. 다른 탭을 닫아주세요.',
-  'pty-error': '터미널을 시작할 수 없습니다',
-  'session-not-found': '세션을 찾을 수 없습니다',
-};
 
 interface ITermActions {
   write: (data: Uint8Array) => void;
@@ -527,63 +522,17 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     setShowClaudeModePrompt(true);
   }, [activeTabId, claudeStatus, activePanelType]);
 
-  const [showPathInput, setShowPathInput] = useState(false);
-  const [droppedFileHint, setDroppedFileHint] = useState('');
-  const pathInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    if (showPathInput) pathInputRef.current?.focus();
-  }, [showPathInput]);
-
-  const handleTerminalDragOver = useCallback((e: React.DragEvent) => {
-    if (e.dataTransfer.types.includes('Files')) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'copy';
-    }
-  }, []);
-
-  const handleTerminalDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    const { files } = e.dataTransfer;
-    if (files.length === 0) return;
-
-    const electronAPI = isElectron
-      ? (window as unknown as { electronAPI: { getPathForFile: (file: File) => string } }).electronAPI
-      : null;
-
-    const paths: string[] = [];
-    for (let i = 0; i < files.length; i++) {
-      const filePath = electronAPI?.getPathForFile(files[i]);
-      if (filePath) {
-        paths.push(escapeShellPath(filePath));
-      }
-    }
-
-    if (paths.length > 0) {
-      wsActionsRef.current.sendStdin(`\x1b[200~${paths.join(' ')}\x1b[201~`);
-      focus();
-    } else {
-      const names = Array.from(files).map((f) => f.name).join(', ');
-      setDroppedFileHint(names);
-      setShowPathInput(true);
-    }
-  }, [focus]);
-
-  const handlePathInputSubmit = useCallback((value: string) => {
-    setShowPathInput(false);
-    setDroppedFileHint('');
-    if (value.trim()) {
-      const escaped = escapeShellPath(value.trim());
-      wsActionsRef.current.sendStdin(`\x1b[200~${escaped}\x1b[201~`);
-      focus();
-    }
-  }, [focus]);
-
-  const handlePathInputDismiss = useCallback(() => {
-    setShowPathInput(false);
-    setDroppedFileHint('');
-    focus();
-  }, [focus]);
+  const {
+    showPathInput,
+    droppedFileHint,
+    handleDragOver: handleTerminalDragOver,
+    handleDrop: handleTerminalDrop,
+    handlePathInputSubmit,
+    handlePathInputDismiss,
+  } = useFileDrop({
+    sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+    focus,
+  });
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
@@ -840,99 +789,30 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
 
         {!noTabs && status === 'disconnected' && disconnectReason === 'session-not-found' && activeTabId && (
-          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">
-            <WifiOff className="h-5 w-5 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {DISCONNECT_MESSAGES['session-not-found']}
-            </span>
-            <div className="flex flex-col items-center gap-3">
-              {activeTab?.cwd && (
-                <span className="max-w-72 truncate text-xs text-muted-foreground/60">{activeTab.cwd.replace(/^\/Users\/[^/]+/, '~')}</span>
-              )}
-              {activeTab?.lastCommand && (
-                <div className="flex flex-col items-center gap-2">
-                  <code className="max-w-64 truncate rounded bg-muted px-2 py-1 text-xs">{activeTab.lastCommand}</code>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleRestartTab(activeTabId, activeTab.lastCommand!)}
-                  >
-                    이 커맨드로 시작
-                  </Button>
-                </div>
-              )}
-              {activeTab?.lastCommand && (
-                <div className="flex w-40 items-center gap-2 text-muted-foreground/40">
-                  <div className="h-px flex-1 bg-current" />
-                  <span className="text-[11px]">또는</span>
-                  <div className="h-px flex-1 bg-current" />
-                </div>
-              )}
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRestartTab(activeTabId)}
-              >
-                새 터미널로 시작
-              </Button>
-            </div>
-          </div>
+          <PaneDisconnectedOverlay
+            cwd={activeTab?.cwd}
+            lastCommand={activeTab?.lastCommand}
+            onRestartWithCommand={(cmd) => handleRestartTab(activeTabId, cmd)}
+            onRestartNew={() => handleRestartTab(activeTabId)}
+          />
         )}
 
         {showClaudeModePrompt && (
-          <div className="absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-lg animate-[fadeIn_200ms_ease-out]">
-            <span className="text-xs text-muted-foreground">CLAUDE 모드로 전환할까요?</span>
-            <Button
-              variant="default"
-              size="sm"
-              className="h-6 px-2 text-[11px]"
-              onClick={() => {
-                setShowClaudeModePrompt(false);
-                handleTogglePanelType();
-              }}
-            >
-              전환
-            </Button>
-            <button
-              className="flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-              onClick={() => setShowClaudeModePrompt(false)}
-              aria-label="닫기"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          </div>
+          <PaneClaudeModePrompt
+            onSwitch={() => {
+              setShowClaudeModePrompt(false);
+              handleTogglePanelType();
+            }}
+            onDismiss={() => setShowClaudeModePrompt(false)}
+          />
         )}
 
         {showPathInput && (
-          <div className="absolute bottom-3 left-3 right-3 z-30 rounded-lg border border-border bg-card shadow-lg animate-[fadeIn_150ms_ease-out]">
-            <div className="flex items-center gap-2 px-3 pt-2.5">
-              <span className="text-xs text-muted-foreground">웹에서는 파일 드래그앤드롭을 지원하지 않습니다</span>
-              <button
-                className="ml-auto flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
-                onClick={handlePathInputDismiss}
-                aria-label="닫기"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            <div className="px-3 pt-1 pb-2.5">
-              <div className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5">
-                <span className="shrink-0 text-xs text-muted-foreground/60">{droppedFileHint}</span>
-                <input
-                  ref={pathInputRef}
-                  className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/40"
-                  placeholder="전체 경로를 입력하세요 (예: /Users/...)"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handlePathInputSubmit(e.currentTarget.value);
-                    } else if (e.key === 'Escape') {
-                      handlePathInputDismiss();
-                    }
-                  }}
-                />
-              </div>
-            </div>
-          </div>
+          <PanePathInputOverlay
+            hint={droppedFileHint}
+            onSubmit={handlePathInputSubmit}
+            onDismiss={handlePathInputDismiss}
+          />
         )}
 
         {!noTabs && !isWebBrowser && (
