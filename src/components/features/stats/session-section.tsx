@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import {
   Bar,
   BarChart,
@@ -294,4 +294,4 @@ const SessionSection = ({ sessions, facets, history, facetsLoading, historyLoadi
   );
 };
 
-export default SessionSection;
+export default memo(SessionSection);

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import {
   Area,
   AreaChart,
@@ -196,4 +196,4 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
   );
 };
 
-export default TokenSection;
+export default memo(TokenSection);

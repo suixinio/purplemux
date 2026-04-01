@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { ITimelineUserMessage } from '@/types/timeline';
 
 interface IUserMessageItemProps {
@@ -12,4 +13,4 @@ const UserMessageItem = ({ entry }: IUserMessageItemProps) => (
   </div>
 );
 
-export default UserMessageItem;
+export default memo(UserMessageItem);

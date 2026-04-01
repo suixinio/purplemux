@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, memo } from 'react';
 import dayjs from 'dayjs';
 import ReactMarkdown from 'react-markdown';
 import { Loader2, Sparkles, ChevronDown, ChevronRight, RefreshCw, Play, Square } from 'lucide-react';
@@ -228,4 +228,4 @@ const DailyReportSection = ({ days, cache, onCacheUpdate }: IDailyReportSectionP
   );
 };
 
-export default DailyReportSection;
+export default memo(DailyReportSection);

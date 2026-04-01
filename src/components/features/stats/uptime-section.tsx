@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import dayjs from 'dayjs';
 import { Trophy, Zap, Flame, Timer, Info } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -284,4 +285,4 @@ const StreakRow = ({ streak, rank }: { streak: IStreak; rank: number }) => {
   );
 };
 
-export default UptimeSection;
+export default memo(UptimeSection);

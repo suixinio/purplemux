@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import {
   FileText,
   FilePen,
@@ -104,4 +104,4 @@ const ToolCallItem = ({ entry, result }: IToolCallItemProps) => {
   );
 };
 
-export default ToolCallItem;
+export default memo(ToolCallItem);

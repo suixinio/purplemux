@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { ClipboardList, Eye, TerminalSquare, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -143,4 +143,4 @@ const PlanItem = ({ entry, sessionName }: IPlanItemProps) => {
   );
 };
 
-export default PlanItem;
+export default memo(PlanItem);

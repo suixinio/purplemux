@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ToolCallItem from '@/components/features/timeline/tool-call-item';
@@ -65,4 +65,4 @@ const ToolGroupItem = ({ toolCalls, toolResults }: IToolGroupItemProps) => {
   );
 };
 
-export default ToolGroupItem;
+export default memo(ToolGroupItem);

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { TPanelType } from '@/types/terminal';
@@ -41,4 +42,4 @@ const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
   );
 };
 
-export default TabStatusIndicator;
+export default memo(TabStatusIndicator);

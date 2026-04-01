@@ -11,22 +11,24 @@ const buildHookSettings = (port: number) => ({
   hooks: {
     Stop: [
       {
+        matcher: '',
         hooks: [
           {
             type: 'http',
             url: `http://localhost:${port}/api/status/hook`,
-            timeout: 3000,
+            timeout: 3,
           },
         ],
       },
     ],
     StopFailure: [
       {
+        matcher: '',
         hooks: [
           {
             type: 'http',
             url: `http://localhost:${port}/api/status/hook`,
-            timeout: 3000,
+            timeout: 3,
           },
         ],
       },

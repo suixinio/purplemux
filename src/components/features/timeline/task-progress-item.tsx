@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import type { ITimelineTaskProgress } from '@/types/timeline';
 
@@ -35,4 +36,4 @@ const TaskProgressItem = ({ entry }: ITaskProgressItemProps) => {
   );
 };
 
-export default TaskProgressItem;
+export default memo(TaskProgressItem);

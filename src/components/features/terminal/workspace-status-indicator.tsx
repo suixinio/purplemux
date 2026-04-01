@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Loader2 } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { TTabDisplayStatus } from '@/types/status';
@@ -75,4 +75,4 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
   );
 };
 
-export default WorkspaceStatusIndicator;
+export default memo(WorkspaceStatusIndicator);

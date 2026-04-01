@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback, useEffect, memo } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
@@ -153,4 +153,4 @@ const WorkspaceItem = ({
   );
 };
 
-export default WorkspaceItem;
+export default memo(WorkspaceItem);

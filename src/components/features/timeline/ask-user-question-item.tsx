@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { MessageCircleQuestion, Check, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -107,4 +107,4 @@ const AskUserQuestionItem = ({ entry, sessionName }: IAskUserQuestionItemProps) 
   );
 };
 
-export default AskUserQuestionItem;
+export default memo(AskUserQuestionItem);

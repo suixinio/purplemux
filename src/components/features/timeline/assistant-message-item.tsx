@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
@@ -20,4 +21,4 @@ const AssistantMessageItem = ({ entry }: IAssistantMessageItemProps) => (
   </div>
 );
 
-export default AssistantMessageItem;
+export default memo(AssistantMessageItem);

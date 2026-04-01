@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import AssistantMessageItem from '@/components/features/timeline/assistant-message-item';
@@ -104,4 +104,4 @@ const AgentGroupItem = ({ entry }: IAgentGroupItemProps) => {
   );
 };
 
-export default AgentGroupItem;
+export default memo(AgentGroupItem);

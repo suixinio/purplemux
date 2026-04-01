@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Activity, DollarSign, CalendarDays, TrendingUp } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -111,4 +111,4 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
   );
 };
 
-export default OverviewSection;
+export default memo(OverviewSection);

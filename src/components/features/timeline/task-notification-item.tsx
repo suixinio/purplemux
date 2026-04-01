@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { CheckCircle2, XCircle, ChevronRight, Clock, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ITimelineTaskNotification } from '@/types/timeline';
@@ -74,4 +74,4 @@ const TaskNotificationItem = ({ entry }: ITaskNotificationItemProps) => {
   );
 };
 
-export default TaskNotificationItem;
+export default memo(TaskNotificationItem);

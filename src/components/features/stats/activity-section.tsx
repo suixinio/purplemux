@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, memo } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -198,4 +198,4 @@ const ActivitySection = ({ data }: IActivitySectionProps) => {
   );
 };
 
-export default ActivitySection;
+export default memo(ActivitySection);

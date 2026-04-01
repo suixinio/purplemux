@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import dayjs from 'dayjs';
 import { Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -100,4 +101,4 @@ const SessionListItem = ({
   );
 };
 
-export default SessionListItem;
+export default memo(SessionListItem);
