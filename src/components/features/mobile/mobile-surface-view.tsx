@@ -95,6 +95,7 @@ const MobileSurfaceView = ({
   const wsActionsRef = useRef<IWsActions>(NOOP_WS_ACTIONS);
   const connectedSessionRef = useRef<string | null>(null);
   const prevConnectedTabIdRef = useRef<string | null>(null);
+  const closingTabIdRef = useRef<string | null>(null);
   const [attemptedTabId, setAttemptedTabId] = useState<string | null>(null);
 
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -206,9 +207,13 @@ const MobileSurfaceView = ({
   });
 
   const handleSessionEnded = useCallback(async () => {
+    if (closingTabIdRef.current) return;
+
     const currentTabs = tabsRef.current;
     const currentActiveTabId = activeTabIdRef.current;
     if (!currentActiveTabId) return;
+
+    closingTabIdRef.current = currentActiveTabId;
 
     const sorted = [...currentTabs].sort((a, b) => a.order - b.order);
     const idx = sorted.findIndex((t) => t.id === currentActiveTabId);
@@ -216,11 +221,14 @@ const MobileSurfaceView = ({
 
     if (adjacent) {
       onSwitchTab(paneId, adjacent.id);
-      onRemoveTabLocally(paneId, currentActiveTabId);
-    } else {
-      onRemoveTabLocally(paneId, currentActiveTabId);
     }
-  }, [paneId, onSwitchTab, onRemoveTabLocally]);
+
+    try {
+      await onDeleteTab(paneId, currentActiveTabId);
+    } finally {
+      closingTabIdRef.current = null;
+    }
+  }, [paneId, onSwitchTab, onDeleteTab]);
 
   const {
     status,
