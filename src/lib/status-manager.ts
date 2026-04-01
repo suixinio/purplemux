@@ -163,6 +163,7 @@ class StatusManager {
           workspaceId: ws.id,
           tabName: tab.name,
           tmuxSession: tab.sessionName,
+          panelType: tab.panelType,
         });
       }
     }
@@ -253,6 +254,7 @@ class StatusManager {
             workspaceId: ws.id,
             tabName: tab.name,
             tmuxSession: tab.sessionName,
+            panelType: tab.panelType,
           };
           this.tabs.set(tab.id, entry);
           this.persistToLayout(entry);
@@ -304,6 +306,7 @@ class StatusManager {
         cliState: entry.cliState,
         workspaceId: entry.workspaceId,
         tabName: entry.tabName,
+        panelType: entry.panelType,
       };
     }
     return result;
@@ -363,6 +366,7 @@ class StatusManager {
       cliState: entry.cliState,
       workspaceId: entry.workspaceId,
       tabName: entry.tabName,
+      panelType: entry.panelType,
     };
     this.broadcast(msg, exclude);
   }

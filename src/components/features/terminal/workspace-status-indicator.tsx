@@ -1,41 +1,58 @@
 import { useMemo, memo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, SquareTerminal, Globe } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import type { TTabDisplayStatus } from '@/types/status';
+import type { TPanelType } from '@/types/terminal';
 
 interface IWorkspaceStatusIndicatorProps {
   workspaceId: string;
 }
 
-const DotByStatus = ({ status }: { status: TTabDisplayStatus }) => {
-  if (status === 'busy') {
+const DotByStatus = ({ status, panelType }: { status: TTabDisplayStatus; panelType?: TPanelType }) => {
+  if (panelType === 'claude-code') {
+    if (status === 'busy') {
+      return (
+        <span className="flex h-3 w-3 items-center justify-center">
+          <Loader2
+            className="h-2 w-2 animate-spin text-muted-foreground"
+            aria-hidden="true"
+          />
+        </span>
+      );
+    }
+
+    if (status === 'needs-attention' || status === 'needs-input') {
+      return (
+        <span className="flex h-3 w-3 items-center justify-center">
+          <span
+            className="h-2 w-2 rounded-full bg-ui-purple animate-pulse"
+            aria-hidden="true"
+          />
+        </span>
+      );
+    }
+
     return (
       <span className="flex h-3 w-3 items-center justify-center">
-        <Loader2
-          className="h-2 w-2 animate-spin text-muted-foreground"
+        <span
+          className="h-2 w-2 rounded-full border border-muted-foreground/40"
           aria-hidden="true"
         />
       </span>
     );
   }
 
-  if (status === 'needs-attention' || status === 'needs-input') {
+  if (panelType === 'web-browser') {
     return (
       <span className="flex h-3 w-3 items-center justify-center">
-        <span
-          className="h-2 w-2 rounded-full bg-ui-purple animate-pulse"
-          aria-hidden="true"
-        />
+        <Globe className="h-2.5 w-2.5 text-muted-foreground/50" aria-hidden="true" />
       </span>
     );
   }
 
   return (
     <span className="flex h-3 w-3 items-center justify-center">
-      <span
-        className="h-2 w-2 rounded-full border border-muted-foreground/40"
-        aria-hidden="true"
-      />
+      <SquareTerminal className="h-2.5 w-2.5 text-muted-foreground/50" aria-hidden="true" />
     </span>
   );
 };
@@ -61,15 +78,16 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
     return ordered.map((tabId) => ({
       tabId,
       status: selectTabDisplayStatus(tabs, tabId),
+      panelType: tabs[tabId]?.panelType,
     }));
   }, [tabs, tabOrder, workspaceId]);
 
   if (wsConnected && tabEntries.length === 0) return null;
 
   return (
-    <span className="mt-0.5 flex h-3 items-center gap-0.5" aria-label="탭 상태">
-      {tabEntries.map(({ tabId, status }) => (
-        <DotByStatus key={tabId} status={status} />
+    <span className="mt-1 flex h-3 items-center gap-0.5" aria-label="탭 상태">
+      {tabEntries.map(({ tabId, status, panelType }) => (
+        <DotByStatus key={tabId} status={status} panelType={panelType} />
       ))}
     </span>
   );

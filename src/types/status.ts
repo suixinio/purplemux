@@ -1,10 +1,12 @@
 import type { TCliState } from '@/types/timeline';
+import type { TPanelType } from '@/types/terminal';
 
 export interface ITabStatusEntry {
   cliState: TCliState;
   workspaceId: string;
   tabName: string;
   tmuxSession: string;
+  panelType?: TPanelType;
 }
 
 export type TTabDisplayStatus = 'busy' | 'needs-attention' | 'needs-input' | 'idle';
@@ -22,6 +24,7 @@ export interface IStatusUpdateMessage {
   cliState: TCliState | null;
   workspaceId: string;
   tabName: string;
+  panelType?: TPanelType;
 }
 
 export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage;

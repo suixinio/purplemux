@@ -351,6 +351,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       cliState: tab.cliState ?? 'inactive',
       terminalConnected: false,
       claudeStatus: 'unknown',
+      panelType: tab.panelType,
     });
 
     connectedSessionRef.current = tab.sessionName;
@@ -422,6 +423,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     setIsCreating(true);
     const newTab = await createTabInPane(paneId, panelType, options?.command);
     if (newTab) {
+      useTabStore.getState().initTab(newTab.id, { panelType, workspaceId: layoutWsId ?? '' });
       if (options?.command) {
         useTabStore.getState().setRestarting(newTab.id, true);
       }

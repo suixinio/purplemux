@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { TCliState, TClaudeStatus } from '@/types/timeline';
 import type { TTabDisplayStatus } from '@/types/status';
+import type { TPanelType } from '@/types/terminal';
 
 export type TSessionView =
   | 'loading'
@@ -18,6 +19,7 @@ export interface ITabState {
   isRestarting: boolean;
   isResuming: boolean;
   workspaceId: string;
+  panelType?: TPanelType;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -49,8 +51,8 @@ interface ITabStore {
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType }) => void;
 }
 
 const updateTab = (
@@ -163,9 +165,9 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = next[tabId];
         if (existing) {
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType };
         }
       }
       return { tabs: next };
@@ -174,17 +176,17 @@ const useTabStore = create<ITabStore>((set) => ({
   updateFromServer: (tabId, update) =>
     set((state) => {
       if (update.cliState === null) {
-        const { [tabId]: _removed, ...rest } = state.tabs;  
+        const { [tabId]: _removed, ...rest } = state.tabs;
         return { tabs: rest };
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType },
         },
       };
     }),

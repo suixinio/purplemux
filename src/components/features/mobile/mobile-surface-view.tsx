@@ -272,6 +272,7 @@ const MobileSurfaceView = ({
       cliState: tab.cliState ?? 'inactive',
       terminalConnected: false,
       claudeStatus: 'unknown',
+      panelType: tab.panelType,
     });
 
     connectedSessionRef.current = tab.sessionName;

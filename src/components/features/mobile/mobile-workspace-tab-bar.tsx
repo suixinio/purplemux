@@ -1,7 +1,7 @@
 import { useRef, useEffect, useMemo } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, SquareTerminal, Globe } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
-import type { IWorkspace, IPaneNode } from '@/types/terminal';
+import type { IWorkspace, IPaneNode, TPanelType } from '@/types/terminal';
 
 interface IMobileWorkspaceTabBarProps {
   workspaces: IWorkspace[];
@@ -16,6 +16,7 @@ interface ITabDot {
   workspaceId: string;
   paneId: string;
   tabId: string;
+  panelType?: TPanelType;
 }
 
 const MobileWorkspaceTabBar = ({
@@ -39,7 +40,7 @@ const MobileWorkspaceTabBar = ({
       for (const pane of panes) {
         const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
         for (const tab of sorted) {
-          wsTabs.push({ workspaceId: ws.id, paneId: pane.id, tabId: tab.id });
+          wsTabs.push({ workspaceId: ws.id, paneId: pane.id, tabId: tab.id, panelType: tab.panelType });
         }
       }
 
@@ -79,6 +80,7 @@ const MobileWorkspaceTabBar = ({
             item.workspaceId === activeWorkspaceId &&
             item.paneId === selectedPaneId &&
             item.tabId === selectedTabId;
+          const isClaude = item.panelType === 'claude-code';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
 
           return (
@@ -91,12 +93,16 @@ const MobileWorkspaceTabBar = ({
             >
               {isActive ? (
                 <span className="h-2 w-2 rounded-[2px] bg-foreground" />
-              ) : status === 'busy' ? (
+              ) : isClaude && status === 'busy' ? (
                 <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
-              ) : status === 'needs-attention' || status === 'needs-input' ? (
+              ) : isClaude && (status === 'needs-attention' || status === 'needs-input') ? (
                 <span className="h-2 w-2 rounded-full bg-ui-purple animate-pulse" />
-              ) : (
+              ) : isClaude ? (
                 <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
+              ) : item.panelType === 'web-browser' ? (
+                <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
+              ) : (
+                <SquareTerminal className="h-2.5 w-2.5 text-muted-foreground/50" />
               )}
             </button>
           );
