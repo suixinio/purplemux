@@ -214,6 +214,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     onTitleChange: (title) => {
       const tabId = activeTabIdRef.current;
       if (!tabId) return;
+      const activeTab = tabsRef.current.find((t) => t.id === tabId);
+      if (activeTab?.panelType === 'web-browser') return;
       if (title === lastTitleRef.current) return;
       lastTitleRef.current = title;
       const formatted = formatTabTitle(title);
@@ -334,7 +336,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     const tab = tabs.find((t) => t.id === activeTabId);
     if (!tab) return;
     if (tab.panelType === 'web-browser') {
-      connectedSessionRef.current = null;
       lastTitleRef.current = '';
       return;
     }
@@ -683,7 +684,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             ? { timeline: 70, 'terminal-area': 30 }
             : { timeline: 0, 'terminal-area': 100 }
           }
-          className={cn('min-h-0 flex-1', isWebBrowser && 'hidden', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
+          className={cn('min-h-0 flex-1', isWebBrowser && 'invisible absolute inset-0 pointer-events-none', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
         >
           <Panel
             id="timeline"
