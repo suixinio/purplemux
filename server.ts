@@ -16,6 +16,7 @@ import { initWorkspaceStore } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
 import { initAuthCredentials } from './src/lib/auth-credentials';
 import { initConfigStore } from './src/lib/config-store';
+import pkg from './package.json';
 
 const dev = process.env.NODE_ENV !== 'production';
 
@@ -326,8 +327,13 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
     await ensureHookSettings(result.port);
   }
 
-  console.log(`> Server listening at http://localhost:${result.port} as ${dev ? 'development' : process.env.NODE_ENV}`);
-  console.log(`> Auth: ${credentials ? 'configured' : '온보딩 대기 (http://localhost:' + result.port + '/login)'}`);
+  const mode = dev ? 'development' : process.env.NODE_ENV;
+  console.log('');
+  console.log(`  \x1b[1m\x1b[35m⚡ Purplemux\x1b[0m  \x1b[2mv${pkg.version}\x1b[0m`);
+  console.log(`  \x1b[2m➜\x1b[0m  Local:  \x1b[36mhttp://localhost:${result.port}\x1b[0m`);
+  console.log(`  \x1b[2m➜\x1b[0m  Mode:   \x1b[33m${mode}\x1b[0m`);
+  console.log(`  \x1b[2m➜\x1b[0m  Auth:   ${credentials ? '\x1b[32mconfigured\x1b[0m' : `\x1b[33m온보딩 대기\x1b[0m \x1b[2m(http://localhost:${result.port}/login)\x1b[0m`}`);
+  console.log('');
 
   return result;
 };
