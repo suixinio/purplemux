@@ -28,7 +28,7 @@ export const INTERRUPT_PREFIX = '[Request interrupted by user';
 
 const EXCLUDED_TYPES = new Set([
   'progress', 'system', 'file-history-snapshot',
-  'queue-operation', 'summary', 'custom-title', 'agent-name',
+  'queue-operation', 'agent-name',
 ]);
 
 const TAIL_THRESHOLD = 1_048_576; // 1MB
@@ -340,15 +340,16 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
             status: 'pending',
           } satisfies ITimelineTaskProgress);
         } else if (toolName === 'TaskUpdate') {
+          const taskStatus = (['in_progress', 'completed', 'blocked'] as const).includes(input.status as 'in_progress' | 'completed' | 'blocked')
+            ? (input.status as 'in_progress' | 'completed' | 'blocked')
+            : 'pending';
           entries.push({
             id: nanoid(),
             type: 'task-progress',
             timestamp,
             action: 'update',
             taskId: typeof input.taskId === 'string' ? input.taskId : String(input.taskId ?? ''),
-            status: (input.status === 'in_progress' || input.status === 'completed')
-              ? input.status
-              : 'pending',
+            status: taskStatus,
           } satisfies ITimelineTaskProgress);
         } else if (toolName === 'AskUserQuestion' && Array.isArray(input.questions)) {
           const questions = (input.questions as Record<string, unknown>[]).map((q) => ({
@@ -630,6 +631,7 @@ const parseContent = (content: string): IParseResult => {
   const rawEntries: IRawEntry[] = [];
   let errorCount = 0;
   let sessionSummary: string | undefined;
+  let customTitle: string | undefined;
   let lineCount = 0;
 
   let bytePos = 0;
@@ -661,6 +663,22 @@ const parseContent = (content: string): IParseResult => {
             }
           }
         }
+      }
+      if (base.data.type === 'custom-title') {
+        const rawObj = raw as Record<string, unknown>;
+        const title = rawObj.title ?? rawObj.customTitle;
+        if (typeof title === 'string' && title.trim()) {
+          customTitle = title.trim();
+        }
+        continue;
+      }
+      if (base.data.type === 'summary') {
+        const rawObj = raw as Record<string, unknown>;
+        const summaryText = rawObj.summary ?? rawObj.text;
+        if (typeof summaryText === 'string' && summaryText.trim() && !sessionSummary) {
+          sessionSummary = summaryText.trim();
+        }
+        continue;
       }
       if (base.data.type === 'system') {
         const rawObj = raw as Record<string, unknown>;
@@ -752,6 +770,7 @@ const parseContent = (content: string): IParseResult => {
     totalLines: lineCount,
     errorCount,
     summary: sessionSummary,
+    customTitle,
   };
 };
 
@@ -842,6 +861,7 @@ export const readTailEntries = async (
         hasMore: sliced,
         errorCount: result.errorCount,
         summary: result.summary,
+        customTitle: result.customTitle,
       };
     }
 
@@ -865,6 +885,7 @@ export const readTailEntries = async (
           hasMore: startByteOffset > 0,
           errorCount: result.errorCount,
           summary: result.summary,
+          customTitle: result.customTitle,
         };
       }
       chunkSize *= 2;

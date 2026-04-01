@@ -213,7 +213,6 @@ export const getLayout = async (wsId: string, defaultCwd?: string): Promise<ILay
       updatedAt: new Date().toISOString(),
     };
     await writeLayoutFile(layout, filePath);
-    console.log(`[layout] 기본 레이아웃 생성 (workspace: ${wsId}, pane: ${pane.id})`);
     return layout;
   });
 
@@ -225,7 +224,6 @@ export const createPane = async (wsId: string, cwd?: string): Promise<{ paneId: 
   await createSession(sessionName, 80, 24, cwd);
 
   const tab: ITab = { id: tabId, sessionName, name: 'Terminal 1', order: 0, ...(cwd ? { cwd } : {}) };
-  console.log(`[layout] pane 생성: ${paneId}, tab: ${tabId}, session: ${sessionName}`);
   return { paneId, tab };
 };
 
@@ -240,7 +238,6 @@ export const deletePane = async (
       // session already gone
     }
   }
-  console.log(`[layout] pane 삭제: ${paneId} (세션 ${sessions.length}개 종료)`);
 };
 
 export const addTabToPane = async (wsId: string, paneId: string, name?: string, cwd?: string, panelType?: string, command?: string): Promise<ITab | null> =>
@@ -273,7 +270,6 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     await writeLayoutFile(layout, filePath);
     syncWorkspaceDirectories(wsId,layout.root);
 
-    console.log(`[layout] 탭 추가: pane=${paneId}, tab=${tabId}, session=${sessionName}`);
     return tab;
   });
 
@@ -323,7 +319,6 @@ export const removeTabFromPane = async (wsId: string, paneId: string, tabId: str
     await writeLayoutFile(layout, filePath);
     syncWorkspaceDirectories(wsId, layout.root);
 
-    console.log(`[layout] 탭 삭제: pane=${paneId}, tab=${tabId}`);
     return true;
   });
 };
@@ -344,7 +339,6 @@ export const renameTabInPane = async (wsId: string, paneId: string, tabId: strin
     layout.updatedAt = new Date().toISOString();
     await writeLayoutFile(layout, filePath);
 
-    console.log(`[layout] 탭 이름 변경: pane=${paneId}, tab=${tabId} → "${name}"`);
     return { ...tab };
   });
 
@@ -367,7 +361,6 @@ export const restartTabSession = async (wsId: string, paneId: string, tabId: str
     if (command) {
       await sendKeys(tab.sessionName, command);
     }
-    console.log(`[layout] 탭 세션 재시작: pane=${paneId}, tab=${tabId}, session=${tab.sessionName}${command ? `, command=${command}` : ''}`);
     return true;
   });
 

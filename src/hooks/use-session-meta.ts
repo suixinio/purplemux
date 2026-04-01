@@ -202,11 +202,13 @@ const mergeTokensByModel = (base: IModelTokens[], delta: IModelTokens[]): IModel
 };
 
 const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta): ISessionMetaData => {
-  let title = '(새 세션)';
-  for (const entry of entries) {
-    if (entry.type === 'user-message') {
-      title = entry.text;
-      break;
+  let title = initMeta.customTitle ?? '(새 세션)';
+  if (!initMeta.customTitle) {
+    for (const entry of entries) {
+      if (entry.type === 'user-message') {
+        title = entry.text;
+        break;
+      }
     }
   }
 

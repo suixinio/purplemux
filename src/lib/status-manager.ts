@@ -140,7 +140,6 @@ class StatusManager {
 
     await this.scanAll();
     this.startPolling();
-    console.log(`[status] 초기화 완료 — ${this.tabs.size}개 탭 감시 중`);
   }
 
   private async scanAll(): Promise<void> {

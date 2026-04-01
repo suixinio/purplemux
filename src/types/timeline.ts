@@ -13,7 +13,7 @@ export interface ISessionInfo {
   cwd: string | null;
 }
 
-export type TTaskStatus = 'pending' | 'in_progress' | 'completed';
+export type TTaskStatus = 'pending' | 'in_progress' | 'completed' | 'blocked';
 
 export interface ITaskItem {
   taskId: string;
@@ -56,6 +56,10 @@ export interface ITimelineAssistantMessage {
     output_tokens: number;
     cache_creation_input_tokens?: number;
     cache_read_input_tokens?: number;
+    speed?: 'fast' | string;
+    server_tool_use?: {
+      web_search_requests?: number;
+    };
   };
 }
 
@@ -216,6 +220,7 @@ export interface IInitMeta {
   outputTokens: number;
   totalTokens: number;
   totalCost: number | null;
+  customTitle?: string;
   tokensByModel: {
     model: string;
     inputTokens: number;
@@ -307,6 +312,7 @@ export interface IChunkReadResult {
   hasMore: boolean;
   errorCount: number;
   summary?: string;
+  customTitle?: string;
 }
 
 export interface IParseResult {
@@ -316,6 +322,7 @@ export interface IParseResult {
   totalLines: number;
   errorCount: number;
   summary?: string;
+  customTitle?: string;
 }
 
 export interface IIncrementalResult {

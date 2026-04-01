@@ -69,13 +69,8 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   }
   conn.disposables = [];
 
-  if (sessionExited) {
-    if (conn.ws.readyState === WebSocket.OPEN) {
-      conn.ws.close(1000, 'Session exited');
-    }
-    console.log(`[terminal] tmux session ended: ${conn.sessionName}`);
-  } else {
-    console.log(`[terminal] tab switch detach: ${conn.sessionName}`);
+  if (sessionExited && conn.ws.readyState === WebSocket.OPEN) {
+    conn.ws.close(1000, 'Session exited');
   }
 
   try {
@@ -89,7 +84,6 @@ const cleanup = (conn: IActiveConnection, sessionExited = false) => {
   }
 
   connections.delete(conn.ws);
-  console.log(`[terminal] client disconnected (active: ${connections.size})`);
 };
 
 
@@ -272,7 +266,6 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
 
   if (sessionId) {
     sessionName = sessionId;
-    console.log(`[terminal] session requested: ${sessionName}`);
     const exists = await hasSession(sessionId);
     if (!exists) {
       console.log(`[terminal] session not found: ${sessionName}`);
@@ -290,7 +283,6 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
       return;
     }
   } else {
-    console.log('[terminal] no session param, creating new session');
     sessionName = defaultSessionName();
     const cols = urlCols > 0 ? urlCols : (pending.resize?.cols || 80);
     const rows = urlRows > 0 ? urlRows : (pending.resize?.rows || 24);
@@ -308,8 +300,6 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   if (pending.resize && pending.resize.cols > 0 && pending.resize.rows > 0) {
     ptyProcess.resize(pending.resize.cols, pending.resize.rows);
   }
-
-  console.log(`[terminal] attached to ${sessionId ? 'existing' : 'new'} session: ${sessionName} (pid: ${ptyProcess.pid})`);
 
   const heartbeatTimer = setInterval(() => {
     if (conn && Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
@@ -334,7 +324,6 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   };
 
   connections.set(ws, conn);
-  console.log(`[terminal] client connected (active: ${connections.size})`);
 
   conn.disposables.push(
     ptyProcess.onData((data: string) => {

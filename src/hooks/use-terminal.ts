@@ -162,7 +162,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       fitAddonRef.current = fitAddon;
 
       terminal.onData((data) => {
-        if (/^\x1b\[[\?>]?[\d;]*c$/.test(data)) return;
+        if (/^\x1b\[[\?>]?[\d;]*[cnR]$/.test(data)) return;
         callbacksRef.current.onInput?.(data);
       });
 

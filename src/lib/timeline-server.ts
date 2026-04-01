@@ -246,7 +246,7 @@ const readFirstTimestamp = async (filePath: string): Promise<string | null> => {
   return null;
 };
 
-const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtOverride?: string | null): IInitMeta => {
+const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtOverride?: string | null, customTitle?: string): IInitMeta => {
   let createdAt: string | null = null;
   let updatedAt: string | null = null;
   let lastTimestamp = 0;
@@ -319,6 +319,7 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
     outputTokens,
     totalTokens: inputTokens + outputTokens,
     totalCost,
+    customTitle,
     tokensByModel,
   };
 };
@@ -375,7 +376,7 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
   }
 
   const firstTimestamp = result.hasMore ? await readFirstTimestamp(jsonlPath) : null;
-  const meta = computeInitMeta(result.entries, result.fileSize, firstTimestamp);
+  const meta = computeInitMeta(result.entries, result.fileSize, firstTimestamp, result.customTitle);
 
   sendJson(ws, {
     type: 'timeline:init',

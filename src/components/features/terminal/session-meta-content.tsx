@@ -3,7 +3,7 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
 import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/format-tokens';
+import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/format-tokens';
 import type { IGitStatus } from '@/lib/git-status';
 
 dayjs.extend(relativeTime);
@@ -21,10 +21,6 @@ const Separator = () => (
   <span className="mx-1.5 text-muted-foreground/50">·</span>
 );
 
-export const formatModelName = (model: string): string => {
-  const match = model.match(/^claude-(\w+)-[\d.-]+/);
-  return match ? match[1] : model;
-};
 
 export const MetaCompact = ({
   title,
@@ -172,7 +168,7 @@ export const MetaDetail = ({
             </span>
             {tokensByModel.map((m) => (
               <span key={m.model} className="font-mono text-xs text-muted-foreground/60">
-                {formatModelName(m.model)}
+                {formatModelDisplayName(m.model)}
                 {tokensByModel.length > 1 ? `: ${formatTokenCount(m.totalTokens)}` : ''}
                 {m.cost !== null ? ` (${formatCost(m.cost)})` : ''}
               </span>
