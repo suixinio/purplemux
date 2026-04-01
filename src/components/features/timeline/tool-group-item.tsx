@@ -27,7 +27,7 @@ const getGroupDescription = (toolCalls: ITimelineToolCall[]) => {
   return `명령 ${count}개 실행함${suffix}`;
 };
 
-const PERMISSION_TOOL_NAMES = new Set(['Edit', 'Write', 'Bash', 'Read', 'Glob', 'Grep', 'Agent']);
+const PERMISSION_TOOL_NAMES = new Set(['Edit', 'Write', 'Bash', 'Read', 'Glob', 'Grep']);
 
 const ToolGroupItem = ({ toolCalls, toolResults, sessionName }: IToolGroupItemProps) => {
   const hasPending = toolCalls.some((t) => t.status === 'pending');
