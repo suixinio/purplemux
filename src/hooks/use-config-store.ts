@@ -4,20 +4,18 @@ export interface IConfigInitialData {
   terminalTheme?: { light: string; dark: string } | null;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
-  authPassword?: string;
-  authSecret?: string;
+  hasAuthPassword?: boolean;
 }
 
 interface IConfigState {
   dangerouslySkipPermissions: boolean;
   editorUrl: string;
-  authPassword: string;
-  authSecret: string;
+  hasAuthPassword: boolean;
 
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
   setEditorUrl: (url: string) => void;
-  setAuthCredentials: (password: string, secret: string) => void;
+  changePassword: (password: string) => void;
 }
 
 const saveConfig = (updates: Record<string, unknown>) => {
@@ -33,15 +31,13 @@ const saveConfig = (updates: Record<string, unknown>) => {
 const useConfigStore = create<IConfigState>((set, get) => ({
   dangerouslySkipPermissions: false,
   editorUrl: '',
-  authPassword: '',
-  authSecret: '',
+  hasAuthPassword: false,
 
   hydrate: (data) => {
     set({
       dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
       editorUrl: data.editorUrl ?? '',
-      authPassword: data.authPassword ?? '',
-      authSecret: data.authSecret ?? '',
+      hasAuthPassword: data.hasAuthPassword ?? false,
     });
   },
 
@@ -56,9 +52,9 @@ const useConfigStore = create<IConfigState>((set, get) => ({
     saveConfig({ editorUrl: url });
   },
 
-  setAuthCredentials: (password, secret) => {
-    set({ authPassword: password, authSecret: secret });
-    saveConfig({ authPassword: password, authSecret: secret });
+  changePassword: (password) => {
+    set({ hasAuthPassword: true });
+    saveConfig({ authPassword: password });
   },
 }));
 

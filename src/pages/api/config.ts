@@ -1,15 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getConfig, updateConfig, hashPassword } from '@/lib/config-store';
+import { getConfig, updateConfig, hashPassword, generateSecret } from '@/lib/config-store';
 import type { IConfigData } from '@/lib/config-store';
 
-const ALLOWED_FIELDS: (keyof Omit<IConfigData, 'updatedAt'>)[] = [
-  'terminalTheme', 'dangerouslySkipPermissions', 'editorUrl', 'authPassword', 'authSecret',
+const ALLOWED_FIELDS: (keyof Omit<IConfigData, 'updatedAt' | 'authSecret'>)[] = [
+  'terminalTheme', 'dangerouslySkipPermissions', 'editorUrl', 'authPassword',
 ];
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
-    const data = await getConfig();
-    return res.status(200).json(data);
+    const { authPassword, authSecret: _, ...safe } = await getConfig();
+    return res.status(200).json({ ...safe, hasAuthPassword: !!authPassword });
   }
 
   if (req.method === 'PATCH') {
@@ -20,14 +20,18 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     if (typeof updates.authPassword === 'string' && updates.authPassword) {
-      updates.authPassword = hashPassword(updates.authPassword as string);
-    }
+      const hashed = await hashPassword(updates.authPassword as string);
+      const secret = generateSecret();
+      updates.authPassword = hashed;
+      updates.authSecret = secret;
 
-    await updateConfig(updates as Partial<Omit<IConfigData, 'updatedAt'>>);
+      await updateConfig(updates as Partial<Omit<IConfigData, 'updatedAt'>>);
 
-    if (updates.authPassword && updates.authSecret) {
-      process.env.AUTH_PASSWORD = updates.authPassword as string;
-      process.env.NEXTAUTH_SECRET = updates.authSecret as string;
+      process.env.AUTH_PASSWORD = hashed;
+      process.env.NEXTAUTH_SECRET = secret;
+    } else {
+      delete updates.authPassword;
+      await updateConfig(updates as Partial<Omit<IConfigData, 'updatedAt'>>);
     }
 
     return res.status(200).json({ ok: true });

@@ -292,12 +292,12 @@ const randomHex = (length: number): string => {
 };
 
 const AuthTab = () => {
-  const authPassword = useConfigStore((state) => state.authPassword);
-  const setAuthCredentials = useConfigStore((state) => state.setAuthCredentials);
+  const hasAuthPassword = useConfigStore((state) => state.hasAuthPassword);
+  const changePassword = useConfigStore((state) => state.changePassword);
   const [localPassword, setLocalPassword] = useState('');
   const [passwordTouched, setPasswordTouched] = useState(false);
 
-  const hasStoredPassword = !!authPassword;
+  const hasStoredPassword = hasAuthPassword;
   const isDirty = passwordTouched && localPassword.trim().length >= 4;
 
   const handlePasswordChange = (value: string) => {
@@ -306,8 +306,7 @@ const AuthTab = () => {
   };
 
   const handleSave = () => {
-    const newSecret = randomHex(64);
-    setAuthCredentials(localPassword.trim(), newSecret);
+    changePassword(localPassword.trim());
     setLocalPassword('');
     setPasswordTouched(false);
     toast.success('저장되었습니다. 서버 재시작 후 적용됩니다.');

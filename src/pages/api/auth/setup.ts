@@ -18,7 +18,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(400).json({ error: '비밀번호를 입력해주세요.' });
     }
 
-    const hashedPassword = hashPassword(authPassword);
+    const hashedPassword = await hashPassword(authPassword);
     const authSecret = generateSecret();
 
     await updateConfig({

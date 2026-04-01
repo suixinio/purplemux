@@ -1,10 +1,22 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getStatusManager } from '@/lib/status-manager';
 
+const isLocalRequest = (req: NextApiRequest): boolean => {
+  const forwarded = req.headers['x-forwarded-for'];
+  const ip = forwarded
+    ? (typeof forwarded === 'string' ? forwarded.split(',')[0].trim() : forwarded[0])
+    : req.socket.remoteAddress;
+  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+};
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   getStatusManager().poll().catch((err) => {

@@ -64,8 +64,41 @@ export const writeConfig = async (data: IConfigData): Promise<void> => {
   broadcastSync({ type: 'config' });
 };
 
-export const hashPassword = (plain: string): string =>
-  crypto.createHash('sha512').update(plain).digest('hex');
+const SCRYPT_KEYLEN = 64;
+const SCRYPT_SALT_LEN = 16;
+
+export const hashPassword = async (plain: string): Promise<string> => {
+  const salt = crypto.randomBytes(SCRYPT_SALT_LEN);
+  const derived = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(plain, salt, SCRYPT_KEYLEN, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
+  return `scrypt:${salt.toString('hex')}:${derived.toString('hex')}`;
+};
+
+const isLegacyHash = (hash: string): boolean => !hash.startsWith('scrypt:');
+
+export const verifyPassword = async (plain: string, stored: string): Promise<boolean> => {
+  if (isLegacyHash(stored)) {
+    const hash = crypto.createHash('sha512').update(plain).digest('hex');
+    if (hash.length !== stored.length) return false;
+    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(stored));
+  }
+  const [, saltHex, hashHex] = stored.split(':');
+  const salt = Buffer.from(saltHex, 'hex');
+  const expected = Buffer.from(hashHex, 'hex');
+  const derived = await new Promise<Buffer>((resolve, reject) => {
+    crypto.scrypt(plain, salt, expected.length, (err, key) => {
+      if (err) reject(err);
+      else resolve(key);
+    });
+  });
+  return crypto.timingSafeEqual(derived, expected);
+};
+
+export const needsRehash = (hash: string): boolean => isLegacyHash(hash);
 
 export const getConfig = async (): Promise<IConfigData> => {
   const data = await readConfig();

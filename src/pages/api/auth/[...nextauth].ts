@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import type { AuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
-import { hashPassword } from '@/lib/config-store';
+import { verifyPassword, needsRehash, hashPassword, updateConfig } from '@/lib/config-store';
 
 const MAX_FAILURES = 16;
 const WINDOW_MS = 15 * 60 * 1000;
@@ -54,9 +54,16 @@ export const authOptions: AuthOptions = {
           throw new Error('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
         }
 
-        if (!credentials?.password || hashPassword(credentials.password) !== process.env.AUTH_PASSWORD) {
+        const storedHash = process.env.AUTH_PASSWORD;
+        if (!credentials?.password || !storedHash || !(await verifyPassword(credentials.password, storedHash))) {
           recordFailure(ip);
           return null;
+        }
+
+        if (needsRehash(storedHash)) {
+          const newHash = await hashPassword(credentials.password);
+          await updateConfig({ authPassword: newHash });
+          process.env.AUTH_PASSWORD = newHash;
         }
 
         clearFailure(ip);
