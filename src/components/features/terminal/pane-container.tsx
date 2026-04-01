@@ -671,14 +671,14 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           />
         )}
 
-        {!isWebBrowser && <Group
+        <Group
           groupRef={splitGroupRef}
           orientation="vertical"
           defaultLayout={isClaudeCode
             ? { timeline: 70, 'terminal-area': 30 }
             : { timeline: 0, 'terminal-area': 100 }
           }
-          className={cn('min-h-0 flex-1', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
+          className={cn('min-h-0 flex-1', isWebBrowser && 'hidden', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
         >
           <Panel
             id="timeline"
@@ -765,7 +765,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
               />
             </div>
           </Panel>
-        </Group>}
+        </Group>
 
         {noTabs && (
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-3">

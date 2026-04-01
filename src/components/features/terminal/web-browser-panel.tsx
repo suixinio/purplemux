@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, RotateCw, Globe } from 'lucide-react';
+import { ArrowLeft, ArrowRight, RotateCw, Globe, Smartphone, Monitor } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import isElectron from '@/hooks/use-is-electron';
 
@@ -11,7 +11,11 @@ interface IElectronWebview extends HTMLElement {
   reload(): void;
   canGoBack(): boolean;
   canGoForward(): boolean;
+  setUserAgent(userAgent: string): void;
 }
+
+const MOBILE_USER_AGENT =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1';
 
 interface IWebBrowserPanelProps {
   initialUrl?: string | null;
@@ -43,6 +47,7 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
   const [canNavigate, setCanNavigate] = useState(isElectron);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
+  const [mobileUA, setMobileUA] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const webviewRef = useRef<IElectronWebview | null>(null);
   const webviewContainerRef = useRef<HTMLDivElement>(null);
@@ -59,6 +64,7 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
     if (!wv) {
       wv = document.createElement('webview') as unknown as IElectronWebview;
       wv.setAttribute('partition', 'persist:web-browser');
+      if (mobileUA) wv.setAttribute('useragent', MOBILE_USER_AGENT);
       wv.style.width = '100%';
       wv.style.height = '100%';
       wv.style.border = 'none';
@@ -93,7 +99,7 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
       wv!.removeEventListener('did-navigate', handleNavigate);
       wv!.removeEventListener('did-navigate-in-page', handleNavigateInPage);
     };
-  }, [url]);
+  }, [url, mobileUA]);
 
   // iframe: src 설정
   useEffect(() => {
@@ -136,6 +142,18 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
       navigate(addressValue);
     }
   };
+
+  const handleToggleMobileUA = useCallback(() => {
+    setMobileUA((prev) => {
+      const next = !prev;
+      const wv = webviewRef.current;
+      if (wv) {
+        wv.setUserAgent(next ? MOBILE_USER_AGENT : '');
+        wv.reload();
+      }
+      return next;
+    });
+  }, []);
 
   const handleGoBack = () => {
     if (isElectron) {
@@ -210,6 +228,20 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
               <RotateCw className="h-3.5 w-3.5" />
             </button>
           </>
+        )}
+
+        {isElectron && (
+          <button
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
+              mobileUA ? 'text-blue-400' : 'text-muted-foreground hover:text-foreground',
+            )}
+            onClick={handleToggleMobileUA}
+            aria-label={mobileUA ? '데스크톱 모드로 전환' : '모바일 모드로 전환'}
+            title={mobileUA ? '모바일 모드 (클릭하여 데스크톱으로 전환)' : '데스크톱 모드 (클릭하여 모바일로 전환)'}
+          >
+            {mobileUA ? <Smartphone className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
+          </button>
         )}
 
         <div className="ml-1 flex flex-1 items-center gap-2 rounded-md border border-border bg-secondary px-2.5 py-1">
