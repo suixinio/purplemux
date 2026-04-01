@@ -19,6 +19,7 @@ const PERMISSION_KEYWORDS = [
 
 const INDICATOR_RE = /^\s*(?:[❯›>]\s+)?(.+)$/;
 const FOCUSED_RE = /^\s*[❯›>]\s+/;
+const NUMBER_PREFIX_RE = /^\d+\.\s+/;
 
 const parsePermissionOptions = (paneContent: string): { options: string[]; focusedIndex: number } => {
   const lines = paneContent.split('\n');
@@ -43,15 +44,16 @@ const parsePermissionOptions = (paneContent: string): { options: string[]; focus
     const match = line.match(INDICATOR_RE);
     if (!match) continue;
     const label = match[1].trim();
+    const stripped = label.replace(NUMBER_PREFIX_RE, '');
 
     if (!foundFirst) {
-      if (PERMISSION_KEYWORDS.some((kw) => label.startsWith(kw))) {
+      if (PERMISSION_KEYWORDS.some((kw) => stripped.startsWith(kw))) {
         if (isFocused) focusedIndex = options.length;
         options.push(label);
         foundFirst = true;
       }
     } else {
-      if (PERMISSION_KEYWORDS.some((kw) => label.startsWith(kw))) {
+      if (PERMISSION_KEYWORDS.some((kw) => stripped.startsWith(kw))) {
         if (isFocused) focusedIndex = options.length;
         options.push(label);
       } else {
@@ -60,9 +62,8 @@ const parsePermissionOptions = (paneContent: string): { options: string[]; focus
     }
   }
 
-  // permission prompt는 반드시 "Yes"로 시작하고 "No"를 포함해야 함
-  const hasYes = options.some((o) => o.startsWith('Yes'));
-  const hasNo = options.some((o) => o.startsWith('No'));
+  const hasYes = options.some((o) => o.replace(NUMBER_PREFIX_RE, '').startsWith('Yes'));
+  const hasNo = options.some((o) => o.replace(NUMBER_PREFIX_RE, '').startsWith('No'));
   if (!hasYes || !hasNo || options.length < 2) {
     return { options: [], focusedIndex: 0 };
   }

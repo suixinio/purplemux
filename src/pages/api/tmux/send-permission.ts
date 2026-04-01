@@ -4,6 +4,7 @@ import { hasSession, capturePaneContent, sendKeySequence } from '@/lib/tmux';
 const FOCUSED_RE = /^\s*[❯›>]\s+/;
 const INDICATOR_RE = /^\s*(?:[❯›>]\s+)?(.+)$/;
 const PERMISSION_KEYWORDS = ['Yes', 'Yes,', 'No'];
+const NUMBER_PREFIX_RE = /^\d+\.\s+/;
 
 const findFocusedIndex = (paneContent: string): { focusedIndex: number; totalOptions: number } => {
   const lines = paneContent.split('\n');
@@ -28,15 +29,16 @@ const findFocusedIndex = (paneContent: string): { focusedIndex: number; totalOpt
     const match = line.match(INDICATOR_RE);
     if (!match) continue;
     const label = match[1].trim();
+    const stripped = label.replace(NUMBER_PREFIX_RE, '');
 
     if (!foundFirst) {
-      if (PERMISSION_KEYWORDS.some((kw) => label.startsWith(kw))) {
+      if (PERMISSION_KEYWORDS.some((kw) => stripped.startsWith(kw))) {
         if (isFocused) focusedIndex = optionCount;
         optionCount++;
         foundFirst = true;
       }
     } else {
-      if (PERMISSION_KEYWORDS.some((kw) => label.startsWith(kw))) {
+      if (PERMISSION_KEYWORDS.some((kw) => stripped.startsWith(kw))) {
         if (isFocused) focusedIndex = optionCount;
         optionCount++;
       } else {
