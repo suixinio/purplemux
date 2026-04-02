@@ -153,6 +153,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
   const clickedTerminalRef = useRef(false);
+  const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
+  const pendingFocusRef = useRef<(() => void) | null>(null);
 
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
@@ -162,6 +164,32 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const claudeStatus = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeStatus ?? 'unknown' : 'unknown');
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'inactive');
   const claudeInputVisible = sessionView === 'timeline';
+
+  const deferredFocusInput = useCallback((fn: () => void) => {
+    if (pointerDownPosRef.current) {
+      pendingFocusRef.current = fn;
+    } else {
+      fn();
+    }
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
+    pendingFocusRef.current = null;
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    const pos = pointerDownPosRef.current;
+    pointerDownPosRef.current = null;
+    if (pendingFocusRef.current && pos) {
+      const dx = e.clientX - pos.x;
+      const dy = e.clientY - pos.y;
+      if (dx * dx + dy * dy < 25) {
+        pendingFocusRef.current();
+      }
+    }
+    pendingFocusRef.current = null;
+  }, []);
 
   const { prompts: quickPrompts } = useQuickPrompts();
 
@@ -407,7 +435,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       if (targetTerminal || !isClaudeCode || !claudeInputVisible) {
         focus();
       } else {
-        focusInputRef.current?.();
+        deferredFocusInput(() => focusInputRef.current?.());
       }
     }
   }, [isFocused]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -607,7 +635,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       wsActionsRef.current.sendResize(cols, rows);
       if (isFocused) {
         if (isClaudeCode) {
-          if (claudeInputVisible) focusInputRef.current?.();
+          if (claudeInputVisible) deferredFocusInput(() => focusInputRef.current?.());
         } else {
           focus();
         }
@@ -618,7 +646,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   useEffect(() => {
     if (isFocused && isClaudeCode && claudeInputVisible) {
-      focusInputRef.current?.();
+      deferredFocusInput(() => focusInputRef.current?.());
     }
   }, [claudeInputVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -644,6 +672,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       aria-label={`Pane ${paneNumber}`}
       aria-current={isFocused ? 'true' : undefined}
       onClick={handleFocusPane}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
     >
       <PaneTabBar
         paneId={paneId}
