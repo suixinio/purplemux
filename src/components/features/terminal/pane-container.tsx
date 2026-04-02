@@ -155,6 +155,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const clickedTerminalRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const pendingFocusRef = useRef<(() => void) | null>(null);
+  const wasDragRef = useRef(false);
 
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
@@ -166,6 +167,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const claudeInputVisible = sessionView === 'timeline';
 
   const deferredFocusInput = useCallback((fn: () => void) => {
+    if (wasDragRef.current) return;
     if (pointerDownPosRef.current) {
       pendingFocusRef.current = fn;
     } else {
@@ -176,17 +178,19 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     pointerDownPosRef.current = { x: e.clientX, y: e.clientY };
     pendingFocusRef.current = null;
+    wasDragRef.current = false;
   }, []);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     const pos = pointerDownPosRef.current;
     pointerDownPosRef.current = null;
-    if (pendingFocusRef.current && pos) {
-      const dx = e.clientX - pos.x;
-      const dy = e.clientY - pos.y;
-      if (dx * dx + dy * dy < 25) {
-        pendingFocusRef.current();
-      }
+    const isDrag = !!pos && (e.clientX - pos.x) ** 2 + (e.clientY - pos.y) ** 2 >= 25;
+    if (isDrag) {
+      wasDragRef.current = true;
+      requestAnimationFrame(() => { wasDragRef.current = false; });
+    }
+    if (pendingFocusRef.current && !isDrag) {
+      pendingFocusRef.current();
     }
     pendingFocusRef.current = null;
   }, []);
