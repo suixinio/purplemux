@@ -64,6 +64,7 @@ export const createSession = async (
       cwd: cwd || process.env.HOME || '/',
     },
   );
+  await applyConfig();
   console.log(`[terminal] tmux session created: ${name} (cols: ${cols}, rows: ${rows})`);
 };
 
