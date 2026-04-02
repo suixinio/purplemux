@@ -232,11 +232,11 @@ const PaneTabBar = ({
                     e.stopPropagation();
                     onClosePane();
                   }}
-                  aria-label="닫기"
+                  aria-label="탭 모두 닫기"
                 >
                   <X className="h-3.5 w-3.5" />
                 </TooltipTrigger>
-                <TooltipContent side="bottom">닫기</TooltipContent>
+                <TooltipContent side="bottom">탭 모두 닫기</TooltipContent>
               </Tooltip>
             </div>
           )}
