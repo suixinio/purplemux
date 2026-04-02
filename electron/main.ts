@@ -331,6 +331,13 @@ const createWindow = (url: string) => {
     return { action: 'deny' };
   });
 
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (navigationUrl !== mainWindow?.webContents.getURL()) {
+      event.preventDefault();
+      shell.openExternal(navigationUrl);
+    }
+  });
+
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
   const saveWindowState = () => {
     if (!mainWindow) return;
