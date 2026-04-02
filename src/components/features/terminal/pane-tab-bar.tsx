@@ -17,7 +17,6 @@ interface IPaneTabBarProps {
   error: string | null;
   isCreating: boolean;
   paneCount: number;
-  canSplit: boolean;
   isSplitting: boolean;
   onSwitchTab: (tabId: string) => void;
   onCreateTab: (panelType?: TPanelType, options?: { command?: string }) => void;
@@ -25,7 +24,6 @@ interface IPaneTabBarProps {
   onRenameTab: (tabId: string, name: string) => void;
   onReorderTabs: (tabIds: string[]) => void;
   onClosePane: () => void;
-  onSplitPane: (orientation: 'horizontal' | 'vertical') => void;
   onMoveTab: (tabId: string, fromPaneId: string, toIndex: number) => void;
   onFocusPane: () => void;
   onRetry: () => void;
@@ -40,7 +38,6 @@ const PaneTabBar = ({
   error,
   isCreating,
   paneCount,
-  canSplit,
   isSplitting,
   onSwitchTab,
   onCreateTab,
@@ -48,7 +45,6 @@ const PaneTabBar = ({
   onRenameTab,
   onReorderTabs,
   onClosePane,
-  onSplitPane,
   onMoveTab,
   onFocusPane,
   onRetry,
@@ -221,7 +217,7 @@ const PaneTabBar = ({
 
       <TooltipProvider>
         <div className="flex shrink-0 items-stretch">
-          <PaneNewTabMenu isCreating={isCreating} canSplit={canSplit} onCreateTab={onCreateTab} onSplitPane={onSplitPane} />
+          <PaneNewTabMenu isCreating={isCreating} onCreateTab={onCreateTab} />
 
           {paneCount >= 2 && (
             <div className="flex items-center px-0.5">

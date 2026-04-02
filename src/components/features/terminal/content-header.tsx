@@ -8,6 +8,9 @@ import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useConfigStore from '@/hooks/use-config-store';
+import { isMac } from '@/lib/keyboard-shortcuts';
+
+const mod = isMac ? '⌘' : 'Ctrl+';
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -132,7 +135,7 @@ const ContentHeader = ({
                 <SplitVerticalIcon className="h-3.5 w-3.5" />
               )}
             </TooltipTrigger>
-            <TooltipContent side="bottom">수직 분할</TooltipContent>
+            <TooltipContent side="bottom">수직 분할 ({mod}D)</TooltipContent>
           </Tooltip>
 
           <Tooltip>
@@ -153,7 +156,7 @@ const ContentHeader = ({
                 <SplitHorizontalIcon className="h-3.5 w-3.5" />
               )}
             </TooltipTrigger>
-            <TooltipContent side="bottom">수평 분할</TooltipContent>
+            <TooltipContent side="bottom">수평 분할 ({mod}⇧D)</TooltipContent>
           </Tooltip>
 
           {paneCount >= 2 && (
