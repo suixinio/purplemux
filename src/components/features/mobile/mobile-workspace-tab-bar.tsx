@@ -105,7 +105,7 @@ const MobileWorkspaceTabBar = ({
               ) : termStatus === 'server' ? (
                 <span className="h-2 w-2 rounded-full bg-ui-green" />
               ) : termStatus === 'running' ? (
-                <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
+                <SquareTerminal className="h-2.5 w-2.5 text-ui-blue" />
               ) : (
                 <SquareTerminal className="h-2.5 w-2.5 text-muted-foreground/50" />
               )}
