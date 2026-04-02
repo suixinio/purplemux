@@ -415,7 +415,7 @@ export const getListeningPorts = async (shellPid: number): Promise<number[]> => 
   try {
     const { stdout } = await execFile(
       'lsof',
-      ['-a', '-p', pids.join(','), '-i', '-sTCP:LISTEN', '-Fn'],
+      ['-a', '-p', pids.join(','), '-i', '-sTCP:LISTEN', '-P', '-Fn'],
       { timeout: CMD_TIMEOUT },
     );
     const ports = new Set<number>();
