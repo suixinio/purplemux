@@ -22,6 +22,7 @@ const PaneLayout = (props: IPaneLayoutProps) => {
 
   const rootRef = useRef<HTMLDivElement>(null);
   const stableContainersRef = useRef(new Map<string, HTMLDivElement>());
+  const prevPaneKeyRef = useRef('');
 
   const groupRefsMap = useRef(new Map<string, React.RefObject<GroupImperativeHandle | null>>());
 
@@ -147,6 +148,22 @@ const PaneLayout = (props: IPaneLayoutProps) => {
         slot.appendChild(container);
       }
     });
+  }, [panes.map((p) => p.id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useLayoutEffect(() => {
+    const key = panes.map((p) => p.id).join(',');
+    if (prevPaneKeyRef.current && prevPaneKeyRef.current !== key) {
+      const walk = (node: TLayoutNode, path: number[]) => {
+        if (node.type === 'pane') return;
+        const pathKey = path.join('-') || 'root';
+        const ref = groupRefsMap.current.get(pathKey);
+        ref?.current?.setLayout({ left: node.ratio, right: 100 - node.ratio });
+        walk(node.children[0], [...path, 0]);
+        walk(node.children[1], [...path, 1]);
+      };
+      walk(root, []);
+    }
+    prevPaneKeyRef.current = key;
   }, [panes.map((p) => p.id).join(',')]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (

@@ -28,7 +28,7 @@ const PaneNewTabMenu = ({ isCreating, onCreateTab }: IPaneNewTabMenuProps) => {
   return (
     <div className="flex items-center border-l border-r border-border px-0.5">
       <Popover open={open} onOpenChange={setOpen}>
-        <Tooltip open={open ? false : undefined}>
+        <Tooltip>
           <TooltipTrigger
             render={
               <PopoverTrigger
