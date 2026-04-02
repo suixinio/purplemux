@@ -50,6 +50,8 @@ const useClaudeStatus = () => {
                 cliState: msg.cliState,
                 workspaceId: msg.workspaceId,
                 panelType: msg.panelType,
+                terminalStatus: msg.terminalStatus,
+                listeningPorts: msg.listeningPorts,
               });
               break;
           }

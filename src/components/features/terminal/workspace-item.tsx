@@ -9,6 +9,7 @@ import {
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import type { IWorkspace } from '@/types/terminal';
+import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
 import WorkspaceStatusIndicator from '@/components/features/terminal/workspace-status-indicator';
 
 interface IWorkspaceItemProps {
@@ -91,6 +92,10 @@ const WorkspaceItem = ({
   const displayDirs = workspace.directories
     .map((d) => d.replace(/^\/Users\/[^/]+/, '~'));
 
+  const portsLabel = useTabStore(
+    (state) => selectWorkspacePortsLabel(state.tabs, workspace.id),
+  );
+
   return (
     <ContextMenu>
       <ContextMenuTrigger
@@ -131,6 +136,11 @@ const WorkspaceItem = ({
             {dir}
           </span>
         ))}
+        {portsLabel && (
+          <span className="truncate text-xs leading-tight text-ui-green/80">
+            {portsLabel}
+          </span>
+        )}
         <WorkspaceStatusIndicator workspaceId={workspace.id} />
       </ContextMenuTrigger>
       <ContextMenuContent>

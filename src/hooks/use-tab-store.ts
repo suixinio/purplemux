@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { TCliState, TClaudeStatus } from '@/types/timeline';
-import type { TTabDisplayStatus } from '@/types/status';
+import type { TTabDisplayStatus, TTerminalStatus } from '@/types/status';
 import type { TPanelType } from '@/types/terminal';
 
 export type TSessionView =
@@ -20,6 +20,8 @@ export interface ITabState {
   isResuming: boolean;
   workspaceId: string;
   panelType?: TPanelType;
+  terminalStatus?: TTerminalStatus;
+  listeningPorts?: number[];
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -51,8 +53,8 @@ interface ITabStore {
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[] }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[] }) => void;
 }
 
 const updateTab = (
@@ -165,9 +167,9 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = next[tabId];
         if (existing) {
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts };
         }
       }
       return { tabs: next };
@@ -181,12 +183,12 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts },
         },
       };
     }),
@@ -236,6 +238,21 @@ export const selectWorkspaceStatus = (
     else if (entry.cliState === 'needs-attention') attentionCount++;
   }
   return { busyCount, attentionCount };
+};
+
+export const selectWorkspacePortsLabel = (
+  tabs: Record<string, ITabState>,
+  wsId: string,
+): string => {
+  const ports = new Set<number>();
+  for (const entry of Object.values(tabs)) {
+    if (entry.workspaceId !== wsId) continue;
+    if (entry.listeningPorts) {
+      for (const p of entry.listeningPorts) ports.add(p);
+    }
+  }
+  if (ports.size === 0) return '';
+  return ':' + [...ports].sort((a, b) => a - b).join(', :');
 };
 
 export const selectGlobalStatus = (

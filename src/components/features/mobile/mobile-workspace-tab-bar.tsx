@@ -82,6 +82,7 @@ const MobileWorkspaceTabBar = ({
             item.tabId === selectedTabId;
           const isClaude = item.panelType === 'claude-code';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
+          const termStatus = statusTabs[item.tabId]?.terminalStatus;
 
           return (
             <button
@@ -101,6 +102,10 @@ const MobileWorkspaceTabBar = ({
                 <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
               ) : item.panelType === 'web-browser' ? (
                 <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
+              ) : termStatus === 'server' ? (
+                <span className="h-2 w-2 rounded-full bg-ui-green" />
+              ) : termStatus === 'running' ? (
+                <Loader2 className="h-2.5 w-2.5 animate-spin text-muted-foreground" />
               ) : (
                 <SquareTerminal className="h-2.5 w-2.5 text-muted-foreground/50" />
               )}

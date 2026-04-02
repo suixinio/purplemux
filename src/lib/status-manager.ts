@@ -1,14 +1,14 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
-import { getAllPanesInfo, capturePaneContent } from '@/lib/tmux';
+import { getAllPanesInfo, capturePaneContent, getListeningPorts, SAFE_SHELLS } from '@/lib/tmux';
 import { detectActiveSession, isClaudeRunning } from '@/lib/session-detection';
 import { hasPermissionPrompt } from '@/lib/permission-prompt';
 import { getLastTerminalOutput } from '@/lib/terminal-server';
 import { INTERRUPT_PREFIX } from '@/lib/session-parser';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState } from '@/types/timeline';
-import type { ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage } from '@/types/status';
+import type { TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage } from '@/types/status';
 import fs from 'fs/promises';
 
 const POLL_INTERVAL_SMALL = 5_000;
@@ -154,16 +154,22 @@ class StatusManager {
 
       const tabs = collectAllTabs(layout.root);
       for (const tab of tabs) {
-        const detectedState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
+        const paneInfo = panesInfo.get(tab.sessionName);
+        const detectedState = await this.detectTabCliState(tab.sessionName, paneInfo);
         const cliState = tab.cliState === 'needs-attention' && detectedState === 'idle'
           ? 'needs-attention' as const
           : detectedState;
+        const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
+          ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
+          : await this.detectTerminalStatus(paneInfo);
         this.tabs.set(tab.id, {
           cliState,
           workspaceId: ws.id,
           tabName: tab.name,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
+          terminalStatus,
+          listeningPorts,
         });
       }
     }
@@ -202,6 +208,18 @@ class StatusManager {
     }
 
     return state;
+  }
+
+  private async detectTerminalStatus(
+    paneInfo?: IPaneInfo,
+  ): Promise<{ terminalStatus: TTerminalStatus; listeningPorts: number[] }> {
+    if (!paneInfo || !paneInfo.pid) return { terminalStatus: 'idle', listeningPorts: [] };
+
+    const ports = await getListeningPorts(paneInfo.pid);
+    if (ports.length > 0) return { terminalStatus: 'server', listeningPorts: ports };
+
+    const isShell = SAFE_SHELLS.has(paneInfo.command);
+    return { terminalStatus: isShell ? 'idle' : 'running', listeningPorts: [] };
   }
 
   private getPollingInterval(): number {
@@ -245,8 +263,12 @@ class StatusManager {
       for (const tab of tabs) {
         knownTabIds.add(tab.id);
         const existing = this.tabs.get(tab.id);
+        const paneInfo = panesInfo.get(tab.sessionName);
 
-        const newCliState = await this.detectTabCliState(tab.sessionName, panesInfo.get(tab.sessionName));
+        const newCliState = await this.detectTabCliState(tab.sessionName, paneInfo);
+        const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
+          ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
+          : await this.detectTerminalStatus(paneInfo);
 
         if (!existing) {
           const entry: ITabStatusEntry = {
@@ -255,6 +277,8 @@ class StatusManager {
             tabName: tab.name,
             tmuxSession: tab.sessionName,
             panelType: tab.panelType,
+            terminalStatus,
+            listeningPorts,
           };
           this.tabs.set(tab.id, entry);
           this.persistToLayout(entry);
@@ -265,17 +289,29 @@ class StatusManager {
         existing.tabName = tab.name;
         existing.workspaceId = ws.id;
 
-        // needs-attention 보호: 폴링이 idle을 감지해도 needs-attention 유지
-        if (existing.cliState === 'needs-attention' && newCliState === 'idle') continue;
+        const prevPorts = existing.listeningPorts;
+        const portsChanged = prevPorts?.length !== listeningPorts.length
+          || listeningPorts.some((p, i) => prevPorts![i] !== p);
+        const terminalChanged = existing.terminalStatus !== terminalStatus || portsChanged;
+        if (terminalChanged) {
+          existing.terminalStatus = terminalStatus;
+          existing.listeningPorts = listeningPorts;
+        }
 
-        if (existing.cliState !== newCliState) {
+        // needs-attention 보호: 폴링이 idle을 감지해도 needs-attention 유지
+        const cliChanged = existing.cliState !== newCliState
+          && !(existing.cliState === 'needs-attention' && newCliState === 'idle');
+
+        if (cliChanged) {
           const prevState = existing.cliState;
           // busy→idle 승격
           existing.cliState = (prevState === 'busy' && newCliState === 'idle')
             ? 'needs-attention'
             : newCliState;
+        }
 
-          this.persistToLayout(existing);
+        if (cliChanged || terminalChanged) {
+          if (cliChanged) this.persistToLayout(existing);
           this.broadcastUpdate(tab.id, existing);
         }
       }
@@ -307,6 +343,8 @@ class StatusManager {
         workspaceId: entry.workspaceId,
         tabName: entry.tabName,
         panelType: entry.panelType,
+        terminalStatus: entry.terminalStatus,
+        listeningPorts: entry.listeningPorts,
       };
     }
     return result;
@@ -367,6 +405,8 @@ class StatusManager {
       workspaceId: entry.workspaceId,
       tabName: entry.tabName,
       panelType: entry.panelType,
+      terminalStatus: entry.terminalStatus,
+      listeningPorts: entry.listeningPorts,
     };
     this.broadcast(msg, exclude);
   }

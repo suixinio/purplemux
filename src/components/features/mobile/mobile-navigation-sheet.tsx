@@ -20,9 +20,18 @@ import {
 } from '@/components/ui/sheet';
 import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
 import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 import WorkspaceStatusIndicator from '@/components/features/terminal/workspace-status-indicator';
+
+const WorkspacePortsLabel = ({ workspaceId }: { workspaceId: string }) => {
+  const label = useTabStore(
+    (state) => selectWorkspacePortsLabel(state.tabs, workspaceId),
+  );
+  if (!label) return null;
+  return <span className="block truncate text-xs text-ui-green/80">{label}</span>;
+};
 
 interface IMobileNavigationSheetProps {
   open: boolean;
@@ -213,6 +222,7 @@ const MobileNavigationSheet = ({
                   )}
                   <div className="min-w-0 flex-1">
                     <span className="block truncate">{ws.name}</span>
+                    <WorkspacePortsLabel workspaceId={ws.id} />
                     {!isExpanded && (
                       <WorkspaceStatusIndicator workspaceId={ws.id} />
                     )}

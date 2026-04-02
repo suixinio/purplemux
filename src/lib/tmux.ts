@@ -252,7 +252,7 @@ export const getAllPanesInfo = async (): Promise<Map<string, IPaneInfo>> => {
   }
 };
 
-const SAFE_SHELLS = new Set(['bash', 'zsh', 'fish', 'sh', 'dash']);
+export const SAFE_SHELLS = new Set(['bash', 'zsh', 'fish', 'sh', 'dash']);
 
 export const checkTerminalProcess = async (
   tmuxSession: string,
@@ -388,6 +388,46 @@ export const capturePaneContent = async (sessionName: string): Promise<string | 
     return stdout;
   } catch {
     return null;
+  }
+};
+
+const getDescendantPids = async (rootPid: number): Promise<number[]> => {
+  const all: number[] = [];
+  let frontier = [rootPid];
+  while (frontier.length > 0) {
+    try {
+      const { stdout } = await execFile('pgrep', ['-P', frontier.join(',')], { timeout: CMD_TIMEOUT });
+      const children = stdout.trim().split('\n').map((s) => parseInt(s, 10)).filter((n) => !Number.isNaN(n));
+      if (children.length === 0) break;
+      all.push(...children);
+      frontier = children;
+    } catch {
+      break;
+    }
+  }
+  return all;
+};
+
+export const getListeningPorts = async (shellPid: number): Promise<number[]> => {
+  const pids = await getDescendantPids(shellPid);
+  if (pids.length === 0) return [];
+
+  try {
+    const { stdout } = await execFile(
+      'lsof',
+      ['-a', '-p', pids.join(','), '-i', '-sTCP:LISTEN', '-Fn'],
+      { timeout: CMD_TIMEOUT },
+    );
+    const ports = new Set<number>();
+    for (const line of stdout.split('\n')) {
+      if (line.startsWith('n')) {
+        const match = line.match(/:(\d+)$/);
+        if (match) ports.add(parseInt(match[1], 10));
+      }
+    }
+    return [...ports].sort((a, b) => a - b);
+  } catch {
+    return [];
   }
 };
 
