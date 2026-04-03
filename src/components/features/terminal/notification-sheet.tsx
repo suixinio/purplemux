@@ -3,6 +3,7 @@ import { Loader2, ArrowRight, Check } from 'lucide-react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import 'dayjs/locale/ko';
+import { useRouter } from 'next/router';
 import {
   Sheet,
   SheetContent,
@@ -127,9 +128,12 @@ const NotificationItem = ({
 );
 
 const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
+  const router = useRouter();
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const isTerminalPage = router.pathname === '/';
   const activeTabId = useLayoutStore((s) => {
+    if (!isTerminalPage) return null;
     if (!s.layout?.activePaneId) return null;
     const pane = findPane(s.layout.root, s.layout.activePaneId);
     return pane?.activeTabId ?? null;
