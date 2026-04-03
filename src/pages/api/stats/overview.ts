@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getStatsCache } from '@/lib/stats/pt-stats-cache';
+import { getStatsCache } from '@/lib/stats/stats-cache';
 import { buildOverview } from '@/lib/stats/stats-cache-parser';
 import { parsePeriod } from '@/lib/stats/period-filter';
 import { getCached, setCached } from '@/lib/stats/cache';

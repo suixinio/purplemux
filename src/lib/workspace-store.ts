@@ -35,18 +35,18 @@ const LEGACY_LAYOUT_FILE = path.join(BASE_DIR, 'layout.json');
 const LEGACY_TABS_FILE = path.join(BASE_DIR, 'tabs.json');
 
 const g = globalThis as unknown as {
-  __ptWorkspaceLock?: Promise<void>;
-  __ptWorkspacesContentCache?: string;
+  __purplemuxWorkspaceLock?: Promise<void>;
+  __purplemuxWorkspacesContentCache?: string;
 };
-if (!g.__ptWorkspaceLock) g.__ptWorkspaceLock = Promise.resolve();
+if (!g.__purplemuxWorkspaceLock) g.__purplemuxWorkspaceLock = Promise.resolve();
 
 const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
   let release: () => void;
   const next = new Promise<void>((r) => {
     release = r;
   });
-  const prev = g.__ptWorkspaceLock!;
-  g.__ptWorkspaceLock = next;
+  const prev = g.__purplemuxWorkspaceLock!;
+  g.__purplemuxWorkspaceLock = next;
   await prev;
   try {
     return await fn();
@@ -93,14 +93,14 @@ const writeWorkspacesFile = async (data: IWorkspacesData): Promise<void> => {
   const { workspaces, sidebarCollapsed, sidebarWidth } = data;
   const contentKey = JSON.stringify({ workspaces, sidebarCollapsed, sidebarWidth });
 
-  if (g.__ptWorkspacesContentCache === contentKey) return;
+  if (g.__purplemuxWorkspacesContentCache === contentKey) return;
 
   data.updatedAt = new Date().toISOString();
   const tmpFile = WORKSPACES_FILE + '.tmp';
   await fs.writeFile(tmpFile, JSON.stringify(data, null, 2));
   await fs.rename(tmpFile, WORKSPACES_FILE);
 
-  g.__ptWorkspacesContentCache = contentKey;
+  g.__purplemuxWorkspacesContentCache = contentKey;
   broadcastSync({ type: 'workspace' });
 };
 

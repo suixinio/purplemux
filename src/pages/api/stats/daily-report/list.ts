@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getStatsCache } from '@/lib/stats/pt-stats-cache';
+import { getStatsCache } from '@/lib/stats/stats-cache';
 import { buildOverview } from '@/lib/stats/stats-cache-parser';
 import { readAllCachedReports } from '@/lib/stats/daily-report-builder';
 import type { IDailyReportListResponse, IDailyReportListItem } from '@/types/stats';

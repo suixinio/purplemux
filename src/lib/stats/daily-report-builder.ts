@@ -5,7 +5,7 @@ import { createReadStream } from 'fs';
 import readline from 'readline';
 import { execFile } from 'child_process';
 import { shellPath } from '@/lib/preflight';
-import { collectJsonlFiles } from './pt-stats-cache';
+import { collectJsonlFiles } from './stats-cache';
 import type { IDailyReportDay } from '@/types/stats';
 
 const CACHE_DIR = path.join(os.homedir(), '.purplemux', 'stats', 'daily-reports');

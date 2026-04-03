@@ -130,7 +130,9 @@ const ReportsPage = () => {
 
         <TodoSection />
 
-        <hr className="mb-6 border-foreground/10" />
+        <div className="mb-6 flex justify-center">
+          <div className="h-px w-12 bg-foreground/10" />
+        </div>
 
         <SectionErrorBoundary sectionName="노트">
           {loading ? (

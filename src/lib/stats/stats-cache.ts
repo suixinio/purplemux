@@ -20,7 +20,7 @@ const CONCURRENCY_LIMIT = 10;
 
 // --- Cache types ---
 
-interface IPtDailyData {
+interface IStatsDailyData {
   messageCount: number;
   sessionCount: number;
   toolCallCount: number;
@@ -29,10 +29,10 @@ interface IPtDailyData {
   sessions: { id: string; start: string; end: string; messages: number }[];
 }
 
-interface IPtCache {
+interface IStatsFileCache {
   version: number;
   lastComputedDate: string;
-  days: Record<string, IPtDailyData>;
+  days: Record<string, IStatsDailyData>;
 }
 
 // --- JSONL parsing ---
@@ -62,8 +62,8 @@ export const collectJsonlFiles = async (): Promise<string[]> => {
 const parseDaysFromFile = async (
   filePath: string,
   targetDates: Set<string>,
-): Promise<Map<string, IPtDailyData>> => {
-  const days = new Map<string, IPtDailyData>();
+): Promise<Map<string, IStatsDailyData>> => {
+  const days = new Map<string, IStatsDailyData>();
   const sessionsByDay = new Map<string, Map<string, { start: string; end: string; messages: number }>>();
 
   try {
@@ -185,7 +185,7 @@ const runWithConcurrency = async <T>(tasks: (() => Promise<T>)[], limit: number)
   return results;
 };
 
-const mergeDailyData = (target: IPtDailyData, source: IPtDailyData): void => {
+const mergeDailyData = (target: IStatsDailyData, source: IStatsDailyData): void => {
   target.messageCount += source.messageCount;
   target.toolCallCount += source.toolCallCount;
 
@@ -220,10 +220,10 @@ const mergeDailyData = (target: IPtDailyData, source: IPtDailyData): void => {
 
 // --- Cache read/write ---
 
-const readCache = async (): Promise<IPtCache | null> => {
+const readCache = async (): Promise<IStatsFileCache | null> => {
   try {
     const content = await fs.readFile(CACHE_PATH, 'utf-8');
-    const raw = JSON.parse(content) as IPtCache;
+    const raw = JSON.parse(content) as IStatsFileCache;
     if (raw.version !== CACHE_VERSION) return null;
     return raw;
   } catch {
@@ -231,7 +231,7 @@ const readCache = async (): Promise<IPtCache | null> => {
   }
 };
 
-const writeCache = async (cache: IPtCache): Promise<void> => {
+const writeCache = async (cache: IStatsFileCache): Promise<void> => {
   await fs.mkdir(CACHE_DIR, { recursive: true });
   await fs.writeFile(CACHE_PATH, JSON.stringify(cache), 'utf-8');
 };
@@ -274,14 +274,14 @@ const findFirstDate = async (): Promise<string | null> => {
   return earliest;
 };
 
-const computeMissingDays = async (targetDates: Set<string>): Promise<Map<string, IPtDailyData>> => {
+const computeMissingDays = async (targetDates: Set<string>): Promise<Map<string, IStatsDailyData>> => {
   if (targetDates.size === 0) return new Map();
 
   const files = await collectJsonlFiles();
   const tasks = files.map((f) => () => parseDaysFromFile(f, targetDates));
   const allResults = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
 
-  const merged = new Map<string, IPtDailyData>();
+  const merged = new Map<string, IStatsDailyData>();
   for (const fileResult of allResults) {
     for (const [date, data] of fileResult) {
       const existing = merged.get(date);
@@ -313,7 +313,7 @@ export const getStatsCache = async (): Promise<IStatsCache> => {
     cache = { version: CACHE_VERSION, lastComputedDate: '', days: {} };
     const firstDate = await findFirstDate();
     if (!firstDate) {
-      return buildStatsCacheFromPt(cache, today);
+      return buildStatsCache(cache, today);
     }
     let d = dayjs(firstDate);
     const end = dayjs(yesterday);
@@ -346,16 +346,16 @@ export const getStatsCache = async (): Promise<IStatsCache> => {
   await writeCache(cache);
 
   const todayData = newDays.get(today) ?? null;
-  const result = buildStatsCacheFromPt(cache, today, todayData);
+  const result = buildStatsCache(cache, today, todayData);
 
   memoryCache = { data: result, expiresAt: Date.now() + MEMORY_TTL };
   return result;
 };
 
-const buildStatsCacheFromPt = (
-  cache: IPtCache,
+const buildStatsCache = (
+  cache: IStatsFileCache,
   today: string,
-  todayData?: IPtDailyData | null,
+  todayData?: IStatsDailyData | null,
 ): IStatsCache => {
   const dailyActivity: IStatsCacheDailyActivity[] = [];
   const dailyModelTokens: IStatsCacheDailyTokens[] = [];
@@ -367,7 +367,7 @@ const buildStatsCacheFromPt = (
   let firstSessionDate = '';
   let longestSession: IStatsCacheLongestSession = { sessionId: '', duration: 0, messageCount: 0, timestamp: '' };
 
-  const allDays: [string, IPtDailyData][] = Object.entries(cache.days);
+  const allDays: [string, IStatsDailyData][] = Object.entries(cache.days);
   if (todayData) {
     allDays.push([today, todayData]);
   }

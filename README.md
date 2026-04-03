@@ -49,8 +49,8 @@
 ## 설치 및 실행
 
 ```bash
-git clone https://github.com/subicura/pt.git
-cd pt
+git clone https://github.com/subicura/purplemux.git
+cd purplemux
 pnpm install
 pnpm start
 ```
