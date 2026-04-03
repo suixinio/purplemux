@@ -12,6 +12,8 @@ export interface ITabStatusEntry {
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
+  claudeSummary?: string | null;
+  lastUserMessage?: string | null;
 }
 
 export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle';
@@ -33,6 +35,8 @@ export interface IStatusUpdateMessage {
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
+  claudeSummary?: string | null;
+  lastUserMessage?: string | null;
 }
 
 export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage;
@@ -42,4 +46,10 @@ export interface IStatusTabDismissedMessage {
   tabId: string;
 }
 
-export type TStatusClientMessage = IStatusTabDismissedMessage;
+export interface IStatusCliStateMessage {
+  type: 'status:cli-state';
+  tabId: string;
+  cliState: TCliState;
+}
+
+export type TStatusClientMessage = IStatusTabDismissedMessage | IStatusCliStateMessage;

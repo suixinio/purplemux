@@ -87,7 +87,7 @@ Claude 패널에서 어떤 화면을 보여줄지 결정하는 파생 상태.
 
 | 경로 | setter | 특성 |
 | --- | --- | --- |
-| 로컬 (onSync) | `setCliState` | `busy→idle` 시 `ready-for-review` 승격, `ready-for-review→idle` 보호 |
+| 로컬 (onSync) | `setCliState` | `busy→idle` 시 `ready-for-review` 승격, `ready-for-review→idle` 보호. `notifyCliState`로 서버에도 전파 |
 | 서버 (status WS) | `syncAllFromServer`, `updateFromServer` | 서버가 authority, 직접 patch (승격/보호 없음) |
 | 사용자 액션 | `dismissTab` | `ready-for-review → idle` 전환 |
 

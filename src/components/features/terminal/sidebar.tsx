@@ -14,7 +14,6 @@ import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
 import { isMac } from '@/lib/keyboard-shortcuts';
 import { useRouter } from 'next/router';
-import { toast } from 'sonner';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,6 +29,7 @@ import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
+import NotificationSheet from '@/components/features/terminal/notification-sheet';
 
 interface ISidebarProps {
   onSelectWorkspace: (workspaceId: string) => void;
@@ -52,7 +52,9 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
   const modTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -278,11 +280,16 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
           <AppLogo shimmer={hasBusy} />
           <div className="flex items-center gap-0.5">
             <button
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => toast.info('개발중입니다')}
+              className="relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
+              onClick={() => setNotificationOpen(true)}
               aria-label="알림"
             >
               <Bell className="h-3.5 w-3.5" />
+              {attentionCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
+                  {attentionCount}
+                </span>
+              )}
             </button>
             <AlertDialog>
               <AlertDialogTrigger
@@ -456,6 +463,13 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
       )}
 
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <NotificationSheet
+        open={notificationOpen}
+        onOpenChange={setNotificationOpen}
+        onNavigate={(workspaceId) => {
+          onSelectWorkspace(workspaceId);
+        }}
+      />
 
       <AlertDialog
         open={!!deleteTarget}

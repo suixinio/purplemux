@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import useTabStore from '@/hooks/use-tab-store';
 import type { TStatusServerMessage } from '@/types/status';
+import type { TCliState } from '@/types/timeline';
 
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
@@ -11,6 +12,12 @@ export const dismissTab = (tabId: string) => {
   useTabStore.getState().dismissTab(tabId);
   if (sharedWs?.readyState === WebSocket.OPEN) {
     sharedWs.send(JSON.stringify({ type: 'status:tab-dismissed', tabId }));
+  }
+};
+
+export const notifyCliState = (tabId: string, cliState: TCliState) => {
+  if (sharedWs?.readyState === WebSocket.OPEN) {
+    sharedWs.send(JSON.stringify({ type: 'status:cli-state', tabId, cliState }));
   }
 };
 
@@ -49,10 +56,13 @@ const useClaudeStatus = () => {
               useTabStore.getState().updateFromServer(msg.tabId, {
                 cliState: msg.cliState,
                 workspaceId: msg.workspaceId,
+                tabName: msg.tabName,
                 panelType: msg.panelType,
                 terminalStatus: msg.terminalStatus,
                 listeningPorts: msg.listeningPorts,
                 currentProcess: msg.currentProcess,
+                claudeSummary: msg.claudeSummary,
+                lastUserMessage: msg.lastUserMessage,
               });
               break;
           }

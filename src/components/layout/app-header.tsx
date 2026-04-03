@@ -1,6 +1,6 @@
+import { useState } from 'react';
 import { Bell, LogOut, Menu } from 'lucide-react';
 import { signOut } from 'next-auth/react';
-import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -16,10 +16,12 @@ import {
 } from '@/components/ui/alert-dialog';
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
+import NotificationSheet from '@/components/features/terminal/notification-sheet';
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
   workspaceName?: string;
+  onNavigateWorkspace?: (workspaceId: string) => void;
 }
 
 const handleLogout = async () => {
@@ -27,8 +29,10 @@ const handleLogout = async () => {
   window.location.href = '/login';
 };
 
-const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
+const AppHeader = ({ onMenuOpen, workspaceName, onNavigateWorkspace }: IAppHeaderProps) => {
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
+  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-background px-3">
@@ -59,12 +63,17 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
-                  onClick={() => toast.info('개발중입니다')}
+                  className="relative h-7 w-7"
+                  onClick={() => setNotificationOpen(true)}
                 />
               }
             >
               <Bell className="h-4 w-4 text-muted-foreground" />
+              {attentionCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
+                  {attentionCount}
+                </span>
+              )}
             </TooltipTrigger>
             <TooltipContent>알림</TooltipContent>
           </Tooltip>
@@ -103,6 +112,13 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
           </AlertDialog>
         </div>
       </TooltipProvider>
+      <NotificationSheet
+        open={notificationOpen}
+        onOpenChange={setNotificationOpen}
+        onNavigate={(workspaceId) => {
+          onNavigateWorkspace?.(workspaceId);
+        }}
+      />
     </header>
   );
 };

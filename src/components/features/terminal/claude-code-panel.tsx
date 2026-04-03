@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
+import { notifyCliState } from '@/hooks/use-claude-status';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import TimelineView from '@/components/features/timeline/timeline-view';
@@ -90,6 +91,7 @@ const ClaudeCodePanel = ({
       useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
+      notifyCliState(tabId, state.cliState);
     },
   });
 

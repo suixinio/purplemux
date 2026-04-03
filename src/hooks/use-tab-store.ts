@@ -19,11 +19,14 @@ export interface ITabState {
   isRestarting: boolean;
   isResuming: boolean;
   workspaceId: string;
+  tabName?: string;
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
   currentProcess?: string;
   currentProcessSetAt?: number;
+  claudeSummary?: string | null;
+  lastUserMessage?: string | null;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -56,8 +59,8 @@ interface ITabStore {
   setCurrentProcess: (tabId: string, process: string | null) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; tabName?: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string; claudeSummary?: string | null; lastUserMessage?: string | null }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; tabName?: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string; claudeSummary?: string | null; lastUserMessage?: string | null }) => void;
 }
 
 const updateTab = (
@@ -182,9 +185,9 @@ const useTabStore = create<ITabStore>((set) => ({
           const processPatch = shouldAcceptServerProcess(existing, entry.currentProcess)
             ? { currentProcess: entry.currentProcess }
             : {};
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, ...processPatch };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, ...processPatch };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage };
         }
       }
       return { tabs: next };
@@ -201,12 +204,12 @@ const useTabStore = create<ITabStore>((set) => ({
         const processPatch = shouldAcceptServerProcess(existing, update.currentProcess)
           ? { currentProcess: update.currentProcess }
           : {};
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, ...processPatch }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, ...processPatch }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage },
         },
       };
     }),

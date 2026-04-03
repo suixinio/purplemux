@@ -30,6 +30,7 @@ interface IJsonlIdleCache {
   stale: boolean;
   needsStaleRecheck: boolean;
   staleMs: number;
+  lastUserMessage: string | null;
 }
 
 const jsonlIdleCache = new Map<string, IJsonlIdleCache>();
@@ -81,21 +82,47 @@ const scanLines = (lines: string[], elapsed: number): IScanResult => {
 interface IJsonlCheckResult {
   idle: boolean;
   stale: boolean;
+  lastUserMessage: string | null;
 }
+
+const MAX_USER_MESSAGE_LENGTH = 200;
+
+const extractLastUserMessage = (lines: string[]): string | null => {
+  for (let i = lines.length - 1; i >= 0; i--) {
+    try {
+      const entry = JSON.parse(lines[i]);
+      if (entry.isSidechain) continue;
+      if (entry.type !== 'user') continue;
+      const content = entry.message?.content;
+      if (!Array.isArray(content)) continue;
+      for (const block of content) {
+        if (typeof block?.text === 'string' && block.text.trim()) {
+          const text = block.text.trim();
+          return text.length > MAX_USER_MESSAGE_LENGTH
+            ? text.slice(0, MAX_USER_MESSAGE_LENGTH) + '…'
+            : text;
+        }
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+};
 
 const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => {
   try {
     const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return { idle: true, stale: false };
+    if (stat.size === 0) return { idle: true, stale: false, lastUserMessage: null };
 
     const cached = jsonlIdleCache.get(jsonlPath);
     if (cached && cached.mtimeMs === stat.mtimeMs) {
-      if (cached.idle) return { idle: true, stale: cached.stale };
+      if (cached.idle) return { idle: true, stale: cached.stale, lastUserMessage: cached.lastUserMessage };
       if (cached.needsStaleRecheck) {
         const idle = Date.now() - stat.mtimeMs > cached.staleMs;
-        return { idle, stale: true };
+        return { idle, stale: true, lastUserMessage: cached.lastUserMessage };
       }
-      return { idle: false, stale: false };
+      return { idle: false, stale: false, lastUserMessage: cached.lastUserMessage };
     }
 
     const handle = await fs.open(jsonlPath, 'r');
@@ -108,6 +135,7 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
       const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
 
       let scan = scanLines(lines, elapsed);
+      let lastUserMessage = extractLastUserMessage(lines);
 
       if (!scan.matched && stat.size > JSONL_TAIL_SIZE) {
         const extSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
@@ -115,15 +143,16 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
         await handle.read(extBuffer, 0, extSize, stat.size - extSize);
         const extLines = extBuffer.toString('utf-8').split('\n').filter((l) => l.trim());
         scan = scanLines(extLines, elapsed);
+        if (!lastUserMessage) lastUserMessage = extractLastUserMessage(extLines);
       }
 
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs });
-      return { idle: scan.idle, stale: scan.stale };
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastUserMessage });
+      return { idle: scan.idle, stale: scan.stale, lastUserMessage };
     } finally {
       await handle.close();
     }
   } catch {
-    return { idle: false, stale: false };
+    return { idle: false, stale: false, lastUserMessage: null };
   }
 };
 
@@ -155,10 +184,10 @@ class StatusManager {
       const tabs = collectAllTabs(layout.root);
       for (const tab of tabs) {
         const paneInfo = panesInfo.get(tab.sessionName);
-        const detectedState = await this.detectTabCliState(tab.sessionName, paneInfo);
-        const cliState = tab.cliState === 'ready-for-review' && detectedState === 'idle'
+        const detected = await this.detectTabCliState(tab.sessionName, paneInfo);
+        const cliState = tab.cliState === 'ready-for-review' && detected.cliState === 'idle'
           ? 'ready-for-review' as const
-          : detectedState;
+          : detected.cliState;
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
@@ -171,23 +200,25 @@ class StatusManager {
           panelType: tab.panelType,
           terminalStatus,
           listeningPorts,
+          claudeSummary: tab.claudeSummary,
+          lastUserMessage: detected.lastUserMessage,
         });
       }
     }
   }
 
-  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<TCliState> {
-    if (!paneInfo || !paneInfo.pid) return 'inactive';
+  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<{ cliState: TCliState; lastUserMessage: string | null }> {
+    if (!paneInfo || !paneInfo.pid) return { cliState: 'inactive', lastUserMessage: null };
 
     const claudeRunning = await isClaudeRunning(paneInfo.pid);
-    if (!claudeRunning) return 'inactive';
+    if (!claudeRunning) return { cliState: 'inactive', lastUserMessage: null };
 
     const session = await detectActiveSession(paneInfo.pid);
-    if (session.status !== 'running') return 'idle';
+    if (session.status !== 'running') return { cliState: 'idle', lastUserMessage: null };
 
-    if (!session.jsonlPath) return 'idle';
+    if (!session.jsonlPath) return { cliState: 'idle', lastUserMessage: null };
 
-    const { idle: jsonlIdle, stale } = await checkJsonlIdle(session.jsonlPath);
+    const { idle: jsonlIdle, stale, lastUserMessage } = await checkJsonlIdle(session.jsonlPath);
 
     let state: TCliState;
     if (!stale) {
@@ -205,10 +236,10 @@ class StatusManager {
 
     if (state === 'busy') {
       const paneContent = await capturePaneContent(tmuxSession);
-      if (paneContent && hasPermissionPrompt(paneContent)) return 'needs-input';
+      if (paneContent && hasPermissionPrompt(paneContent)) return { cliState: 'needs-input', lastUserMessage };
     }
 
-    return state;
+    return { cliState: state, lastUserMessage };
   }
 
   private async detectTerminalStatus(
@@ -266,14 +297,14 @@ class StatusManager {
         const existing = this.tabs.get(tab.id);
         const paneInfo = panesInfo.get(tab.sessionName);
 
-        const newCliState = await this.detectTabCliState(tab.sessionName, paneInfo);
+        const detected = await this.detectTabCliState(tab.sessionName, paneInfo);
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
 
         if (!existing) {
           const entry: ITabStatusEntry = {
-            cliState: newCliState,
+            cliState: detected.cliState,
             workspaceId: ws.id,
             tabName: tab.name,
             currentProcess: paneInfo?.command,
@@ -281,6 +312,8 @@ class StatusManager {
             panelType: tab.panelType,
             terminalStatus,
             listeningPorts,
+            claudeSummary: tab.claudeSummary,
+            lastUserMessage: detected.lastUserMessage,
           };
           this.tabs.set(tab.id, entry);
           this.persistToLayout(entry);
@@ -292,6 +325,8 @@ class StatusManager {
         existing.tabName = tab.name;
         existing.currentProcess = paneInfo?.command;
         existing.workspaceId = ws.id;
+        existing.claudeSummary = tab.claudeSummary;
+        existing.lastUserMessage = detected.lastUserMessage;
 
         const prevPorts = existing.listeningPorts;
         const portsChanged = prevPorts?.length !== listeningPorts.length
@@ -303,15 +338,15 @@ class StatusManager {
         }
 
         // ready-for-review 보호: 폴링이 idle을 감지해도 ready-for-review 유지
-        const cliChanged = existing.cliState !== newCliState
-          && !(existing.cliState === 'ready-for-review' && newCliState === 'idle');
+        const cliChanged = existing.cliState !== detected.cliState
+          && !(existing.cliState === 'ready-for-review' && detected.cliState === 'idle');
 
         if (cliChanged) {
           const prevState = existing.cliState;
           // busy→idle 승격
-          existing.cliState = (prevState === 'busy' && newCliState === 'idle')
+          existing.cliState = (prevState === 'busy' && detected.cliState === 'idle')
             ? 'ready-for-review'
-            : newCliState;
+            : detected.cliState;
         }
 
         if (cliChanged || terminalChanged || processChanged) {
@@ -350,6 +385,8 @@ class StatusManager {
         panelType: entry.panelType,
         terminalStatus: entry.terminalStatus,
         listeningPorts: entry.listeningPorts,
+        claudeSummary: entry.claudeSummary,
+        lastUserMessage: entry.lastUserMessage,
       };
     }
     return result;
@@ -413,6 +450,8 @@ class StatusManager {
       panelType: entry.panelType,
       terminalStatus: entry.terminalStatus,
       listeningPorts: entry.listeningPorts,
+      claudeSummary: entry.claudeSummary,
+      lastUserMessage: entry.lastUserMessage,
     };
     this.broadcast(msg, exclude);
   }
