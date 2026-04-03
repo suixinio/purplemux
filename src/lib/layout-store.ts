@@ -428,6 +428,29 @@ export const updateTabClaudeSummary = async (
   });
 };
 
+export const updateTabLastUserMessage = async (
+  sessionName: string,
+  lastUserMessage: string | null,
+): Promise<void> => {
+  const parsed = parseSessionName(sessionName);
+  if (!parsed) return;
+
+  await withLock(async () => {
+    const filePath = resolveLayoutFile(parsed.wsId);
+    const layout = await readLayoutFile(filePath);
+    if (!layout) return;
+
+    const allTabs = collectAllTabs(layout.root);
+    const tab = allTabs.find((t) => t.sessionName === sessionName);
+    if (!tab) return;
+
+    if (tab.lastUserMessage === lastUserMessage) return;
+    tab.lastUserMessage = lastUserMessage;
+    layout.updatedAt = new Date().toISOString();
+    await writeLayoutFile(layout, filePath);
+  });
+};
+
 export const updateTabCliStatus = async (
   sessionName: string,
   cliState: TCliState,

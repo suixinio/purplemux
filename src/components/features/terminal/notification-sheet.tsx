@@ -24,6 +24,7 @@ interface INotificationItem {
   workspaceId: string;
   lastUserMessage?: string | null;
   readyForReviewAt?: number | null;
+  busySince?: number | null;
 }
 
 interface INotificationSheetProps {
@@ -48,6 +49,7 @@ const collectItems = (
       workspaceId: tab.workspaceId,
       lastUserMessage: tab.lastUserMessage,
       readyForReviewAt: tab.readyForReviewAt,
+      busySince: tab.busySince,
     });
   }
 
@@ -78,9 +80,9 @@ const NotificationItem = ({
         <span className="truncate text-sm font-medium text-foreground">
           {item.workspaceName}
         </span>
-        {item.readyForReviewAt && (
+        {(item.readyForReviewAt || item.busySince) && (
           <span className="shrink-0 text-xs text-muted-foreground/60">
-            {dayjs(item.readyForReviewAt).fromNow()}
+            {dayjs(item.readyForReviewAt ?? item.busySince).fromNow()}
           </span>
         )}
       </div>

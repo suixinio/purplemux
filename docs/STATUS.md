@@ -148,6 +148,20 @@ noise 엔트리(`file-history-snapshot`, `progress`, `last-prompt`)는 스킵하
 - `ready-for-review` 상태에서 `idle` 수신 시 무시 (보호)
 - `dismissTab` 호출 시 `ready-for-review → idle` 전환
 
+#### ready-for-review 보호 불변식
+
+`ready-for-review`는 **`dismissTab`으로만 해제**된다. `cliState`를 쓰는 모든 경로에서 이 보호가 필요하다:
+
+| 경로 | 보호 방법 |
+| --- | --- |
+| `setCliState` (로컬) | `prev === 'ready-for-review' && new === 'idle'` → 무시 |
+| `updateTab` (서버 StatusManager) | 동일 조건 → 무시 |
+| `poll` (서버 StatusManager) | `cliChanged` 조건에서 제외 |
+| `initTab` (탭 초기화/재연결) | `existing === 'ready-for-review'` → 유지 |
+| `syncAllFromServer` / `updateFromServer` | 서버가 authority, 직접 patch (서버에서 이미 보호) |
+
+**새로운 `cliState` 쓰기 경로를 추가할 때는 반드시 이 보호를 포함해야 한다.** `initTab`에서 layout JSON의 stale 값이 store의 `ready-for-review`를 덮어쓰는 버그가 실제 발생한 사례가 있다 — layout 파일 persist는 비동기(fire-and-forget)이므로 WebSocket을 통해 전파된 store 값과 layout 파일 값이 불일치할 수 있다.
+
 #### Staleness fallback (서버만 적용)
 
 위 규칙에서 `busy`로 판정되더라도, JSONL 파일의 mtime이 **90초 이상** 경과했으면 `idle`로 전환한다.

@@ -22,6 +22,7 @@ export interface ITab {
   claudeSessionId?: string | null;
   claudeJsonlPath?: string | null;
   claudeSummary?: string | null;
+  lastUserMessage?: string | null;
   lastCommand?: string | null;
   cliState?: TCliState;
   webUrl?: string | null;

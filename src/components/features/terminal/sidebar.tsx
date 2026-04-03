@@ -49,12 +49,14 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const collapsed = useWorkspaceStore((s) => s.sidebarCollapsed);
   const width = useWorkspaceStore((s) => s.sidebarWidth);
-  const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
+  const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
+  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
+  const hasBusy = busyCount > 0;
+  const hasActive = busyCount > 0 || attentionCount > 0;
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
-  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
   const modTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -284,7 +286,7 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
               onClick={() => setNotificationOpen(true)}
               aria-label="알림"
             >
-              <Bell className="h-3.5 w-3.5" />
+              <Bell className={`h-3.5 w-3.5${hasActive ? ' fill-current' : ''}`} />
               {attentionCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
                   {attentionCount}

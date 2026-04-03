@@ -15,6 +15,7 @@ export interface ITabStatusEntry {
   claudeSummary?: string | null;
   lastUserMessage?: string | null;
   readyForReviewAt?: number | null;
+  busySince?: number | null;
 }
 
 export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle';
@@ -39,6 +40,7 @@ export interface IStatusUpdateMessage {
   claudeSummary?: string | null;
   lastUserMessage?: string | null;
   readyForReviewAt?: number | null;
+  busySince?: number | null;
 }
 
 export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage;

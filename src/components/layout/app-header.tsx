@@ -30,8 +30,10 @@ const handleLogout = async () => {
 };
 
 const AppHeader = ({ onMenuOpen, workspaceName, onNavigateWorkspace }: IAppHeaderProps) => {
-  const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
+  const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
   const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
+  const hasBusy = busyCount > 0;
+  const hasActive = hasBusy || attentionCount > 0;
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
@@ -68,7 +70,7 @@ const AppHeader = ({ onMenuOpen, workspaceName, onNavigateWorkspace }: IAppHeade
                 />
               }
             >
-              <Bell className="h-4 w-4 text-muted-foreground" />
+              <Bell className={`h-4 w-4 text-muted-foreground${hasActive ? ' fill-current' : ''}`} />
               {attentionCount > 0 && (
                 <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
                   {attentionCount}

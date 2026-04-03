@@ -9,7 +9,7 @@ import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPaneTitle } from './tmux';
 import { cwdToProjectPath } from './session-list';
-import { updateTabClaudeSessionId, updateTabClaudeSummary } from './layout-store';
+import { updateTabClaudeSessionId, updateTabClaudeSummary, updateTabLastUserMessage } from './layout-store';
 import { getDangerouslySkipPermissions } from './config-store';
 import { HOOK_SETTINGS_PATH } from './hook-settings';
 import { calculateCost } from './format-tokens';
@@ -93,6 +93,21 @@ const sendEmptyInit = (ws: WebSocket, sessionId = '') => {
   });
 };
 
+const MAX_USER_MESSAGE_LENGTH = 200;
+
+const findLastUserMessage = (entries: ITimelineEntry[]): string | null => {
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const entry = entries[i];
+    if (entry.type === 'user-message' && entry.text.trim()) {
+      const text = entry.text.trim();
+      return text.length > MAX_USER_MESSAGE_LENGTH
+        ? text.slice(0, MAX_USER_MESSAGE_LENGTH) + '…'
+        : text;
+    }
+  }
+  return null;
+};
+
 const subscribeAndUpdateSummary = async (
   ws: WebSocket, jsonlPath: string, sessionId: string | undefined, sessionName: string,
 ) => {
@@ -171,6 +186,13 @@ const processFileChange = async (fw: IFileWatcher) => {
       }
       if (partialReads.length > 0) {
         await Promise.all(partialReads);
+      }
+
+      if (fw.sessionName) {
+        const lastMsg = findLastUserMessage(newEntries);
+        if (lastMsg) {
+          await updateTabLastUserMessage(fw.sessionName, lastMsg).catch(() => {});
+        }
       }
 
       if (!fw.summaryResolved && fw.sessionName && newEntries.some((e) => e.type === 'assistant-message')) {
@@ -392,6 +414,13 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
 
   if (!isNewWatcher) {
     fw.initOffsets.set(ws, result.fileSize);
+  }
+
+  if (sessionName) {
+    const lastMsg = findLastUserMessage(result.entries);
+    if (lastMsg) {
+      await updateTabLastUserMessage(sessionName, lastMsg).catch(() => {});
+    }
   }
 
   return result.summary;

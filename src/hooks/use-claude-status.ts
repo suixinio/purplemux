@@ -64,6 +64,7 @@ const useClaudeStatus = () => {
                 claudeSummary: msg.claudeSummary,
                 lastUserMessage: msg.lastUserMessage,
                 readyForReviewAt: msg.readyForReviewAt,
+                busySince: msg.busySince,
               });
               break;
           }
