@@ -1,8 +1,10 @@
 import { useCallback, useState, useEffect } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import { FileText, ArrowLeft } from 'lucide-react';
+import dayjs from 'dayjs';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { WEEKDAY_LABELS } from '@/components/features/stats/stats-utils';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useBrowserTitle from '@/hooks/use-browser-title';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
@@ -24,6 +26,13 @@ const ReportsPage = () => {
     },
     [],
   );
+
+  const [now, setNow] = useState(() => dayjs());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(dayjs()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const [days, setDays] = useState<IDailyReportListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -83,20 +92,26 @@ const ReportsPage = () => {
   const content = (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="mx-auto max-w-5xl px-4 py-6">
-        <div className="mb-6 flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => router.push('/')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <FileText className="h-4 w-4 text-ui-purple" />
-          <h1 className="text-sm font-semibold">데일리 노트</h1>
-          {!loading && total > 0 && (
-            <span className="text-xs text-muted-foreground">{total}일</span>
-          )}
+        <div className="mb-6">
+          <div className="mb-3 flex items-center justify-between">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => router.push('/')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            {!loading && total > 0 && (
+              <span className="text-xs text-muted-foreground">{total}일</span>
+            )}
+          </div>
+          <div className="text-2xl font-light tabular-nums tracking-tight">
+            {now.format('HH:mm')}
+          </div>
+          <div className="text-sm text-muted-foreground">
+            {WEEKDAY_LABELS[now.day()]}요일, {now.format('M')}월 {now.format('D')}일
+          </div>
         </div>
 
         <SectionErrorBoundary sectionName="데일리 노트">
