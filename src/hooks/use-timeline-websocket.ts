@@ -202,6 +202,21 @@ const useTimelineWebSocket = ({
     };
   }, [enabled, sessionName, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!enabled) return;
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        retryCountRef.current = 0;
+        const id = ++connectIdRef.current;
+        doConnectRef.current(id);
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [enabled]);
+
   const subscribe = useCallback((jsonlPath: string) => {
     const ws = wsRef.current;
     if (ws?.readyState === WebSocket.OPEN) {
