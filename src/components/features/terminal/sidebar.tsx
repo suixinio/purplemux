@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { signOut } from 'next-auth/react';
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
+import { useNotificationCount } from '@/components/features/terminal/notification-sheet';
 import AppLogo from '@/components/layout/app-logo';
 import { isMac } from '@/lib/keyboard-shortcuts';
 import { useRouter } from 'next/router';
@@ -49,9 +50,8 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const collapsed = useWorkspaceStore((s) => s.sidebarCollapsed);
   const width = useWorkspaceStore((s) => s.sidebarWidth);
-  const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
-  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
-  const hasBusy = busyCount > 0;
+  const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
+  const { busyCount, attentionCount } = useNotificationCount();
   const hasActive = busyCount > 0 || attentionCount > 0;
 
   const [settingsOpen, setSettingsOpen] = useState(false);

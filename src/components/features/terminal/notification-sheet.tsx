@@ -21,6 +21,32 @@ import type { ITabState } from '@/hooks/use-tab-store';
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
 
+const useActiveTabId = (): string | null => {
+  const router = useRouter();
+  const isTerminalPage = router.pathname === '/';
+  return useLayoutStore((s) => {
+    if (!isTerminalPage) return null;
+    if (!s.layout?.activePaneId) return null;
+    const pane = findPane(s.layout.root, s.layout.activePaneId);
+    return pane?.activeTabId ?? null;
+  });
+};
+
+export const useNotificationCount = (): { busyCount: number; attentionCount: number } => {
+  const tabs = useTabStore((s) => s.tabs);
+  const activeTabId = useActiveTabId();
+  return useMemo(() => {
+    let busyCount = 0;
+    let attentionCount = 0;
+    for (const [tabId, tab] of Object.entries(tabs)) {
+      if (tabId === activeTabId) continue;
+      if (tab.cliState === 'busy') busyCount++;
+      else if (tab.cliState === 'ready-for-review') attentionCount++;
+    }
+    return { busyCount, attentionCount };
+  }, [tabs, activeTabId]);
+};
+
 interface INotificationItem {
   tabId: string;
   workspaceName: string;
@@ -131,16 +157,9 @@ const NotificationItem = ({
 );
 
 const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
-  const router = useRouter();
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const isTerminalPage = router.pathname === '/';
-  const activeTabId = useLayoutStore((s) => {
-    if (!isTerminalPage) return null;
-    if (!s.layout?.activePaneId) return null;
-    const pane = findPane(s.layout.root, s.layout.activePaneId);
-    return pane?.activeTabId ?? null;
-  });
+  const activeTabId = useActiveTabId();
 
   const busyItems = useMemo(
     () => collectItems(tabs, workspaces, 'busy', activeTabId),

@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
-import NotificationSheet from '@/components/features/terminal/notification-sheet';
+import NotificationSheet, { useNotificationCount } from '@/components/features/terminal/notification-sheet';
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
@@ -29,10 +29,9 @@ const handleLogout = async () => {
 };
 
 const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
-  const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
-  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
-  const hasBusy = busyCount > 0;
-  const hasActive = hasBusy || attentionCount > 0;
+  const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
+  const { busyCount, attentionCount } = useNotificationCount();
+  const hasActive = busyCount > 0 || attentionCount > 0;
   const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
