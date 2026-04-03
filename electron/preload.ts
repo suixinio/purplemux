@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   platform: process.platform,
   openExternal: (url: string) => ipcRenderer.invoke('open-external', url),
   getPathForFile: (file: File) => webUtils.getPathForFile(file),
+  getSystemResources: () => ipcRenderer.invoke('get-system-resources'),
 });

@@ -446,6 +446,23 @@ ipcMain.handle('open-external', (_event, url: string) => {
   }
 });
 
+// --- System Resources ---
+
+ipcMain.handle('get-system-resources', () => {
+  const metrics = app.getAppMetrics();
+  let cpuTotal = 0;
+  let memTotal = 0;
+  for (const m of metrics) {
+    cpuTotal += m.cpu.percentCPUUsage;
+    memTotal += m.memory.workingSetSize * 1024; // KB → bytes
+  }
+
+  return {
+    cpu: cpuTotal,
+    memory: { used: memTotal },
+  };
+});
+
 app.on('ready', bootstrap);
 
 app.on('activate', () => {

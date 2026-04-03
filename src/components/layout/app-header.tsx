@@ -46,7 +46,7 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
         {workspaceName && (
           <>
             <span className="text-muted-foreground/40 text-sm">/</span>
-            <span className="truncate text-sm text-muted-foreground">{workspaceName}</span>
+            <span className="truncate text-sm font-medium text-muted-foreground">{workspaceName}</span>
           </>
         )}
       </div>
