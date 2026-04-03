@@ -63,6 +63,7 @@ const useClaudeStatus = () => {
                 currentProcess: msg.currentProcess,
                 claudeSummary: msg.claudeSummary,
                 lastUserMessage: msg.lastUserMessage,
+                readyForReviewAt: msg.readyForReviewAt,
               });
               break;
           }

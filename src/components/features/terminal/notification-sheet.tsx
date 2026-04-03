@@ -1,5 +1,8 @@
 import { useMemo, useCallback } from 'react';
 import { Loader2, ArrowRight, Check } from 'lucide-react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ko';
 import {
   Sheet,
   SheetContent,
@@ -12,11 +15,15 @@ import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { dismissTab } from '@/hooks/use-claude-status';
 import type { ITabState } from '@/hooks/use-tab-store';
 
+dayjs.extend(relativeTime);
+dayjs.locale('ko');
+
 interface INotificationItem {
   tabId: string;
   workspaceName: string;
   workspaceId: string;
   lastUserMessage?: string | null;
+  readyForReviewAt?: number | null;
 }
 
 interface INotificationSheetProps {
@@ -40,6 +47,7 @@ const collectItems = (
       workspaceName: wsMap.get(tab.workspaceId) || tab.workspaceId,
       workspaceId: tab.workspaceId,
       lastUserMessage: tab.lastUserMessage,
+      readyForReviewAt: tab.readyForReviewAt,
     });
   }
 
@@ -66,9 +74,16 @@ const NotificationItem = ({
       )}
     </span>
     <div className="min-w-0 flex-1">
-      <span className="truncate text-sm font-medium text-foreground">
-        {item.workspaceName}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="truncate text-sm font-medium text-foreground">
+          {item.workspaceName}
+        </span>
+        {item.readyForReviewAt && (
+          <span className="shrink-0 text-xs text-muted-foreground/60">
+            {dayjs(item.readyForReviewAt).fromNow()}
+          </span>
+        )}
+      </div>
       {item.lastUserMessage && (
         <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
           {item.lastUserMessage}

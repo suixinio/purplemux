@@ -87,22 +87,36 @@ interface IJsonlCheckResult {
 
 const MAX_USER_MESSAGE_LENGTH = 200;
 
+const truncate = (text: string): string =>
+  text.length > MAX_USER_MESSAGE_LENGTH
+    ? text.slice(0, MAX_USER_MESSAGE_LENGTH) + '…'
+    : text;
+
+const extractUserText = (content: unknown): string | null => {
+  if (typeof content === 'string') {
+    const trimmed = content.trim();
+    if (trimmed && !trimmed.startsWith(INTERRUPT_PREFIX)) return trimmed;
+    return null;
+  }
+  if (Array.isArray(content)) {
+    for (const block of content) {
+      if (block?.type === 'text' && typeof block.text === 'string') {
+        const trimmed = block.text.trim();
+        if (trimmed && !trimmed.startsWith(INTERRUPT_PREFIX)) return trimmed;
+      }
+    }
+  }
+  return null;
+};
+
 const extractLastUserMessage = (lines: string[]): string | null => {
   for (let i = lines.length - 1; i >= 0; i--) {
     try {
       const entry = JSON.parse(lines[i]);
       if (entry.isSidechain) continue;
       if (entry.type !== 'user') continue;
-      const content = entry.message?.content;
-      if (!Array.isArray(content)) continue;
-      for (const block of content) {
-        if (typeof block?.text === 'string' && block.text.trim()) {
-          const text = block.text.trim();
-          return text.length > MAX_USER_MESSAGE_LENGTH
-            ? text.slice(0, MAX_USER_MESSAGE_LENGTH) + '…'
-            : text;
-        }
-      }
+      const text = extractUserText(entry.message?.content);
+      if (text) return truncate(text);
     } catch {
       continue;
     }
@@ -137,12 +151,12 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
       let scan = scanLines(lines, elapsed);
       let lastUserMessage = extractLastUserMessage(lines);
 
-      if (!scan.matched && stat.size > JSONL_TAIL_SIZE) {
+      if ((!scan.matched || !lastUserMessage) && stat.size > JSONL_TAIL_SIZE) {
         const extSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
         const extBuffer = Buffer.alloc(extSize);
         await handle.read(extBuffer, 0, extSize, stat.size - extSize);
         const extLines = extBuffer.toString('utf-8').split('\n').filter((l) => l.trim());
-        scan = scanLines(extLines, elapsed);
+        if (!scan.matched) scan = scanLines(extLines, elapsed);
         if (!lastUserMessage) lastUserMessage = extractLastUserMessage(extLines);
       }
 
@@ -202,6 +216,7 @@ class StatusManager {
           listeningPorts,
           claudeSummary: tab.claudeSummary,
           lastUserMessage: detected.lastUserMessage,
+          readyForReviewAt: cliState === 'ready-for-review' ? Date.now() : null,
         });
       }
     }
@@ -344,9 +359,9 @@ class StatusManager {
         if (cliChanged) {
           const prevState = existing.cliState;
           // busy→idle 승격
-          existing.cliState = (prevState === 'busy' && detected.cliState === 'idle')
-            ? 'ready-for-review'
-            : detected.cliState;
+          const promoted = prevState === 'busy' && detected.cliState === 'idle';
+          existing.cliState = promoted ? 'ready-for-review' : detected.cliState;
+          existing.readyForReviewAt = promoted ? Date.now() : null;
         }
 
         if (cliChanged || terminalChanged || processChanged) {
@@ -387,6 +402,7 @@ class StatusManager {
         listeningPorts: entry.listeningPorts,
         claudeSummary: entry.claudeSummary,
         lastUserMessage: entry.lastUserMessage,
+        readyForReviewAt: entry.readyForReviewAt,
       };
     }
     return result;
@@ -400,9 +416,9 @@ class StatusManager {
     if (prevState === cliState) return;
     if (prevState === 'ready-for-review' && cliState === 'idle') return;
 
-    entry.cliState = (prevState === 'busy' && cliState === 'idle')
-      ? 'ready-for-review'
-      : cliState;
+    const promoted = prevState === 'busy' && cliState === 'idle';
+    entry.cliState = promoted ? 'ready-for-review' : cliState;
+    entry.readyForReviewAt = promoted ? Date.now() : null;
 
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
@@ -413,6 +429,7 @@ class StatusManager {
     if (!entry || entry.cliState !== 'ready-for-review') return;
 
     entry.cliState = 'idle';
+    entry.readyForReviewAt = null;
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
   }
@@ -452,6 +469,7 @@ class StatusManager {
       listeningPorts: entry.listeningPorts,
       claudeSummary: entry.claudeSummary,
       lastUserMessage: entry.lastUserMessage,
+      readyForReviewAt: entry.readyForReviewAt,
     };
     this.broadcast(msg, exclude);
   }
