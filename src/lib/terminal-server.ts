@@ -304,7 +304,6 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
 
   const heartbeatTimer = setInterval(() => {
     if (conn && Date.now() - lastHeartbeat > HEARTBEAT_TIMEOUT) {
-      console.log(`[terminal] heartbeat timeout (pid: ${ptyProcess!.pid})`);
       conn.detaching = true;
       if (ws.readyState === WebSocket.OPEN) {
         ws.close(1001, 'Heartbeat timeout');

@@ -128,7 +128,7 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
           <div key={day.date} className="space-y-2">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">
+                <span className="text-base font-medium text-muted-foreground">
                   {day.date} ({weekday})
                 </span>
                 {isToday && (

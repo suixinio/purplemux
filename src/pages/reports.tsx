@@ -1,17 +1,14 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
 import { useRouter } from 'next/router';
-import dayjs from 'dayjs';
 import { ArrowLeft, Sparkles, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { WEEKDAY_LABELS } from '@/components/features/stats/stats-utils';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useBrowserTitle from '@/hooks/use-browser-title';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
 import SectionErrorBoundary from '@/components/features/stats/section-error-boundary';
 import DailyReportSection from '@/components/features/stats/daily-report-section';
-import TodoSection from '@/components/features/todo/todo-section';
 import type { IDailyReportDay, IDailyReportListItem, IDailyReportListResponse } from '@/types/stats';
 
 const PAGE_SIZE = 10;
@@ -27,13 +24,6 @@ const ReportsPage = () => {
     },
     [],
   );
-
-  const [now, setNow] = useState(() => dayjs());
-
-  useEffect(() => {
-    const id = setInterval(() => setNow(dayjs()), 60_000);
-    return () => clearInterval(id);
-  }, []);
 
   const [days, setDays] = useState<IDailyReportListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -120,18 +110,6 @@ const ReportsPage = () => {
               )
             )}
           </div>
-          <div className="text-sm text-muted-foreground">
-            {now.format('M')}월 {now.format('D')}일 {WEEKDAY_LABELS[now.day()]}요일
-          </div>
-          <div className="text-2xl font-light tabular-nums tracking-tight">
-            {now.format('HH:mm')}
-          </div>
-        </div>
-
-        <TodoSection />
-
-        <div className="mb-6 flex justify-center">
-          <div className="h-px w-12 bg-foreground/10" />
         </div>
 
         <SectionErrorBoundary sectionName="노트">
