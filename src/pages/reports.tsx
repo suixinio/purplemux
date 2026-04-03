@@ -11,6 +11,7 @@ import useWorkspaceStore from '@/hooks/use-workspace-store';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
 import SectionErrorBoundary from '@/components/features/stats/section-error-boundary';
 import DailyReportSection from '@/components/features/stats/daily-report-section';
+import TodoSection from '@/components/features/todo/todo-section';
 import type { IDailyReportDay, IDailyReportListItem, IDailyReportListResponse } from '@/types/stats';
 
 const PAGE_SIZE = 10;
@@ -126,6 +127,8 @@ const ReportsPage = () => {
             {now.format('HH:mm')}
           </div>
         </div>
+
+        <TodoSection />
 
         <SectionErrorBoundary sectionName="노트">
           {loading ? (
