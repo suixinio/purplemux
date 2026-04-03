@@ -46,7 +46,7 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
           {MENU_ITEMS.map((item) => (
             <button
               key={item.key}
-              className="flex flex-col items-center gap-2 rounded-lg border border-border bg-background p-4 text-foreground transition-colors active:bg-accent disabled:pointer-events-none disabled:opacity-50"
+              className="flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border border-border bg-background text-foreground transition-colors active:bg-accent disabled:pointer-events-none disabled:opacity-50"
               disabled={isCreating}
               onClick={() => handleSelect(item)}
             >
