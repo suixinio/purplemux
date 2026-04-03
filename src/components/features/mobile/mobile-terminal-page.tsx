@@ -2,7 +2,8 @@ import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import { Loader2, AlertTriangle, RefreshCw, Monitor, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import useLayout, { collectPanes } from '@/hooks/use-layout';
+import useLayout, { collectPanes, useLayoutStore } from '@/hooks/use-layout';
+import { findPane } from '@/lib/layout-tree';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
@@ -146,45 +147,18 @@ const MobileTerminalPage = () => {
     [activeWorkspaceId, layout],
   );
 
-  const pendingTabRef = useRef<string | null>(null);
-
-  const focusTab = useCallback(
-    (tabId: string) => {
-      if (!layout.layout) return false;
-      for (const pane of collectPanes(layout.layout.root)) {
-        if (pane.tabs.some((t) => t.id === tabId)) {
-          setSelectedPaneId(pane.id);
-          setSelectedTabId(tabId);
-          layout.focusPane(pane.id);
-          layout.switchTabInPane(pane.id, tabId);
-          return true;
-        }
-      }
-      return false;
-    },
-    [layout],
-  );
-
   useEffect(() => {
-    if (!pendingTabRef.current || !layout.layout || layout.isLoading) return;
-    const tabId = pendingTabRef.current;
-    pendingTabRef.current = null;
-    focusTab(tabId);
-  }, [layout.layout, layout.isLoading, focusTab]);
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const { workspaceId, tabId } = (e as CustomEvent).detail;
-      const currentWsId = useWorkspaceStore.getState().activeWorkspaceId;
-      if (workspaceId === currentWsId) {
-        focusTab(tabId);
-      } else {
-        pendingTabRef.current = tabId;
+    return useLayoutStore.subscribe((state, prev) => {
+      if (!state.layout || state.layout === prev.layout) return;
+      const activePaneId = state.layout.activePaneId;
+      if (!activePaneId) return;
+      const pane = findPane(state.layout.root, activePaneId);
+      if (pane?.activeTabId) {
+        setSelectedPaneId(activePaneId);
+        setSelectedTabId(pane.activeTabId);
       }
-    };
-    window.addEventListener('navigate-to-tab', handler);
-    return () => window.removeEventListener('navigate-to-tab', handler);
-  }, [focusTab]);
+    });
+  }, []);
 
   const [newTabDialogOpen, setNewTabDialogOpen] = useState(false);
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');

@@ -21,7 +21,6 @@ import NotificationSheet from '@/components/features/terminal/notification-sheet
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
   workspaceName?: string;
-  onNavigateWorkspace?: (workspaceId: string) => void;
 }
 
 const handleLogout = async () => {
@@ -29,7 +28,7 @@ const handleLogout = async () => {
   window.location.href = '/login';
 };
 
-const AppHeader = ({ onMenuOpen, workspaceName, onNavigateWorkspace }: IAppHeaderProps) => {
+const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
   const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
   const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
   const hasBusy = busyCount > 0;
@@ -117,9 +116,6 @@ const AppHeader = ({ onMenuOpen, workspaceName, onNavigateWorkspace }: IAppHeade
       <NotificationSheet
         open={notificationOpen}
         onOpenChange={setNotificationOpen}
-        onNavigate={(workspaceId) => {
-          onNavigateWorkspace?.(workspaceId);
-        }}
       />
     </header>
   );

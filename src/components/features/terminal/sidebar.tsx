@@ -468,9 +468,6 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
       <NotificationSheet
         open={notificationOpen}
         onOpenChange={setNotificationOpen}
-        onNavigate={(workspaceId) => {
-          onSelectWorkspace(workspaceId);
-        }}
       />
 
       <AlertDialog

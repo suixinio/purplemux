@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import type { ILayoutData, ITab, IPaneNode, TPanelType } from '@/types/terminal';
 import { clearInputDraft } from '@/hooks/use-web-input';
 import useTabStore from '@/hooks/use-tab-store';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import {
   collectPanes,
   findPane,
@@ -54,6 +55,7 @@ interface ILayoutState {
   retryCount: number;
   paneCount: number;
   canSplit: boolean;
+  pendingFocusTabId: string | null;
 
   setWorkspaceId: (id: string | null) => void;
   setLayout: (data: ILayoutData) => void;
@@ -73,6 +75,10 @@ interface ILayoutState {
   equalizeRatios: () => void;
   updateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   clearLayout: () => void;
+  focusTab: (tabId: string) => boolean;
+  focusPrevTab: () => void;
+  focusNextTab: () => void;
+  focusTabByIndex: (index: number) => void;
 }
 
 let _abortController: AbortController | null = null;
@@ -131,6 +137,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   retryCount: 0,
   paneCount: 0,
   canSplit: false,
+  pendingFocusTabId: null,
 
   setWorkspaceId: (id) => {
     set({ workspaceId: id });
@@ -194,6 +201,11 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
         }
       }
       set({ layout: data, retryCount: 0, ...updateDerived(data, get().isSplitting) });
+      const pendingTabId = get().pendingFocusTabId;
+      if (pendingTabId) {
+        set({ pendingFocusTabId: null });
+        setTimeout(() => get().focusTab(pendingTabId), 0);
+      }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;
       const retryCount = get().retryCount + 1;
@@ -503,6 +515,72 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   clearLayout: () => {
     set({ layout: null, paneCount: 0, canSplit: false });
   },
+
+  focusTab: (tabId) => {
+    const { layout } = get();
+    if (!layout) return false;
+    for (const pane of collectPanes(layout.root)) {
+      if (pane.tabs.some((t) => t.id === tabId)) {
+        get().focusPane(pane.id);
+        get().switchTabInPane(pane.id, tabId);
+        return true;
+      }
+    }
+    return false;
+  },
+
+  focusPrevTab: () => {
+    const { layout } = get();
+    if (!layout) return;
+    const panes = collectPanes(layout.root);
+    const pane = panes.find((p) => p.id === layout.activePaneId);
+    if (!pane) return;
+    const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
+    if (idx > 0) {
+      get().switchTabInPane(pane.id, sorted[idx - 1].id);
+    } else {
+      const paneIdx = panes.indexOf(pane);
+      if (paneIdx > 0) {
+        const prevPane = panes[paneIdx - 1];
+        const prevSorted = [...prevPane.tabs].sort((a, b) => a.order - b.order);
+        get().focusPane(prevPane.id);
+        get().switchTabInPane(prevPane.id, prevSorted[prevSorted.length - 1].id);
+      }
+    }
+  },
+
+  focusNextTab: () => {
+    const { layout } = get();
+    if (!layout) return;
+    const panes = collectPanes(layout.root);
+    const pane = panes.find((p) => p.id === layout.activePaneId);
+    if (!pane) return;
+    const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
+    const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
+    if (idx < sorted.length - 1) {
+      get().switchTabInPane(pane.id, sorted[idx + 1].id);
+    } else {
+      const paneIdx = panes.indexOf(pane);
+      if (paneIdx < panes.length - 1) {
+        const nextPane = panes[paneIdx + 1];
+        const nextSorted = [...nextPane.tabs].sort((a, b) => a.order - b.order);
+        get().focusPane(nextPane.id);
+        get().switchTabInPane(nextPane.id, nextSorted[0].id);
+      }
+    }
+  },
+
+  focusTabByIndex: (index) => {
+    const { layout } = get();
+    if (!layout?.activePaneId) return;
+    const pane = collectPanes(layout.root).find((p) => p.id === layout.activePaneId);
+    if (!pane) return;
+    const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
+    const tab = index >= sorted.length ? sorted[sorted.length - 1] : sorted[index];
+    if (!tab || tab.id === pane.activeTabId) return;
+    get().switchTabInPane(pane.id, tab.id);
+  },
 }));
 
 useLayoutStore.subscribe((state, prevState) => {
@@ -513,6 +591,17 @@ useLayoutStore.subscribe((state, prevState) => {
 
 export const setOnFetchError = (fn: (() => void) | null): void => {
   _onFetchError = fn;
+};
+
+export const navigateToTab = (workspaceId: string, tabId: string) => {
+  const store = useLayoutStore.getState();
+  if (workspaceId === store.workspaceId) {
+    store.focusTab(tabId);
+  } else {
+    store.clearLayout();
+    useLayoutStore.setState({ pendingFocusTabId: tabId });
+    useWorkspaceStore.getState().switchWorkspace(workspaceId);
+  }
 };
 
 
@@ -561,6 +650,10 @@ const useLayout = ({ workspaceId, onFetchError }: { workspaceId: string | null; 
     updateTabPanelType: s.updateTabPanelType,
     clearLayout: s.clearLayout,
     fetchLayout: s.fetchLayout,
+    focusTab: s.focusTab,
+    focusPrevTab: s.focusPrevTab,
+    focusNextTab: s.focusNextTab,
+    focusTabByIndex: s.focusTabByIndex,
   })));
 };
 

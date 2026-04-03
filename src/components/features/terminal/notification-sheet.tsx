@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { dismissTab } from '@/hooks/use-claude-status';
+import { navigateToTab } from '@/hooks/use-layout';
 import type { ITabState } from '@/hooks/use-tab-store';
 
 dayjs.extend(relativeTime);
@@ -30,7 +31,6 @@ interface INotificationItem {
 interface INotificationSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onNavigate?: (workspaceId: string, tabId: string) => void;
 }
 
 const collectItems = (
@@ -52,6 +52,12 @@ const collectItems = (
       busySince: tab.busySince,
     });
   }
+
+  items.sort((a, b) => {
+    const ta = a.readyForReviewAt ?? a.busySince ?? 0;
+    const tb = b.readyForReviewAt ?? b.busySince ?? 0;
+    return tb - ta;
+  });
 
   return items;
 };
@@ -117,7 +123,7 @@ const NotificationItem = ({
   </div>
 );
 
-const NotificationSheet = ({ open, onOpenChange, onNavigate }: INotificationSheetProps) => {
+const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   const tabs = useTabStore((s) => s.tabs);
   const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
   const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
@@ -139,11 +145,10 @@ const NotificationSheet = ({ open, onOpenChange, onNavigate }: INotificationShee
 
   const handleNavigate = useCallback(
     (workspaceId: string, tabId: string) => {
-      onNavigate?.(workspaceId, tabId);
-      window.dispatchEvent(new CustomEvent('navigate-to-tab', { detail: { workspaceId, tabId } }));
+      navigateToTab(workspaceId, tabId);
       onOpenChange(false);
     },
-    [onNavigate, onOpenChange],
+    [onOpenChange],
   );
 
   const isEmpty = busyCount === 0 && attentionCount === 0;

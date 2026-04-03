@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
-import { collectPanes, findAdjacentPaneInDirection } from '@/hooks/use-layout';
+import { collectPanes, findAdjacentPaneInDirection, useLayoutStore } from '@/hooks/use-layout';
 import type { TDirection } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import {
@@ -19,7 +19,6 @@ interface ILayoutActions {
   focusPane: (paneId: string) => void;
   createTabInPane: (paneId: string, panelType?: TPanelType, command?: string) => Promise<ITab | null>;
   deleteTabInPane: (paneId: string, tabId: string) => Promise<void>;
-  switchTabInPane: (paneId: string, tabId: string) => void;
 }
 
 interface IUseKeyboardShortcutsOptions {
@@ -37,9 +36,6 @@ const getFocusedPane = (layout: ILayoutData | null): IPaneNode | null => {
   const panes = collectPanes(layout.root);
   return panes.find((p) => p.id === layout.activePaneId) ?? null;
 };
-
-const getSortedTabs = (pane: IPaneNode): ITab[] =>
-  [...pane.tabs].sort((a, b) => a.order - b.order);
 
 const useKeyboardShortcuts = ({
   layout,
@@ -121,51 +117,13 @@ const useKeyboardShortcuts = ({
 
   useHotkeys(
     KEY_MAP.PREV_TAB,
-    () => {
-      const l = layoutRef.current;
-      if (!l.layout) return;
-      const panes = collectPanes(l.layout.root);
-      const pane = panes.find((p) => p.id === l.layout!.activePaneId);
-      if (!pane) return;
-      const sorted = getSortedTabs(pane);
-      const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
-      if (idx > 0) {
-        l.switchTabInPane(pane.id, sorted[idx - 1].id);
-      } else {
-        const paneIdx = panes.indexOf(pane);
-        if (paneIdx > 0) {
-          const prevPane = panes[paneIdx - 1];
-          const prevSorted = getSortedTabs(prevPane);
-          l.focusPane(prevPane.id);
-          l.switchTabInPane(prevPane.id, prevSorted[prevSorted.length - 1].id);
-        }
-      }
-    },
+    () => useLayoutStore.getState().focusPrevTab(),
     HOTKEY_OPTIONS,
   );
 
   useHotkeys(
     KEY_MAP.NEXT_TAB,
-    () => {
-      const l = layoutRef.current;
-      if (!l.layout) return;
-      const panes = collectPanes(l.layout.root);
-      const pane = panes.find((p) => p.id === l.layout!.activePaneId);
-      if (!pane) return;
-      const sorted = getSortedTabs(pane);
-      const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
-      if (idx < sorted.length - 1) {
-        l.switchTabInPane(pane.id, sorted[idx + 1].id);
-      } else {
-        const paneIdx = panes.indexOf(pane);
-        if (paneIdx < panes.length - 1) {
-          const nextPane = panes[paneIdx + 1];
-          const nextSorted = getSortedTabs(nextPane);
-          l.focusPane(nextPane.id);
-          l.switchTabInPane(nextPane.id, nextSorted[0].id);
-        }
-      }
-    },
+    () => useLayoutStore.getState().focusNextTab(),
     HOTKEY_OPTIONS,
   );
 
@@ -182,18 +140,9 @@ const useKeyboardShortcuts = ({
   useHotkeys(
     TAB_NUMBER_KEYS,
     (event) => {
-      const l = layoutRef.current;
-      if (!l.layout) return;
-      const pane = getFocusedPane(l.layout);
-      if (!pane) return;
-
       const digit = parseInt(event.code.replace('Digit', ''), 10);
       if (isNaN(digit) || digit < 1 || digit > 9) return;
-
-      const sorted = getSortedTabs(pane);
-      const tab = digit === 9 ? sorted[sorted.length - 1] : sorted[digit - 1];
-      if (!tab || tab.id === pane.activeTabId) return;
-      l.switchTabInPane(pane.id, tab.id);
+      useLayoutStore.getState().focusTabByIndex(digit === 9 ? Infinity : digit - 1);
     },
     HOTKEY_OPTIONS,
   );
