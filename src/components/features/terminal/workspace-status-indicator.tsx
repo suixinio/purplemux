@@ -1,7 +1,6 @@
 import { useMemo, memo } from 'react';
 import { Loader2, Globe } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
-import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { getProcessIcon } from '@/lib/process-icon';
 import type { TTabDisplayStatus, TTerminalStatus } from '@/types/status';
 import type { TPanelType } from '@/types/terminal';
@@ -13,7 +12,7 @@ interface IWorkspaceStatusIndicatorProps {
 const NERD_FONT_STYLE = { fontFamily: 'MesloLGLDZ, monospace' };
 
 const TerminalNerdIcon = ({ className, process }: { className: string; process?: string | null }) => (
-  <span className={`text-[10px] leading-none ${className}`} style={NERD_FONT_STYLE} aria-hidden="true">
+  <span className={`text-xs leading-none ${className}`} style={NERD_FONT_STYLE} aria-hidden="true">
     {getProcessIcon(process)}
   </span>
 );
@@ -50,8 +49,6 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
   const tabs = useTabStore((state) => state.tabs);
   const tabOrder = useTabStore((state) => state.tabOrders[workspaceId]);
   const wsConnected = useTabStore((state) => state.statusWsConnected);
-  const metadata = useTabMetadataStore((state) => state.metadata);
-
   const tabEntries = useMemo(() => {
     const statusTabIds = new Set<string>();
     for (const [tabId, entry] of Object.entries(tabs)) {
@@ -65,24 +62,21 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
       if (!ordered.includes(id)) ordered.push(id);
     }
 
-    return ordered.map((tabId) => {
-      const meta = metadata[tabId];
-      return {
-        tabId,
-        status: selectTabDisplayStatus(tabs, tabId),
-        panelType: tabs[tabId]?.panelType,
-        terminalStatus: tabs[tabId]?.terminalStatus,
-        process: meta?.currentProcess ?? meta?.title,
-      };
-    });
-  }, [tabs, tabOrder, workspaceId, metadata]);
+    return ordered.map((tabId) => ({
+      tabId,
+      status: selectTabDisplayStatus(tabs, tabId),
+      panelType: tabs[tabId]?.panelType,
+      terminalStatus: tabs[tabId]?.terminalStatus,
+      tabTitle: tabs[tabId]?.tabTitle,
+    }));
+  }, [tabs, tabOrder, workspaceId]);
 
   if (wsConnected && tabEntries.length === 0) return null;
 
   return (
     <span className="mt-1 flex h-3 items-center gap-0.5" aria-label="탭 상태">
-      {tabEntries.map(({ tabId, status, panelType, terminalStatus, process }) => (
-        <DotByStatus key={tabId} status={status} panelType={panelType} terminalStatus={terminalStatus} process={process} />
+      {tabEntries.map(({ tabId, status, panelType, terminalStatus, tabTitle }) => (
+        <DotByStatus key={tabId} status={status} panelType={panelType} terminalStatus={terminalStatus} process={tabTitle} />
       ))}
     </span>
   );

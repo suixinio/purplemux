@@ -166,6 +166,7 @@ class StatusManager {
           cliState,
           workspaceId: ws.id,
           tabName: tab.name,
+          tabTitle: tab.title,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
           terminalStatus,
@@ -275,6 +276,7 @@ class StatusManager {
             cliState: newCliState,
             workspaceId: ws.id,
             tabName: tab.name,
+            tabTitle: tab.title,
             tmuxSession: tab.sessionName,
             panelType: tab.panelType,
             terminalStatus,
@@ -287,6 +289,7 @@ class StatusManager {
         }
 
         existing.tabName = tab.name;
+        existing.tabTitle = tab.title;
         existing.workspaceId = ws.id;
 
         const prevPorts = existing.listeningPorts;
@@ -342,6 +345,7 @@ class StatusManager {
         cliState: entry.cliState,
         workspaceId: entry.workspaceId,
         tabName: entry.tabName,
+        tabTitle: entry.tabTitle,
         panelType: entry.panelType,
         terminalStatus: entry.terminalStatus,
         listeningPorts: entry.listeningPorts,
@@ -404,6 +408,7 @@ class StatusManager {
       cliState: entry.cliState,
       workspaceId: entry.workspaceId,
       tabName: entry.tabName,
+      tabTitle: entry.tabTitle,
       panelType: entry.panelType,
       terminalStatus: entry.terminalStatus,
       listeningPorts: entry.listeningPorts,

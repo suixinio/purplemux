@@ -52,6 +52,7 @@ const useClaudeStatus = () => {
                 panelType: msg.panelType,
                 terminalStatus: msg.terminalStatus,
                 listeningPorts: msg.listeningPorts,
+                tabTitle: msg.tabTitle,
               });
               break;
           }

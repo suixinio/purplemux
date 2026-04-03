@@ -22,6 +22,7 @@ export interface ITabState {
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
+  tabTitle?: string;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -53,8 +54,8 @@ interface ITabStore {
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[] }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[] }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; tabTitle?: string }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; tabTitle?: string }) => void;
 }
 
 const updateTab = (
@@ -167,9 +168,9 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = next[tabId];
         if (existing) {
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, tabTitle: entry.tabTitle };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, tabTitle: entry.tabTitle };
         }
       }
       return { tabs: next };
@@ -183,12 +184,12 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, tabTitle: update.tabTitle }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, tabTitle: update.tabTitle },
         },
       };
     }),

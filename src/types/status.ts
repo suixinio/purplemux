@@ -7,6 +7,7 @@ export interface ITabStatusEntry {
   cliState: TCliState;
   workspaceId: string;
   tabName: string;
+  tabTitle?: string;
   tmuxSession: string;
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
@@ -28,6 +29,7 @@ export interface IStatusUpdateMessage {
   cliState: TCliState | null;
   workspaceId: string;
   tabName: string;
+  tabTitle?: string;
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
