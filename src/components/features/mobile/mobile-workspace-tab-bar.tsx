@@ -83,7 +83,7 @@ const MobileWorkspaceTabBar = ({
           const isClaude = item.panelType === 'claude-code';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
           const termStatus = statusTabs[item.tabId]?.terminalStatus;
-          const nerdIcon = getProcessIcon(statusTabs[item.tabId]?.tabTitle);
+          const nerdIcon = getProcessIcon(statusTabs[item.tabId]?.currentProcess);
           const nerdStyle = { fontFamily: 'MesloLGLDZ, monospace' } as const;
 
           return (

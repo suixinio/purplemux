@@ -67,7 +67,7 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
       status: selectTabDisplayStatus(tabs, tabId),
       panelType: tabs[tabId]?.panelType,
       terminalStatus: tabs[tabId]?.terminalStatus,
-      tabTitle: tabs[tabId]?.tabTitle,
+      currentProcess: tabs[tabId]?.currentProcess,
     }));
   }, [tabs, tabOrder, workspaceId]);
 
@@ -75,8 +75,8 @@ const WorkspaceStatusIndicator = ({ workspaceId }: IWorkspaceStatusIndicatorProp
 
   return (
     <span className="mt-1 flex h-3 items-center gap-0.5" aria-label="탭 상태">
-      {tabEntries.map(({ tabId, status, panelType, terminalStatus, tabTitle }) => (
-        <DotByStatus key={tabId} status={status} panelType={panelType} terminalStatus={terminalStatus} process={tabTitle} />
+      {tabEntries.map(({ tabId, status, panelType, terminalStatus, currentProcess }) => (
+        <DotByStatus key={tabId} status={status} panelType={panelType} terminalStatus={terminalStatus} process={currentProcess} />
       ))}
     </span>
   );

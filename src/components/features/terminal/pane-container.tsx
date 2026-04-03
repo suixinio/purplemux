@@ -104,11 +104,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     }),
   );
 
-  const tabProcesses = useTabMetadataStore(
+  const tabProcesses = useTabStore(
     useShallow((state) => {
       const result: Record<string, string> = {};
       for (const id of tabIds) {
-        const p = state.metadata[id]?.currentProcess;
+        const p = state.tabs[id]?.currentProcess;
         if (p) result[id] = p;
       }
       return result;
@@ -263,9 +263,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       lastTitleRef.current = title;
       const formatted = formatTabTitle(title);
       const process = parseCurrentCommand(title);
-      const store = useTabMetadataStore.getState();
-      store.setTitle(tabId, formatted);
-      store.setCurrentProcess(tabId, process);
+      useTabMetadataStore.getState().setTitle(tabId, formatted);
+      useTabStore.getState().setCurrentProcess(tabId, process);
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;

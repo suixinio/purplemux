@@ -22,7 +22,8 @@ export interface ITabState {
   panelType?: TPanelType;
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
-  tabTitle?: string;
+  currentProcess?: string;
+  currentProcessSetAt?: number;
 }
 
 const DEFAULT_TAB_STATE: ITabState = {
@@ -52,10 +53,11 @@ interface ITabStore {
   dismissTab: (tabId: string) => void;
   setResuming: (tabId: string, resuming: boolean) => void;
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
+  setCurrentProcess: (tabId: string, process: string | null) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
-  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; tabTitle?: string }>) => void;
-  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; tabTitle?: string }) => void;
+  syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string }>) => void;
+  updateFromServer: (tabId: string, update: { cliState: TCliState | null; workspaceId: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string }) => void;
 }
 
 const updateTab = (
@@ -152,6 +154,15 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { workspaceId }) };
     }),
 
+  setCurrentProcess: (tabId, process) =>
+    set((state) => {
+      const prev = state.tabs[tabId];
+      if (!prev) return state;
+      const value = process ?? undefined;
+      if (prev.currentProcess === value) return state;
+      return { tabs: updateTab(state.tabs, tabId, { currentProcess: value, currentProcessSetAt: Date.now() }) };
+    }),
+
   setTabOrder: (workspaceId, tabIds) =>
     set((state) => {
       const prev = state.tabOrders[workspaceId];
@@ -168,9 +179,12 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = next[tabId];
         if (existing) {
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, tabTitle: entry.tabTitle };
+          const processPatch = shouldAcceptServerProcess(existing, entry.currentProcess)
+            ? { currentProcess: entry.currentProcess }
+            : {};
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, ...processPatch };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, tabTitle: entry.tabTitle };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess };
         }
       }
       return { tabs: next };
@@ -184,16 +198,27 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, tabTitle: update.tabTitle }) };
+        const processPatch = shouldAcceptServerProcess(existing, update.currentProcess)
+          ? { currentProcess: update.currentProcess }
+          : {};
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, ...processPatch }) };
       }
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, tabTitle: update.tabTitle },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess },
         },
       };
     }),
 }));
+
+// 클라이언트가 최근에 설정한 값이 있으면 서버 값으로 덮어쓰지 않음
+const SERVER_PROCESS_GRACE_MS = 10_000;
+const shouldAcceptServerProcess = (existing: ITabState, serverProcess?: string): boolean => {
+  if (!existing.currentProcessSetAt) return true;
+  if (existing.currentProcess === serverProcess) return true;
+  return Date.now() - existing.currentProcessSetAt > SERVER_PROCESS_GRACE_MS;
+};
 
 // --- helpers ---
 

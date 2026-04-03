@@ -166,7 +166,7 @@ class StatusManager {
           cliState,
           workspaceId: ws.id,
           tabName: tab.name,
-          tabTitle: tab.title,
+          currentProcess: paneInfo?.command,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
           terminalStatus,
@@ -276,7 +276,7 @@ class StatusManager {
             cliState: newCliState,
             workspaceId: ws.id,
             tabName: tab.name,
-            tabTitle: tab.title,
+            currentProcess: paneInfo?.command,
             tmuxSession: tab.sessionName,
             panelType: tab.panelType,
             terminalStatus,
@@ -288,9 +288,9 @@ class StatusManager {
           continue;
         }
 
-        const tabTitleChanged = existing.tabTitle !== tab.title;
+        const processChanged = existing.currentProcess !== paneInfo?.command;
         existing.tabName = tab.name;
-        existing.tabTitle = tab.title;
+        existing.currentProcess = paneInfo?.command;
         existing.workspaceId = ws.id;
 
         const prevPorts = existing.listeningPorts;
@@ -314,7 +314,7 @@ class StatusManager {
             : newCliState;
         }
 
-        if (cliChanged || terminalChanged || tabTitleChanged) {
+        if (cliChanged || terminalChanged || processChanged) {
           if (cliChanged) this.persistToLayout(existing);
           this.broadcastUpdate(tab.id, existing);
         }
@@ -346,7 +346,7 @@ class StatusManager {
         cliState: entry.cliState,
         workspaceId: entry.workspaceId,
         tabName: entry.tabName,
-        tabTitle: entry.tabTitle,
+        currentProcess: entry.currentProcess,
         panelType: entry.panelType,
         terminalStatus: entry.terminalStatus,
         listeningPorts: entry.listeningPorts,
@@ -409,7 +409,7 @@ class StatusManager {
       cliState: entry.cliState,
       workspaceId: entry.workspaceId,
       tabName: entry.tabName,
-      tabTitle: entry.tabTitle,
+      currentProcess: entry.currentProcess,
       panelType: entry.panelType,
       terminalStatus: entry.terminalStatus,
       listeningPorts: entry.listeningPorts,

@@ -6,7 +6,6 @@ interface ITabMetadata {
   title?: string;
   cwd?: string;
   lastCommand?: string | null;
-  currentProcess?: string | null;
 }
 
 interface ITabMetadataState {
@@ -14,7 +13,6 @@ interface ITabMetadataState {
   setTitle: (tabId: string, title: string) => void;
   setCwd: (tabId: string, cwd: string) => void;
   setLastCommand: (tabId: string, lastCommand: string | null) => void;
-  setCurrentProcess: (tabId: string, process: string | null) => void;
   removeTab: (tabId: string) => void;
   hydrate: (data: Record<string, ITabMetadata>) => void;
   retainOnly: (tabIds: Set<string>) => void;
@@ -100,14 +98,6 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
       return { metadata: { ...state.metadata, [tabId]: { ...prev, lastCommand } } };
     });
     scheduleSyncToLayout();
-  },
-
-  setCurrentProcess: (tabId, process) => {
-    set((state) => {
-      const prev = state.metadata[tabId];
-      if (prev?.currentProcess === process) return state;
-      return { metadata: { ...state.metadata, [tabId]: { ...prev, currentProcess: process } } };
-    });
   },
 
   removeTab: (tabId) => {
