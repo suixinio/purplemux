@@ -33,7 +33,7 @@ const DotByStatus = ({ status, panelType, terminalStatus, process }: { status: T
     inner = <Globe className="h-2.5 w-2.5 text-muted-foreground/50" aria-hidden="true" />;
   } else if (terminalStatus === 'server') {
     isNerd = true;
-    inner = <TerminalNerdIcon className="text-ui-green animate-pulse" process={process} />;
+    inner = <TerminalNerdIcon className="text-ui-green" process={process} />;
   } else if (terminalStatus === 'running') {
     isNerd = true;
     inner = <TerminalNerdIcon className="text-ui-blue" process={process} />;

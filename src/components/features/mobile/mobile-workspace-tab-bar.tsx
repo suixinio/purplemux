@@ -105,7 +105,7 @@ const MobileWorkspaceTabBar = ({
               ) : item.panelType === 'web-browser' ? (
                 <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
               ) : termStatus === 'server' ? (
-                <span className="text-sm leading-none text-ui-green animate-pulse" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
+                <span className="text-sm leading-none text-ui-green" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
               ) : termStatus === 'running' ? (
                 <span className="text-sm leading-none text-ui-blue" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
               ) : (
