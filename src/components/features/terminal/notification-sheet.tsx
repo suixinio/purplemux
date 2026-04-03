@@ -10,10 +10,11 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
+import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { dismissTab } from '@/hooks/use-claude-status';
-import { navigateToTab } from '@/hooks/use-layout';
+import { navigateToTab, useLayoutStore } from '@/hooks/use-layout';
+import { findPane } from '@/lib/layout-tree';
 import type { ITabState } from '@/hooks/use-tab-store';
 
 dayjs.extend(relativeTime);
@@ -37,12 +38,14 @@ const collectItems = (
   tabs: Record<string, ITabState>,
   workspaces: { id: string; name: string }[],
   targetState: 'busy' | 'ready-for-review',
+  excludeTabId?: string | null,
 ): INotificationItem[] => {
   const wsMap = new Map(workspaces.map((ws) => [ws.id, ws.name]));
   const items: INotificationItem[] = [];
 
   for (const [tabId, tab] of Object.entries(tabs)) {
     if (tab.cliState !== targetState) continue;
+    if (tabId === excludeTabId) continue;
     items.push({
       tabId,
       workspaceName: wsMap.get(tab.workspaceId) || tab.workspaceId,
@@ -125,18 +128,21 @@ const NotificationItem = ({
 
 const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   const tabs = useTabStore((s) => s.tabs);
-  const busyCount = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount);
-  const attentionCount = useTabStore((s) => selectGlobalStatus(s.tabs).attentionCount);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const activeTabId = useLayoutStore((s) => {
+    if (!s.layout?.activePaneId) return null;
+    const pane = findPane(s.layout.root, s.layout.activePaneId);
+    return pane?.activeTabId ?? null;
+  });
 
   const busyItems = useMemo(
-    () => collectItems(tabs, workspaces, 'busy'),
-    [tabs, workspaces],
+    () => collectItems(tabs, workspaces, 'busy', activeTabId),
+    [tabs, workspaces, activeTabId],
   );
 
   const reviewItems = useMemo(
-    () => collectItems(tabs, workspaces, 'ready-for-review'),
-    [tabs, workspaces],
+    () => collectItems(tabs, workspaces, 'ready-for-review', activeTabId),
+    [tabs, workspaces, activeTabId],
   );
 
   const handleDismiss = useCallback((tabId: string) => {
@@ -151,7 +157,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
     [onOpenChange],
   );
 
-  const isEmpty = busyCount === 0 && attentionCount === 0;
+  const isEmpty = busyItems.length === 0 && reviewItems.length === 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -170,7 +176,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
               {busyItems.length > 0 && (
                 <section>
                   <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    진행중 ({busyCount})
+                    진행중 ({busyItems.length})
                   </h3>
                   <div className="flex flex-col gap-2">
                     {busyItems.map((item) => (
@@ -188,7 +194,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
               {reviewItems.length > 0 && (
                 <section className={busyItems.length > 0 ? 'mt-4' : ''}>
                   <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    리뷰 ({attentionCount})
+                    리뷰 ({reviewItems.length})
                   </h3>
                   <div className="flex flex-col gap-2">
                     {reviewItems.map((item) => (

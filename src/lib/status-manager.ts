@@ -295,6 +295,7 @@ class StatusManager {
         }
 
         const processChanged = existing.currentProcess !== paneInfo?.command;
+        const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         existing.tabName = tab.name;
         existing.currentProcess = paneInfo?.command;
         existing.workspaceId = ws.id;
@@ -323,7 +324,7 @@ class StatusManager {
           existing.busySince = newCliState === 'busy' && prevState !== 'busy' ? Date.now() : (newCliState !== 'busy' ? null : existing.busySince);
         }
 
-        if (cliChanged || terminalChanged || processChanged) {
+        if (cliChanged || terminalChanged || processChanged || messageChanged) {
           if (cliChanged) this.persistToLayout(existing);
           this.broadcastUpdate(tab.id, existing);
         }
