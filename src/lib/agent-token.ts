@@ -1,12 +1,33 @@
 import { randomBytes } from 'crypto';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
+import path from 'path';
 import type { NextApiRequest } from 'next';
 
-let token: string | null = null;
+const TOKEN_PATH = path.join(
+  process.env.HOME ?? '/tmp',
+  '.purplemux',
+  '.agent-token',
+);
+
+const g = globalThis as unknown as { __ptAgentToken?: string };
 
 export const getAgentToken = (): string => {
-  if (!token) {
+  if (g.__ptAgentToken) return g.__ptAgentToken;
+
+  let token: string;
+  try {
+    token = readFileSync(TOKEN_PATH, 'utf-8').trim();
+  } catch {
     token = randomBytes(32).toString('hex');
+    try {
+      mkdirSync(path.dirname(TOKEN_PATH), { recursive: true });
+      writeFileSync(TOKEN_PATH, token, { mode: 0o600 });
+    } catch {
+      // best-effort
+    }
   }
+
+  g.__ptAgentToken = token;
   return token;
 };
 
