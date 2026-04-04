@@ -12,6 +12,7 @@ import {
   hasSession,
   sendKeys,
   sendRawKeys,
+  sendBracketedPaste,
   getSessionPanePid,
   getPaneCurrentCommand,
   listSessions,
@@ -56,6 +57,22 @@ import type {
 
 
 const log = createLogger('agent-manager');
+
+const DEFAULT_SOUL = `## Core Truths
+- 사용자의 의도를 정확히 파악하고, 불필요한 확인 없이 바로 실행한다
+- 작업 진행 상황을 간결하게 보고하되, 수식어와 반복 설명은 생략한다
+- 코드를 직접 수정하지 않고, 탭에 명확하고 구체적인 지시를 전달하여 위임한다
+- 실패 시 원인을 먼저 파악하고, 스스로 해결을 시도한 후 결과를 보고한다
+
+## Boundaries
+- 확인이 꼭 필요한 경우에만 question을 사용한다
+- 파괴적 작업(파일 삭제, force push 등)은 반드시 사전 승인을 받는다
+- 사용자의 코드 스타일과 프로젝트 컨벤션을 존중한다
+
+## Vibe
+- 간결하고 직접적으로 대화한다
+- 기술적으로 정확하되 친근한 톤을 유지한다
+- 한국어로 소통한다`.trimEnd();
 
 const AGENTS_DIR = path.join(os.homedir(), '.purplemux', 'agents');
 const AGENT_SESSION_PREFIX = 'agent-';
@@ -154,6 +171,7 @@ class AgentManager {
 
     await ensureAgentDir(id);
     await this.writeConfig(id, config);
+    await this.writeSoul(id, DEFAULT_SOUL);
     await writeChatIndex(id, { sessions: [] });
 
     const chatSessionId = await createChatSession(id);
@@ -276,7 +294,7 @@ class AgentManager {
     this.broadcast(event);
   }
 
-  async updateAgent(agentId: string, update: { name?: string; role?: string }): Promise<IAgentInfo | null> {
+  async updateAgent(agentId: string, update: { name?: string; role?: string; soul?: string }): Promise<IAgentInfo | null> {
     const runtime = this.agents.get(agentId);
     if (!runtime) return null;
 
@@ -296,6 +314,10 @@ class AgentManager {
       if (update.name) config.name = update.name;
       if (update.role) config.role = update.role;
       await this.writeConfig(agentId, config);
+    }
+
+    if (update.soul !== undefined) {
+      await this.writeSoul(agentId, update.soul);
     }
 
     const newHash = await this.computeClaudeMdHash(runtime);
@@ -419,12 +441,22 @@ class AgentManager {
     const { info } = runtime;
     const baseUrl = `http://localhost:${port}/api/agent-rpc`;
     const authHeader = `  -H "X-Agent-Token: ${token}" \\`;
+    const soul = await this.readSoul(info.id);
 
     const lines = [
       '# Agent Instructions',
       '',
       `You are "${info.name}" — ${info.role || 'general-purpose agent'}.`,
       '',
+      ...(soul ? [
+        '## Soul',
+        '',
+        'The following defines your personality, values, and communication style.',
+        'Internalize these principles — they shape how you think, act, and communicate.',
+        '',
+        soul,
+        '',
+      ] : []),
       '## Workspace Discovery',
       '',
       'You do NOT have pre-assigned projects. Instead, discover available workspaces',
@@ -775,8 +807,7 @@ class AgentManager {
   }
 
   private async deliverToAgent(runtime: IAgentRuntime, content: string): Promise<void> {
-    const escaped = content.replace(/'/g, "'\\''");
-    await sendKeys(runtime.info.tmuxSession, escaped);
+    await sendBracketedPaste(runtime.info.tmuxSession, content);
   }
 
   // --- Status management ---
@@ -830,6 +861,20 @@ class AgentManager {
       '',
     ].join('\n');
     await fs.writeFile(configPath, content, 'utf-8');
+  }
+
+  async readSoul(agentId: string): Promise<string> {
+    const soulPath = path.join(getAgentDir(agentId), 'soul.md');
+    try {
+      return await fs.readFile(soulPath, 'utf-8');
+    } catch {
+      return '';
+    }
+  }
+
+  private async writeSoul(agentId: string, content: string): Promise<void> {
+    const soulPath = path.join(getAgentDir(agentId), 'soul.md');
+    await fs.writeFile(soulPath, content, 'utf-8');
   }
 
   private parseConfigMd(raw: string): IAgentConfig | null {
@@ -1059,8 +1104,7 @@ class AgentManager {
     if (!alive) throw new Error('Tab session is dead');
 
     if (tr.tab.status === 'idle') {
-      const escaped = content.replace(/'/g, "'\\''");
-      await sendKeys(tr.tab.tmuxSession, escaped);
+      await sendBracketedPaste(tr.tab.tmuxSession, content);
       tr.tab.status = 'working';
       tr.tab.lastActivity = new Date().toISOString();
       await this.persistTabs(runtime);
@@ -1328,8 +1372,7 @@ class AgentManager {
 
         if (newStatus === 'idle' && tr.prevStatus === 'working' && tr.messageQueue.length > 0) {
           const next = tr.messageQueue.shift()!;
-          const escaped = next.replace(/'/g, "'\\''");
-          await sendKeys(tr.tab.tmuxSession, escaped);
+          await sendBracketedPaste(tr.tab.tmuxSession, next);
           tr.tab.status = 'working';
           this.broadcastTabStatus(runtime.info.id, tr.tab.tabId, 'working');
         }

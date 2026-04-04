@@ -12,11 +12,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const agent = manager.getAgent(agentId);
     if (!agent) return res.status(404).json({ error: 'Agent not found' });
+    const soul = await manager.readSoul(agentId);
 
     return res.status(200).json({
       id: agent.id,
       name: agent.name,
       role: agent.role,
+      soul,
       status: agent.status,
       createdAt: agent.createdAt,
     });
@@ -33,6 +35,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         id: agent.id,
         name: agent.name,
         role: agent.role,
+        soul: await manager.readSoul(agentId),
         status: agent.status,
         createdAt: agent.createdAt,
       });

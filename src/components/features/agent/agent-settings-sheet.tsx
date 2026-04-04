@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,11 +32,27 @@ interface ISettingsFormProps {
 const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => {
   const [name, setName] = useState(agent.name);
   const [role, setRole] = useState(agent.role);
+  const [soul, setSoul] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoadingSoul, setIsLoadingSoul] = useState(true);
 
   const agents = useAgentStore(useShallow(selectAgentList));
   const updateAgent = useAgentStore((s) => s.updateAgent);
+
+  useEffect(() => {
+    const fetchSoul = async () => {
+      try {
+        const res = await fetch(`/api/agent/${agent.id}`);
+        if (res.ok) {
+          const data = await res.json();
+          setSoul(data.soul ?? '');
+        }
+      } catch { /* ignore */ }
+      setIsLoadingSoul(false);
+    };
+    fetchSoul();
+  }, [agent.id]);
 
   const validateName = useCallback(
     (value: string) => {
@@ -69,6 +85,7 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
     const success = await updateAgent(agent.id, {
       name,
       role,
+      soul,
     });
 
     setIsSaving(false);
@@ -109,6 +126,23 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
             placeholder="역할을 입력하세요"
             maxLength={100}
           />
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Soul</Label>
+          <p className="text-xs text-muted-foreground">에이전트의 성격, 행동 방식, 커뮤니케이션 스타일을 정의합니다</p>
+          {isLoadingSoul ? (
+            <div className="flex h-32 items-center justify-center rounded-md border">
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <textarea
+              value={soul}
+              onChange={(e) => setSoul(e.target.value)}
+              className="flex min-h-[160px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              placeholder="## Core Truths\n- ...\n\n## Vibe\n- ..."
+            />
+          )}
         </div>
 
       </div>

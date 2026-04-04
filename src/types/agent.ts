@@ -62,6 +62,7 @@ export interface IAgentDetailResponse {
   id: string;
   name: string;
   role: string;
+  soul: string;
   status: TAgentStatus;
   createdAt: string;
 }
@@ -69,6 +70,7 @@ export interface IAgentDetailResponse {
 export interface IUpdateAgentRequest {
   name?: string;
   role?: string;
+  soul?: string;
 }
 
 export interface ISendMessageRequest {
