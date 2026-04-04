@@ -1,6 +1,9 @@
 import pino from 'pino';
 import path from 'path';
 import os from 'os';
+import { createRequire } from 'node:module';
+
+const nodeRequire = createRequire(__filename);
 
 const LOG_DIR = path.join(os.homedir(), '.purplemux', 'logs');
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
@@ -13,7 +16,7 @@ if (!g.__ptRootLogger) {
     transport: {
       targets: [
         {
-          target: require.resolve('pino-roll'),
+          target: nodeRequire.resolve('pino-roll'),
           options: {
             file: path.join(LOG_DIR, 'purplemux'),
             frequency: 'daily',
@@ -23,7 +26,7 @@ if (!g.__ptRootLogger) {
           },
         },
         {
-          target: require.resolve('pino-pretty'),
+          target: nodeRequire.resolve('pino-pretty'),
           options: {
             colorize: true,
             ignore: 'pid,hostname,module',
