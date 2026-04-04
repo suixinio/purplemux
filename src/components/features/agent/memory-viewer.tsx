@@ -1,9 +1,9 @@
-import { memo } from 'react';
+import { memo, useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import dayjs from 'dayjs';
-import { FileText, Pencil, RefreshCw } from 'lucide-react';
+import { FileText, Pencil, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import MarkdownEditor from '@/components/features/agent/markdown-editor';
@@ -30,6 +30,52 @@ const formatBytes = (bytes: number): string => {
   if (bytes < 1024) return `${bytes}B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)}MB`;
+};
+
+const extractAgent = (filePath: string): string | null => {
+  const first = filePath.split('/')[0];
+  return first && first !== 'shared' ? first : null;
+};
+
+const COLLAPSE_HEIGHT = 400;
+
+const CollapsibleContent = ({ children }: { children: React.ReactNode }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isOverflow, setIsOverflow] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (el) {
+      setIsOverflow(el.scrollHeight > COLLAPSE_HEIGHT);
+      setIsExpanded(false);
+    }
+  }, [children]);
+
+  const toggle = useCallback(() => setIsExpanded((prev) => !prev), []);
+
+  return (
+    <div className="relative">
+      <div
+        ref={contentRef}
+        className="overflow-hidden transition-[max-height] duration-200"
+        style={{ maxHeight: isOverflow && !isExpanded ? `${COLLAPSE_HEIGHT}px` : 'none' }}
+      >
+        {children}
+      </div>
+      {isOverflow && !isExpanded && (
+        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-background to-transparent" />
+      )}
+      {isOverflow && (
+        <div className="flex justify-center py-2">
+          <Button variant="ghost" size="sm" onClick={toggle} className="h-7 gap-1 text-xs text-muted-foreground">
+            {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {isExpanded ? '접기' : '더 보기'}
+          </Button>
+        </div>
+      )}
+    </div>
+  );
 };
 
 const EmptyState = () => (
@@ -113,17 +159,22 @@ const MemoryViewer = ({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3">
-          <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
-            {content ?? ''}
-          </ReactMarkdown>
-        </div>
+        <CollapsibleContent>
+          <div className="prose prose-sm dark:prose-invert max-w-none break-words [&_pre]:rounded-md [&_pre]:bg-muted [&_pre]:p-3">
+            <ReactMarkdown remarkPlugins={REMARK_PLUGINS} rehypePlugins={REHYPE_PLUGINS}>
+              {content ?? ''}
+            </ReactMarkdown>
+          </div>
+        </CollapsibleContent>
       </div>
 
-      {(sizeBytes !== null || modifiedAt) && (
+      {(sizeBytes !== null || modifiedAt || selectedPath) && (
         <div className="flex gap-4 border-t px-4 py-2 text-xs text-muted-foreground">
           {sizeBytes !== null && <span>크기: {formatBytes(sizeBytes)}</span>}
           {modifiedAt && <span>수정: {dayjs(modifiedAt).format('YYYY-MM-DD HH:mm')}</span>}
+          {selectedPath && extractAgent(selectedPath) && (
+            <span>에이전트: {extractAgent(selectedPath)}</span>
+          )}
         </div>
       )}
     </div>
