@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useShallow } from 'zustand/react/shallow';
 import { Plus, Bot, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,7 +45,7 @@ const EmptyState = ({ onCreateClick }: { onCreateClick: () => void }) => (
 
 const AgentsPage = () => {
   const router = useRouter();
-  const agents = useAgentStore(selectAgentList);
+  const agents = useAgentStore(useShallow(selectAgentList));
   const isLoading = useAgentStore((s) => s.isLoading);
   const error = useAgentStore((s) => s.error);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);

@@ -87,9 +87,19 @@ const chatReducer = (state: IChatState, action: TChatAction): IChatState => {
         messages: [...state.messages, action.payload],
       };
     case 'SEND_SUCCESS': {
+      const { tempId, realId, status } = action.payload;
+      // WebSocket may have already delivered the real message before API responded
+      const hasReal = state.messages.some((m) => m.id === realId);
+      if (hasReal) {
+        return {
+          ...state,
+          isSending: false,
+          messages: state.messages.filter((m) => m.id !== tempId),
+        };
+      }
       const updated = state.messages.map((m) =>
-        m.id === action.payload.tempId
-          ? { ...m, id: action.payload.realId, metadata: action.payload.status === 'queued' ? { queued: true } : m.metadata }
+        m.id === tempId
+          ? { ...m, id: realId, metadata: status === 'queued' ? { queued: true } : m.metadata }
           : m,
       );
       return { ...state, isSending: false, messages: updated };
@@ -100,8 +110,17 @@ const chatReducer = (state: IChatState, action: TChatAction): IChatState => {
       return { ...state, isSending: false, failedMessageIds: failed };
     }
     case 'RECEIVE_MESSAGE': {
-      const exists = state.messages.some((m) => m.id === action.payload.id);
-      if (exists) return state;
+      const { id, role } = action.payload;
+      if (state.messages.some((m) => m.id === id)) return state;
+      // WebSocket echo of our own message may arrive before SEND_SUCCESS
+      if (role === 'user') {
+        const tempIdx = state.messages.findIndex((m) => m.id.startsWith('temp-'));
+        if (tempIdx >= 0) {
+          const updated = [...state.messages];
+          updated[tempIdx] = action.payload;
+          return { ...state, messages: updated };
+        }
+      }
       return { ...state, messages: [...state.messages, action.payload] };
     }
     case 'SET_AT_BOTTOM':
@@ -144,6 +163,7 @@ const useAgentChat = (agentId: string) => {
   const sendingRef = useRef(false);
 
   const fetchHistory = useCallback(async () => {
+    if (!agentId) return;
     dispatch({ type: 'INIT_START' });
     try {
       const res = await fetch(`/api/agent/${agentId}/chat`);
@@ -177,7 +197,7 @@ const useAgentChat = (agentId: string) => {
 
   const sendMessage = useCallback(
     async (content: string) => {
-      if (sendingRef.current || !content.trim()) return;
+      if (!agentId || sendingRef.current || !content.trim()) return;
       sendingRef.current = true;
 
       const tempId = `temp-${Date.now()}`;
@@ -228,6 +248,7 @@ const useAgentChat = (agentId: string) => {
 
   // WebSocket connection
   useEffect(() => {
+    if (!agentId) return;
     mountedRef.current = true;
 
     const connect = () => {

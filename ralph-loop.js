@@ -114,14 +114,11 @@ const MAX_VERIFY = 3;
     const rows = lines.slice(2);
 
     for (const row of rows) {
-      const cols = row
-        .split('|')
-        .map((c) => c.trim())
-        .filter(Boolean);
-      const [feature, , , buildCol, verifyCol] = cols;
+      const cols = row.split('|').map((c) => c.trim());
+      const [, feature, , , buildCol, verifyCol] = cols;
 
-      if (buildCol.includes('⬜')) return { feature, step: 'build' };
-      if (verifyCol.includes('⬜')) return { feature, step: 'verify' };
+      if (!buildCol || buildCol.includes('⬜')) return { feature, step: 'build' };
+      if (!verifyCol || verifyCol.includes('⬜')) return { feature, step: 'verify' };
     }
 
     return null;

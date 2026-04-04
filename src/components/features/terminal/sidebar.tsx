@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import {
+  Bot,
   ChevronsLeft,
   ChevronsRight,
   Plus,
@@ -28,6 +29,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useAgentStore, { selectBlockedCount } from '@/hooks/use-agent-store';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
 import NotificationSheet from '@/components/features/terminal/notification-sheet';
@@ -53,6 +55,7 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
   const { busyCount, attentionCount } = useNotificationCount();
   const hasActive = busyCount > 0 || attentionCount > 0;
+  const blockedCount = useAgentStore(selectBlockedCount);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -378,6 +381,18 @@ const Sidebar = ({ onSelectWorkspace }: ISidebarProps) => {
 
           <div className="flex items-center justify-between px-2 pb-2">
             <div className="flex items-center gap-0.5">
+              <button
+                className="relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
+                onClick={() => router.push('/agents')}
+                aria-label="에이전트"
+              >
+                <Bot className="h-3.5 w-3.5" />
+                {blockedCount > 0 && (
+                  <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-amber px-0.5 text-[9px] font-medium leading-none text-white">
+                    {blockedCount}
+                  </span>
+                )}
+              </button>
               <button
                 className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
                 onClick={() => router.push('/reports')}

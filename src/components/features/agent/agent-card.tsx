@@ -64,7 +64,7 @@ const AgentCard = ({ agent, onClick, onSettingsClick, isFadingOut }: IAgentCardP
           {agent.projects.map((project) => (
             <div key={project} className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <Folder className="h-3 w-3 text-muted-foreground/60" />
-              <span>{project}</span>
+              <span>{project.split('/').pop() || project}</span>
             </div>
           ))}
         </div>

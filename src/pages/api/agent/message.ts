@@ -5,10 +5,19 @@ import type { IAgentMessageRequest } from '@/types/agent';
 
 const log = createLogger('api:agent-message');
 
+const isLocalRequest = (req: NextApiRequest): boolean => {
+  const host = req.headers.host || '';
+  return host.startsWith('localhost:') || host.startsWith('127.0.0.1:');
+};
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
     return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ error: 'Forbidden' });
   }
 
   const { agentId, type, content, metadata } = req.body as Partial<IAgentMessageRequest>;

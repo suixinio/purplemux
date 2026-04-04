@@ -9,6 +9,7 @@ import {
   killSession,
   hasSession,
   sendKeys,
+  sendRawKeys,
   getSessionPanePid,
   getPaneCurrentCommand,
   listSessions,
@@ -54,6 +55,7 @@ interface IAgentRuntime {
   chatSessionId: string | null;
   restartCount: number;
   statusTimer: ReturnType<typeof setInterval> | null;
+  relaySetAt: number;
 }
 
 const g = globalThis as unknown as { __ptAgentManager?: AgentManager };
@@ -142,6 +144,7 @@ class AgentManager {
       chatSessionId,
       restartCount: 0,
       statusTimer: null,
+      relaySetAt: 0,
     };
     this.agents.set(id, runtime);
 
@@ -314,8 +317,15 @@ class AgentManager {
       message,
     });
 
-    if (type === 'question') {
+    if (type === 'question' || type === 'approval') {
       this.setStatus(runtime, 'blocked');
+      runtime.relaySetAt = Date.now();
+    } else if (type === 'done' || type === 'error' || type === 'report') {
+      this.setStatus(runtime, 'idle');
+      runtime.relaySetAt = Date.now();
+      if (runtime.messageQueue.length > 0) {
+        await this.drainQueue(runtime);
+      }
     }
 
     return message;
@@ -327,70 +337,76 @@ class AgentManager {
 
   // --- Session lifecycle ---
 
-  private async writeAgentClaudeMd(runtime: IAgentRuntime, cwd: string): Promise<void> {
+  private async writeAgentClaudeMd(runtime: IAgentRuntime): Promise<void> {
     const port = process.env.PORT || '8022';
     const { info } = runtime;
+    const projectPaths = info.projects.length > 0
+      ? info.projects.map((p) => `- ${p}`).join('\n')
+      : '- (none)';
+
     const content = [
       '# Agent Instructions',
       '',
       `You are "${info.name}" — ${info.role}.`,
       '',
-      '## Reporting',
+      '## Projects',
       '',
-      'You MUST report progress, ask questions, and signal completion via the relay API.',
-      'Use curl to send messages:',
+      'You are responsible for the following project directories:',
+      projectPaths,
+      '',
+      'Always work within these directories when reading or modifying code.',
+      '',
+      '## Communication (CRITICAL)',
+      '',
+      'The user communicates with you through a chat UI, NOT the terminal.',
+      'Your terminal output is invisible to the user.',
+      'The ONLY way the user sees your responses is through the relay API below.',
+      '',
+      '**You MUST call this API for EVERY response**, whether it is a simple reply, progress update, question, or completion notice.',
       '',
       '```bash',
       `curl -s -X POST http://localhost:${port}/api/agent/message \\`,
       `  -H "Content-Type: application/json" \\`,
-      `  -d '{"agentId":"${info.id}","type":"report","content":"your message here"}'`,
+      `  -d '{"agentId":"${info.id}","type":"TYPE","content":"YOUR_MESSAGE"}'`,
       '```',
       '',
       '### Message types',
       '',
       '| type | when to use |',
       '|------|------------|',
-      '| `report` | Progress updates, intermediate results |',
-      '| `question` | Need user input before continuing |',
+      '| `report` | Any reply to the user, progress updates, intermediate results |',
+      '| `question` | Need user input before continuing (user must answer before you proceed) |',
       '| `done` | Task completed successfully |',
       '| `error` | Unrecoverable failure |',
       '| `approval` | Need user approval for a risky action |',
       '',
       '## Rules',
       '',
-      '- Report at meaningful milestones, not every step.',
-      '- Use `question` sparingly — only when you truly cannot proceed.',
-      '- Always send `done` or `error` when finished.',
+      '- ALWAYS relay your response via the API above. The user cannot see terminal output.',
+      '- For long tasks, send periodic `report` messages so the user knows progress.',
+      '- Use `question` when you need input — this blocks you until the user replies.',
+      '- Always send `done` or `error` when a task is finished.',
       '',
     ].join('\n');
 
-    const claudeMdPath = path.join(cwd, 'CLAUDE.md');
-    const existing = await fs.readFile(claudeMdPath, 'utf-8').catch(() => '');
-    const marker = '<!-- agent-relay -->';
-    const block = `${marker}\n${content}${marker}`;
-
-    if (existing.includes(marker)) {
-      const replaced = existing.replace(
-        new RegExp(`${marker}[\\s\\S]*?${marker}`),
-        block,
-      );
-      await fs.writeFile(claudeMdPath, replaced, 'utf-8');
-    } else {
-      const merged = existing ? `${existing}\n\n${block}\n` : `${block}\n`;
-      await fs.writeFile(claudeMdPath, merged, 'utf-8');
-    }
+    const claudeMdPath = path.join(getAgentDir(info.id), 'CLAUDE.md');
+    await fs.writeFile(claudeMdPath, content, 'utf-8');
   }
 
   private async startAgentSession(runtime: IAgentRuntime): Promise<void> {
     const { info } = runtime;
-    const cwd = info.projects[0] || os.homedir();
+    const agentDir = getAgentDir(info.id);
 
     try {
-      await this.writeAgentClaudeMd(runtime, cwd);
-      await createSession(info.tmuxSession, TMUX_COLS, TMUX_ROWS, cwd);
+      await this.writeAgentClaudeMd(runtime);
+      await createSession(info.tmuxSession, TMUX_COLS, TMUX_ROWS, agentDir);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
       await sendKeys(info.tmuxSession, 'claude --dangerously-skip-permissions');
+
+      // Accept workspace trust prompt if shown
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await sendRawKeys(info.tmuxSession, 'Enter');
 
       this.setStatus(runtime, 'idle');
       runtime.restartCount = 0;
@@ -455,6 +471,10 @@ class AgentManager {
     const sessionInfo = await detectActiveSession(panePid);
 
     if (sessionInfo.status === 'running' && sessionInfo.jsonlPath) {
+      // Skip polling-based status if relay API recently set status
+      const RELAY_GRACE_MS = 10_000;
+      if (Date.now() - runtime.relaySetAt < RELAY_GRACE_MS) return;
+
       const prevStatus = runtime.status;
       const newStatus = await this.deriveStatusFromSession(runtime, sessionInfo.jsonlPath);
 
@@ -667,6 +687,7 @@ class AgentManager {
         chatSessionId,
         restartCount: 0,
         statusTimer: null,
+      relaySetAt: 0,
       };
 
       this.agents.set(entry, runtime);

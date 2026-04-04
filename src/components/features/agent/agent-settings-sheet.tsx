@@ -11,6 +11,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet';
+import { useShallow } from 'zustand/react/shallow';
 import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import type { IAgentInfo } from '@/types/agent';
@@ -38,7 +39,7 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
   const [isSaving, setIsSaving] = useState(false);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const agents = useAgentStore(selectAgentList);
+  const agents = useAgentStore(useShallow(selectAgentList));
   const updateAgent = useAgentStore((s) => s.updateAgent);
 
   const validateName = useCallback(
@@ -65,11 +66,11 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
     [agents, agent.id],
   );
 
-  const handleToggleProject = (projectName: string) => {
+  const handleToggleProject = (projectPath: string) => {
     setSelectedProjects((prev) =>
-      prev.includes(projectName)
-        ? prev.filter((p) => p !== projectName)
-        : [...prev, projectName],
+      prev.includes(projectPath)
+        ? prev.filter((p) => p !== projectPath)
+        : [...prev, projectPath],
     );
   };
 
@@ -129,15 +130,17 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
             <p className="text-xs text-muted-foreground">등록된 워크스페이스가 없습니다</p>
           ) : (
             <div className="max-h-40 space-y-2 overflow-y-auto rounded-lg border p-3">
-              {workspaces.map((ws) => (
-                <label key={ws.id} className="flex cursor-pointer items-center gap-2">
-                  <Checkbox
-                    checked={selectedProjects.includes(ws.name)}
-                    onCheckedChange={() => handleToggleProject(ws.name)}
-                  />
-                  <span className="text-sm">{ws.name}</span>
-                </label>
-              ))}
+              {workspaces
+                .filter((ws) => ws.directories.length > 0)
+                .map((ws) => (
+                  <label key={ws.id} className="flex cursor-pointer items-center gap-2">
+                    <Checkbox
+                      checked={selectedProjects.includes(ws.directories[0])}
+                      onCheckedChange={() => handleToggleProject(ws.directories[0])}
+                    />
+                    <span className="text-sm">{ws.name}</span>
+                  </label>
+                ))}
             </div>
           )}
         </div>
