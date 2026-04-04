@@ -22,6 +22,7 @@ interface IMessageListProps {
   onLoadMore: () => Promise<void>;
   onResend: (messageId: string) => void;
   onApproval: (action: '승인' | '거부') => void;
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
 const SkeletonMessages = () => (
@@ -107,6 +108,7 @@ const MessageList = ({
   onLoadMore,
   onResend,
   onApproval,
+  scrollToBottomRef,
 }: IMessageListProps) => {
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
@@ -124,6 +126,15 @@ const MessageList = ({
       requestAnimationFrame(() => setSkipAnimation(false));
     }
   }, [skipAnimation, messages.length, scrollToBottom]);
+
+  useEffect(() => {
+    if (!scrollToBottomRef) return;
+    scrollToBottomRef.current = () => {
+      scrollToBottom('smooth');
+      setTimeout(() => scrollToBottom('smooth'), 300);
+    };
+    return () => { scrollToBottomRef.current = undefined; };
+  }, [scrollToBottomRef, scrollToBottom]);
 
   const triggerLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMoreRef.current) return;

@@ -1467,7 +1467,7 @@ class AgentManager {
     try {
       const alive = await hasSession(runtime.info.tmuxSession);
       if (alive) {
-        await sendRawKeys(runtime.info.tmuxSession, message);
+        await sendBracketedPaste(runtime.info.tmuxSession, message);
       }
     } catch (err) {
       log.error(`failed to notify agent ${runtime.info.id}: ${err instanceof Error ? err.message : err}`);

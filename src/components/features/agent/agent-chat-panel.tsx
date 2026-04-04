@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import ChatHeader from '@/components/features/agent/chat-header';
 import MessageList from '@/components/features/agent/message-list';
 import ChatInput from '@/components/features/agent/chat-input';
@@ -20,6 +20,7 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
   const {
     messages,
@@ -46,6 +47,7 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
   const handleSend = useCallback(
     (content: string) => {
       sendMessage(content);
+      scrollToBottomRef.current?.();
     },
     [sendMessage],
   );
@@ -102,6 +104,7 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
           onLoadMore={loadMore}
           onResend={resendMessage}
           onApproval={handleApproval}
+          scrollToBottomRef={scrollToBottomRef}
         />
 
         <ChatInput
