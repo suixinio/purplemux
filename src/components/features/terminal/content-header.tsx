@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useRouter } from 'next/router';
 import { Bot, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -41,9 +40,11 @@ interface IContentHeaderProps {
   paneCount: number;
   canSplit: boolean;
   isSplitting: boolean;
+  agentPanelOpen: boolean;
   onSplitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => void;
   onEqualizeRatios: () => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
+  onAgentToggle: () => void;
 }
 
 const ContentHeader = ({
@@ -52,12 +53,13 @@ const ContentHeader = ({
   paneCount,
   canSplit,
   isSplitting,
+  agentPanelOpen,
   onSplitPane,
   onEqualizeRatios,
   onUpdateTabPanelType,
+  onAgentToggle,
 }: IContentHeaderProps) => {
   const [isToggling, setIsToggling] = useState(false);
-  const router = useRouter();
   const blockedCount = useAgentStore(selectBlockedCount);
 
   const panes = collectPanes(root);
@@ -87,9 +89,13 @@ const ContentHeader = ({
       <div className="h-titlebar" />
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
       <button
-        className="relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-        onClick={() => router.push('/agents')}
+        className={cn(
+          'relative flex h-7 w-7 items-center justify-center rounded transition-colors hover:bg-accent hover:text-foreground',
+          agentPanelOpen ? 'bg-accent text-foreground' : 'text-muted-foreground',
+        )}
+        onClick={onAgentToggle}
         aria-label="에이전트"
+        aria-pressed={agentPanelOpen}
       >
         <Bot className="h-3.5 w-3.5" />
         {blockedCount > 0 && (

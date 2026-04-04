@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { Loader2, AlertTriangle, RefreshCw, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import PaneLayout from '@/components/features/terminal/pane-layout';
 import Sidebar from '@/components/features/terminal/sidebar';
 import ContentHeader from '@/components/features/terminal/content-header';
+import AgentPanel from '@/components/features/agent/agent-panel';
 import useSync from '@/hooks/use-sync';
 
 const TerminalPage = () => {
@@ -20,6 +21,11 @@ const TerminalPage = () => {
   const workspaceCount = useWorkspaceStore((s) => s.workspaces.length);
   const prevWorkspaceIdRef = useRef<string | null>(null);
   const equalizeRef = useRef<(() => void) | null>(null);
+  const [agentPanelOpen, setAgentPanelOpen] = useState(false);
+
+  const handleAgentToggle = useCallback(() => {
+    setAgentPanelOpen((prev) => !prev);
+  }, []);
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -164,9 +170,11 @@ const TerminalPage = () => {
             paneCount={layout.paneCount}
             canSplit={layout.canSplit}
             isSplitting={layout.isSplitting}
+            agentPanelOpen={agentPanelOpen}
             onSplitPane={layout.splitPane}
             onEqualizeRatios={() => equalizeRef.current?.()}
             onUpdateTabPanelType={layout.updateTabPanelType}
+            onAgentToggle={handleAgentToggle}
           />
         )}
 
@@ -189,18 +197,22 @@ const TerminalPage = () => {
           )}
 
           {layout.layout && !layout.isLoading && (
-            <div
-              key={activeWorkspaceId}
-              className="h-full"
-            >
-              <PaneLayout
-              root={layout.layout.root}
-              onUpdateRatio={layout.updateRatio}
-              onEqualizeRatios={layout.equalizeRatios}
-              equalizeRef={equalizeRef}
-            />
-          </div>
-        )}
+            agentPanelOpen ? (
+              <AgentPanel />
+            ) : (
+              <div
+                key={activeWorkspaceId}
+                className="h-full"
+              >
+                <PaneLayout
+                  root={layout.layout.root}
+                  onUpdateRatio={layout.updateRatio}
+                  onEqualizeRatios={layout.equalizeRatios}
+                  equalizeRef={equalizeRef}
+                />
+              </div>
+            )
+          )}
 
           {!activeWorkspaceId && !isLoading && !error && (
             <div className="flex h-full items-center justify-center">

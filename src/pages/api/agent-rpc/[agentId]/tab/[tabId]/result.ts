@@ -1,13 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getAgentManager } from '@/lib/agent-manager';
+import { verifyAgentToken } from '@/lib/agent-token';
 import { createLogger } from '@/lib/logger';
 
-const log = createLogger('api:agent-tab-result');
-
-const isLocalRequest = (req: NextApiRequest): boolean => {
-  const host = req.headers.host || '';
-  return host.startsWith('localhost:') || host.startsWith('127.0.0.1:');
-};
+const log = createLogger('api:agent-rpc-tab-result');
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -15,7 +11,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!isLocalRequest(req)) {
+  if (!verifyAgentToken(req)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 

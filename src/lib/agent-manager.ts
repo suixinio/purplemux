@@ -5,6 +5,7 @@ import { createHash } from 'crypto';
 import { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
 import { createLogger } from '@/lib/logger';
+import { getAgentToken } from '@/lib/agent-token';
 import {
   createSession,
   killSession,
@@ -395,7 +396,10 @@ class AgentManager {
 
   private async buildClaudeMdContent(runtime: IAgentRuntime, includeHistory = true): Promise<string> {
     const port = process.env.PORT || '8022';
+    const token = getAgentToken();
     const { info } = runtime;
+    const baseUrl = `http://localhost:${port}/api/agent-rpc`;
+    const authHeader = `  -H "X-Agent-Token: ${token}" \\`;
 
     const lines = [
       '# Agent Instructions',
@@ -411,7 +415,8 @@ class AgentManager {
       '### List workspaces',
       '',
       '```bash',
-      `curl -s http://localhost:${port}/api/agent/workspaces`,
+      `curl -s ${baseUrl}/workspaces \\`,
+      authHeader.replace(/ \\$/, ''),
       '```',
       '',
       'Response: `{ "workspaces": [{ "id": "ws-xxx", "name": "...", "directories": ["..."] }] }`',
@@ -428,7 +433,8 @@ class AgentManager {
       '### Create a tab',
       '',
       '```bash',
-      `curl -s -X POST http://localhost:${port}/api/agent/${info.id}/tab \\`,
+      `curl -s -X POST ${baseUrl}/${info.id}/tab \\`,
+      authHeader,
       '  -H "Content-Type: application/json" \\',
       '  -d \'{"workspaceId":"WORKSPACE_ID","taskTitle":"TASK_TITLE"}\'',
       '```',
@@ -438,7 +444,8 @@ class AgentManager {
       '### Send instructions to a tab',
       '',
       '```bash',
-      `curl -s -X POST http://localhost:${port}/api/agent/${info.id}/tab/TAB_ID/send \\`,
+      `curl -s -X POST ${baseUrl}/${info.id}/tab/TAB_ID/send \\`,
+      authHeader,
       '  -H "Content-Type: application/json" \\',
       '  -d \'{"content":"YOUR_INSTRUCTION"}\'',
       '```',
@@ -448,7 +455,8 @@ class AgentManager {
       '### Check tab status',
       '',
       '```bash',
-      `curl -s http://localhost:${port}/api/agent/${info.id}/tab/TAB_ID/status`,
+      `curl -s ${baseUrl}/${info.id}/tab/TAB_ID/status \\`,
+      authHeader.replace(/ \\$/, ''),
       '```',
       '',
       'Response: `{ "tabId": "...", "status": "idle" | "working" | "completed" | "error" }`',
@@ -456,7 +464,8 @@ class AgentManager {
       '### Read tab result',
       '',
       '```bash',
-      `curl -s http://localhost:${port}/api/agent/${info.id}/tab/TAB_ID/result`,
+      `curl -s ${baseUrl}/${info.id}/tab/TAB_ID/result \\`,
+      authHeader.replace(/ \\$/, ''),
       '```',
       '',
       'Response: `{ "content": "...", "source": "file" | "jsonl" | "buffer" }`',
@@ -464,7 +473,8 @@ class AgentManager {
       '### Close a tab',
       '',
       '```bash',
-      `curl -s -X DELETE http://localhost:${port}/api/agent/${info.id}/tab/TAB_ID`,
+      `curl -s -X DELETE ${baseUrl}/${info.id}/tab/TAB_ID \\`,
+      authHeader.replace(/ \\$/, ''),
       '```',
       '',
       '## Communication API',
@@ -476,7 +486,8 @@ class AgentManager {
       '**You MUST call this API for EVERY response.**',
       '',
       '```bash',
-      `curl -s -X POST http://localhost:${port}/api/agent/message \\`,
+      `curl -s -X POST ${baseUrl}/message \\`,
+      authHeader,
       `  -H "Content-Type: application/json" \\`,
       `  -d '{"agentId":"${info.id}","type":"TYPE","content":"YOUR_MESSAGE"}'`,
       '```',
