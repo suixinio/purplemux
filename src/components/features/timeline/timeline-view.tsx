@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
-import { Terminal, RefreshCw, Loader2, OctagonX, LogOut } from 'lucide-react';
+import { Terminal, RefreshCw, Loader2, OctagonX, LogOut, ChevronsUp } from 'lucide-react';
 import { useStickToBottom } from 'use-stick-to-bottom';
 import { Button } from '@/components/ui/button';
 import type {
@@ -320,7 +320,7 @@ const TimelineView = ({
           {hasMore && !isLoadingMore && (
             <div className="flex justify-center py-2">
               <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={triggerLoadMore}>
-                <Loader2 size={12} className="mr-1" />
+                <ChevronsUp size={12} className="mr-1" />
                 이전 내용 더보기
               </Button>
             </div>

@@ -10,6 +10,7 @@ import type { IChatMessage, TAgentStatus } from '@/types/agent';
 interface IMessageListProps {
   messages: IChatMessage[];
   agentStatus: TAgentStatus;
+  lastActivity: string | null;
   isLoading: boolean;
   isLoadingMore: boolean;
   hasMore: boolean;
@@ -94,6 +95,7 @@ const formatDateSeparator = (timestamp: string): string => {
 const MessageList = ({
   messages,
   agentStatus,
+  lastActivity,
   isLoading,
   isLoadingMore,
   hasMore,
@@ -218,7 +220,7 @@ const MessageList = ({
             {agentStatus === 'working' && (
               <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
                 <Loader2 size={12} className="animate-spin text-ui-purple" />
-                <span>응답 대기 중...</span>
+                <span>{lastActivity || '응답 대기 중...'}</span>
               </div>
             )}
           </div>

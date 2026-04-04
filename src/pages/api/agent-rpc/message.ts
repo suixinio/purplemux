@@ -22,7 +22,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(400).json({ error: 'agentId, type, content 필수' });
   }
 
-  const validTypes = new Set(['report', 'question', 'done', 'error', 'approval']);
+  const validTypes = new Set(['report', 'question', 'done', 'error', 'approval', 'activity']);
   if (!validTypes.has(type)) {
     return res.status(400).json({ error: `invalid type: ${type}` });
   }

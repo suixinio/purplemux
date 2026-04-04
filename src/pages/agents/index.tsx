@@ -10,6 +10,9 @@ import AgentCard from '@/components/features/agent/agent-card';
 import AgentCreateDialog from '@/components/features/agent/agent-create-dialog';
 import AgentSettingsSheet from '@/components/features/agent/agent-settings-sheet';
 import AgentDeleteDialog from '@/components/features/agent/agent-delete-dialog';
+import MobileLayout from '@/components/features/mobile/mobile-layout';
+import useIsMobile from '@/hooks/use-is-mobile';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
 import useAgentStatus from '@/hooks/use-agent-status';
 import type { IAgentInfo } from '@/types/agent';
@@ -45,11 +48,19 @@ const EmptyState = ({ onCreateClick }: { onCreateClick: () => void }) => (
 
 const AgentsPage = () => {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const agents = useAgentStore(useShallow(selectAgentList));
   const isLoading = useAgentStore((s) => s.isLoading);
   const error = useAgentStore((s) => s.error);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const deleteAgent = useAgentStore((s) => s.deleteAgent);
+
+  const handleSelectWorkspace = useCallback(
+    (workspaceId: string) => {
+      useWorkspaceStore.getState().switchWorkspace(workspaceId);
+    },
+    [],
+  );
 
   const [createOpen, setCreateOpen] = useState(false);
   const [settingsAgent, setSettingsAgent] = useState<IAgentInfo | null>(null);
@@ -104,6 +115,46 @@ const AgentsPage = () => {
     fetchAgents();
   }, [fetchAgents]);
 
+  const content = (
+    <main className="flex-1 overflow-y-auto">
+      <div className="mx-auto max-w-2xl px-4 py-6">
+        <div className="mb-6 flex items-center justify-between">
+          <h1 className="text-xl font-semibold">My Agents</h1>
+          <Button size="sm" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            새 에이전트
+          </Button>
+        </div>
+
+        {isLoading ? (
+          <SkeletonCards />
+        ) : error ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-20">
+            <p className="text-sm text-muted-foreground">{error}</p>
+            <Button variant="outline" size="sm" onClick={handleRetry}>
+              <RefreshCw className="h-3 w-3" />
+              재시도
+            </Button>
+          </div>
+        ) : agents.length === 0 ? (
+          <EmptyState onCreateClick={() => setCreateOpen(true)} />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="list">
+            {agents.map((agent) => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
+                onClick={() => handleCardClick(agent)}
+                onSettingsClick={() => handleSettingsClick(agent)}
+                isFadingOut={fadingOutId === agent.id}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+
   return (
     <>
       <Head>
@@ -111,45 +162,16 @@ const AgentsPage = () => {
       </Head>
 
       <div className="flex h-dvh flex-col bg-background">
-        <AppHeader />
-
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-2xl px-4 py-6">
-            <div className="mb-6 flex items-center justify-between">
-              <h1 className="text-xl font-semibold">My Agents</h1>
-              <Button size="sm" onClick={() => setCreateOpen(true)}>
-                <Plus className="h-3.5 w-3.5" />
-                새 에이전트
-              </Button>
-            </div>
-
-            {isLoading ? (
-              <SkeletonCards />
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center gap-3 py-20">
-                <p className="text-sm text-muted-foreground">{error}</p>
-                <Button variant="outline" size="sm" onClick={handleRetry}>
-                  <RefreshCw className="h-3 w-3" />
-                  재시도
-                </Button>
-              </div>
-            ) : agents.length === 0 ? (
-              <EmptyState onCreateClick={() => setCreateOpen(true)} />
-            ) : (
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="list">
-                {agents.map((agent) => (
-                  <AgentCard
-                    key={agent.id}
-                    agent={agent}
-                    onClick={() => handleCardClick(agent)}
-                    onSettingsClick={() => handleSettingsClick(agent)}
-                    isFadingOut={fadingOutId === agent.id}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-        </main>
+        {isMobile ? (
+          <MobileLayout onSelectWorkspace={handleSelectWorkspace} hideTabBar>
+            {content}
+          </MobileLayout>
+        ) : (
+          <>
+            <AppHeader />
+            {content}
+          </>
+        )}
       </div>
 
       <AgentCreateDialog

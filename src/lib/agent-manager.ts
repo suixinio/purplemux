@@ -418,6 +418,8 @@ class AgentManager {
     if (type === 'question' || type === 'approval') {
       this.setStatus(runtime, 'blocked');
       runtime.relaySetAt = Date.now();
+    } else if (type === 'activity') {
+      // activity는 상태 변경 없이 저장+브로드캐스트만
     } else if (type === 'done' || type === 'error' || type === 'report') {
       this.setStatus(runtime, 'idle');
       runtime.relaySetAt = Date.now();
@@ -431,6 +433,16 @@ class AgentManager {
 
   getChatSessionId(agentId: string): string | null {
     return this.agents.get(agentId)?.chatSessionId ?? null;
+  }
+
+  private async emitActivity(runtime: IAgentRuntime, content: string, metadata?: Record<string, unknown>): Promise<void> {
+    const agentId = runtime.info.id;
+    if (!runtime.chatSessionId) {
+      runtime.chatSessionId = await createChatSession(agentId);
+    }
+    const message = createMessage('agent', 'activity', content, metadata);
+    await appendMessage(agentId, runtime.chatSessionId, message);
+    this.broadcast({ type: 'agent:message', agentId, message });
   }
 
   // --- Session lifecycle ---
@@ -1045,6 +1057,9 @@ class AgentManager {
 
     const cwd = ws.directories[0];
     const tabName = taskTitle || 'Agent Task';
+
+    await this.emitActivity(runtime, `탭 생성 중: ${tabName}`, { workspaceId, taskTitle });
+
     const newTab = await addTabToPane(workspaceId, targetPane.id, tabName, cwd, 'claude-code');
     if (!newTab) throw new Error('Failed to create tab session');
 
@@ -1104,6 +1119,8 @@ class AgentManager {
     if (!alive) throw new Error('Tab session is dead');
 
     if (tr.tab.status === 'idle') {
+      const label = tr.tab.taskTitle || tabId;
+      await this.emitActivity(runtime, `작업 지시 전송: ${label}`, { tabId });
       await sendBracketedPaste(tr.tab.tmuxSession, content);
       tr.tab.status = 'working';
       tr.tab.lastActivity = new Date().toISOString();

@@ -20,7 +20,7 @@ export interface IChatMessage {
   id: string;
   timestamp: string;
   role: 'user' | 'agent';
-  type: 'text' | 'report' | 'question' | 'done' | 'error' | 'approval';
+  type: 'text' | 'report' | 'question' | 'done' | 'error' | 'approval' | 'activity';
   content: string;
   metadata?: Record<string, unknown>;
 }
@@ -84,7 +84,7 @@ export interface ISendMessageResponse {
 
 export interface IAgentMessageRequest {
   agentId: string;
-  type: 'report' | 'question' | 'done' | 'error' | 'approval';
+  type: 'report' | 'question' | 'done' | 'error' | 'approval' | 'activity';
   content: string;
   metadata?: Record<string, unknown>;
 }

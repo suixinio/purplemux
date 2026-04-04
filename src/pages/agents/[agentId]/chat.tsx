@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import AppHeader from '@/components/layout/app-header';
@@ -7,17 +7,28 @@ import MessageList from '@/components/features/agent/message-list';
 import ChatInput from '@/components/features/agent/chat-input';
 import AgentSettingsSheet from '@/components/features/agent/agent-settings-sheet';
 import AgentDeleteDialog from '@/components/features/agent/agent-delete-dialog';
+import MobileLayout from '@/components/features/mobile/mobile-layout';
+import useIsMobile from '@/hooks/use-is-mobile';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useAgentStore from '@/hooks/use-agent-store';
 import useAgentChat from '@/hooks/use-agent-chat';
 
 const AgentChatPage = () => {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const agentId = router.query.agentId as string;
 
   const agent = useAgentStore((s) => (agentId ? s.agents[agentId] ?? null : null));
   const deleteAgent = useAgentStore((s) => s.deleteAgent);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const isStoreLoading = useAgentStore((s) => s.isLoading);
+
+  const handleSelectWorkspace = useCallback(
+    (workspaceId: string) => {
+      useWorkspaceStore.getState().switchWorkspace(workspaceId);
+    },
+    [],
+  );
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -70,10 +81,49 @@ const AgentChatPage = () => {
     router.push('/agents');
   }, [agentId, deleteAgent, router]);
 
+  const lastActivity = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].type === 'activity') return messages[i].content;
+      if (messages[i].role === 'agent' && messages[i].type !== 'activity') break;
+    }
+    return null;
+  }, [messages]);
+
   if (!agentId) return null;
 
   const agentStatus = agent?.status ?? 'offline';
+
   const title = agent ? `${agent.name} — purplemux` : '에이전트 채팅 — purplemux';
+
+  const content = (
+    <>
+      <ChatHeader agent={agent} onSettingsClick={() => setSettingsOpen(true)} />
+
+      <MessageList
+        messages={messages}
+        agentStatus={agentStatus}
+        lastActivity={lastActivity}
+        isLoading={isLoading || (isStoreLoading && !agent)}
+        isLoadingMore={isLoadingMore}
+        hasMore={hasMore}
+        isConnected={isConnected}
+        connectionError={connectionError}
+        loadError={loadError}
+        failedMessageIds={failedMessageIds}
+        onRetry={fetchHistory}
+        onLoadMore={loadMore}
+        onResend={resendMessage}
+        onApproval={handleApproval}
+      />
+
+      <ChatInput
+        agentId={agentId}
+        onSend={handleSend}
+        agentStatus={agentStatus}
+        isSending={isSending}
+      />
+    </>
+  );
 
   return (
     <>
@@ -82,31 +132,16 @@ const AgentChatPage = () => {
       </Head>
 
       <div className="flex h-dvh flex-col bg-background">
-        <AppHeader />
-        <ChatHeader agent={agent} onSettingsClick={() => setSettingsOpen(true)} />
-
-        <MessageList
-          messages={messages}
-          agentStatus={agentStatus}
-          isLoading={isLoading || (isStoreLoading && !agent)}
-          isLoadingMore={isLoadingMore}
-          hasMore={hasMore}
-          isConnected={isConnected}
-          connectionError={connectionError}
-          loadError={loadError}
-          failedMessageIds={failedMessageIds}
-          onRetry={fetchHistory}
-          onLoadMore={loadMore}
-          onResend={resendMessage}
-          onApproval={handleApproval}
-        />
-
-        <ChatInput
-          agentId={agentId}
-          onSend={handleSend}
-          agentStatus={agentStatus}
-          isSending={isSending}
-        />
+        {isMobile ? (
+          <MobileLayout onSelectWorkspace={handleSelectWorkspace} hideTabBar>
+            {content}
+          </MobileLayout>
+        ) : (
+          <>
+            <AppHeader />
+            {content}
+          </>
+        )}
       </div>
 
       <AgentSettingsSheet

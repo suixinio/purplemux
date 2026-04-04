@@ -2,7 +2,7 @@ import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { AlertCircle, CheckCircle2, Clock, HelpCircle, ShieldQuestion } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, HelpCircle, Loader2, ShieldQuestion } from 'lucide-react';
 import dayjs from 'dayjs';
 import ApprovalActions from '@/components/features/agent/approval-actions';
 import type { IChatMessage } from '@/types/agent';
@@ -35,6 +35,10 @@ const agentTypeLabels: Record<string, { icon: React.ReactNode; label: string } |
   approval: {
     icon: <ShieldQuestion className="h-3 w-3 text-ui-purple" />,
     label: '승인 요청',
+  },
+  activity: {
+    icon: <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />,
+    label: '',
   },
 };
 
@@ -74,6 +78,16 @@ const ChatBubble = ({ message, isFailed, approvalResolved, onResend, onApproval 
   }
 
   const typeLabel = agentTypeLabels[message.type] ?? null;
+
+  if (message.type === 'activity') {
+    return (
+      <div className="animate-in fade-in duration-150 flex items-center gap-1.5 py-1 text-xs text-muted-foreground" role="article" aria-label={`에이전트 활동, ${time}`}>
+        <Loader2 className="h-3 w-3 animate-spin" />
+        <span>{message.content}</span>
+        <span className="text-[10px] text-muted-foreground/50">{time}</span>
+      </div>
+    );
+  }
 
   return (
     <div className="animate-in fade-in duration-150" role="article" aria-label={`에이전트 메시지, ${time}`}>

@@ -14,6 +14,7 @@ interface IMobileLayoutProps {
   onSelectSurface?: (workspaceId: string, paneId: string, tabId: string) => void;
   selectedPaneId?: string | null;
   selectedTabId?: string | null;
+  hideTabBar?: boolean;
 }
 
 const MobileLayout = ({
@@ -22,6 +23,7 @@ const MobileLayout = ({
   onSelectSurface,
   selectedPaneId,
   selectedTabId,
+  hideTabBar,
 }: IMobileLayoutProps) => {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -173,14 +175,16 @@ const MobileLayout = ({
         />
       </div>
       {children}
-      <MobileWorkspaceTabBar
-        workspaces={workspaces}
-        activeWorkspaceId={activeWorkspaceId}
-        workspaceLayouts={workspaceLayouts}
-        selectedPaneId={selectedPaneId ?? activePaneId}
-        selectedTabId={selectedTabId ?? activeTabId}
-        onSelect={handleSelectSurface}
-      />
+      {!hideTabBar && (
+        <MobileWorkspaceTabBar
+          workspaces={workspaces}
+          activeWorkspaceId={activeWorkspaceId}
+          workspaceLayouts={workspaceLayouts}
+          selectedPaneId={selectedPaneId ?? activePaneId}
+          selectedTabId={selectedTabId ?? activeTabId}
+          onSelect={handleSelectSurface}
+        />
+      )}
       <MobileNavigationSheet
         open={menuOpen}
         onOpenChange={setMenuOpen}

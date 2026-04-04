@@ -9,6 +9,9 @@ import { Skeleton } from '@/components/ui/skeleton';
 import MemoryTree from '@/components/features/agent/memory-tree';
 import MemoryViewer from '@/components/features/agent/memory-viewer';
 import MemoryStats from '@/components/features/agent/memory-stats';
+import MobileLayout from '@/components/features/mobile/mobile-layout';
+import useIsMobile from '@/hooks/use-is-mobile';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useAgentStore from '@/hooks/use-agent-store';
 import type {
   IMemoryNode,
@@ -86,11 +89,19 @@ const TreeErrorState = ({ onRetry }: { onRetry: () => void }) => (
 
 const MemoryPage = () => {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const agentId = router.query.agentId as string;
 
   const agent = useAgentStore((s) => (agentId ? s.agents[agentId] ?? null : null));
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const isStoreLoading = useAgentStore((s) => s.isLoading);
+
+  const handleSelectWorkspace = useCallback(
+    (workspaceId: string) => {
+      useWorkspaceStore.getState().switchWorkspace(workspaceId);
+    },
+    [],
+  );
 
   const [state, setState] = useState<IPageState>(initialState);
   const [mobileTab, setMobileTab] = useState<'tree' | 'viewer'>('tree');
@@ -282,17 +293,10 @@ const MemoryPage = () => {
   const title = agent ? `${agent.name} 메모리 — purplemux` : '메모리 — purplemux';
   const agentName = agent?.name ?? agentId;
 
-  return (
+  const content = (
     <>
-      <Head>
-        <title>{title}</title>
-      </Head>
-
-      <div className="flex h-dvh flex-col bg-background">
-        <AppHeader />
-
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b px-4 py-3">
           <Button
             variant="ghost"
             size="icon"
@@ -381,6 +385,26 @@ const MemoryPage = () => {
           recentFiles={state.recentFiles}
           onFileSelect={handleFileSelect}
         />
+    </>
+  );
+
+  return (
+    <>
+      <Head>
+        <title>{title}</title>
+      </Head>
+
+      <div className="flex h-dvh flex-col bg-background">
+        {isMobile ? (
+          <MobileLayout onSelectWorkspace={handleSelectWorkspace} hideTabBar>
+            {content}
+          </MobileLayout>
+        ) : (
+          <>
+            <AppHeader />
+            {content}
+          </>
+        )}
       </div>
     </>
   );

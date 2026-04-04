@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import ChatHeader from '@/components/features/agent/chat-header';
 import MessageList from '@/components/features/agent/message-list';
 import ChatInput from '@/components/features/agent/chat-input';
@@ -70,6 +70,14 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
 
   const agentStatus = agent?.status ?? 'offline';
 
+  const lastActivity = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].type === 'activity') return messages[i].content;
+      if (messages[i].role === 'agent' && messages[i].type !== 'activity') break;
+    }
+    return null;
+  }, [messages]);
+
   return (
     <>
       <div className="flex h-full flex-col">
@@ -82,6 +90,7 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
         <MessageList
           messages={messages}
           agentStatus={agentStatus}
+          lastActivity={lastActivity}
           isLoading={isLoading || (isStoreLoading && !agent)}
           isLoadingMore={isLoadingMore}
           hasMore={hasMore}

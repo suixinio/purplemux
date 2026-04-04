@@ -11,6 +11,9 @@ import BrainSessionCard from '@/components/features/agent/brain-session-card';
 import ProjectGroup from '@/components/features/agent/project-group';
 import RecentActivity from '@/components/features/agent/recent-activity';
 import OfflineBanner from '@/components/features/agent/offline-banner';
+import MobileLayout from '@/components/features/mobile/mobile-layout';
+import useIsMobile from '@/hooks/use-is-mobile';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useAgentStore from '@/hooks/use-agent-store';
 import type {
   IAgentWorkspaceResponse,
@@ -96,11 +99,19 @@ const initialState: IWorkspaceState = {
 
 const AgentWorkspacePage = () => {
   const router = useRouter();
+  const isMobile = useIsMobile();
   const agentId = router.query.agentId as string;
 
   const agent = useAgentStore((s) => (agentId ? s.agents[agentId] ?? null : null));
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const isStoreLoading = useAgentStore((s) => s.isLoading);
+
+  const handleSelectWorkspace = useCallback(
+    (workspaceId: string) => {
+      useWorkspaceStore.getState().switchWorkspace(workspaceId);
+    },
+    [],
+  );
 
   const [state, setState] = useState<IWorkspaceState>(initialState);
   const [wsError, setWsError] = useState(false);
@@ -313,17 +324,10 @@ const AgentWorkspacePage = () => {
   // Sort project groups by tab count (most tabs first)
   const sortedGroups = [...state.projectGroups].sort((a, b) => b.tabs.length - a.tabs.length);
 
-  return (
+  const content = (
     <>
-      <Head>
-        <title>{title}</title>
-      </Head>
-
-      <div className="flex h-dvh flex-col bg-background">
-        <AppHeader />
-
-        {/* Header */}
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+      {/* Header */}
+      <div className="flex items-center gap-3 border-b px-4 py-3">
           <Button
             variant="ghost"
             size="icon"
@@ -390,6 +394,26 @@ const AgentWorkspacePage = () => {
             </>
           )}
         </div>
+    </>
+  );
+
+  return (
+    <>
+      <Head>
+        <title>{title}</title>
+      </Head>
+
+      <div className="flex h-dvh flex-col bg-background">
+        {isMobile ? (
+          <MobileLayout onSelectWorkspace={handleSelectWorkspace} hideTabBar>
+            {content}
+          </MobileLayout>
+        ) : (
+          <>
+            <AppHeader />
+            {content}
+          </>
+        )}
       </div>
     </>
   );
