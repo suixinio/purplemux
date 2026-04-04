@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { createHash } from 'crypto';
 import { WebSocket } from 'ws';
 import { nanoid } from 'nanoid';
 import { createLogger } from '@/lib/logger';
@@ -24,6 +25,7 @@ import {
   getLatestSessionId,
   appendMessage,
   createMessage,
+  readMessages,
   removeAgentDir,
   writeChatIndex,
 } from '@/lib/agent-chat';
@@ -82,6 +84,9 @@ interface IAgentRuntime {
   relaySetAt: number;
   tabs: Map<string, ITabRuntime>;
   tabPollTimer: ReturnType<typeof setInterval> | null;
+  claudeMdHash: string;
+  pendingRestart: boolean;
+  lastClaudeSessionId: string | null;
 }
 
 const g = globalThis as unknown as { __ptAgentManager?: AgentManager };
@@ -171,6 +176,9 @@ class AgentManager {
       relaySetAt: 0,
       tabs: new Map(),
       tabPollTimer: null,
+      claudeMdHash: '',
+      pendingRestart: false,
+      lastClaudeSessionId: null,
     };
     this.agents.set(id, runtime);
 
@@ -268,6 +276,17 @@ class AgentManager {
       if (update.name) config.name = update.name;
       if (update.role) config.role = update.role;
       await this.writeConfig(agentId, config);
+    }
+
+    const newHash = await this.computeClaudeMdHash(runtime);
+    if (newHash !== runtime.claudeMdHash && runtime.status !== 'offline') {
+      if (runtime.status === 'idle' || runtime.status === 'blocked') {
+        runtime.restartCount = 0;
+        await this.restartAgentSession(runtime);
+      } else {
+        runtime.pendingRestart = true;
+        log.info(`agent ${agentId} marked for pending restart (CLAUDE.md changed)`);
+      }
     }
 
     return { ...runtime.info, status: runtime.status };
@@ -374,11 +393,11 @@ class AgentManager {
 
   // --- Session lifecycle ---
 
-  private async writeAgentClaudeMd(runtime: IAgentRuntime): Promise<void> {
+  private async buildClaudeMdContent(runtime: IAgentRuntime, includeHistory = true): Promise<string> {
     const port = process.env.PORT || '8022';
     const { info } = runtime;
 
-    const content = [
+    const lines = [
       '# Agent Instructions',
       '',
       `You are "${info.name}" — ${info.role || 'general-purpose agent'}.`,
@@ -491,11 +510,57 @@ class AgentManager {
       '- Always send `done` or `error` when a mission is finished.',
       '- Tab notifications arrive as `[TAB_COMPLETE] tabId=xxx status=completed` or `[TAB_ERROR] tabId=xxx status=error`.',
       '- You can run multiple tabs in parallel for independent tasks.',
+      '- Your session may restart. Previous conversation history is saved in `./chat/` as JSONL files.',
+      '  Read `./chat/index.json` to find session IDs, then `./chat/{sessionId}.jsonl` for messages.',
+      '  Review recent history after restart to maintain context continuity.',
       '',
-    ].join('\n');
+    ];
 
-    const claudeMdPath = path.join(getAgentDir(info.id), 'CLAUDE.md');
+    if (includeHistory && runtime.chatSessionId) {
+      try {
+        const { messages } = await readMessages(info.id, runtime.chatSessionId, { limit: 20 });
+        if (messages.length > 0) {
+          lines.push('## Recent Conversation', '');
+          lines.push('> Below is the recent conversation history. Use this to resume context after restart.', '');
+          for (const msg of messages) {
+            const truncated = msg.content.length > 200
+              ? msg.content.slice(0, 200) + '...'
+              : msg.content;
+            const safe = truncated.replace(/\n/g, ' ');
+            lines.push(`> [${msg.role}/${msg.type}] ${safe}`);
+          }
+          lines.push('');
+          lines.push('위 대화를 참고하여 이전 맥락을 이어가세요. 사용자가 이전 대화를 언급하면 이 내용을 기반으로 응답하세요.');
+          lines.push('');
+        }
+      } catch (err) {
+        log.warn(`failed to read chat history for CLAUDE.md: ${err instanceof Error ? err.message : err}`);
+      }
+    }
+
+    return lines.join('\n');
+  }
+
+  private async writeAgentClaudeMd(runtime: IAgentRuntime): Promise<void> {
+    const content = await this.buildClaudeMdContent(runtime);
+    const claudeMdPath = path.join(getAgentDir(runtime.info.id), 'CLAUDE.md');
     await fs.writeFile(claudeMdPath, content, 'utf-8');
+  }
+
+  private async computeClaudeMdHash(runtime: IAgentRuntime): Promise<string> {
+    const content = await this.buildClaudeMdContent(runtime, false);
+    return createHash('sha256').update(content).digest('hex').slice(0, 16);
+  }
+
+  private async isClaudeMdStale(runtime: IAgentRuntime): Promise<boolean> {
+    const claudeMdPath = path.join(getAgentDir(runtime.info.id), 'CLAUDE.md');
+    try {
+      const existing = await fs.readFile(claudeMdPath, 'utf-8');
+      const expected = await this.buildClaudeMdContent(runtime, false);
+      return !existing.startsWith(expected);
+    } catch {
+      return true;
+    }
   }
 
   private async startAgentSession(runtime: IAgentRuntime): Promise<void> {
@@ -513,6 +578,8 @@ class AgentManager {
       await new Promise((resolve) => setTimeout(resolve, 2000));
       await sendRawKeys(info.tmuxSession, 'Enter');
 
+      runtime.claudeMdHash = await this.computeClaudeMdHash(runtime);
+      runtime.pendingRestart = false;
       this.setStatus(runtime, 'idle');
       runtime.restartCount = 0;
       this.startStatusPolling(runtime);
@@ -576,6 +643,19 @@ class AgentManager {
     const sessionInfo = await detectActiveSession(panePid);
 
     if (sessionInfo.status === 'running' && sessionInfo.jsonlPath) {
+      // Detect Claude CLI session change (e.g. after force-kill + restart)
+      const claudeSessionId = sessionInfo.sessionId;
+      if (runtime.lastClaudeSessionId && claudeSessionId && claudeSessionId !== runtime.lastClaudeSessionId) {
+        log.info(`agent ${runtime.info.id} Claude session changed: ${runtime.lastClaudeSessionId} → ${claudeSessionId}`);
+        runtime.lastClaudeSessionId = claudeSessionId;
+        this.setStatus(runtime, 'idle');
+        if (runtime.messageQueue.length > 0) {
+          await this.drainQueue(runtime);
+        }
+        return;
+      }
+      runtime.lastClaudeSessionId = claudeSessionId;
+
       // Skip polling-based status if relay API recently set status
       const RELAY_GRACE_MS = 10_000;
       if (Date.now() - runtime.relaySetAt < RELAY_GRACE_MS) return;
@@ -632,6 +712,15 @@ class AgentManager {
             return 'idle';
           }
           if (entry.type === 'user') {
+            const content = entry.message?.content;
+            if (Array.isArray(content)) {
+              const interrupted = content.some(
+                (c: { type: string; text?: string; is_error?: boolean }) =>
+                  (c.type === 'text' && c.text?.includes('[Request interrupted by user')) ||
+                  (c.type === 'tool_result' && c.is_error === true),
+              );
+              if (interrupted) return 'idle';
+            }
             return 'working';
           }
         } catch {
@@ -668,6 +757,15 @@ class AgentManager {
     runtime.info.status = status;
     this.broadcastStatus(runtime.info.id, status);
     log.info(`agent ${runtime.info.id} status: ${status}`);
+
+    if (status === 'idle' && runtime.pendingRestart) {
+      runtime.pendingRestart = false;
+      runtime.restartCount = 0;
+      log.info(`agent ${runtime.info.id} executing pending restart`);
+      this.restartAgentSession(runtime).catch((err) => {
+        log.error(`pending restart failed for ${runtime.info.id}: ${err instanceof Error ? err.message : err}`);
+      });
+    }
   }
 
   private broadcastStatus(agentId: string, status: TAgentStatus): void {
@@ -781,6 +879,9 @@ class AgentManager {
         relaySetAt: 0,
         tabs: new Map(),
         tabPollTimer: null,
+        claudeMdHash: '',
+        pendingRestart: false,
+        lastClaudeSessionId: null,
       };
 
       this.agents.set(entry, runtime);
@@ -788,10 +889,17 @@ class AgentManager {
       await this.recoverTabs(runtime);
 
       if (agentSessions.has(tmuxSession)) {
-        this.setStatus(runtime, 'idle');
-        this.startStatusPolling(runtime);
-        if (runtime.tabs.size > 0) this.startTabPolling(runtime);
-        log.info(`recovered agent session: ${entry} (${tmuxSession})`);
+        runtime.claudeMdHash = await this.computeClaudeMdHash(runtime);
+        const needsRestart = await this.isClaudeMdStale(runtime);
+        if (needsRestart) {
+          log.info(`agent ${entry} CLAUDE.md is stale, restarting session`);
+          await this.restartAgentSession(runtime);
+        } else {
+          this.setStatus(runtime, 'idle');
+          this.startStatusPolling(runtime);
+          if (runtime.tabs.size > 0) this.startTabPolling(runtime);
+          log.info(`recovered agent session: ${entry} (${tmuxSession})`);
+        }
       } else {
         await this.startAgentSession(runtime);
       }
