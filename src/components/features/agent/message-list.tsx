@@ -71,6 +71,21 @@ const DateSeparator = ({ date }: { date: string }) => (
   </div>
 );
 
+const resolveApproval = (
+  messages: IChatMessage[],
+  index: number,
+): 'approved' | 'rejected' | null => {
+  for (let i = index + 1; i < messages.length; i++) {
+    const m = messages[i];
+    if (m.role === 'user') {
+      if (m.content === '승인') return 'approved';
+      if (m.content === '거부') return 'rejected';
+      return null;
+    }
+  }
+  return null;
+};
+
 const shouldShowDateSeparator = (current: IChatMessage, prev: IChatMessage | null): boolean => {
   if (!prev) return true;
   return !dayjs(current.timestamp).isSame(dayjs(prev.timestamp), 'day');
@@ -216,6 +231,7 @@ const MessageList = ({
                   <ChatBubble
                     message={msg}
                     isFailed={failedMessageIds.has(msg.id)}
+                    approvalResolved={msg.type === 'approval' ? resolveApproval(messages, i) : undefined}
                     onResend={() => onResend(msg.id)}
                     onApproval={msg.type === 'approval' ? onApproval : undefined}
                   />

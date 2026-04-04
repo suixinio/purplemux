@@ -5,14 +5,16 @@ type TApprovalResult = 'approved' | 'rejected' | null;
 
 interface IApprovalActionsProps {
   onAction: (action: '승인' | '거부') => void;
+  resolvedAs?: TApprovalResult;
   disabled?: boolean;
 }
 
-const ApprovalActions = ({ onAction, disabled }: IApprovalActionsProps) => {
-  const [result, setResult] = useState<TApprovalResult>(null);
+const ApprovalActions = ({ onAction, resolvedAs, disabled }: IApprovalActionsProps) => {
+  const [localResult, setLocalResult] = useState<TApprovalResult>(null);
+  const result = localResult ?? resolvedAs;
 
   const handleAction = (action: '승인' | '거부') => {
-    setResult(action === '승인' ? 'approved' : 'rejected');
+    setLocalResult(action === '승인' ? 'approved' : 'rejected');
     onAction(action);
   };
 

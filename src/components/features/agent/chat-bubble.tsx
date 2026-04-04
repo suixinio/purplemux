@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, HelpCircle, ShieldQuestion } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock, HelpCircle, ShieldQuestion } from 'lucide-react';
 import dayjs from 'dayjs';
 import ApprovalActions from '@/components/features/agent/approval-actions';
 import type { IChatMessage } from '@/types/agent';
@@ -6,6 +6,7 @@ import type { IChatMessage } from '@/types/agent';
 interface IChatBubbleProps {
   message: IChatMessage;
   isFailed?: boolean;
+  approvalResolved?: 'approved' | 'rejected' | null;
   onResend?: () => void;
   onApproval?: (action: '승인' | '거부') => void;
 }
@@ -30,7 +31,7 @@ const agentTypeStyles: Record<string, { icon: React.ReactNode; bg: string }> = {
   },
 };
 
-const ChatBubble = ({ message, isFailed, onResend, onApproval }: IChatBubbleProps) => {
+const ChatBubble = ({ message, isFailed, approvalResolved, onResend, onApproval }: IChatBubbleProps) => {
   const isUser = message.role === 'user';
   const time = dayjs(message.timestamp).format('HH:mm');
   const isQueued = message.metadata && 'queued' in message.metadata;
@@ -43,7 +44,10 @@ const ChatBubble = ({ message, isFailed, onResend, onApproval }: IChatBubbleProp
             <p className="whitespace-pre-wrap">{message.content}</p>
             <div className="mt-1 flex items-center justify-end gap-1">
               {isQueued && (
-                <span className="text-[10px] text-primary-foreground/40">큐잉됨</span>
+                <span className="flex items-center gap-0.5 text-[10px] text-primary-foreground/40">
+                  <Clock className="h-2.5 w-2.5" />
+                  큐잉됨
+                </span>
               )}
               <span className="text-[10px] text-primary-foreground/60">{time}</span>
             </div>
@@ -77,7 +81,7 @@ const ChatBubble = ({ message, isFailed, onResend, onApproval }: IChatBubbleProp
               </span>
             )}
             {message.type === 'approval' && onApproval && (
-              <ApprovalActions onAction={onApproval} />
+              <ApprovalActions onAction={onApproval} resolvedAs={approvalResolved} />
             )}
             <div className="mt-1">
               <span className="text-[10px] text-muted-foreground">{time}</span>
