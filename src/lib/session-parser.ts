@@ -309,13 +309,14 @@ const parseSingleEntry = (raw: unknown, base: z.infer<typeof BaseEntrySchema>): 
         const toolName = (content as { name: string }).name;
         const toolUseId = (content as { id: string }).id;
 
-        if (toolName === 'ExitPlanMode' && typeof input.plan === 'string') {
+        if (toolName === 'ExitPlanMode' && input.plan != null) {
+          const planText = typeof input.plan === 'string' ? input.plan : JSON.stringify(input.plan, null, 2);
           entries.push({
             id: nanoid(),
             type: 'plan',
             timestamp,
             toolUseId,
-            markdown: input.plan,
+            markdown: planText,
             filePath: typeof input.planFilePath === 'string' ? input.planFilePath : undefined,
             allowedPrompts: Array.isArray(input.allowedPrompts)
               ? (input.allowedPrompts as { tool?: string; prompt?: string }[]).map((p) => ({
