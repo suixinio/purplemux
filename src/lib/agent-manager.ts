@@ -1077,6 +1077,12 @@ class AgentManager {
 
   // --- Tab management ---
 
+  listTabs(agentId: string): IAgentExecTab[] {
+    const runtime = this.agents.get(agentId);
+    if (!runtime) return [];
+    return Array.from(runtime.tabs.values()).map((tr) => tr.tab);
+  }
+
   async createTab(agentId: string, workspaceId: string, taskTitle?: string): Promise<IAgentExecTab> {
     const runtime = this.agents.get(agentId);
     if (!runtime) throw new Error('Agent not found');

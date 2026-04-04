@@ -7,8 +7,8 @@ import type { ICreateTabRequest } from '@/types/agent';
 const log = createLogger('api:agent-rpc-tab');
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
-  if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST');
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    res.setHeader('Allow', 'GET, POST');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
@@ -17,6 +17,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const agentId = req.query.agentId as string;
+
+  if (req.method === 'GET') {
+    const tabs = getAgentManager().listTabs(agentId);
+    return res.status(200).json({ tabs });
+  }
+
   const { workspaceId, taskTitle } = req.body as Partial<ICreateTabRequest>;
 
   if (!workspaceId) {
