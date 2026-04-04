@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import StepNode from '@/components/features/agent/step-node';
 import TabLink from '@/components/features/agent/tab-link';
 import BlockedPopover from '@/components/features/agent/blocked-popover';
+import useMissionStore from '@/hooks/use-mission-store';
 import type { ITask, TTaskStatus } from '@/types/mission';
 
 interface ITaskNodeProps {
@@ -35,6 +36,7 @@ const statusText: Record<TTaskStatus, string> = {
 };
 
 const TaskNode = ({ task, agentId, missionId, isLast }: ITaskNodeProps) => {
+  const isPlanAdjusted = useMissionStore((s) => s.planAdjustedTaskIds.has(task.id));
   const isUnconfirmed = !task.confirmed;
   const icon = isUnconfirmed ? (
     <span className="inline-block h-3.5 w-3.5 rounded-full border border-dashed border-muted-foreground/40" />
@@ -49,24 +51,29 @@ const TaskNode = ({ task, agentId, missionId, isLast }: ITaskNodeProps) => {
   const content = (
     <div
       className={cn(
-        'relative',
+        'relative animate-in fade-in duration-300',
         !isLast && 'pb-1',
       )}
     >
       <div
         className={cn(
-          'flex items-center gap-2 py-1.5',
+          'flex items-center gap-2 py-1.5 transition-colors duration-300',
           task.status === 'blocked' && 'cursor-pointer',
         )}
         role="treeitem"
         aria-selected={task.status === 'running'}
         aria-expanded={task.steps.length > 0}
       >
-        <span className="relative z-10 flex-shrink-0 bg-background">{icon}</span>
-        <span className={cn('text-sm', titleClass)}>
+        <span className="relative z-10 flex-shrink-0 bg-background transition-all duration-300">{icon}</span>
+        <span className={cn('text-sm transition-colors duration-300', titleClass)}>
           {task.title}
           {isUnconfirmed && ' ┄┄┄'}
         </span>
+        {isPlanAdjusted && (
+          <span className="text-[10px] text-ui-amber animate-in fade-in duration-300">
+            계획 조정됨
+          </span>
+        )}
         {task.status === 'running' && task.tabLink && <TabLink tabLink={task.tabLink} />}
       </div>
 

@@ -13,6 +13,7 @@ interface IMissionState {
   missions: Record<string, IMission[]>;
   isLoading: boolean;
   error: string | null;
+  planAdjustedTaskIds: Set<string>;
 
   fetchMissions: (agentId: string) => Promise<void>;
   updateTaskStatus: (missionId: string, taskId: string, status: TTaskStatus) => void;
@@ -24,6 +25,7 @@ interface IMissionState {
   ) => void;
   updatePlan: (missionId: string, tasks: ITask[]) => void;
   completeMission: (missionId: string, status: TMissionStatus) => void;
+  clearPlanAdjusted: (taskIds: string[]) => void;
 }
 
 const findAndUpdate = (
@@ -59,10 +61,11 @@ export const deriveMissionStatus = (tasks: ITask[]): TMissionStatus => {
   return 'pending';
 };
 
-const useMissionStore = create<IMissionState>((set) => ({
+const useMissionStore = create<IMissionState>((set, get) => ({
   missions: {},
   isLoading: true,
   error: null,
+  planAdjustedTaskIds: new Set(),
 
   fetchMissions: async (agentId) => {
     set({ isLoading: true, error: null });
@@ -103,13 +106,37 @@ const useMissionStore = create<IMissionState>((set) => ({
   },
 
   updatePlan: (missionId, tasks) => {
+    const existing = (() => {
+      for (const agentMissions of Object.values(get().missions)) {
+        const m = agentMissions.find((mission) => mission.id === missionId);
+        if (m) return m.tasks;
+      }
+      return [];
+    })();
+
+    const existingIds = new Set(existing.map((t) => t.id));
+    const adjustedIds = tasks
+      .filter((t) => {
+        if (!existingIds.has(t.id)) return true;
+        const prev = existing.find((e) => e.id === t.id);
+        return prev && (prev.title !== t.title || prev.confirmed !== t.confirmed);
+      })
+      .map((t) => t.id);
+
     set((state) => ({
       missions: findAndUpdate(state.missions, missionId, (mission) => ({
         ...mission,
         tasks,
         status: deriveMissionStatus(tasks),
       })),
+      planAdjustedTaskIds: new Set([...state.planAdjustedTaskIds, ...adjustedIds]),
     }));
+
+    if (adjustedIds.length > 0) {
+      setTimeout(() => {
+        get().clearPlanAdjusted(adjustedIds);
+      }, 3000);
+    }
   },
 
   completeMission: (missionId, status) => {
@@ -120,6 +147,14 @@ const useMissionStore = create<IMissionState>((set) => ({
         completedAt: status === 'completed' ? new Date().toISOString() : mission.completedAt,
       })),
     }));
+  },
+
+  clearPlanAdjusted: (taskIds) => {
+    set((state) => {
+      const next = new Set(state.planAdjustedTaskIds);
+      for (const id of taskIds) next.delete(id);
+      return { planAdjustedTaskIds: next };
+    });
   },
 }));
 

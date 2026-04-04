@@ -85,6 +85,7 @@ const MissionDashboardPage = () => {
 
   const [completedOpen, setCompletedOpen] = useState(false);
   const [wsError, setWsError] = useState(false);
+  const [recentlyCompletedIds, setRecentlyCompletedIds] = useState<Set<string>>(new Set());
 
   const wsRef = useRef<WebSocket | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,6 +113,9 @@ const MissionDashboardPage = () => {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (retriesRef.current > 0) {
+          fetchMissions(agentId);
+        }
         retriesRef.current = 0;
         setWsError(false);
       };
@@ -142,7 +146,16 @@ const MissionDashboardPage = () => {
           }
 
           if (data.type === 'mission:complete' && data.agentId === agentId) {
-            completeMission(data.missionId, data.status);
+            setRecentlyCompletedIds((prev) => new Set([...prev, data.missionId]));
+            setTimeout(() => {
+              completeMission(data.missionId, data.status);
+              setRecentlyCompletedIds((prev) => {
+                const next = new Set(prev);
+                next.delete(data.missionId);
+                return next;
+              });
+              setCompletedOpen(true);
+            }, 3000);
           }
         } catch {
           // ignore parse errors
@@ -173,7 +186,7 @@ const MissionDashboardPage = () => {
       wsRef.current?.close();
       wsRef.current = null;
     };
-  }, [agentId, updateTaskStatus, updateStepStatus, updatePlan, completeMission]);
+  }, [agentId, fetchMissions, updateTaskStatus, updateStepStatus, updatePlan, completeMission]);
 
   const handleRetry = useCallback(() => {
     if (agentId) fetchMissions(agentId);
@@ -251,6 +264,7 @@ const MissionDashboardPage = () => {
                       mission={mission}
                       agentId={agentId}
                       defaultExpanded
+                      completing={recentlyCompletedIds.has(mission.id)}
                     />
                   ))}
                 </div>

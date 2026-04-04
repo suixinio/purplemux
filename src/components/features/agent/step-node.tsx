@@ -28,10 +28,11 @@ const statusText: Record<TStepStatus, string> = {
 };
 
 const StepNode = ({ title, status }: IStepNodeProps) => (
-  <div className="flex items-center gap-2 py-1 ml-6" role="treeitem" aria-selected={false}>
-    <span className="flex-shrink-0">{statusIcon[status]}</span>
-    <span className={cn('text-sm', statusText[status])}>{title}</span>
+  <div className="flex items-center gap-2 py-1 ml-6 transition-colors duration-300" role="treeitem" aria-selected={false}>
+    <span className="flex-shrink-0 transition-all duration-300">{statusIcon[status]}</span>
+    <span className={cn('text-sm transition-colors duration-300', statusText[status])}>{title}</span>
   </div>
 );
+
 
 export default StepNode;

@@ -50,7 +50,7 @@ const BlockedPopover = ({ agentId, missionId, taskId, children }: IBlockedPopove
 
   return (
     <Popover onOpenChange={handleOpenChange}>
-      <PopoverTrigger className="w-full text-left">{children}</PopoverTrigger>
+      <PopoverTrigger className="w-full text-left" aria-haspopup="dialog">{children}</PopoverTrigger>
       <PopoverContent className="w-72" align="start">
         <div className="flex items-center gap-1.5">
           <AlertCircle size={12} className="text-ui-amber" />
@@ -63,7 +63,7 @@ const BlockedPopover = ({ agentId, missionId, taskId, children }: IBlockedPopove
           {reason && `"${reason.reason}"`}
         </div>
 
-        <Button variant="outline" size="sm" className="mt-3 w-full" onClick={handleChatNavigate}>
+        <Button variant="outline" size="xs" className="mt-3 w-full" onClick={handleChatNavigate}>
           채팅에서 답변하기
         </Button>
       </PopoverContent>
