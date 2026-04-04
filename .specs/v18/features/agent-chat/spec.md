@@ -2,7 +2,7 @@
 page: agent-chat
 title: 에이전트 채팅
 route: /agents/[agentId]/chat
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STYLE.md

@@ -2,7 +2,7 @@
 page: agent-management
 title: 에이전트 목록/관리
 route: /agents
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md

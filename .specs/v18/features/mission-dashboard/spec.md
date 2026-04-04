@@ -2,7 +2,7 @@
 page: mission-dashboard
 title: 미션/태스크 현황
 route: /agents/[agentId]/missions
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STATUS.md

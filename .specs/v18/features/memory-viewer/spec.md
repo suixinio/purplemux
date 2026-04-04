@@ -2,7 +2,7 @@
 page: memory-viewer
 title: 메모리 뷰어
 route: /agents/[agentId]/memory
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md

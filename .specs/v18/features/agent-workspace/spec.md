@@ -2,7 +2,7 @@
 page: agent-workspace
 title: 에이전트 워크스페이스
 route: /agents/[agentId]/workspace
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/TMUX.md

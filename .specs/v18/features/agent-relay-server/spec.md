@@ -2,7 +2,7 @@
 page: agent-relay-server
 title: 에이전트 중계 서버
 route: /api/agent/*
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/TMUX.md
