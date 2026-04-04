@@ -627,6 +627,16 @@ class AgentManager {
         await this.startAgentSession(runtime);
       }
     }
+
+    const registeredSessions = new Set(
+      Array.from(this.agents.values()).map((r) => r.info.tmuxSession),
+    );
+    for (const orphan of agentSessions) {
+      if (!registeredSessions.has(orphan)) {
+        await killSession(orphan);
+        log.info(`killed orphan agent session: ${orphan}`);
+      }
+    }
   }
 
   private async listAgentTmuxSessions(): Promise<string[]> {
