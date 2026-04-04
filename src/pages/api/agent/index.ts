@@ -21,12 +21,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'POST') {
     const { name, role, projects } = req.body as Partial<ICreateAgentRequest>;
-    if (!name || !role || !projects?.length) {
-      return res.status(400).json({ error: 'name, role, projects 필수' });
+    if (!name) {
+      return res.status(400).json({ error: 'name은 필수입니다' });
     }
 
     try {
-      const info = await manager.createAgent(name, role, projects);
+      const info = await manager.createAgent(name, role ?? '', projects ?? []);
       return res.status(201).json({
         id: info.id,
         name: info.name,

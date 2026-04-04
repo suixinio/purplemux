@@ -87,15 +87,15 @@ const AgentCreateDialog = ({ open, onOpenChange, onCreated }: IAgentCreateDialog
     if (!validateName(name)) return;
     setIsCreating(true);
 
+    handleOpenChange(false);
+
     const agentId = await createAgent({
       name,
       role,
       projects: selectedProjects,
     });
 
-    setIsCreating(false);
     if (agentId) {
-      handleOpenChange(false);
       onCreated(agentId);
     }
   };

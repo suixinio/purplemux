@@ -59,6 +59,21 @@ const useAgentStore = create<IAgentState>((set) => ({
   },
 
   createAgent: async (req) => {
+    const tempId = `temp-${Date.now()}`;
+    const optimistic: IAgentInfo = {
+      id: tempId,
+      name: req.name,
+      role: req.role,
+      projects: req.projects,
+      status: 'offline',
+      createdAt: new Date().toISOString(),
+      tmuxSession: '',
+    };
+
+    set((state) => ({
+      agents: { ...state.agents, [tempId]: optimistic },
+    }));
+
     try {
       const res = await fetch('/api/agent', {
         method: 'POST',
@@ -70,22 +85,30 @@ const useAgentStore = create<IAgentState>((set) => ({
         throw new Error(data.error || '에이전트 생성에 실패했습니다');
       }
       const data: ICreateAgentResponse = await res.json();
-      set((state) => ({
-        agents: {
-          ...state.agents,
-          [data.id]: {
-            id: data.id,
-            name: data.name,
-            role: data.role,
-            projects: data.projects,
-            status: data.status,
-            createdAt: new Date().toISOString(),
-            tmuxSession: '',
+
+      set((state) => {
+        const { [tempId]: _, ...rest } = state.agents;
+        return {
+          agents: {
+            ...rest,
+            [data.id]: {
+              id: data.id,
+              name: data.name,
+              role: data.role,
+              projects: data.projects,
+              status: data.status,
+              createdAt: new Date().toISOString(),
+              tmuxSession: '',
+            },
           },
-        },
-      }));
+        };
+      });
       return data.id;
     } catch (err) {
+      set((state) => {
+        const { [tempId]: _, ...rest } = state.agents;
+        return { agents: rest };
+      });
       const msg = err instanceof Error ? err.message : '에이전트 생성에 실패했습니다';
       toast.error(msg);
       return null;
@@ -126,15 +149,23 @@ const useAgentStore = create<IAgentState>((set) => ({
   },
 
   deleteAgent: async (id) => {
+    const backup = useAgentStore.getState().agents[id];
+
+    set((state) => {
+      const { [id]: _, ...rest } = state.agents;
+      return { agents: rest };
+    });
+
     try {
       const res = await fetch(`/api/agent/${id}`, { method: 'DELETE' });
       if (!res.ok && res.status !== 204) throw new Error();
-      set((state) => {
-        const { [id]: _, ...rest } = state.agents;
-        return { agents: rest };
-      });
       return true;
     } catch {
+      if (backup) {
+        set((state) => ({
+          agents: { ...state.agents, [id]: backup },
+        }));
+      }
       toast.error('에이전트 삭제에 실패했습니다');
       return false;
     }
