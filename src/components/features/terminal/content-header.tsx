@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ExternalLink, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/router';
+import { Bot, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +9,7 @@ import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useConfigStore from '@/hooks/use-config-store';
+import useAgentStore, { selectBlockedCount } from '@/hooks/use-agent-store';
 import { isMac } from '@/lib/keyboard-shortcuts';
 
 const mod = isMac ? '⌘' : 'Ctrl+';
@@ -55,6 +57,8 @@ const ContentHeader = ({
   onUpdateTabPanelType,
 }: IContentHeaderProps) => {
   const [isToggling, setIsToggling] = useState(false);
+  const router = useRouter();
+  const blockedCount = useAgentStore(selectBlockedCount);
 
   const panes = collectPanes(root);
   const focusedPane = panes.find((p) => p.id === activePaneId) ?? panes[0];
@@ -82,7 +86,18 @@ const ContentHeader = ({
     <div className="shrink-0 bg-background">
       <div className="h-titlebar" />
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
-      <div />
+      <button
+        className="relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        onClick={() => router.push('/agents')}
+        aria-label="에이전트"
+      >
+        <Bot className="h-3.5 w-3.5" />
+        {blockedCount > 0 && (
+          <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-amber px-0.5 text-[9px] font-medium leading-none text-white">
+            {blockedCount}
+          </span>
+        )}
+      </button>
       <TooltipProvider>
         <div className="flex items-center gap-1">
           <Tabs
