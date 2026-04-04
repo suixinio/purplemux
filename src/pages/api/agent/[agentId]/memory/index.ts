@@ -3,7 +3,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import { createLogger } from '@/lib/logger';
-import type { IMemoryNode, IMemoryTreeResponse } from '@/types/memory';
+import type { IMemoryNode, IMemoryTreeResponse, IRecentMemoryFile } from '@/types/memory';
 
 const log = createLogger('api:agent-memory');
 const AGENTS_DIR = path.join(os.homedir(), '.purplemux', 'agents');
@@ -67,6 +67,18 @@ const countStats = (nodes: IMemoryNode[]): { files: number; bytes: number } => {
   return { files, bytes };
 };
 
+const collectFiles = (nodes: IMemoryNode[]): IRecentMemoryFile[] => {
+  const files: IRecentMemoryFile[] = [];
+  for (const node of nodes) {
+    if (node.type === 'file' && node.modifiedAt) {
+      files.push({ path: node.path, fileName: node.name, modifiedAt: node.modifiedAt });
+    } else if (node.children) {
+      files.push(...collectFiles(node.children));
+    }
+  }
+  return files;
+};
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -84,6 +96,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const agentNode = tree.find((n) => n.type === 'directory' && n.name === agentId);
     const agentStats = agentNode?.children ? countStats(agentNode.children) : { files: 0, bytes: 0 };
 
+    const allFiles = collectFiles(tree);
+    allFiles.sort((a, b) => new Date(b.modifiedAt).getTime() - new Date(a.modifiedAt).getTime());
+    const recentFiles = allFiles.slice(0, 5);
+
     const response: IMemoryTreeResponse = {
       tree,
       stats: {
@@ -92,6 +108,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         agentFiles: agentStats.files,
         agentSizeBytes: agentStats.bytes,
       },
+      recentFiles,
     };
 
     return res.status(200).json(response);

@@ -16,6 +16,7 @@ interface ITreeNodeProps {
   level: number;
   selectedPath: string | null;
   expandedPaths: Set<string>;
+  agentId?: string;
   onFileSelect: (path: string) => void;
   onToggleDir: (path: string) => void;
 }
@@ -25,6 +26,7 @@ const TreeNode = ({
   level,
   selectedPath,
   expandedPaths,
+  agentId,
   onFileSelect,
   onToggleDir,
 }: ITreeNodeProps) => {
@@ -50,6 +52,8 @@ const TreeNode = ({
     [handleClick],
   );
 
+  const isCurrentAgent = node.type === 'directory' && level === 0 && node.name === agentId;
+
   if (node.type === 'directory') {
     return (
       <div role="treeitem" aria-expanded={isExpanded} aria-selected={false}>
@@ -65,7 +69,7 @@ const TreeNode = ({
             className={cn('shrink-0 transition-transform', isExpanded && 'rotate-90')}
           />
           <Folder size={14} className="shrink-0 text-muted-foreground" />
-          <span className="truncate text-sm">{node.name}</span>
+          <span className={cn('truncate text-sm', isCurrentAgent && 'font-medium')}>{node.name}</span>
         </div>
 
         {isExpanded && node.children && (
@@ -77,6 +81,7 @@ const TreeNode = ({
                 level={level + 1}
                 selectedPath={selectedPath}
                 expandedPaths={expandedPaths}
+                agentId={agentId}
                 onFileSelect={onFileSelect}
                 onToggleDir={onToggleDir}
               />

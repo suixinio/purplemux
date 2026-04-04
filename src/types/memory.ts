@@ -7,6 +7,12 @@ export interface IMemoryNode {
   children?: IMemoryNode[];
 }
 
+export interface IRecentMemoryFile {
+  path: string;
+  fileName: string;
+  modifiedAt: string;
+}
+
 export interface IMemoryTreeResponse {
   tree: IMemoryNode[];
   stats: {
@@ -15,6 +21,7 @@ export interface IMemoryTreeResponse {
     agentFiles: number;
     agentSizeBytes: number;
   };
+  recentFiles: IRecentMemoryFile[];
 }
 
 export interface IMemoryFileResponse {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo, memo } from 'react';
+import { useState, useCallback, useEffect, useMemo, memo, useRef } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import TreeNode from '@/components/features/agent/tree-node';
@@ -68,6 +68,30 @@ const MemoryTree = ({
     onSearchChange('');
   }, [onSearchChange]);
 
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  const handleTreeKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+
+    const container = treeRef.current;
+    if (!container) return;
+
+    const items = Array.from(container.querySelectorAll<HTMLElement>('[tabindex="0"]'));
+    if (items.length === 0) return;
+
+    const currentIdx = items.indexOf(document.activeElement as HTMLElement);
+    let nextIdx: number;
+
+    if (e.key === 'ArrowDown') {
+      nextIdx = currentIdx < items.length - 1 ? currentIdx + 1 : 0;
+    } else {
+      nextIdx = currentIdx > 0 ? currentIdx - 1 : items.length - 1;
+    }
+
+    items[nextIdx]?.focus();
+  }, []);
+
   const isSearchMode = searchQuery.length >= 2;
 
   return (
@@ -104,7 +128,7 @@ const MemoryTree = ({
         )}
 
         {!isSearchMode && (
-          <div role="tree">
+          <div role="tree" ref={treeRef} onKeyDown={handleTreeKeyDown}>
             {tree.map((node) => (
               <TreeNode
                 key={node.path}
@@ -112,6 +136,7 @@ const MemoryTree = ({
                 level={0}
                 selectedPath={selectedPath}
                 expandedPaths={expandedPaths}
+                agentId={agentId}
                 onFileSelect={onFileSelect}
                 onToggleDir={handleToggleDir}
               />

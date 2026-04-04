@@ -1,4 +1,7 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
+import { Clock, ChevronUp, ChevronDown } from 'lucide-react';
+import dayjs from 'dayjs';
+import type { IRecentMemoryFile } from '@/types/memory';
 
 interface IMemoryStatsProps {
   totalFiles: number;
@@ -6,6 +9,8 @@ interface IMemoryStatsProps {
   agentFiles: number;
   agentSizeBytes: number;
   agentName: string;
+  recentFiles: IRecentMemoryFile[];
+  onFileSelect: (path: string) => void;
 }
 
 const formatBytes = (bytes: number): string => {
@@ -20,15 +25,54 @@ const MemoryStats = ({
   agentFiles,
   agentSizeBytes,
   agentName,
-}: IMemoryStatsProps) => (
-  <div className="flex gap-6 border-t px-4 py-2 text-xs text-muted-foreground">
-    <span>
-      전체: {totalFiles} 파일, {formatBytes(totalSizeBytes)}
-    </span>
-    <span>
-      {agentName}: {agentFiles} 파일, {formatBytes(agentSizeBytes)}
-    </span>
-  </div>
-);
+  recentFiles,
+  onFileSelect,
+}: IMemoryStatsProps) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <div className="border-t">
+      {isExpanded && recentFiles.length > 0 && (
+        <div className="border-b px-4 py-2">
+          <div className="mb-1 flex items-center gap-1 text-xs font-medium text-muted-foreground">
+            <Clock size={10} />
+            최근 변경
+          </div>
+          {recentFiles.map((file) => (
+            <button
+              key={file.path}
+              type="button"
+              className="flex w-full items-center gap-2 rounded px-1 py-0.5 text-left text-xs hover:bg-muted/50"
+              onClick={() => onFileSelect(file.path)}
+            >
+              <span className="truncate text-foreground">{file.fileName}</span>
+              <span className="shrink-0 text-muted-foreground">
+                {dayjs(file.modifiedAt).format('MM-DD HH:mm')}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="flex items-center gap-6 px-4 py-2 text-xs text-muted-foreground">
+        <span>
+          전체: {totalFiles} 파일, {formatBytes(totalSizeBytes)}
+        </span>
+        <span>
+          {agentName}: {agentFiles} 파일, {formatBytes(agentSizeBytes)}
+        </span>
+        {recentFiles.length > 0 && (
+          <button
+            type="button"
+            className="ml-auto flex items-center gap-0.5 hover:text-foreground"
+            onClick={() => setIsExpanded((prev) => !prev)}
+          >
+            {isExpanded ? <ChevronDown size={12} /> : <ChevronUp size={12} />}
+            최근 변경
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
 
 export default memo(MemoryStats);
