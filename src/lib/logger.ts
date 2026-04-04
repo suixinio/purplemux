@@ -13,7 +13,7 @@ if (!g.__ptRootLogger) {
     transport: {
       targets: [
         {
-          target: 'pino-roll',
+          target: require.resolve('pino-roll'),
           options: {
             file: path.join(LOG_DIR, 'purplemux'),
             frequency: 'daily',
@@ -23,7 +23,7 @@ if (!g.__ptRootLogger) {
           },
         },
         {
-          target: 'pino-pretty',
+          target: require.resolve('pino-pretty'),
           options: {
             colorize: true,
             ignore: 'pid,hostname,module',
