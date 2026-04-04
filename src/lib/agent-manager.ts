@@ -220,7 +220,7 @@ class AgentManager {
       message,
     });
 
-    if (runtime.status === 'idle') {
+    if (runtime.status === 'idle' || runtime.status === 'blocked') {
       await this.deliverToAgent(runtime, content);
       this.setStatus(runtime, 'working');
       return { id: message.id, status: 'sent' };
@@ -229,6 +229,12 @@ class AgentManager {
     if (runtime.messageQueue.length >= MAX_QUEUE_SIZE) {
       runtime.messageQueue.shift();
       log.warn(`message queue overflow for agent ${agentId}, dropping oldest`);
+
+      const dropNotice = createMessage('agent', 'error', '메시지 큐가 가득 차 가장 오래된 메시지가 삭제되었습니다.');
+      if (runtime.chatSessionId) {
+        await appendMessage(agentId, runtime.chatSessionId, dropNotice);
+      }
+      this.broadcast({ type: 'agent:message', agentId, message: dropNotice });
     }
     runtime.messageQueue.push(content);
     return { id: message.id, status: 'queued' };
@@ -269,11 +275,66 @@ class AgentManager {
 
   // --- Session lifecycle ---
 
+  private async writeAgentClaudeMd(runtime: IAgentRuntime, cwd: string): Promise<void> {
+    const port = process.env.PORT || '8022';
+    const { info } = runtime;
+    const content = [
+      '# Agent Instructions',
+      '',
+      `You are "${info.name}" — ${info.role}.`,
+      '',
+      '## Reporting',
+      '',
+      'You MUST report progress, ask questions, and signal completion via the relay API.',
+      'Use curl to send messages:',
+      '',
+      '```bash',
+      `curl -s -X POST http://localhost:${port}/api/agent/message \\`,
+      `  -H "Content-Type: application/json" \\`,
+      `  -d '{"agentId":"${info.id}","type":"report","content":"your message here"}'`,
+      '```',
+      '',
+      '### Message types',
+      '',
+      '| type | when to use |',
+      '|------|------------|',
+      '| `report` | Progress updates, intermediate results |',
+      '| `question` | Need user input before continuing |',
+      '| `done` | Task completed successfully |',
+      '| `error` | Unrecoverable failure |',
+      '| `approval` | Need user approval for a risky action |',
+      '',
+      '## Rules',
+      '',
+      '- Report at meaningful milestones, not every step.',
+      '- Use `question` sparingly — only when you truly cannot proceed.',
+      '- Always send `done` or `error` when finished.',
+      '',
+    ].join('\n');
+
+    const claudeMdPath = path.join(cwd, 'CLAUDE.md');
+    const existing = await fs.readFile(claudeMdPath, 'utf-8').catch(() => '');
+    const marker = '<!-- agent-relay -->';
+    const block = `${marker}\n${content}${marker}`;
+
+    if (existing.includes(marker)) {
+      const replaced = existing.replace(
+        new RegExp(`${marker}[\\s\\S]*?${marker}`),
+        block,
+      );
+      await fs.writeFile(claudeMdPath, replaced, 'utf-8');
+    } else {
+      const merged = existing ? `${existing}\n\n${block}\n` : `${block}\n`;
+      await fs.writeFile(claudeMdPath, merged, 'utf-8');
+    }
+  }
+
   private async startAgentSession(runtime: IAgentRuntime): Promise<void> {
     const { info } = runtime;
     const cwd = info.projects[0] || os.homedir();
 
     try {
+      await this.writeAgentClaudeMd(runtime, cwd);
       await createSession(info.tmuxSession, TMUX_COLS, TMUX_ROWS, cwd);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
