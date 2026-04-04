@@ -32,6 +32,8 @@ import type {
   IAgentStatusSync,
   IAgentStatusUpdate,
   IAgentChatMessage,
+  IAgentWorkspaceResponse,
+  TWorkspaceServerMessage,
 } from '@/types/agent';
 import type { IMission, IBlockReasonResponse } from '@/types/mission';
 
@@ -78,7 +80,7 @@ class AgentManager {
     this.clients.delete(ws);
   }
 
-  private broadcast(event: IAgentStatusSync | IAgentStatusUpdate | IAgentChatMessage): void {
+  private broadcast(event: IAgentStatusSync | IAgentStatusUpdate | IAgentChatMessage | TWorkspaceServerMessage): void {
     const msg = JSON.stringify(event);
     for (const ws of this.clients) {
       if (ws.readyState === WebSocket.OPEN) {
@@ -171,6 +173,43 @@ class AgentManager {
     _taskId: string,
   ): IBlockReasonResponse | null {
     return null;
+  }
+
+  getWorkspace(agentId: string): IAgentWorkspaceResponse | null {
+    const runtime = this.agents.get(agentId);
+    if (!runtime) return null;
+
+    const now = Date.now();
+    const createdMs = new Date(runtime.info.createdAt).getTime();
+    const uptimeSeconds = Math.floor((now - createdMs) / 1000);
+
+    return {
+      agentId,
+      brainSession: {
+        tmuxSession: runtime.info.tmuxSession,
+        status: runtime.status,
+      },
+      stats: {
+        runningTasks: 0,
+        completedTasks: 0,
+        uptimeSeconds: runtime.status !== 'offline' ? uptimeSeconds : 0,
+      },
+      projectGroups: [],
+      recentActivity: [],
+    };
+  }
+
+  async restartAgent(agentId: string): Promise<boolean> {
+    const runtime = this.agents.get(agentId);
+    if (!runtime) return false;
+
+    runtime.restartCount = 0;
+    await this.restartAgentSession(runtime);
+    return runtime.status !== 'offline';
+  }
+
+  broadcastWorkspaceEvent(event: TWorkspaceServerMessage): void {
+    this.broadcast(event);
   }
 
   async updateAgent(agentId: string, update: { name?: string; role?: string; projects?: string[] }): Promise<IAgentInfo | null> {

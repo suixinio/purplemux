@@ -111,6 +111,80 @@ export interface IChatHistoryResponse {
   hasMore: boolean;
 }
 
+// Workspace types
+
+export type TAgentTabStatus = 'running' | 'completed' | 'idle' | 'failed';
+
+export interface IAgentTab {
+  tabId: string;
+  tabName: string;
+  taskTitle?: string;
+  taskId?: string;
+  status: TAgentTabStatus;
+}
+
+export interface IProjectGroup {
+  workspaceId: string;
+  workspaceName: string;
+  projectPath: string;
+  tabs: IAgentTab[];
+}
+
+export interface IActivityEntry {
+  timestamp: string;
+  action: string;
+  projectName?: string;
+}
+
+export interface IAgentWorkspaceResponse {
+  agentId: string;
+  brainSession: {
+    tmuxSession: string;
+    status: TAgentStatus;
+  };
+  stats: {
+    runningTasks: number;
+    completedTasks: number;
+    uptimeSeconds: number;
+  };
+  projectGroups: IProjectGroup[];
+  recentActivity: IActivityEntry[];
+}
+
+// Workspace WebSocket events
+
+export interface IWorkspaceTabAdded {
+  type: 'workspace:tab-added';
+  agentId: string;
+  workspaceId: string;
+  tab: IAgentTab;
+}
+
+export interface IWorkspaceTabUpdated {
+  type: 'workspace:tab-updated';
+  agentId: string;
+  tabId: string;
+  status: TAgentTabStatus;
+}
+
+export interface IWorkspaceTabRemoved {
+  type: 'workspace:tab-removed';
+  agentId: string;
+  tabId: string;
+}
+
+export interface IWorkspaceActivity {
+  type: 'workspace:activity';
+  agentId: string;
+  entry: IActivityEntry;
+}
+
+export type TWorkspaceServerMessage =
+  | IWorkspaceTabAdded
+  | IWorkspaceTabUpdated
+  | IWorkspaceTabRemoved
+  | IWorkspaceActivity;
+
 // WebSocket message types
 
 export interface IAgentStatusSync {

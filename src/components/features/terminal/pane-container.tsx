@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
+import { useRouter } from 'next/router';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import { ChevronDown, ChevronUp, Loader2, Plus, TerminalSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -20,6 +21,7 @@ import WebBrowserPanel from '@/components/features/terminal/web-browser-panel';
 import PaneDisconnectedOverlay from '@/components/features/terminal/pane-disconnected-overlay';
 import PaneClaudeModePrompt from '@/components/features/terminal/pane-claude-mode-prompt';
 import PanePathInputOverlay from '@/components/features/terminal/pane-path-input-overlay';
+import ObserveBanner from '@/components/features/agent/observe-banner';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
@@ -63,6 +65,10 @@ const CLAUDE_CODE_FONT_SIZE = 11;
 const EMPTY_TABS: ITab[] = [];
 
 const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
+  const router = useRouter();
+  const isObserveMode = router.query.observe === 'true';
+  const observeAgentId = (router.query.agentId as string) || '';
+
   const pane = useLayoutStore((s) => (s.layout ? findPane(s.layout.root, paneId) : null));
   const tabs = pane?.tabs ?? EMPTY_TABS;
   const activeTabId = pane?.activeTabId ?? null;
@@ -252,7 +258,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const { terminalRef, write, clear, reset, fit, focus, isReady } = useTerminal({
     theme: terminalTheme.colors,
     fontSize: isClaudeCode ? CLAUDE_CODE_FONT_SIZE : undefined,
-    onInput: (data) => wsActionsRef.current.sendStdin(data),
+    onInput: (data) => {
+      if (isObserveMode) return;
+      wsActionsRef.current.sendStdin(data);
+    },
     onResize: (cols, rows) => wsActionsRef.current.sendResize(cols, rows),
     onTitleChange: (title) => {
       const tabId = activeTabIdRef.current;
@@ -713,6 +722,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         onFocusPane={handleFocusPane}
         onRetry={() => {}}
       />
+
+      {isObserveMode && <ObserveBanner agentId={observeAgentId} />}
 
       <div
         role="tabpanel"
