@@ -23,7 +23,7 @@ interface IAgentSettingsSheetProps {
   onDeleteClick: () => void;
 }
 
-const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
+const NAME_PATTERN = /^\S+$/;
 
 interface ISettingsFormProps {
   agent: IAgentInfo;
@@ -68,7 +68,7 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
         return false;
       }
       if (!NAME_PATTERN.test(value)) {
-        setNameError('영문 소문자, 숫자, 하이픈만 사용 가능합니다');
+        setNameError('공백은 사용할 수 없습니다');
         return false;
       }
       if (agents.some((a) => a.name === value && a.id !== agent.id)) {
