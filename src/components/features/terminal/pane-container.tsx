@@ -678,7 +678,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [claudeInputVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const noTabs = tabs.length === 0;
-  const ready = isReady && status === 'connected' && !noTabs;
+  const ready = isReady && (status === 'connected' || hasEverConnected) && !noTabs;
   const showInitialLoading =
     !noTabs &&
     (!isReady ||
