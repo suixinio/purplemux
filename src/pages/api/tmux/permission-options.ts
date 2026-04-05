@@ -28,7 +28,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     const { options } = parsePermissionOptions(content);
-    return res.status(200).json({ options });
+    const isBypassPrompt = content.includes('Bypass Permissions');
+    return res.status(200).json({ options, ...(isBypassPrompt && { isBypassPrompt: true }) });
   } catch (err) {
     log.error(`permission-options query failed: ${err instanceof Error ? err.message : err}`);
     return res.status(500).json({ error: '터미널 캡처 실패' });

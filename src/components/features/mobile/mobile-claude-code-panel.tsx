@@ -3,6 +3,7 @@ import { ChevronDown } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import useTimeline from '@/hooks/use-timeline';
+import useStartingPrompt from '@/hooks/use-starting-prompt';
 import useSessionList from '@/hooks/use-session-list';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
 import useSessionMeta from '@/hooks/use-session-meta';
@@ -11,6 +12,7 @@ import useGitStatus from '@/hooks/use-git-status';
 import useTmuxInfo from '@/hooks/use-tmux-info';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
+import BypassPromptCard from '@/components/features/terminal/bypass-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import WebInputBar from '@/components/features/terminal/web-input-bar';
 import QuickPromptBar from '@/components/features/terminal/quick-prompt-bar';
@@ -58,7 +60,6 @@ const MobileClaudeCodePanel = ({
 }: IMobileClaudeCodePanelProps) => {
   const { prompts: quickPrompts } = useQuickPrompts();
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
-  const [startingLong, setStartingLong] = useState(false);
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
@@ -176,14 +177,7 @@ const MobileClaudeCodePanel = ({
 
   const isInputVisible = view === 'timeline';
 
-  useEffect(() => {
-    if (effectiveClaudeStatus !== 'starting') {
-      setStartingLong(false);
-      return;
-    }
-    const timer = setTimeout(() => setStartingLong(true), 5000);
-    return () => clearTimeout(timer);
-  }, [effectiveClaudeStatus]);
+  const startingPromptOptions = useStartingPrompt(effectiveClaudeStatus === 'starting', sessionName);
 
   useEffect(() => {
     onCliStateChange(cliState);
@@ -224,8 +218,18 @@ const MobileClaudeCodePanel = ({
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
         <Spinner className="h-4 w-4 text-muted-foreground" />
-        {startingLong && (
-          <span className="mt-3 text-xs text-muted-foreground">터미널을 확인하세요</span>
+        {startingPromptOptions && (
+          startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
+            <BypassPromptCard
+              sessionName={sessionName}
+              options={startingPromptOptions.options}
+              fallback={
+                <span className="text-xs text-muted-foreground">터미널을 확인하세요</span>
+              }
+            />
+          ) : (
+            <span className="mt-3 text-xs text-muted-foreground">터미널을 확인하세요</span>
+          )
         )}
       </div>
     );

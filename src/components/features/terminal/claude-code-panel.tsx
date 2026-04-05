@@ -4,10 +4,12 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
+import useStartingPrompt from '@/hooks/use-starting-prompt';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
 import { notifyCliState } from '@/hooks/use-claude-status';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
+import BypassPromptCard from '@/components/features/terminal/bypass-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import SessionMetaBar from '@/components/features/terminal/session-meta-bar';
 
@@ -33,7 +35,6 @@ const ClaudeCodePanel = ({
   scrollToBottomRef,
 }: IClaudeCodePanelProps) => {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
-  const [startingLong, setStartingLong] = useState(false);
 
   const claudeStatus = useTabStore((s) => s.tabs[tabId]?.claudeStatus ?? 'unknown');
   const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
@@ -90,7 +91,6 @@ const ClaudeCodePanel = ({
     },
     onSync: (state) => {
       const current = useTabStore.getState().tabs[tabId];
-      // starting 상태에서 timeline의 not-running은 무시 (세션 아직 준비 안 됨)
       if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
         useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
       }
@@ -147,14 +147,7 @@ const ClaudeCodePanel = ({
     ? 'inactive' as const
     : cliState;
 
-  useEffect(() => {
-    if (claudeStatus !== 'starting') {
-      setStartingLong(false);
-      return;
-    }
-    const timer = setTimeout(() => setStartingLong(true), 5000);
-    return () => clearTimeout(timer);
-  }, [claudeStatus]);
+  const startingPromptOptions = useStartingPrompt(claudeStatus === 'starting', sessionName);
 
   const handleSelectSession = useCallback(
     (sid: string) => {
@@ -178,13 +171,28 @@ const ClaudeCodePanel = ({
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
         <Spinner className="h-4 w-4 text-muted-foreground" />
-        {startingLong && (
-          <button
-            className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-            onClick={onClose}
-          >
-            터미널을 확인하세요
-          </button>
+        {startingPromptOptions && (
+          startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
+            <BypassPromptCard
+              sessionName={sessionName}
+              options={startingPromptOptions.options}
+              fallback={
+                <button
+                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  onClick={onClose}
+                >
+                  터미널을 확인하세요
+                </button>
+              }
+            />
+          ) : (
+            <button
+              className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+              onClick={onClose}
+            >
+              터미널을 확인하세요
+            </button>
+          )
         )}
       </div>
     );
