@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -179,8 +179,18 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
 
       </div>
 
-      <div className="flex flex-col gap-3 border-t p-4">
-        <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-between border-t p-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-muted-foreground hover:text-destructive"
+          onClick={onDeleteClick}
+          disabled={isSaving}
+        >
+          <Trash2 className="h-4 w-4" />
+          <span className="sr-only">에이전트 삭제</span>
+        </Button>
+        <div className="flex gap-2">
           <Button variant="outline" onClick={onClose} disabled={isSaving}>
             취소
           </Button>
@@ -195,16 +205,6 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
             )}
           </Button>
         </div>
-
-        <Button
-          variant="destructive"
-          size="sm"
-          className="w-full"
-          onClick={onDeleteClick}
-          disabled={isSaving}
-        >
-          에이전트 삭제
-        </Button>
       </div>
     </>
   );

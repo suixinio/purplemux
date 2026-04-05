@@ -85,6 +85,8 @@ const MAX_CONCURRENT_TABS = 5;
 const TAB_POLL_INTERVAL = 5_000;
 const TAB_MESSAGE_QUEUE_MAX = 5;
 const JSONL_TAIL_SIZE = 8192;
+const DELIVERY_CHECK_DELAY_MS = 30_000;
+const MAX_DELIVERY_RETRIES = 2;
 
 interface ITabRuntime {
   tab: IAgentExecTab;
@@ -105,6 +107,9 @@ interface IAgentRuntime {
   claudeMdHash: string;
   pendingRestart: boolean;
   lastClaudeSessionId: string | null;
+  lastDeliveredContent: string | null;
+  lastDeliveredAt: number;
+  deliveryRetryCount: number;
 }
 
 const g = globalThis as unknown as { __ptAgentManager?: AgentManager };
@@ -200,6 +205,9 @@ class AgentManager {
       claudeMdHash: '',
       pendingRestart: false,
       lastClaudeSessionId: null,
+      lastDeliveredContent: null,
+      lastDeliveredAt: 0,
+      deliveryRetryCount: 0,
     };
     this.agents.set(id, runtime);
 
@@ -379,6 +387,9 @@ class AgentManager {
 
     if (runtime.status === 'idle' || runtime.status === 'blocked') {
       await this.deliverToAgent(runtime, content);
+      runtime.lastDeliveredContent = content;
+      runtime.lastDeliveredAt = Date.now();
+      runtime.deliveryRetryCount = 0;
       this.setStatus(runtime, 'working');
       return { id: message.id, status: 'sent' };
     }
@@ -418,6 +429,11 @@ class AgentManager {
       agentId,
       message,
     });
+
+    // relay 응답이 왔으므로 delivery 추적 클리어
+    runtime.lastDeliveredContent = null;
+    runtime.lastDeliveredAt = 0;
+    runtime.deliveryRetryCount = 0;
 
     if (type === 'question' || type === 'approval') {
       this.setStatus(runtime, 'blocked');
@@ -781,9 +797,7 @@ class AgentManager {
         log.debug(`agent ${runtime.info.id} Claude session changed: ${runtime.lastClaudeSessionId} → ${claudeSessionId}`);
         runtime.lastClaudeSessionId = claudeSessionId;
         this.setStatus(runtime, 'idle');
-        if (runtime.messageQueue.length > 0) {
-          await this.drainQueue(runtime);
-        }
+        await this.retryOrDrainPending(runtime);
         return;
       }
       runtime.lastClaudeSessionId = claudeSessionId;
@@ -802,8 +816,19 @@ class AgentManager {
           this.setStatus(runtime, newStatus);
         }
 
-        if (newStatus === 'idle' && runtime.messageQueue.length > 0) {
-          await this.drainQueue(runtime);
+        if (newStatus === 'idle') {
+          await this.retryOrDrainPending(runtime);
+        }
+      }
+
+      // working 상태인데 relay 응답 없이 오래 걸리면 실제 상태 확인 후 재전달
+      if (runtime.status === 'working' && runtime.lastDeliveredContent && runtime.lastDeliveredAt > 0) {
+        const elapsed = Date.now() - runtime.lastDeliveredAt;
+        if (elapsed >= DELIVERY_CHECK_DELAY_MS) {
+          const actualStatus = await this.deriveStatusFromSession(runtime, sessionInfo.jsonlPath);
+          if (actualStatus === 'idle') {
+            await this.retryDelivery(runtime);
+          }
         }
       }
     } else if (sessionInfo.status !== 'running') {
@@ -812,6 +837,9 @@ class AgentManager {
         // Claude exited, restart
         await sendKeys(runtime.info.tmuxSession, 'claude --dangerously-skip-permissions');
         this.setStatus(runtime, 'idle');
+      } else if (runtime.status === 'working' && runtime.lastDeliveredContent) {
+        // Claude Code 프롬프트에서 대기 중 (세션 없음) — 미전달 메시지 재전달
+        await this.retryDelivery(runtime);
       }
     }
   }
@@ -873,11 +901,65 @@ class AgentManager {
     if (!next) return;
 
     await this.deliverToAgent(runtime, next);
+    runtime.lastDeliveredContent = next;
+    runtime.lastDeliveredAt = Date.now();
+    runtime.deliveryRetryCount = 0;
     this.setStatus(runtime, 'working');
   }
 
   private async deliverToAgent(runtime: IAgentRuntime, content: string): Promise<void> {
     await sendBracketedPaste(runtime.info.tmuxSession, content);
+  }
+
+  private async retryDelivery(runtime: IAgentRuntime): Promise<void> {
+    if (!runtime.lastDeliveredContent) return;
+
+    if (runtime.deliveryRetryCount >= MAX_DELIVERY_RETRIES) {
+      log.warn(`agent ${runtime.info.id} delivery failed after ${MAX_DELIVERY_RETRIES} retries, giving up`);
+      const errorMsg = createMessage('agent', 'error', '메시지 전달에 실패했습니다. 다시 보내주세요.');
+      if (runtime.chatSessionId) {
+        await appendMessage(runtime.info.id, runtime.chatSessionId, errorMsg);
+      }
+      this.broadcast({ type: 'agent:message', agentId: runtime.info.id, message: errorMsg });
+      runtime.lastDeliveredContent = null;
+      runtime.lastDeliveredAt = 0;
+      runtime.deliveryRetryCount = 0;
+      this.setStatus(runtime, 'idle');
+      return;
+    }
+
+    runtime.deliveryRetryCount++;
+    log.info(`agent ${runtime.info.id} retrying delivery (attempt ${runtime.deliveryRetryCount})`);
+    await this.deliverToAgent(runtime, runtime.lastDeliveredContent);
+    runtime.lastDeliveredAt = Date.now();
+    this.setStatus(runtime, 'working');
+  }
+
+  private async retryOrDrainPending(runtime: IAgentRuntime): Promise<void> {
+    if (runtime.lastDeliveredContent) {
+      await this.retryDelivery(runtime);
+    } else if (runtime.messageQueue.length > 0) {
+      await this.drainQueue(runtime);
+    }
+  }
+
+  private async findUnansweredMessage(agentId: string, sessionId: string): Promise<string | null> {
+    try {
+      const { messages } = await readMessages(agentId, sessionId, { limit: 10 });
+      if (messages.length === 0) return null;
+
+      // 마지막 메시지부터 역순 탐색
+      for (let i = messages.length - 1; i >= 0; i--) {
+        const msg = messages[i];
+        if (msg.role === 'agent') return null; // agent 응답이 있으면 정상
+        if (msg.role === 'user' && msg.type === 'text') {
+          return msg.content;
+        }
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   // --- Status management ---
@@ -1030,11 +1112,22 @@ class AgentManager {
         claudeMdHash: '',
         pendingRestart: false,
         lastClaudeSessionId: null,
+        lastDeliveredContent: null,
+        lastDeliveredAt: 0,
+        deliveryRetryCount: 0,
       };
 
       this.agents.set(entry, runtime);
 
       await this.recoverTabs(runtime);
+
+      // 마지막 user 메시지에 대한 agent 응답이 없으면 재전달 대상으로 기록
+      const pendingContent = chatSessionId ? await this.findUnansweredMessage(entry, chatSessionId) : null;
+      if (pendingContent) {
+        runtime.lastDeliveredContent = pendingContent;
+        runtime.lastDeliveredAt = Date.now();
+        log.info(`agent ${entry} has unanswered message, will retry delivery`);
+      }
 
       if (agentSessions.has(tmuxSession)) {
         runtime.claudeMdHash = await this.computeClaudeMdHash(runtime);
@@ -1050,6 +1143,11 @@ class AgentManager {
         }
       } else {
         await this.startAgentSession(runtime);
+      }
+
+      // idle 상태로 복구된 후 미전달 메시지 재전달
+      if (runtime.status === 'idle' && runtime.lastDeliveredContent) {
+        await this.retryDelivery(runtime);
       }
     }
 
