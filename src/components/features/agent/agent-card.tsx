@@ -1,10 +1,10 @@
 import { Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import useAgentStore from '@/hooks/use-agent-store';
 import type { IAgentInfo, TAgentStatus } from '@/types/agent';
 
 interface IAgentCardProps {
   agent: IAgentInfo;
-  hasUnread?: boolean;
   onClick: () => void;
   onSettingsClick: () => void;
   isFadingOut?: boolean;
@@ -17,7 +17,8 @@ const statusConfig: Record<TAgentStatus, { className: string; label: string }> =
   offline: { className: 'bg-muted-foreground/10', label: '오프라인' },
 };
 
-const AgentCard = ({ agent, hasUnread, onClick, onSettingsClick, isFadingOut }: IAgentCardProps) => {
+const AgentCard = ({ agent, onClick, onSettingsClick, isFadingOut }: IAgentCardProps) => {
+  const hasUnread = useAgentStore((s) => s.unreadAgentIds.has(agent.id));
   const status = statusConfig[agent.status];
 
   const handleSettingsClick = (e: React.MouseEvent) => {

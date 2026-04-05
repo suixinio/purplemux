@@ -33,8 +33,6 @@ export const selectBlockedCount = (state: IAgentState): number =>
 
 export const selectUnreadCount = (state: IAgentState): number => state.unreadAgentIds.size;
 
-export const selectUnreadAgentIds = (state: IAgentState): Set<string> => state.unreadAgentIds;
-
 export const selectAgentList = (state: IAgentState): IAgentInfo[] =>
   Object.values(state.agents).sort(
     (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),

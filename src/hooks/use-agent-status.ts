@@ -1,18 +1,22 @@
 import { useEffect, useRef } from 'react';
 import useAgentStore from '@/hooks/use-agent-store';
+import useConfigStore from '@/hooks/use-config-store';
 import type { TAgentServerMessage } from '@/types/agent';
 
 const RECONNECT_DELAY = 3000;
 const MAX_RETRIES = 5;
 
 const useAgentStatus = () => {
+  const agentEnabled = useConfigStore((s) => s.agentEnabled);
   const wsRef = useRef<WebSocket | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(false);
   const retriesRef = useRef(0);
 
   useEffect(() => {
+    if (!agentEnabled) return;
     mountedRef.current = true;
+    retriesRef.current = 0;
 
     const connect = () => {
       if (!mountedRef.current) return;
@@ -68,7 +72,7 @@ const useAgentStatus = () => {
       wsRef.current?.close();
       wsRef.current = null;
     };
-  }, []);
+  }, [agentEnabled]);
 };
 
 export default useAgentStatus;

@@ -3,6 +3,7 @@ import useIsMobile from '@/hooks/use-is-mobile';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
 import Sidebar from '@/components/layout/sidebar';
 import useSync from '@/hooks/use-sync';
+import useAgentStatus from '@/hooks/use-agent-status';
 
 interface IPageShellProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface IPageShellProps {
 
 const PageShell = ({ children }: IPageShellProps) => {
   useSync();
+  useAgentStatus();
   const isMobile = useIsMobile();
 
   if (isMobile) {

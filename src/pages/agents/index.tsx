@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { getPageShellWithTitlebarLayout } from '@/components/layout/page-shell';
 import AgentCreateDialog from '@/components/features/agent/agent-create-dialog';
 import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
-import useAgentStatus from '@/hooks/use-agent-status';
 
 const LAST_AGENT_KEY = 'last-agent-id';
 
@@ -32,8 +31,6 @@ const AgentsPage = () => {
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
 
   const [createOpen, setCreateOpen] = useState(false);
-
-  useAgentStatus();
 
   useEffect(() => {
     fetchAgents();
