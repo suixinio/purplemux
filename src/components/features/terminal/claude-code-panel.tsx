@@ -162,7 +162,7 @@ const ClaudeCodePanel = ({
 
   if (view === 'loading' || (view === 'inactive' && sessions.length === 0 && isSessionListLoading)) {
     return (
-      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
+      <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
