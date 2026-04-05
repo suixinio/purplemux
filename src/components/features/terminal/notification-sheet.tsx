@@ -11,6 +11,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { dismissTab } from '@/hooks/use-claude-status';
@@ -65,14 +66,12 @@ const collectItems = (
   tabs: Record<string, ITabState>,
   workspaces: { id: string; name: string }[],
   targetState: 'busy' | 'ready-for-review',
-  excludeTabId?: string | null,
 ): INotificationItem[] => {
   const wsMap = new Map(workspaces.map((ws) => [ws.id, ws.name]));
   const items: INotificationItem[] = [];
 
   for (const [tabId, tab] of Object.entries(tabs)) {
     if (tab.cliState !== targetState) continue;
-    if (tabId === excludeTabId) continue;
     items.push({
       tabId,
       workspaceName: wsMap.get(tab.workspaceId) || tab.workspaceId,
@@ -95,17 +94,24 @@ const collectItems = (
 const NotificationItem = ({
   item,
   showActions,
+  isActiveTab,
   onDismiss,
   onNavigate,
 }: {
   item: INotificationItem;
   showActions: boolean;
+  isActiveTab?: boolean;
   onDismiss?: (tabId: string) => void;
   onNavigate?: (workspaceId: string, tabId: string) => void;
 }) => (
   <div
-    className="flex items-start gap-3 rounded-md border border-border/50 bg-muted/30 px-3 py-2.5 transition-colors hover:bg-muted/50 cursor-pointer"
-    onClick={() => onNavigate?.(item.workspaceId, item.tabId)}
+    className={cn(
+      'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
+      isActiveTab
+        ? 'border-ui-purple/30 bg-ui-purple/5'
+        : 'border-border/50 bg-muted/30 hover:bg-muted/50 cursor-pointer',
+    )}
+    onClick={isActiveTab ? undefined : () => onNavigate?.(item.workspaceId, item.tabId)}
   >
     <span className="mt-1 shrink-0">
       {showActions ? (
@@ -130,7 +136,7 @@ const NotificationItem = ({
           {item.lastUserMessage}
         </p>
       )}
-      {showActions && (
+      {showActions && !isActiveTab && (
         <div className="mt-2 flex items-center gap-1.5">
           <Button
             variant="outline"
@@ -162,13 +168,13 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   const activeTabId = useActiveTabId();
 
   const busyItems = useMemo(
-    () => collectItems(tabs, workspaces, 'busy', activeTabId),
-    [tabs, workspaces, activeTabId],
+    () => collectItems(tabs, workspaces, 'busy'),
+    [tabs, workspaces],
   );
 
   const reviewItems = useMemo(
-    () => collectItems(tabs, workspaces, 'ready-for-review', activeTabId),
-    [tabs, workspaces, activeTabId],
+    () => collectItems(tabs, workspaces, 'ready-for-review'),
+    [tabs, workspaces],
   );
 
   const handleDismiss = useCallback((tabId: string) => {
@@ -188,6 +194,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" showCloseButton={false} className="w-80 sm:max-w-80">
+        <div className="h-titlebar shrink-0" />
         <SheetHeader>
           <SheetTitle>알림</SheetTitle>
         </SheetHeader>
@@ -210,6 +217,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                         key={item.tabId}
                         item={item}
                         showActions={false}
+                        isActiveTab={item.tabId === activeTabId}
                         onNavigate={handleNavigate}
                       />
                     ))}
@@ -228,6 +236,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                         key={item.tabId}
                         item={item}
                         showActions
+                        isActiveTab={item.tabId === activeTabId}
                         onDismiss={handleDismiss}
                         onNavigate={handleNavigate}
                       />
