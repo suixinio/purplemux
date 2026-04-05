@@ -93,6 +93,19 @@ const useClaudeStatus = () => {
 
     connect();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      const state = sharedWs?.readyState;
+      if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) return;
+      if (retryTimerRef.current) {
+        clearTimeout(retryTimerRef.current);
+        retryTimerRef.current = null;
+      }
+      retryCountRef.current = 0;
+      connect();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       mountedRef.current = false;
       if (retryTimerRef.current) {
@@ -103,6 +116,7 @@ const useClaudeStatus = () => {
         sharedWs.close();
         sharedWs = null;
       }
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
 };

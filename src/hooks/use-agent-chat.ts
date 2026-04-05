@@ -295,11 +295,22 @@ const useAgentChat = (agentId: string) => {
 
     connect();
 
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return;
+      const state = wsRef.current?.readyState;
+      if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) return;
+      if (timerRef.current) clearTimeout(timerRef.current);
+      retriesRef.current = 0;
+      connect();
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       mountedRef.current = false;
       if (timerRef.current) clearTimeout(timerRef.current);
       wsRef.current?.close();
       wsRef.current = null;
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [agentId]);
 
