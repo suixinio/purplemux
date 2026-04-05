@@ -1346,7 +1346,7 @@ class AgentManager {
 
     await this.emitActivity(runtime, `탭 생성 중: ${tabName}`, { workspaceId, taskTitle });
 
-    const newTab = await addTabToPane(workspaceId, targetPane.id, tabName, cwd, 'claude-code', undefined, agentId);
+    const newTab = await addTabToPane(workspaceId, targetPane.id, tabName, cwd, 'claude-code');
     if (!newTab) throw new Error('Failed to create tab session');
 
     const tabHookPath = await this.writeTabHookSettings(agentId, newTab.id);
