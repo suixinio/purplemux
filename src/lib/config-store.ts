@@ -83,14 +83,8 @@ export const hashPassword = async (plain: string): Promise<string> => {
   return `scrypt:${salt.toString('hex')}:${derived.toString('hex')}`;
 };
 
-const isLegacyHash = (hash: string): boolean => !hash.startsWith('scrypt:');
-
 export const verifyPassword = async (plain: string, stored: string): Promise<boolean> => {
-  if (isLegacyHash(stored)) {
-    const hash = crypto.createHash('sha512').update(plain).digest('hex');
-    if (hash.length !== stored.length) return false;
-    return crypto.timingSafeEqual(Buffer.from(hash), Buffer.from(stored));
-  }
+  if (!stored.startsWith('scrypt:')) return false;
   const [, saltHex, hashHex] = stored.split(':');
   const salt = Buffer.from(saltHex, 'hex');
   const expected = Buffer.from(hashHex, 'hex');
@@ -102,8 +96,6 @@ export const verifyPassword = async (plain: string, stored: string): Promise<boo
   });
   return crypto.timingSafeEqual(derived, expected);
 };
-
-export const needsRehash = (hash: string): boolean => isLegacyHash(hash);
 
 export const getConfig = async (): Promise<IConfigData> => {
   const data = await readConfig();
@@ -119,7 +111,7 @@ export const updateConfig = async (updates: Partial<Omit<IConfigData, 'updatedAt
 
 export const needsSetup = async (): Promise<boolean> => {
   const data = await readConfig();
-  return !data?.authPassword;
+  return !data?.authPassword || !data.authPassword.startsWith('scrypt:');
 };
 
 export const initConfigStore = async (): Promise<void> => {

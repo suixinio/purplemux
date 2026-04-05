@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { verifyPassword, needsRehash, hashPassword, updateConfig } from '@/lib/config-store';
+import { verifyPassword } from '@/lib/config-store';
 import { signSessionToken, buildCookieHeader, isSecureRequest } from '@/lib/auth';
 
 const MAX_FAILURES = 16;
@@ -52,12 +52,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (!password || !storedHash || !(await verifyPassword(password, storedHash))) {
     recordFailure(ip);
     return res.status(401).json({ error: '비밀번호가 올바르지 않습니다.' });
-  }
-
-  if (needsRehash(storedHash)) {
-    const newHash = await hashPassword(password);
-    await updateConfig({ authPassword: newHash });
-    process.env.AUTH_PASSWORD = newHash;
   }
 
   failureMap.delete(ip);
