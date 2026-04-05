@@ -39,6 +39,64 @@ const buildHookSettings = (port: number) => ({
   },
 });
 
+export const buildAgentTabHookSettings = (port: number, agentId: string, tabId: string) => ({
+  hooks: {
+    Stop: [
+      {
+        matcher: '',
+        hooks: [
+          {
+            type: 'http',
+            url: `http://localhost:${port}/api/agent-rpc/${agentId}/tab/${tabId}/hook`,
+            timeout: 3,
+          },
+        ],
+      },
+    ],
+    StopFailure: [
+      {
+        matcher: '',
+        hooks: [
+          {
+            type: 'http',
+            url: `http://localhost:${port}/api/agent-rpc/${agentId}/tab/${tabId}/hook`,
+            timeout: 3,
+          },
+        ],
+      },
+    ],
+  },
+});
+
+export const buildAgentBrainHookSettings = (port: number, agentId: string) => ({
+  hooks: {
+    Stop: [
+      {
+        matcher: '',
+        hooks: [
+          {
+            type: 'http',
+            url: `http://localhost:${port}/api/agent-rpc/${agentId}/brain-hook`,
+            timeout: 3,
+          },
+        ],
+      },
+    ],
+    StopFailure: [
+      {
+        matcher: '',
+        hooks: [
+          {
+            type: 'http',
+            url: `http://localhost:${port}/api/agent-rpc/${agentId}/brain-hook`,
+            timeout: 3,
+          },
+        ],
+      },
+    ],
+  },
+});
+
 export const ensureHookSettings = async (actualPort?: number): Promise<void> => {
   const port = actualPort ?? parseInt(process.env.PORT || '8022', 10);
   const settings = buildHookSettings(port);

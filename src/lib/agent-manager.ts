@@ -38,6 +38,7 @@ import {
 } from '@/lib/layout-store';
 import { collectPanes } from '@/lib/layout-tree';
 import { getWorkspaceById } from '@/lib/workspace-store';
+import { buildAgentTabHookSettings, buildAgentBrainHookSettings } from '@/lib/hook-settings';
 import type {
   TAgentStatus,
   IAgentConfig,
@@ -82,7 +83,7 @@ const STATUS_POLL_INTERVAL = 5_000;
 const TMUX_COLS = 200;
 const TMUX_ROWS = 50;
 const MAX_CONCURRENT_TABS = 5;
-const TAB_POLL_INTERVAL = 5_000;
+const TAB_POLL_INTERVAL = 30_000;
 const TAB_MESSAGE_QUEUE_MAX = 5;
 const JSONL_TAIL_SIZE = 8192;
 const DELIVERY_CHECK_DELAY_MS = 30_000;
@@ -389,6 +390,7 @@ class AgentManager {
       await this.deliverToAgent(runtime, content);
       this.markDelivered(runtime, content);
       this.setStatus(runtime, 'working');
+      runtime.relaySetAt = Date.now();
       return { id: message.id, status: 'sent' };
     }
 
@@ -732,10 +734,11 @@ class AgentManager {
 
     try {
       await this.writeAgentClaudeMd(runtime);
+      const brainHookPath = await this.writeAgentHookSettings(info.id);
       await createSession(info.tmuxSession, TMUX_COLS, TMUX_ROWS, agentDir);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
-      await sendKeys(info.tmuxSession, 'claude --dangerously-skip-permissions');
+      await sendKeys(info.tmuxSession, `claude --settings ${brainHookPath} --dangerously-skip-permissions`);
 
       // Accept workspace trust prompt if shown
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -847,7 +850,8 @@ class AgentManager {
       const command = await getPaneCurrentCommand(runtime.info.tmuxSession);
       if (command && ['zsh', 'bash', 'fish', 'sh'].includes(command)) {
         // Claude exited, restart
-        await sendKeys(runtime.info.tmuxSession, 'claude --dangerously-skip-permissions');
+        const hookPath = this.getAgentHookPath(runtime.info.id);
+        await sendKeys(runtime.info.tmuxSession, `claude --settings ${hookPath} --dangerously-skip-permissions`);
         this.setStatus(runtime, 'idle');
       } else if (runtime.status === 'working' && runtime.lastDeliveredContent) {
         // Claude Code 프롬프트에서 대기 중 (세션 없음) — 미전달 메시지 재전달
@@ -1058,6 +1062,94 @@ class AgentManager {
     await fs.writeFile(soulPath, content, 'utf-8');
   }
 
+  // --- Hook settings ---
+
+  private getAgentHookPath(agentId: string): string {
+    return path.join(getAgentDir(agentId), 'hooks.json');
+  }
+
+  private getTabHookPath(agentId: string, tabId: string): string {
+    return path.join(getAgentDir(agentId), `hooks-${tabId}.json`);
+  }
+
+  private async writeAgentHookSettings(agentId: string): Promise<string> {
+    const port = parseInt(process.env.PORT || '8022', 10);
+    const hookPath = this.getAgentHookPath(agentId);
+    const settings = buildAgentBrainHookSettings(port, agentId);
+    await fs.writeFile(hookPath, JSON.stringify(settings, null, 2), 'utf-8');
+    return hookPath;
+  }
+
+  private async writeTabHookSettings(agentId: string, tabId: string): Promise<string> {
+    const port = parseInt(process.env.PORT || '8022', 10);
+    const hookPath = this.getTabHookPath(agentId, tabId);
+    const settings = buildAgentTabHookSettings(port, agentId, tabId);
+    await fs.writeFile(hookPath, JSON.stringify(settings, null, 2), 'utf-8');
+    return hookPath;
+  }
+
+  async onTabHook(agentId: string, tabId: string): Promise<void> {
+    const runtime = this.agents.get(agentId);
+    if (!runtime) return;
+
+    const tr = runtime.tabs.get(tabId);
+    if (!tr) return;
+    if (tr.tab.status === 'completed' || tr.tab.status === 'error') return;
+
+    const newStatus = await this.detectTabStatus(tr);
+    if (newStatus === tr.prevStatus) return;
+
+    tr.tab.status = newStatus;
+    tr.tab.lastActivity = new Date().toISOString();
+    this.broadcastTabStatus(agentId, tabId, newStatus);
+
+    if ((newStatus === 'completed' || newStatus === 'error') && tr.prevStatus === 'working') {
+      await this.notifyAgentTabComplete(runtime, tabId, newStatus);
+    }
+
+    if (newStatus === 'idle' && tr.prevStatus === 'working') {
+      if (tr.messageQueue.length > 0) {
+        const next = tr.messageQueue.shift()!;
+        await sendBracketedPaste(tr.tab.tmuxSession, next);
+        tr.tab.status = 'working';
+        this.broadcastTabStatus(agentId, tabId, 'working');
+      } else {
+        tr.tab.status = 'completed';
+        tr.tab.lastActivity = new Date().toISOString();
+        this.broadcastTabStatus(agentId, tabId, 'completed');
+        await this.notifyAgentTabComplete(runtime, tabId, 'completed');
+      }
+    }
+
+    tr.prevStatus = tr.tab.status;
+    await this.persistTabs(runtime);
+  }
+
+  async onBrainHook(agentId: string): Promise<void> {
+    const runtime = this.agents.get(agentId);
+    if (!runtime) return;
+
+    runtime.relaySetAt = Date.now();
+
+    const panePid = await getSessionPanePid(runtime.info.tmuxSession);
+    if (!panePid) return;
+
+    const sessionInfo = await detectActiveSession(panePid);
+    if (sessionInfo.status !== 'running' || !sessionInfo.jsonlPath) return;
+
+    runtime.lastClaudeSessionId = sessionInfo.sessionId;
+
+    const derivedStatus = await this.deriveStatusFromSession(runtime, sessionInfo.jsonlPath);
+    if (derivedStatus !== runtime.status) {
+      this.setStatus(runtime, derivedStatus);
+    }
+
+    if (derivedStatus === 'idle') {
+      this.clearDeliveryTracking(runtime);
+      await this.retryOrDrainPending(runtime);
+    }
+  }
+
   private parseConfigMd(raw: string): IAgentConfig | null {
     const match = raw.match(/^---\n([\s\S]*?)\n---/);
     if (!match) return null;
@@ -1254,11 +1346,13 @@ class AgentManager {
 
     await this.emitActivity(runtime, `탭 생성 중: ${tabName}`, { workspaceId, taskTitle });
 
-    const newTab = await addTabToPane(workspaceId, targetPane.id, tabName, cwd, 'claude-code');
+    const newTab = await addTabToPane(workspaceId, targetPane.id, tabName, cwd, 'claude-code', undefined, agentId);
     if (!newTab) throw new Error('Failed to create tab session');
 
+    const tabHookPath = await this.writeTabHookSettings(agentId, newTab.id);
+
     await new Promise((resolve) => setTimeout(resolve, 500));
-    await sendKeys(newTab.sessionName, 'claude --dangerously-skip-permissions');
+    await sendKeys(newTab.sessionName, `claude --settings ${tabHookPath} --dangerously-skip-permissions`);
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
     await sendRawKeys(newTab.sessionName, 'Enter');
@@ -1581,11 +1675,18 @@ class AgentManager {
           await this.notifyAgentTabComplete(runtime, tr.tab.tabId, newStatus);
         }
 
-        if (newStatus === 'idle' && tr.prevStatus === 'working' && tr.messageQueue.length > 0) {
-          const next = tr.messageQueue.shift()!;
-          await sendBracketedPaste(tr.tab.tmuxSession, next);
-          tr.tab.status = 'working';
-          this.broadcastTabStatus(runtime.info.id, tr.tab.tabId, 'working');
+        if (newStatus === 'idle' && tr.prevStatus === 'working') {
+          if (tr.messageQueue.length > 0) {
+            const next = tr.messageQueue.shift()!;
+            await sendBracketedPaste(tr.tab.tmuxSession, next);
+            tr.tab.status = 'working';
+            this.broadcastTabStatus(runtime.info.id, tr.tab.tabId, 'working');
+          } else {
+            tr.tab.status = 'completed';
+            tr.tab.lastActivity = new Date().toISOString();
+            this.broadcastTabStatus(runtime.info.id, tr.tab.tabId, 'completed');
+            await this.notifyAgentTabComplete(runtime, tr.tab.tabId, 'completed');
+          }
         }
 
         tr.prevStatus = newStatus;
