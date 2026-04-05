@@ -31,10 +31,14 @@ export const getAgentToken = (): string => {
   return token;
 };
 
-export const verifyAgentToken = (req: NextApiRequest): boolean => {
-  const value = req.headers['x-agent-token'];
-  if (!value || typeof value !== 'string') return false;
+export const verifyTokenValue = (value: string | null | undefined): boolean => {
+  if (!value) return false;
   const expected = getAgentToken();
   if (value.length !== expected.length) return false;
   return timingSafeEqual(Buffer.from(value), Buffer.from(expected));
+};
+
+export const verifyAgentToken = (req: NextApiRequest): boolean => {
+  const value = req.headers['x-agent-token'];
+  return verifyTokenValue(typeof value === 'string' ? value : undefined);
 };

@@ -11,6 +11,9 @@ interface IDocumentProps extends DocumentInitialProps {
   hasAuthPassword: boolean;
 }
 
+const safeJson = (v: unknown) =>
+  JSON.stringify(v).replace(/</g, '\\u003c').replace(/>/g, '\\u003e').replace(/&/g, '\\u0026');
+
 class MyDocument extends Document<IDocumentProps> {
   static async getInitialProps(ctx: DocumentContext): Promise<IDocumentProps> {
     const initialProps = await Document.getInitialProps(ctx);
@@ -45,7 +48,7 @@ class MyDocument extends Document<IDocumentProps> {
 
     const initScript = [
       `window.__SB__={w:${sidebarWidth},c:${sidebarCollapsed}}`,
-      `window.__CFG__={ae:${agentEnabled},eu:${JSON.stringify(editorUrl)},dsp:${dangerouslySkipPermissions},hap:${hasAuthPassword}}`,
+      `window.__CFG__={ae:${agentEnabled},eu:${safeJson(editorUrl)},dsp:${dangerouslySkipPermissions},hap:${hasAuthPassword}}`,
     ].join(';');
 
     return (

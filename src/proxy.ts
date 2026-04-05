@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { verifyTokenValue } from '@/lib/agent-token';
 
 export const proxy = async (request: NextRequest) => {
+  const agentToken = request.headers.get('x-agent-token');
+  if (agentToken && verifyTokenValue(agentToken)) {
+    return NextResponse.next();
+  }
+
   const token = await getToken({
     req: request,
     secret: process.env.NEXTAUTH_SECRET,

@@ -5,11 +5,17 @@ import { promisify } from 'util';
 const execFile = promisify(execFileCb);
 const CMD_TIMEOUT = 10000;
 
+const parsePort = (v: unknown): number | null => {
+  const n = Number(v);
+  return Number.isInteger(n) && n > 0 && n <= 65535 ? n : null;
+};
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
-    const { httpsPort, localPort } = req.body ?? {};
+    const httpsPort = parsePort(req.body?.httpsPort);
+    const localPort = parsePort(req.body?.localPort);
     if (!httpsPort || !localPort) {
-      return res.status(400).json({ error: 'httpsPort와 localPort가 필요합니다' });
+      return res.status(400).json({ error: '유효한 포트 번호가 필요합니다 (1-65535)' });
     }
 
     try {
@@ -26,9 +32,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'DELETE') {
-    const { httpsPort } = req.body ?? {};
+    const httpsPort = parsePort(req.body?.httpsPort);
     if (!httpsPort) {
-      return res.status(400).json({ error: 'httpsPort가 필요합니다' });
+      return res.status(400).json({ error: '유효한 포트 번호가 필요합니다 (1-65535)' });
     }
 
     try {
