@@ -12,6 +12,7 @@ import type {
 
 interface IAgentState {
   agents: Record<string, IAgentInfo>;
+  unreadAgentIds: Set<string>;
   isLoading: boolean;
   error: string | null;
 
@@ -21,12 +22,18 @@ interface IAgentState {
   deleteAgent: (id: string) => Promise<boolean>;
   syncFromServer: (agents: Array<{ id: string; name: string; status: TAgentStatus }>) => void;
   updateStatus: (id: string, status: TAgentStatus) => void;
+  markUnread: (id: string) => void;
+  markRead: (id: string) => void;
   addOptimistic: (agent: IAgentInfo) => void;
   removeOptimistic: (id: string) => void;
 }
 
 export const selectBlockedCount = (state: IAgentState): number =>
   Object.values(state.agents).filter((a) => a.status === 'blocked').length;
+
+export const selectUnreadCount = (state: IAgentState): number => state.unreadAgentIds.size;
+
+export const selectUnreadAgentIds = (state: IAgentState): Set<string> => state.unreadAgentIds;
 
 export const selectAgentList = (state: IAgentState): IAgentInfo[] =>
   Object.values(state.agents).sort(
@@ -35,6 +42,7 @@ export const selectAgentList = (state: IAgentState): IAgentInfo[] =>
 
 const useAgentStore = create<IAgentState>((set) => ({
   agents: {},
+  unreadAgentIds: new Set<string>(),
   isLoading: true,
   error: null,
 
@@ -204,6 +212,24 @@ const useAgentStore = create<IAgentState>((set) => ({
           [id]: { ...agent, status },
         },
       };
+    });
+  },
+
+  markUnread: (id) => {
+    set((state) => {
+      if (state.unreadAgentIds.has(id)) return state;
+      const next = new Set(state.unreadAgentIds);
+      next.add(id);
+      return { unreadAgentIds: next };
+    });
+  },
+
+  markRead: (id) => {
+    set((state) => {
+      if (!state.unreadAgentIds.has(id)) return state;
+      const next = new Set(state.unreadAgentIds);
+      next.delete(id);
+      return { unreadAgentIds: next };
     });
   },
 

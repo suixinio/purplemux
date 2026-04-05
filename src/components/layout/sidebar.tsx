@@ -33,7 +33,7 @@ import useWorkspaceStore from '@/hooks/use-workspace-store';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
 import NotificationSheet from '@/components/features/terminal/notification-sheet';
-import useAgentStore, { selectBlockedCount } from '@/hooks/use-agent-store';
+import useAgentStore, { selectBlockedCount, selectUnreadCount } from '@/hooks/use-agent-store';
 import useConfigStore from '@/hooks/use-config-store';
 import { useSelectWorkspace } from '@/hooks/use-sidebar-actions';
 
@@ -56,6 +56,7 @@ const Sidebar = () => {
   const { busyCount, attentionCount } = useNotificationCount();
   const hasActive = busyCount > 0 || attentionCount > 0;
   const blockedCount = useAgentStore(selectBlockedCount);
+  const unreadCount = useAgentStore(selectUnreadCount);
   const agentEnabled = useConfigStore((s) => s.agentEnabled);
   const selectWorkspace = useSelectWorkspace();
 
@@ -402,11 +403,15 @@ const Sidebar = () => {
                   aria-label="에이전트"
                 >
                   <Bot className="h-3.5 w-3.5" />
-                  {blockedCount > 0 && (
+                  {unreadCount > 0 ? (
+                    <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-teal px-0.5 text-[9px] font-medium leading-none text-white">
+                      {unreadCount}
+                    </span>
+                  ) : blockedCount > 0 ? (
                     <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-amber px-0.5 text-[9px] font-medium leading-none text-white">
                       {blockedCount}
                     </span>
-                  )}
+                  ) : null}
                 </button>
               )}
               <button

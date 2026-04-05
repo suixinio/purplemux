@@ -9,7 +9,7 @@ import AgentCreateDialog from '@/components/features/agent/agent-create-dialog';
 import AgentSettingsSheet from '@/components/features/agent/agent-settings-sheet';
 import AgentDeleteDialog from '@/components/features/agent/agent-delete-dialog';
 import AgentChatPanel from '@/components/features/agent/agent-chat-panel';
-import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
+import useAgentStore, { selectAgentList, selectUnreadAgentIds } from '@/hooks/use-agent-store';
 import useAgentStatus from '@/hooks/use-agent-status';
 import type { IAgentInfo } from '@/types/agent';
 
@@ -46,6 +46,7 @@ const AgentPanel = () => {
   const router = useRouter();
   const activeAgentId = (router.query.agentId as string) || null;
   const agents = useAgentStore(useShallow(selectAgentList));
+  const unreadAgentIds = useAgentStore(selectUnreadAgentIds);
   const isLoading = useAgentStore((s) => s.isLoading);
   const error = useAgentStore((s) => s.error);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
@@ -145,6 +146,7 @@ const AgentPanel = () => {
                 <AgentCard
                   key={agent.id}
                   agent={agent}
+                  hasUnread={unreadAgentIds.has(agent.id)}
                   onClick={() => handleCardClick(agent)}
                   onSettingsClick={() => handleSettingsClick(agent)}
                   isFadingOut={fadingOutId === agent.id}

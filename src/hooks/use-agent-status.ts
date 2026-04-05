@@ -38,6 +38,10 @@ const useAgentStatus = () => {
           if (data.type === 'agent:status') {
             store.updateStatus(data.agentId, data.status);
           }
+
+          if (data.type === 'agent:message' && data.message.role === 'agent' && data.message.type !== 'activity') {
+            store.markUnread(data.agentId);
+          }
         } catch {
           // ignore parse errors
         }

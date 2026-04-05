@@ -26,11 +26,16 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
   const agent = useAgentStore((s) => s.agents[agentId] ?? null);
   const deleteAgent = useAgentStore((s) => s.deleteAgent);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
+  const markRead = useAgentStore((s) => s.markRead);
   const isStoreLoading = useAgentStore((s) => s.isLoading);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
+
+  useEffect(() => {
+    markRead(agentId);
+  }, [agentId, markRead]);
 
   const {
     messages,

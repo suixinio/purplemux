@@ -4,6 +4,7 @@ import type { IAgentInfo, TAgentStatus } from '@/types/agent';
 
 interface IAgentCardProps {
   agent: IAgentInfo;
+  hasUnread?: boolean;
   onClick: () => void;
   onSettingsClick: () => void;
   isFadingOut?: boolean;
@@ -16,7 +17,7 @@ const statusConfig: Record<TAgentStatus, { className: string; label: string }> =
   offline: { className: 'bg-muted-foreground/10', label: '오프라인' },
 };
 
-const AgentCard = ({ agent, onClick, onSettingsClick, isFadingOut }: IAgentCardProps) => {
+const AgentCard = ({ agent, hasUnread, onClick, onSettingsClick, isFadingOut }: IAgentCardProps) => {
   const status = statusConfig[agent.status];
 
   const handleSettingsClick = (e: React.MouseEvent) => {
@@ -43,6 +44,9 @@ const AgentCard = ({ agent, onClick, onSettingsClick, isFadingOut }: IAgentCardP
             aria-label={`상태: ${status.label}`}
           />
           <span className="text-sm font-medium">{agent.name}</span>
+          {hasUnread && (
+            <span className="h-1.5 w-1.5 rounded-full bg-ui-teal" />
+          )}
         </div>
         <Button
           variant="ghost"
