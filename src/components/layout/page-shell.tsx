@@ -1,9 +1,10 @@
-import type { ReactElement, ReactNode } from 'react';
+import { type ReactElement, type ReactNode, useEffect } from 'react';
 import useIsMobile from '@/hooks/use-is-mobile';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
 import Sidebar from '@/components/layout/sidebar';
 import useSync from '@/hooks/use-sync';
 import useAgentStatus from '@/hooks/use-agent-status';
+import useConfigStore from '@/hooks/use-config-store';
 
 interface IPageShellProps {
   children: ReactNode;
@@ -12,6 +13,14 @@ interface IPageShellProps {
 const PageShell = ({ children }: IPageShellProps) => {
   useSync();
   useAgentStatus();
+
+  useEffect(() => {
+    const cfg = (window as unknown as Record<string, unknown>).__CFG__ as
+      | { ae: boolean } | undefined;
+    if (cfg?.ae && !useConfigStore.getState().agentEnabled) {
+      useConfigStore.setState({ agentEnabled: true });
+    }
+  }, []);
   const isMobile = useIsMobile();
 
   if (isMobile) {

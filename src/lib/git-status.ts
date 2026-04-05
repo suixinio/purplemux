@@ -1,6 +1,7 @@
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 import { getSessionCwd } from '@/lib/tmux';
+import { getCached, setCached } from '@/lib/stats/cache';
 
 const execFile = promisify(execFileCb);
 
@@ -66,11 +67,17 @@ const getStashCount = async (cwd: string): Promise<number> => {
   }
 };
 
+const GIT_STATUS_TTL = 15_000;
+
 export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | null> => {
   const cwd = await getSessionCwd(tmuxSession);
   if (!cwd) {
     throw new Error('tmux-session-not-found');
   }
+
+  const cacheKey = `git-status:${cwd}`;
+  const cached = getCached<IGitStatus | null>(cacheKey);
+  if (cached !== null) return cached;
 
   try {
     const { stdout } = await execFile(
@@ -85,14 +92,17 @@ export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | nu
       getStashCount(cwd),
     ]);
 
-    return {
+    const status: IGitStatus = {
       ...porcelain,
       ...aheadBehind,
       stash,
     };
+    setCached(cacheKey, status, GIT_STATUS_TTL);
+    return status;
   } catch (err: unknown) {
     const exitCode = (err as { code?: number }).code;
     if (exitCode === 128) {
+      setCached(cacheKey, null, GIT_STATUS_TTL);
       return null;
     }
     throw err;

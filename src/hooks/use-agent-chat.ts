@@ -156,6 +156,7 @@ const useAgentChat = (agentId: string) => {
   const mountedRef = useRef(false);
   const retriesRef = useRef(0);
   const sendingRef = useRef(false);
+  const lastSyncRef = useRef(0);
 
   const fetchHistory = useCallback(async () => {
     if (!agentId) return;
@@ -307,9 +308,13 @@ const useAgentChat = (agentId: string) => {
     fetchHistory();
   }, [fetchHistory]);
 
-  // Re-sync on reconnect
+  // Re-sync on reconnect (throttled)
   useEffect(() => {
     if (state.isConnected && !state.isLoading && state.sessionId) {
+      const now = Date.now();
+      if (now - lastSyncRef.current < RECONNECT_DELAY) return;
+      lastSyncRef.current = now;
+
       const syncMissed = async () => {
         try {
           const res = await fetch(`/api/agent/${agentId}/chat?sessionId=${state.sessionId}`);
