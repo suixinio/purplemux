@@ -120,7 +120,7 @@ class AgentManager {
 
     await fs.mkdir(AGENTS_DIR, { recursive: true });
     await this.scanExistingAgents();
-    log.info(`agent manager initialized (${this.agents.size} agents)`);
+    log.debug(`agent manager initialized (${this.agents.size} agents)`);
   }
 
   addClient(ws: WebSocket): void {
@@ -151,7 +151,7 @@ class AgentManager {
 
   // --- CRUD ---
 
-  async createAgent(name: string, role: string): Promise<IAgentInfo> {
+  async createAgent(name: string, role: string, avatar?: string): Promise<IAgentInfo> {
     for (const r of this.agents.values()) {
       if (r.info.name === name) {
         throw new Error('Agent name already exists');
@@ -167,6 +167,7 @@ class AgentManager {
       role,
       autonomy: 'conservative',
       createdAt: now,
+      ...(avatar ? { avatar } : {}),
     };
 
     await ensureAgentDir(id);
@@ -183,6 +184,7 @@ class AgentManager {
       status: 'offline',
       createdAt: now,
       tmuxSession,
+      ...(avatar ? { avatar } : {}),
     };
 
     const runtime: IAgentRuntime = {
@@ -294,7 +296,7 @@ class AgentManager {
     this.broadcast(event);
   }
 
-  async updateAgent(agentId: string, update: { name?: string; role?: string; soul?: string }): Promise<IAgentInfo | null> {
+  async updateAgent(agentId: string, update: { name?: string; role?: string; soul?: string; avatar?: string }): Promise<IAgentInfo | null> {
     const runtime = this.agents.get(agentId);
     if (!runtime) return null;
 
@@ -308,11 +310,13 @@ class AgentManager {
 
     if (update.name) runtime.info.name = update.name;
     if (update.role) runtime.info.role = update.role;
+    if (update.avatar !== undefined) runtime.info.avatar = update.avatar || undefined;
 
     const config = await this.readConfig(agentId);
     if (config) {
       if (update.name) config.name = update.name;
       if (update.role) config.role = update.role;
+      if (update.avatar !== undefined) config.avatar = update.avatar || undefined;
       await this.writeConfig(agentId, config);
     }
 
@@ -774,7 +778,7 @@ class AgentManager {
       // Detect Claude CLI session change (e.g. after force-kill + restart)
       const claudeSessionId = sessionInfo.sessionId;
       if (runtime.lastClaudeSessionId && claudeSessionId && claudeSessionId !== runtime.lastClaudeSessionId) {
-        log.info(`agent ${runtime.info.id} Claude session changed: ${runtime.lastClaudeSessionId} → ${claudeSessionId}`);
+        log.debug(`agent ${runtime.info.id} Claude session changed: ${runtime.lastClaudeSessionId} → ${claudeSessionId}`);
         runtime.lastClaudeSessionId = claudeSessionId;
         this.setStatus(runtime, 'idle');
         if (runtime.messageQueue.length > 0) {
@@ -883,7 +887,7 @@ class AgentManager {
     runtime.status = status;
     runtime.info.status = status;
     this.broadcastStatus(runtime.info.id, status);
-    log.info(`agent ${runtime.info.id} status: ${status}`);
+    log.debug(`agent ${runtime.info.id} status: ${status}`);
 
     if (status === 'idle' && runtime.pendingRestart) {
       runtime.pendingRestart = false;
@@ -917,16 +921,16 @@ class AgentManager {
 
   private async writeConfig(agentId: string, config: IAgentConfig): Promise<void> {
     const configPath = path.join(getAgentDir(agentId), 'config.md');
-    const content = [
+    const lines = [
       '---',
       `name: ${config.name}`,
       `role: ${config.role}`,
       `autonomy: ${config.autonomy}`,
       `createdAt: ${config.createdAt}`,
-      '---',
-      '',
-    ].join('\n');
-    await fs.writeFile(configPath, content, 'utf-8');
+    ];
+    if (config.avatar) lines.push(`avatar: ${config.avatar}`);
+    lines.push('---', '');
+    await fs.writeFile(configPath, lines.join('\n'), 'utf-8');
   }
 
   async readSoul(agentId: string): Promise<string> {
@@ -960,6 +964,8 @@ class AgentManager {
         config.autonomy = line.slice(10).trim();
       } else if (line.startsWith('createdAt: ')) {
         config.createdAt = line.slice(11).trim();
+      } else if (line.startsWith('avatar: ')) {
+        config.avatar = line.slice(8).trim();
       }
     }
 
@@ -1008,6 +1014,7 @@ class AgentManager {
         status: 'offline',
         createdAt: config.createdAt,
         tmuxSession,
+        ...(config.avatar ? { avatar: config.avatar } : {}),
       };
 
       const runtime: IAgentRuntime = {
@@ -1039,7 +1046,7 @@ class AgentManager {
           this.setStatus(runtime, 'idle');
           this.startStatusPolling(runtime);
           if (runtime.tabs.size > 0) this.startTabPolling(runtime);
-          log.info(`recovered agent session: ${entry} (${tmuxSession})`);
+          log.debug(`recovered agent session: ${entry} (${tmuxSession})`);
         }
       } else {
         await this.startAgentSession(runtime);
@@ -1515,9 +1522,9 @@ class AgentManager {
             messageQueue: [],
             prevStatus: tab.status,
           });
-          log.info(`recovered agent tab: ${tab.tabId} (${tab.tmuxSession})`);
+          log.debug(`recovered agent tab: ${tab.tabId} (${tab.tmuxSession})`);
         } else {
-          log.info(`agent tab session dead, removing: ${tab.tabId}`);
+          log.debug(`agent tab session dead, removing: ${tab.tabId}`);
         }
       }
 
@@ -1542,7 +1549,7 @@ class AgentManager {
       }
     }
     this.clients.clear();
-    log.info('agent manager shutdown');
+    log.debug('agent manager shutdown');
   }
 }
 

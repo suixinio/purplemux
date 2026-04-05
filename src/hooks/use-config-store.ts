@@ -22,6 +22,25 @@ interface IConfigState {
   changePassword: (password: string) => void;
 }
 
+const getInitialConfig = (): Pick<IConfigState, 'agentEnabled' | 'editorUrl' | 'dangerouslySkipPermissions' | 'hasAuthPassword'> => {
+  if (typeof window !== 'undefined') {
+    const cfg = (window as unknown as Record<string, unknown>).__CFG__ as
+      | { ae: boolean; eu: string; dsp: boolean; hap: boolean }
+      | undefined;
+    if (cfg) {
+      return {
+        agentEnabled: cfg.ae,
+        editorUrl: cfg.eu,
+        dangerouslySkipPermissions: cfg.dsp,
+        hasAuthPassword: cfg.hap,
+      };
+    }
+  }
+  return { agentEnabled: false, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false };
+};
+
+const initialConfig = getInitialConfig();
+
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
     method: 'PATCH',
@@ -33,10 +52,10 @@ const saveConfig = (updates: Record<string, unknown>) => {
 };
 
 const useConfigStore = create<IConfigState>((set, get) => ({
-  dangerouslySkipPermissions: false,
-  editorUrl: '',
-  agentEnabled: false,
-  hasAuthPassword: false,
+  dangerouslySkipPermissions: initialConfig.dangerouslySkipPermissions,
+  editorUrl: initialConfig.editorUrl,
+  agentEnabled: initialConfig.agentEnabled,
+  hasAuthPassword: initialConfig.hasAuthPassword,
 
   hydrate: (data) => {
     set({

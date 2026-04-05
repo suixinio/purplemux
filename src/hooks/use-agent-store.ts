@@ -50,6 +50,7 @@ const useAgentStore = create<IAgentState>((set) => ({
           ...a,
           createdAt: '',
           tmuxSession: '',
+          avatar: a.avatar,
         };
       }
       set({ agents, isLoading: false });
@@ -68,6 +69,7 @@ const useAgentStore = create<IAgentState>((set) => ({
       status: 'offline',
       createdAt: new Date().toISOString(),
       tmuxSession: '',
+      avatar: req.avatar,
     };
 
     set((state) => ({
@@ -98,6 +100,7 @@ const useAgentStore = create<IAgentState>((set) => ({
               status: data.status,
               createdAt: new Date().toISOString(),
               tmuxSession: '',
+              avatar: data.avatar,
             },
           },
         };
@@ -134,6 +137,7 @@ const useAgentStore = create<IAgentState>((set) => ({
             name: data.name,
             role: data.role,
             status: data.status,
+            avatar: data.avatar,
           },
         },
       }));

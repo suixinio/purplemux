@@ -5,6 +5,7 @@ export interface IAgentConfig {
   role: string;
   autonomy: string;
   createdAt: string;
+  avatar?: string;
 }
 
 export interface IAgentInfo {
@@ -14,6 +15,7 @@ export interface IAgentInfo {
   status: TAgentStatus;
   createdAt: string;
   tmuxSession: string;
+  avatar?: string;
 }
 
 export interface IChatMessage {
@@ -40,6 +42,7 @@ export interface IChatIndex {
 export interface ICreateAgentRequest {
   name: string;
   role: string;
+  avatar?: string;
 }
 
 export interface ICreateAgentResponse {
@@ -47,6 +50,7 @@ export interface ICreateAgentResponse {
   name: string;
   role: string;
   status: TAgentStatus;
+  avatar?: string;
 }
 
 export interface IAgentListResponse {
@@ -55,6 +59,7 @@ export interface IAgentListResponse {
     name: string;
     role: string;
     status: TAgentStatus;
+    avatar?: string;
   }>;
 }
 
@@ -65,12 +70,14 @@ export interface IAgentDetailResponse {
   soul: string;
   status: TAgentStatus;
   createdAt: string;
+  avatar?: string;
 }
 
 export interface IUpdateAgentRequest {
   name?: string;
   role?: string;
   soul?: string;
+  avatar?: string;
 }
 
 export interface ISendMessageRequest {

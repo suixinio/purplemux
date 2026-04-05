@@ -1,11 +1,21 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
-import ChatHeader from '@/components/features/agent/chat-header';
+import { ArrowLeft, Settings } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import MessageList from '@/components/features/agent/message-list';
 import ChatInput from '@/components/features/agent/chat-input';
 import AgentSettingsSheet from '@/components/features/agent/agent-settings-sheet';
 import AgentDeleteDialog from '@/components/features/agent/agent-delete-dialog';
 import useAgentStore from '@/hooks/use-agent-store';
 import useAgentChat from '@/hooks/use-agent-chat';
+import type { TAgentStatus } from '@/types/agent';
+
+const statusConfig: Record<TAgentStatus, { className: string; label: string }> = {
+  idle: { className: 'bg-muted-foreground/20', label: '대기 중' },
+  working: { className: 'bg-ui-teal animate-pulse', label: '작업 중' },
+  blocked: { className: 'bg-ui-amber animate-pulse', label: '응답 대기' },
+  offline: { className: 'bg-muted-foreground/10', label: '오프라인' },
+};
 
 interface IAgentChatPanelProps {
   agentId: string;
@@ -83,11 +93,53 @@ const AgentChatPanel = ({ agentId, onBack }: IAgentChatPanelProps) => {
   return (
     <>
       <div className="flex h-full flex-col">
-        <ChatHeader
-          agent={agent}
-          onSettingsClick={() => setSettingsOpen(true)}
-          onBack={onBack}
-        />
+        <div className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-7 w-7 shrink-0"
+            onClick={onBack}
+            aria-label="에이전트 목록으로 돌아가기"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          {agent && (
+            <>
+              <span className="truncate text-sm font-medium">{agent.name}</span>
+              {agent.status === 'working' ? (
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className="text-xs text-ui-teal">입력중</span>
+                  <span className="flex gap-[2px]">
+                    <span className="typing-dot h-[3px] w-[3px] rounded-full bg-ui-teal" />
+                    <span className="typing-dot h-[3px] w-[3px] rounded-full bg-ui-teal" />
+                    <span className="typing-dot h-[3px] w-[3px] rounded-full bg-ui-teal" />
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <span
+                    className={cn(
+                      'inline-block h-1.5 w-1.5 shrink-0 rounded-full',
+                      statusConfig[agent.status].className,
+                    )}
+                  />
+                  <span className="text-xs text-muted-foreground">{statusConfig[agent.status].label}</span>
+                </>
+              )}
+              <div className="ml-auto">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => setSettingsOpen(true)}
+                  aria-label="에이전트 설정"
+                >
+                  <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
 
         <MessageList
           messages={messages}

@@ -54,10 +54,10 @@ const sendResumeKeys = async (target: IAutoResumeTarget, skipPerms: boolean): Pr
 
     if (!SAFE_SHELLS.has(command)) {
       if (command === 'claude' || command === 'node') {
-        log.info(`Claude 이미 실행 중, skip: ${target.tmuxSession}`);
+        log.debug(`Claude 이미 실행 중, skip: ${target.tmuxSession}`);
         return true;
       }
-      log.info(`셸이 아닌 프로세스 실행 중 (${command}), skip: ${target.tmuxSession}`);
+      log.debug(`셸이 아닌 프로세스 실행 중 (${command}), skip: ${target.tmuxSession}`);
       return false;
     }
 
@@ -102,7 +102,7 @@ export const autoResumeOnStartup = async (): Promise<void> => {
 
   log.info(`${targets.length}개 Surface 자동 resume 시작`);
   executeAutoResume(targets).then(() => {
-    log.info('자동 resume 완료');
+    log.debug('자동 resume 완료');
   }).catch((err) => {
     log.error(`자동 resume 중 오류: ${err instanceof Error ? err.message : err}`);
   });

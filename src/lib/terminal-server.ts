@@ -158,7 +158,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
   if (clientId) {
     connections.forEach((conn) => {
       if (conn.clientId === clientId && !conn.cleaned) {
-        log.info(`replacing existing connection for clientId: ${clientId}`);
+        log.debug(`replacing existing connection for clientId: ${clientId}`);
         conn.detaching = true;
         cleanup(conn);
       }
@@ -172,7 +172,7 @@ export const handleConnection = async (ws: WebSocket, request: IncomingMessage, 
     let evicted = 0;
     for (const [oldWs, oldConn] of connections) {
       if (evicted >= toEvict) break;
-      log.info(`evicting stale connection for session: ${oldConn.sessionName}`);
+      log.debug(`evicting stale connection for session: ${oldConn.sessionName}`);
       oldConn.detaching = true;
       cleanup(oldConn);
       if (oldWs.readyState === WebSocket.OPEN || oldWs.readyState === WebSocket.CONNECTING) {

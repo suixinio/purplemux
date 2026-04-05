@@ -3,6 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Sheet,
   SheetContent,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/sheet';
 import { useShallow } from 'zustand/react/shallow';
 import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
+import { AVATAR_OPTIONS } from '@/lib/agent-avatars';
 import type { IAgentInfo } from '@/types/agent';
 
 interface IAgentSettingsSheetProps {
@@ -32,6 +34,7 @@ interface ISettingsFormProps {
 const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => {
   const [name, setName] = useState(agent.name);
   const [role, setRole] = useState(agent.role);
+  const [avatar, setAvatar] = useState(agent.avatar ?? '');
   const [soul, setSoul] = useState('');
   const [nameError, setNameError] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -86,6 +89,7 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
       name,
       role,
       soul,
+      avatar,
     });
 
     setIsSaving(false);
@@ -102,6 +106,34 @@ const SettingsForm = ({ agent, onClose, onDeleteClick }: ISettingsFormProps) => 
       </SheetHeader>
 
       <div className="flex-1 space-y-4 overflow-y-auto px-4">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">아바타</Label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`rounded-full ring-2 ring-offset-2 ring-offset-background transition-all ${!avatar ? 'ring-primary' : 'ring-transparent hover:ring-muted-foreground/30'}`}
+              onClick={() => setAvatar('')}
+            >
+              <Avatar size="default">
+                <AvatarFallback>{name ? name[0]?.toUpperCase() : '?'}</AvatarFallback>
+              </Avatar>
+            </button>
+            {AVATAR_OPTIONS.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                className={`rounded-full ring-2 ring-offset-2 ring-offset-background transition-all ${avatar === opt ? 'ring-primary' : 'ring-transparent hover:ring-muted-foreground/30'}`}
+                onClick={() => setAvatar(opt)}
+              >
+                <Avatar size="default">
+                  <AvatarImage src={opt} alt={opt} />
+                  <AvatarFallback>?</AvatarFallback>
+                </Avatar>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <Label className="text-sm font-medium">이름</Label>
           <Input

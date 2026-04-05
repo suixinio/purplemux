@@ -40,6 +40,16 @@ interface IWorkspaceState {
 
 const STORAGE_KEY = 'pt-active-workspace-id';
 
+const getInitialSidebar = (): { sidebarWidth: number; sidebarCollapsed: boolean } => {
+  if (typeof window !== 'undefined') {
+    const sb = (window as unknown as Record<string, unknown>).__SB__ as { w: number; c: boolean } | undefined;
+    if (sb) return { sidebarWidth: sb.w, sidebarCollapsed: sb.c };
+  }
+  return { sidebarWidth: 200, sidebarCollapsed: false };
+};
+
+const initialSidebar = getInitialSidebar();
+
 const getStoredActiveWorkspaceId = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEY);
@@ -82,8 +92,8 @@ const saveActive = (updates: {
 const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   workspaces: [],
   activeWorkspaceId: null,
-  sidebarCollapsed: false,
-  sidebarWidth: 200,
+  sidebarCollapsed: initialSidebar.sidebarCollapsed,
+  sidebarWidth: initialSidebar.sidebarWidth,
   isLoading: true,
   error: null,
 

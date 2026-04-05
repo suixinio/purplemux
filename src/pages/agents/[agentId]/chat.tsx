@@ -1,26 +1,32 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import { useShallow } from 'zustand/react/shallow';
 import PageShell from '@/components/layout/page-shell';
 import ChatHeader from '@/components/features/agent/chat-header';
 import MessageList from '@/components/features/agent/message-list';
 import ChatInput from '@/components/features/agent/chat-input';
 import AgentSettingsSheet from '@/components/features/agent/agent-settings-sheet';
 import AgentDeleteDialog from '@/components/features/agent/agent-delete-dialog';
-import useAgentStore from '@/hooks/use-agent-store';
+import AgentCreateDialog from '@/components/features/agent/agent-create-dialog';
+import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
 import useAgentChat from '@/hooks/use-agent-chat';
+
+const LAST_AGENT_KEY = 'last-agent-id';
 
 const AgentChatPage = () => {
   const router = useRouter();
   const agentId = router.query.agentId as string;
 
   const agent = useAgentStore((s) => (agentId ? s.agents[agentId] ?? null : null));
+  const agents = useAgentStore(useShallow(selectAgentList));
   const deleteAgent = useAgentStore((s) => s.deleteAgent);
   const fetchAgents = useAgentStore((s) => s.fetchAgents);
   const isStoreLoading = useAgentStore((s) => s.isLoading);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const {
     messages,
@@ -44,6 +50,12 @@ const AgentChatPage = () => {
     }
   }, [agent, agentId, fetchAgents]);
 
+  useEffect(() => {
+    if (agentId) {
+      localStorage.setItem(LAST_AGENT_KEY, agentId);
+    }
+  }, [agentId]);
+
   const handleSend = useCallback(
     (content: string) => {
       sendMessage(content);
@@ -58,6 +70,22 @@ const AgentChatPage = () => {
     [sendMessage],
   );
 
+  const handleAgentSelect = useCallback(
+    (id: string) => {
+      localStorage.setItem(LAST_AGENT_KEY, id);
+      router.push(`/agents/${id}/chat`);
+    },
+    [router],
+  );
+
+  const handleCreated = useCallback(
+    (id: string) => {
+      localStorage.setItem(LAST_AGENT_KEY, id);
+      router.push(`/agents/${id}/chat`);
+    },
+    [router],
+  );
+
   const handleDeleteClick = useCallback(() => {
     setDeleteOpen(true);
   }, []);
@@ -67,6 +95,7 @@ const AgentChatPage = () => {
     setDeleteOpen(false);
     setSettingsOpen(false);
     await deleteAgent(agentId);
+    localStorage.removeItem(LAST_AGENT_KEY);
     router.push('/agents');
   }, [agentId, deleteAgent, router]);
 
@@ -86,7 +115,13 @@ const AgentChatPage = () => {
 
   const content = (
     <>
-      <ChatHeader agent={agent} onSettingsClick={() => setSettingsOpen(true)} />
+      <ChatHeader
+        agent={agent}
+        agents={agents}
+        onSettingsClick={() => setSettingsOpen(true)}
+        onCreateClick={() => setCreateOpen(true)}
+        onAgentSelect={handleAgentSelect}
+      />
 
       <MessageList
         messages={messages}
@@ -139,6 +174,12 @@ const AgentChatPage = () => {
           onConfirm={handleDeleteConfirm}
         />
       )}
+
+      <AgentCreateDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onCreated={handleCreated}
+      />
     </>
   );
 };

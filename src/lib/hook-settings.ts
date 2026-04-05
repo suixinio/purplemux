@@ -53,5 +53,5 @@ export const ensureHookSettings = async (actualPort?: number): Promise<void> => 
 
   await fs.mkdir(BASE_DIR, { recursive: true });
   await fs.writeFile(HOOKS_FILE, content, 'utf-8');
-  log.info(`${HOOKS_FILE} 생성 완료`);
+  log.debug(`${HOOKS_FILE} 생성 완료`);
 };

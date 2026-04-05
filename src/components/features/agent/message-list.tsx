@@ -228,10 +228,10 @@ const MessageList = ({
               );
             })}
 
-            {agentStatus === 'working' && (
+            {agentStatus === 'working' && lastActivity && (
               <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
                 <Loader2 size={12} className="animate-spin text-ui-purple" />
-                <span>{lastActivity || '응답 대기 중...'}</span>
+                <span>{lastActivity}</span>
               </div>
             )}
           </div>

@@ -153,7 +153,7 @@ export const crossCheckLayout = async (
 
       if (!tmuxSet.has(tab.sessionName) && tab.panelType === 'claude-code') {
         const cwd = tab.cwd || defaultCwd;
-        log.info(`crossCheck: Claude 탭 세션 재생성: ${tab.sessionName} (cwd: ${cwd})`);
+        log.debug(`crossCheck: Claude 탭 세션 재생성: ${tab.sessionName} (cwd: ${cwd})`);
         await createSession(tab.sessionName, 80, 24, cwd);
         changed = true;
       }

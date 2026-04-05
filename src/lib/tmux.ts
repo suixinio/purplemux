@@ -68,7 +68,7 @@ export const createSession = async (
     },
   );
   await applyConfig();
-  log.info(`tmux session created: ${name} (cols: ${cols}, rows: ${rows})`);
+  log.debug(`tmux session created: ${name} (cols: ${cols}, rows: ${rows})`);
 };
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -157,7 +157,7 @@ export const scanSessions = async (): Promise<void> => {
   const sessions = await listSessions();
   if (sessions.length > 0) {
     sessions.forEach((name) => {
-      log.info(`existing tmux session found: ${name}`);
+      log.debug(`existing tmux session found: ${name}`);
     });
   }
 };

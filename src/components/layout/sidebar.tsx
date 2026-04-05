@@ -51,6 +51,7 @@ const Sidebar = () => {
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const collapsed = useWorkspaceStore((s) => s.sidebarCollapsed);
   const width = useWorkspaceStore((s) => s.sidebarWidth);
+  const isLoading = useWorkspaceStore((s) => s.isLoading);
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
   const { busyCount, attentionCount } = useNotificationCount();
   const hasActive = busyCount > 0 || attentionCount > 0;
@@ -279,9 +280,10 @@ const Sidebar = () => {
     <div className="relative flex shrink-0">
       <div
         className="flex shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar"
+        suppressHydrationWarning
         style={{
-          width: collapsed ? 0 : width,
-          minWidth: collapsed ? 0 : MIN_WIDTH,
+          width: isLoading ? 'var(--initial-sb-w, 200px)' : (collapsed ? 0 : width),
+          minWidth: isLoading ? 'var(--initial-sb-mw, 160px)' : (collapsed ? 0 : MIN_WIDTH),
           maxWidth: MAX_WIDTH,
           borderRightStyle: collapsed ? 'none' : undefined,
           transition: isDragging ? 'none' : 'width 200ms ease, min-width 200ms ease',

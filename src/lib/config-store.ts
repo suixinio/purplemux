@@ -127,7 +127,7 @@ export const initConfigStore = async (): Promise<void> => {
 
   const existing = await readConfig();
   if (existing) {
-    log.info('config.json 로드 완료');
+    log.debug('config.json 로드 완료');
     return;
   }
 

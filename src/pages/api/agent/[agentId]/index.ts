@@ -21,6 +21,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       soul,
       status: agent.status,
       createdAt: agent.createdAt,
+      avatar: agent.avatar,
     });
   }
 
@@ -38,6 +39,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         soul: await manager.readSoul(agentId),
         status: agent.status,
         createdAt: agent.createdAt,
+        avatar: agent.avatar,
       });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'unknown error';

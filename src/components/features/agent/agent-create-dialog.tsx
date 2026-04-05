@@ -3,6 +3,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,7 @@ import {
 } from '@/components/ui/dialog';
 import { useShallow } from 'zustand/react/shallow';
 import useAgentStore, { selectAgentList } from '@/hooks/use-agent-store';
+import { AVATAR_OPTIONS } from '@/lib/agent-avatars';
 
 interface IAgentCreateDialogProps {
   open: boolean;
@@ -25,6 +27,7 @@ const NAME_PATTERN = /^[a-z0-9][a-z0-9-]*$/;
 const AgentCreateDialog = ({ open, onOpenChange, onCreated }: IAgentCreateDialogProps) => {
   const [name, setName] = useState('');
   const [role, setRole] = useState('');
+  const [avatar, setAvatar] = useState('');
   const [nameError, setNameError] = useState('');
   const [isCreating, setIsCreating] = useState(false);
 
@@ -34,6 +37,7 @@ const AgentCreateDialog = ({ open, onOpenChange, onCreated }: IAgentCreateDialog
   const resetForm = () => {
     setName('');
     setRole('');
+    setAvatar('');
     setNameError('');
     setIsCreating(false);
   };
@@ -80,6 +84,7 @@ const AgentCreateDialog = ({ open, onOpenChange, onCreated }: IAgentCreateDialog
     const agentId = await createAgent({
       name,
       role,
+      ...(avatar ? { avatar } : {}),
     });
 
     if (agentId) {
@@ -98,6 +103,34 @@ const AgentCreateDialog = ({ open, onOpenChange, onCreated }: IAgentCreateDialog
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">아바타</Label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className={`rounded-full ring-2 ring-offset-2 ring-offset-background transition-all ${!avatar ? 'ring-primary' : 'ring-transparent hover:ring-muted-foreground/30'}`}
+                onClick={() => setAvatar('')}
+              >
+                <Avatar size="default">
+                  <AvatarFallback>{name ? name[0]?.toUpperCase() : '?'}</AvatarFallback>
+                </Avatar>
+              </button>
+              {AVATAR_OPTIONS.map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  className={`rounded-full ring-2 ring-offset-2 ring-offset-background transition-all ${avatar === opt ? 'ring-primary' : 'ring-transparent hover:ring-muted-foreground/30'}`}
+                  onClick={() => setAvatar(opt)}
+                >
+                  <Avatar size="default">
+                    <AvatarImage src={opt} alt={opt} />
+                    <AvatarFallback>?</AvatarFallback>
+                  </Avatar>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-1.5">
             <Label className="text-sm font-medium">이름</Label>
             <Input
