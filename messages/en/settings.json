@@ -108,6 +108,7 @@
     "description": "Manage prompt buttons displayed above the input field.",
     "builtinSection": "Built-in Prompts",
     "customSection": "Custom Prompts",
+    "itemsSection": "Prompts",
     "addPrompt": "Add Prompt",
     "editPrompt": "Edit Prompt",
     "nameLabel": "Name",

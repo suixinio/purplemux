@@ -67,7 +67,7 @@ const SortableItem = ({ item, onEdit, onDelete, onToggle }: ISortableItemProps) 
   };
 
   return (
-    <div ref={setNodeRef} className="flex items-center gap-1 bg-background px-1 py-2.5" style={style}>
+    <div ref={setNodeRef} className="flex items-center gap-1 bg-background py-2.5 pl-1 pr-3" style={style}>
       <div
         ref={setActivatorNodeRef}
         {...attributes}
@@ -95,6 +95,47 @@ const SortableItem = ({ item, onEdit, onDelete, onToggle }: ISortableItemProps) 
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>
+        <Switch checked={item.enabled} onCheckedChange={(v) => onToggle(item.id, v)} />
+      </div>
+    </div>
+  );
+};
+
+interface ISortableBuiltinItemProps {
+  item: ISidebarItem;
+  onToggle: (id: string, enabled: boolean) => void;
+}
+
+const SortableBuiltinItem = ({ item, onToggle }: ISortableBuiltinItemProps) => {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : undefined,
+    position: isDragging ? ('relative' as const) : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} className="flex items-center gap-1 bg-background py-2.5 pl-1 pr-3" style={style}>
+      <div
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        className="flex shrink-0 cursor-grab items-center text-muted-foreground/50 active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <IconPicker value={item.icon} readonly size={14} />
+          <p className="text-sm font-medium">{item.name}</p>
+        </div>
+        <p className="truncate font-mono text-xs text-muted-foreground">{item.url}</p>
+      </div>
+      <div className="flex shrink-0 items-center">
         <Switch checked={item.enabled} onCheckedChange={(v) => onToggle(item.id, v)} />
       </div>
     </div>
@@ -199,21 +240,11 @@ const SidebarItemsSettings = () => {
               <div className="overflow-hidden rounded-lg border">
                 {allOrderedItems.map((item) =>
                   isBuiltin(item.id) ? (
-                    <div key={item.id} className="flex items-center gap-1 bg-background px-1 py-2.5">
-                      <div className="flex shrink-0 items-center text-muted-foreground/20">
-                        <GripVertical className="h-4 w-4" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
-                          <IconPicker value={item.icon} readonly size={14} />
-                          <p className="text-sm font-medium">{item.name}</p>
-                        </div>
-                        <p className="truncate font-mono text-xs text-muted-foreground">{item.url}</p>
-                      </div>
-                      <div className="flex shrink-0 items-center">
-                        <Switch checked={item.enabled} onCheckedChange={(v) => handleToggle(item.id, v)} />
-                      </div>
-                    </div>
+                    <SortableBuiltinItem
+                      key={item.id}
+                      item={item}
+                      onToggle={handleToggle}
+                    />
                   ) : (
                     <SortableItem
                       key={item.id}

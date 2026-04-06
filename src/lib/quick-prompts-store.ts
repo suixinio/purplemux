@@ -12,11 +12,13 @@ interface IQuickPrompt {
 interface IQuickPromptsFile {
   custom: IQuickPrompt[];
   disabledBuiltinIds: string[];
+  order: string[];
 }
 
 interface IQuickPromptsData {
   builtins: IQuickPrompt[];
   custom: IQuickPrompt[];
+  order: string[];
 }
 
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
@@ -33,7 +35,7 @@ const migrateFromFlatArray = (arr: IQuickPrompt[]): IQuickPromptsFile => {
     .filter((p) => builtinIds.has(p.id) && !p.enabled)
     .map((p) => p.id);
   const custom = arr.filter((p) => !builtinIds.has(p.id));
-  return { custom, disabledBuiltinIds };
+  return { custom, disabledBuiltinIds, order: [] };
 };
 
 const readQuickPrompts = async (): Promise<IQuickPromptsData> => {
@@ -50,7 +52,7 @@ const readQuickPrompts = async (): Promise<IQuickPromptsData> => {
 
     return buildData(parsed as IQuickPromptsFile);
   } catch {
-    return buildData({ custom: [], disabledBuiltinIds: [] });
+    return buildData({ custom: [], disabledBuiltinIds: [], order: [] });
   }
 };
 
@@ -61,7 +63,8 @@ const buildData = (file: IQuickPromptsFile): IQuickPromptsData => {
     enabled: !disabledSet.has(b.id),
   }));
   const custom = (file.custom ?? []).map((c) => ({ ...c }));
-  return { builtins, custom };
+  const order = file.order ?? [];
+  return { builtins, custom, order };
 };
 
 const writeQuickPrompts = async (data: IQuickPromptsFile): Promise<void> => {

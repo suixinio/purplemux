@@ -10,7 +10,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'PUT') {
     const body = req.body as IQuickPromptsFile;
-    if (!Array.isArray(body.custom) || !Array.isArray(body.disabledBuiltinIds)) {
+    if (!Array.isArray(body.custom) || !Array.isArray(body.disabledBuiltinIds) || !Array.isArray(body.order)) {
       return res.status(400).json({ error: 'Invalid format' });
     }
     await writeQuickPrompts(body);

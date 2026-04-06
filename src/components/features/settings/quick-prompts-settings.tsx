@@ -38,6 +38,46 @@ interface IFormState {
 
 const restrictToVerticalAxis: Modifier = ({ transform }) => ({ ...transform, x: 0 });
 
+const isBuiltin = (id: string) => id.startsWith('builtin-');
+
+interface ISortableBuiltinPromptProps {
+  prompt: IQuickPrompt;
+  onToggle: (id: string, enabled: boolean) => void;
+}
+
+const SortableBuiltinPrompt = ({ prompt: p, onToggle }: ISortableBuiltinPromptProps) => {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } = useSortable({
+    id: p.id,
+  });
+
+  const style = {
+    transform: CSS.Translate.toString(transform),
+    transition,
+    zIndex: isDragging ? 1 : undefined,
+    position: isDragging ? ('relative' as const) : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} className="flex items-center gap-1 bg-background py-2.5 pl-1 pr-3" style={style}>
+      <div
+        ref={setActivatorNodeRef}
+        {...attributes}
+        {...listeners}
+        className="flex shrink-0 cursor-grab items-center text-muted-foreground/50 active:cursor-grabbing"
+      >
+        <GripVertical className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{p.name}</p>
+        <p className="truncate font-mono text-xs text-muted-foreground">{p.prompt}</p>
+      </div>
+      <div className="flex shrink-0 items-center">
+        <Switch checked={p.enabled} onCheckedChange={(v) => onToggle(p.id, v)} />
+      </div>
+    </div>
+  );
+};
+
 interface ISortablePromptItemProps {
   prompt: IQuickPrompt;
   onEdit: (p: IQuickPrompt) => void;
@@ -58,7 +98,7 @@ const SortablePromptItem = ({ prompt: p, onEdit, onDelete, onToggle }: ISortable
   };
 
   return (
-    <div ref={setNodeRef} className="flex items-center gap-1 bg-background px-1 py-2.5" style={style}>
+    <div ref={setNodeRef} className="flex items-center gap-1 bg-background py-2.5 pl-1 pr-3" style={style}>
       <div
         ref={setActivatorNodeRef}
         {...attributes}
@@ -91,26 +131,30 @@ const SortablePromptItem = ({ prompt: p, onEdit, onDelete, onToggle }: ISortable
 
 const QuickPromptsSettings = () => {
   const t = useTranslations('settings.quickPrompts');
-  const { builtinPrompts, customPrompts, toggleBuiltin, saveCustom, resetAll } = useQuickPrompts();
+  const { allOrderedPrompts, customPrompts, toggleBuiltin, saveCustom, saveOrder, deletePrompt, resetAll } =
+    useQuickPrompts();
   const [form, setForm] = useState<IFormState | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const handleCustomToggle = useCallback(
+  const handleToggle = useCallback(
     (id: string, enabled: boolean) => {
-      const next = customPrompts.map((p) => (p.id === id ? { ...p, enabled } : p));
-      saveCustom(next);
+      if (isBuiltin(id)) {
+        toggleBuiltin(id, enabled);
+      } else {
+        const next = customPrompts.map((p) => (p.id === id ? { ...p, enabled } : p));
+        saveCustom(next);
+      }
     },
-    [customPrompts, saveCustom],
+    [customPrompts, toggleBuiltin, saveCustom],
   );
 
   const handleDelete = useCallback(
     (id: string) => {
-      const next = customPrompts.filter((p) => p.id !== id);
-      saveCustom(next);
+      deletePrompt(id);
     },
-    [customPrompts, saveCustom],
+    [deletePrompt],
   );
 
   const handleEdit = useCallback((p: IQuickPrompt) => {
@@ -151,13 +195,14 @@ const QuickPromptsSettings = () => {
       const { active, over } = event;
       if (!over || active.id === over.id) return;
 
-      const oldIndex = customPrompts.findIndex((p) => p.id === active.id);
-      const newIndex = customPrompts.findIndex((p) => p.id === over.id);
+      const oldIndex = allOrderedPrompts.findIndex((p) => p.id === active.id);
+      const newIndex = allOrderedPrompts.findIndex((p) => p.id === over.id);
       if (oldIndex === -1 || newIndex === -1) return;
 
-      saveCustom(arrayMove(customPrompts, oldIndex, newIndex));
+      const reordered = arrayMove(allOrderedPrompts, oldIndex, newIndex);
+      saveOrder(reordered.map((p) => p.id));
     },
-    [customPrompts, saveCustom],
+    [allOrderedPrompts, saveOrder],
   );
 
   const isFormValid = form ? form.name.trim().length > 0 && form.prompt.trim().length > 0 : false;
@@ -169,43 +214,30 @@ const QuickPromptsSettings = () => {
         <p className="text-sm text-muted-foreground">{t('description')}</p>
       </div>
 
-      {builtinPrompts.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">{t('builtinSection')}</p>
-          <div className="divide-y divide-border rounded-lg border">
-            {builtinPrompts.map((p) => (
-              <div key={p.id} className="flex items-center gap-3 px-3 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{p.name}</p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">{p.prompt}</p>
-                </div>
-                <Switch checked={p.enabled} onCheckedChange={(v) => toggleBuiltin(p.id, v)} />
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground">{t('customSection')}</p>
-        {customPrompts.length > 0 && (
+        <p className="text-xs font-medium text-muted-foreground">{t('itemsSection')}</p>
+        {allOrderedPrompts.length > 0 && (
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
             modifiers={[restrictToVerticalAxis]}
             onDragEnd={handleDragEnd}
           >
-            <SortableContext items={customPrompts.map((p) => p.id)} strategy={verticalListSortingStrategy}>
+            <SortableContext items={allOrderedPrompts.map((p) => p.id)} strategy={verticalListSortingStrategy}>
               <div className="overflow-hidden rounded-lg border">
-                {customPrompts.map((p) => (
-                  <SortablePromptItem
-                    key={p.id}
-                    prompt={p}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                    onToggle={handleCustomToggle}
-                  />
-                ))}
+                {allOrderedPrompts.map((p) =>
+                  isBuiltin(p.id) ? (
+                    <SortableBuiltinPrompt key={p.id} prompt={p} onToggle={handleToggle} />
+                  ) : (
+                    <SortablePromptItem
+                      key={p.id}
+                      prompt={p}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                      onToggle={handleToggle}
+                    />
+                  ),
+                )}
               </div>
             </SortableContext>
           </DndContext>
