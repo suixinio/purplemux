@@ -280,6 +280,24 @@ const TerminalThemeSync = () => {
   return null;
 };
 
+const FONT_SIZE_ROOT: Record<string, string> = {
+  normal: '',
+  large: '18px',
+  'x-large': '20px',
+};
+
+const FontSizeSync = () => {
+  const fontSize = useConfigStore((s) => s.fontSize);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const value = FONT_SIZE_ROOT[fontSize] ?? '';
+    root.style.fontSize = value;
+  }, [fontSize]);
+
+  return null;
+};
+
 const CustomCSSSync = () => {
   const customCSS = useConfigStore((s) => s.customCSS);
 
@@ -369,6 +387,7 @@ export default function App({ Component, pageProps }: TAppPropsWithLayout) {
           <ElectronTitlebar />
           {getLayout(<Component {...pageProps} />)}
           <TerminalThemeSync />
+          <FontSizeSync />
           <CustomCSSSync />
           <ClaudeStatusProvider />
           <ThemedToaster />

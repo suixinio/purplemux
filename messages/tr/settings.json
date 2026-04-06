@@ -18,7 +18,12 @@
     "theme": "Tema",
     "themeDescription": "Görüntüleme temasını seçin.",
     "language": "Dil",
-    "languageDescription": "Arayüz dilini seçin."
+    "languageDescription": "Arayüz dilini seçin.",
+    "fontSize": "Yazı tipi boyutu",
+    "fontSizeDescription": "Arayüz ve terminal yazı tipi boyutunu ayarlayın.",
+    "fontSizeNormal": "Normal",
+    "fontSizeLarge": "Büyük",
+    "fontSizeXLarge": "Çok büyük"
   },
   "appearance": {
     "customCSS": "Özel CSS",

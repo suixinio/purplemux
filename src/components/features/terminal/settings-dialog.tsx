@@ -80,12 +80,20 @@ const LOCALES = [
   { id: 'tr', label: 'Türkçe' },
 ] as const;
 
+const FONT_SIZES = [
+  { id: 'normal', labelKey: 'fontSizeNormal' },
+  { id: 'large', labelKey: 'fontSizeLarge' },
+  { id: 'x-large', labelKey: 'fontSizeXLarge' },
+] as const;
+
 const GeneralTab = () => {
   const t = useTranslations('settings.general');
   const tc = useTranslations('common');
   const { theme, setTheme } = useTheme();
   const locale = useConfigStore((s) => s.locale);
   const setLocale = useConfigStore((s) => s.setLocale);
+  const fontSize = useConfigStore((s) => s.fontSize);
+  const setFontSize = useConfigStore((s) => s.setFontSize);
 
   const handleThemeChange = (value: string) => {
     setTheme(value);
@@ -145,6 +153,20 @@ const GeneralTab = () => {
             </div>
           </PopoverContent>
         </Popover>
+      </div>
+
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-sm font-medium">{t('fontSize')}</p>
+          <p className="text-sm text-muted-foreground">{t('fontSizeDescription')}</p>
+        </div>
+        <ButtonGroup>
+          {FONT_SIZES.map((s) => (
+            <Button key={s.id} variant={fontSize === s.id ? 'default' : 'outline'} size="sm" onClick={() => setFontSize(s.id)}>
+              {t(s.labelKey)}
+            </Button>
+          ))}
+        </ButtonGroup>
       </div>
     </div>
   );

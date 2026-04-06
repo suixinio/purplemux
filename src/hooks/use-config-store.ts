@@ -10,6 +10,7 @@ export interface IConfigInitialData {
   notificationsEnabled?: boolean;
   hasAuthPassword?: boolean;
   locale?: string;
+  fontSize?: string;
 }
 
 interface IConfigState {
@@ -20,6 +21,7 @@ interface IConfigState {
   hasAuthPassword: boolean;
   locale: string;
   customCSS: string;
+  fontSize: string;
 
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
@@ -29,9 +31,10 @@ interface IConfigState {
   changePassword: (password: string) => void;
   setLocale: (locale: string) => void;
   setCustomCSS: (css: string) => void;
+  setFontSize: (fontSize: string) => void;
 }
 
-const initialConfig = { agentEnabled: false, notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '' };
+const initialConfig = { agentEnabled: false, notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal' };
 
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
@@ -51,6 +54,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   hasAuthPassword: initialConfig.hasAuthPassword,
   locale: initialConfig.locale,
   customCSS: initialConfig.customCSS,
+  fontSize: initialConfig.fontSize,
 
   hydrate: (data) => {
     set({
@@ -61,6 +65,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
       hasAuthPassword: data.hasAuthPassword ?? false,
       locale: data.locale ?? 'en',
       customCSS: data.customCSS ?? '',
+      fontSize: data.fontSize ?? 'normal',
     });
   },
 
@@ -98,6 +103,11 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   setCustomCSS: (css) => {
     set({ customCSS: css });
     saveConfig({ customCSS: css });
+  },
+
+  setFontSize: (fontSize) => {
+    set({ fontSize });
+    saveConfig({ fontSize });
   },
 }));
 

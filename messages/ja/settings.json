@@ -18,7 +18,12 @@
     "theme": "テーマ",
     "themeDescription": "表示テーマを選択します。",
     "language": "言語",
-    "languageDescription": "インターフェース言語を選択します。"
+    "languageDescription": "インターフェース言語を選択します。",
+    "fontSize": "フォントサイズ",
+    "fontSizeDescription": "UIとターミナルのフォントサイズを調整します。",
+    "fontSizeNormal": "標準",
+    "fontSizeLarge": "大",
+    "fontSizeXLarge": "特大"
   },
   "appearance": {
     "customCSS": "カスタム CSS",

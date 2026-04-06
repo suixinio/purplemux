@@ -63,7 +63,12 @@ interface IPaneContainerProps {
   paneNumber: number;
 }
 
-const CLAUDE_CODE_FONT_SIZE = 11;
+const TERMINAL_FONT_SIZES: Record<string, { normal: number; claudeCode: number }> = {
+  normal: { normal: 12, claudeCode: 11 },
+  large: { normal: 14, claudeCode: 13 },
+  'x-large': { normal: 16, claudeCode: 15 },
+};
+
 const EMPTY_TABS: ITab[] = [];
 
 const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
@@ -95,6 +100,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const isWebBrowser = activePanelType === 'web-browser';
 
   const { theme: terminalTheme } = useTerminalTheme();
+  const configFontSize = useConfigStore((s) => s.fontSize);
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [sessionSwitching, setSessionSwitching] = useState(false);
   const sessionSwitchTimerRef = useRef(0);
@@ -261,7 +267,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const { terminalRef, write, clear, reset, fit, focus, isReady } = useTerminal({
     theme: terminalTheme.colors,
-    fontSize: isClaudeCode ? CLAUDE_CODE_FONT_SIZE : undefined,
+    fontSize: (TERMINAL_FONT_SIZES[configFontSize] ?? TERMINAL_FONT_SIZES.normal)[isClaudeCode ? 'claudeCode' : 'normal'],
     onInput: (data) => {
       if (isObserveMode) return;
       wsActionsRef.current.sendStdin(data);

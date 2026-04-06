@@ -18,7 +18,12 @@
     "theme": "主题",
     "themeDescription": "选择显示主题。",
     "language": "语言",
-    "languageDescription": "选择界面语言。"
+    "languageDescription": "选择界面语言。",
+    "fontSize": "字体大小",
+    "fontSizeDescription": "调整界面和终端的字体大小。",
+    "fontSizeNormal": "正常",
+    "fontSizeLarge": "大",
+    "fontSizeXLarge": "特大"
   },
   "appearance": {
     "customCSS": "自定义 CSS",

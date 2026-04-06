@@ -18,6 +18,7 @@ export interface IConfigData {
   agentEnabled?: boolean;
   notificationsEnabled?: boolean;
   locale?: string;
+  fontSize?: string;
   updatedAt: string;
 }
 

@@ -18,7 +18,12 @@
     "theme": "Theme",
     "themeDescription": "Wähle das Anzeige-Theme.",
     "language": "Sprache",
-    "languageDescription": "Wähle die Sprache der Benutzeroberfläche."
+    "languageDescription": "Wähle die Sprache der Benutzeroberfläche.",
+    "fontSize": "Schriftgröße",
+    "fontSizeDescription": "Schriftgröße für Oberfläche und Terminal anpassen.",
+    "fontSizeNormal": "Normal",
+    "fontSizeLarge": "Groß",
+    "fontSizeXLarge": "Sehr groß"
   },
   "appearance": {
     "customCSS": "Benutzerdefiniertes CSS",

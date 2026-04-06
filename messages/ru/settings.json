@@ -18,7 +18,12 @@
     "theme": "Тема",
     "themeDescription": "Выберите тему оформления.",
     "language": "Язык",
-    "languageDescription": "Выберите язык интерфейса."
+    "languageDescription": "Выберите язык интерфейса.",
+    "fontSize": "Размер шрифта",
+    "fontSizeDescription": "Настройте размер шрифта интерфейса и терминала.",
+    "fontSizeNormal": "Обычный",
+    "fontSizeLarge": "Крупный",
+    "fontSizeXLarge": "Очень крупный"
   },
   "appearance": {
     "customCSS": "Пользовательский CSS",

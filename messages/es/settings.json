@@ -18,7 +18,12 @@
     "theme": "Tema",
     "themeDescription": "Selecciona el tema de visualización.",
     "language": "Idioma",
-    "languageDescription": "Selecciona el idioma de la interfaz."
+    "languageDescription": "Selecciona el idioma de la interfaz.",
+    "fontSize": "Tamaño de fuente",
+    "fontSizeDescription": "Ajusta el tamaño de fuente de la interfaz y la terminal.",
+    "fontSizeNormal": "Normal",
+    "fontSizeLarge": "Grande",
+    "fontSizeXLarge": "Muy grande"
   },
   "appearance": {
     "customCSS": "CSS personalizado",
