@@ -352,7 +352,9 @@ const createWindow = (url: string) => {
   });
 
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
-    if (navigationUrl !== mainWindow?.webContents.getURL()) {
+    const currentOrigin = new URL(mainWindow?.webContents.getURL() || '').origin;
+    const targetOrigin = new URL(navigationUrl).origin;
+    if (currentOrigin !== targetOrigin) {
       event.preventDefault();
       shell.openExternal(navigationUrl);
     }
