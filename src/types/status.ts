@@ -16,6 +16,7 @@ export interface ITabStatusEntry {
   lastUserMessage?: string | null;
   readyForReviewAt?: number | null;
   busySince?: number | null;
+  processRetries?: number;
 }
 
 export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle';
