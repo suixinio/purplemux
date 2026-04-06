@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import useTabStore from '@/hooks/use-tab-store';
 import useConfigStore from '@/hooks/use-config-store';
+import { navigateToTab } from '@/hooks/use-layout';
 import isElectron from '@/hooks/use-is-electron';
 
 interface IElectronAPI {
@@ -14,12 +15,21 @@ const getElectronAPI = (): IElectronAPI | null => {
   return (window as unknown as { electronAPI: IElectronAPI }).electronAPI;
 };
 
+let lastNotifiedTabId: string | null = null;
+let lastNotifiedWorkspaceId: string | null = null;
+
 const useNativeNotification = () => {
   useEffect(() => {
     const api = getElectronAPI();
     if (!api) return;
 
-    const unsub = useTabStore.subscribe((state, prev) => {
+    const unsubClick = api.onNotificationClick(() => {
+      if (lastNotifiedTabId && lastNotifiedWorkspaceId) {
+        navigateToTab(lastNotifiedWorkspaceId, lastNotifiedTabId);
+      }
+    });
+
+    const unsubStore = useTabStore.subscribe((state, prev) => {
       const enabled = useConfigStore.getState().notificationsEnabled;
       let notified = false;
       let attentionCount = 0;
@@ -33,11 +43,12 @@ const useNativeNotification = () => {
           tab.cliState === 'ready-for-review' &&
           prevTab?.cliState === 'busy'
         ) {
-          const title = 'Claude 작업 완료';
           const body = tab.lastUserMessage
             ? tab.lastUserMessage.slice(0, 100)
             : tab.tabName || tabId;
-          api.showNotification(title, body);
+          api.showNotification('Task Complete', body);
+          lastNotifiedTabId = tabId;
+          lastNotifiedWorkspaceId = tab.workspaceId;
           notified = true;
         }
       }
@@ -45,7 +56,10 @@ const useNativeNotification = () => {
       api.setDockBadge(attentionCount);
     });
 
-    return unsub;
+    return () => {
+      unsubClick();
+      unsubStore();
+    };
   }, []);
 };
 
