@@ -3,14 +3,14 @@ import {
   ChevronDown,
   ChevronRight,
   Plus,
-  BarChart3,
-  FileText,
   Settings,
   X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import { useRouter } from 'next/router';
+import useSidebarItems from '@/hooks/use-sidebar-items';
+import IconRenderer from '@/components/features/settings/icon-renderer';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -66,6 +66,7 @@ const MobileNavigationSheet = ({
   const [longPressTabId, setLongPressTabId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const metadata = useTabMetadataStore((s) => s.metadata);
+  const { items: sidebarItems } = useSidebarItems();
 
   const handleToggleWorkspace = useCallback(
     (workspaceId: string) => {
@@ -271,26 +272,24 @@ const MobileNavigationSheet = ({
             Workspace
           </button>
           <div className="flex items-center gap-0.5 px-3 pb-3">
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
-              onClick={() => {
-                onOpenChange(false);
-                router.push('/reports');
-              }}
-              aria-label={t('notes')}
-            >
-              <FileText size={15} />
-            </button>
-            <button
-              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
-              onClick={() => {
-                onOpenChange(false);
-                router.push('/stats');
-              }}
-              aria-label={t('stats')}
-            >
-              <BarChart3 size={15} />
-            </button>
+            {sidebarItems.map((item) => {
+              const isExternal = item.url.startsWith('http://') || item.url.startsWith('https://');
+              const navPath = isExternal ? `/webview?url=${encodeURIComponent(item.url)}` : item.url;
+              return (
+                <button
+                  key={item.id}
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
+                  onClick={() => {
+                    onOpenChange(false);
+                    router.push(navPath);
+                  }}
+                  aria-label={item.name}
+                  title={item.name}
+                >
+                  <IconRenderer name={item.icon} className="h-[15px] w-[15px]" />
+                </button>
+              );
+            })}
             <button
               className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
               onClick={() => {
