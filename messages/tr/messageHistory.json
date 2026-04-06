@@ -1,0 +1,10 @@
+{
+  "title": "Mesaj Geçmişi",
+  "searchPlaceholder": "Geçmişte ara...",
+  "loading": "Yükleniyor..",
+  "fetchError": "Yükleme başarısız",
+  "retry": "Tekrar Dene",
+  "noSearchResults": "Arama sonucu bulunamadı",
+  "noHistory": "Geçmiş yok",
+  "deleteLabel": "Sil"
+}

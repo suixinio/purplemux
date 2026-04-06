@@ -1,0 +1,8 @@
+{
+  "connecting": "Verbindung wird hergestellt...",
+  "reconnecting": "Verbindung wird wiederhergestellt... ({count}/{max})",
+  "maxConnections": "Maximale Verbindungsanzahl überschritten",
+  "ptyError": "Terminal konnte nicht gestartet werden",
+  "disconnected": "Verbindung getrennt",
+  "reconnect": "Erneut verbinden"
+}

@@ -1,0 +1,8 @@
+{
+  "title": "通知",
+  "empty": "沒有進行中的任務",
+  "busySection": "進行中（{count}）",
+  "reviewSection": "待審查（{count}）",
+  "dismiss": "關閉",
+  "navigate": "前往"
+}

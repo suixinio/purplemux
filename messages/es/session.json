@@ -1,0 +1,33 @@
+{
+  "noMessage": "(sin mensaje)",
+  "sessionLabel": "Sesión: {message}",
+  "turnCount": "{count} turnos",
+  "justNow": "ahora mismo",
+  "minutesAgo": "hace {count}m",
+  "hoursAgo": "hace {count}h",
+  "yesterday": "ayer",
+  "daysAgo": "hace {count}d",
+  "weeksAgo": "hace {count}sem",
+  "monthsAgo": "hace {count}mes",
+  "yearsAgo": "hace {count}a",
+  "empty": {
+    "closeLabel": "Cerrar",
+    "noSession": "Sin sesiones",
+    "startNewSession": "Ejecuta claude en el terminal{br}para iniciar una nueva sesión",
+    "newConversation": "Nueva conversación",
+    "close": "Cerrar"
+  },
+  "meta": {
+    "message": "Mensajes",
+    "userAssistant": "Usuario {userCount} / Asistente {assistantCount}",
+    "tokens": "Tokens",
+    "inputOutputTotal": "Entrada {input} / Salida {output} / Total {total}",
+    "cost": "Costo",
+    "created": "Creado",
+    "updated": "Actualizado",
+    "path": "Ruta",
+    "process": "Proceso",
+    "size": "Tamaño",
+    "session": "Sesión"
+  }
+}

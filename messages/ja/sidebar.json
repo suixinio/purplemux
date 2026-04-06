@@ -1,0 +1,11 @@
+{
+  "workspaceList": "ワークスペース一覧",
+  "addWorkspace": "ワークスペースを追加",
+  "noWorkspaces": "ワークスペースがありません",
+  "deleteWorkspace": "ワークスペースを削除",
+  "deleteWorkspaceConfirm": "ワークスペース「{name}」を閉じますか？",
+  "notes": "メモ",
+  "stats": "使用状況",
+  "collapseSidebar": "サイドバーを折りたたむ",
+  "expandSidebar": "サイドバーを展開"
+}

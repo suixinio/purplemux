@@ -1,0 +1,9 @@
+{
+  "pageTitle": "Redefinir - purplemux",
+  "title": "Redefinir tmux",
+  "stepCleanup": "Limpando conexoes",
+  "stepReset": "Parando e redefinindo o servidor tmux",
+  "stepDone": "Concluido",
+  "apiError": "Erro na resposta da API",
+  "resetFailed": "Falha ao redefinir o tmux."
+}

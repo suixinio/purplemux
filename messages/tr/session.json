@@ -1,0 +1,33 @@
+{
+  "noMessage": "(mesaj yok)",
+  "sessionLabel": "Oturum: {message}",
+  "turnCount": "{count} tur",
+  "justNow": "az önce",
+  "minutesAgo": "{count}dk önce",
+  "hoursAgo": "{count}sa önce",
+  "yesterday": "dün",
+  "daysAgo": "{count}g önce",
+  "weeksAgo": "{count}hf önce",
+  "monthsAgo": "{count}ay önce",
+  "yearsAgo": "{count}yıl önce",
+  "empty": {
+    "closeLabel": "Kapat",
+    "noSession": "Oturum yok",
+    "startNewSession": "Yeni bir oturum başlatmak için{br}terminalde claude komutunu çalıştırın",
+    "newConversation": "Yeni sohbet",
+    "close": "Kapat"
+  },
+  "meta": {
+    "message": "Mesajlar",
+    "userAssistant": "Kullanıcı {userCount} / Asistan {assistantCount}",
+    "tokens": "Token",
+    "inputOutputTotal": "Giriş {input} / Çıkış {output} / Toplam {total}",
+    "cost": "Maliyet",
+    "created": "Oluşturulma",
+    "updated": "Güncellenme",
+    "path": "Yol",
+    "process": "İşlem",
+    "size": "Boyut",
+    "session": "Oturum"
+  }
+}

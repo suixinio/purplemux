@@ -1,0 +1,8 @@
+{
+  "title": "Уведомления",
+  "empty": "Нет активных задач",
+  "busySection": "В процессе ({count})",
+  "reviewSection": "На проверке ({count})",
+  "dismiss": "Скрыть",
+  "navigate": "Перейти"
+}

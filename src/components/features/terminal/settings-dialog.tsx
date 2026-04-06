@@ -3,7 +3,7 @@ import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import isElectron from '@/hooks/use-is-electron';
-import { Bell, Bot, Check, ChevronDown, Code, Dices, Globe, Layout, Lock, Monitor, Moon, Palette, RotateCcw, Settings, Sun, Terminal, Wrench, X, Zap } from 'lucide-react';
+import { Bell, Bot, Check, ChevronDown, ChevronsUpDown, Code, Dices, Globe, Layout, Lock, Monitor, Moon, Palette, RotateCcw, Settings, Sun, Terminal, Wrench, X, Zap } from 'lucide-react';
 import ClaudeLogo from '@/components/icons/claude-logo';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
@@ -68,6 +69,15 @@ const saveAppTheme = (value: string) => {
 const LOCALES = [
   { id: 'en', label: 'English' },
   { id: 'ko', label: '한국어' },
+  { id: 'ja', label: '日本語' },
+  { id: 'zh-CN', label: '中文（简体）' },
+  { id: 'zh-TW', label: '中文（繁體）' },
+  { id: 'es', label: 'Español' },
+  { id: 'fr', label: 'Français' },
+  { id: 'de', label: 'Deutsch' },
+  { id: 'pt-BR', label: 'Português (BR)' },
+  { id: 'ru', label: 'Русский' },
+  { id: 'tr', label: 'Türkçe' },
 ] as const;
 
 const GeneralTab = () => {
@@ -110,19 +120,31 @@ const GeneralTab = () => {
           <p className="text-sm font-medium">{t('language')}</p>
           <p className="text-sm text-muted-foreground">{t('languageDescription')}</p>
         </div>
-        <ButtonGroup>
-          {LOCALES.map((l) => (
-            <Button
-              key={l.id}
-              variant={locale === l.id ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setLocale(l.id)}
-            >
-              {locale === l.id && <Check className="h-4 w-4" />}
-              {l.label}
-            </Button>
-          ))}
-        </ButtonGroup>
+        <Popover>
+          <PopoverTrigger
+            className="inline-flex h-8 min-w-[180px] items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
+          >
+            <span>{LOCALES.find((l) => l.id === locale)?.label ?? 'English'}</span>
+            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+          </PopoverTrigger>
+          <PopoverContent align="end" className="w-[180px] p-1">
+            <div className="max-h-[280px] overflow-y-auto">
+            {LOCALES.map((l) => (
+              <button
+                key={l.id}
+                className={cn(
+                  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground',
+                  locale === l.id && 'bg-accent text-accent-foreground',
+                )}
+                onClick={() => setLocale(l.id)}
+              >
+                <Check className={cn('h-3.5 w-3.5', locale === l.id ? 'opacity-100' : 'opacity-0')} />
+                {l.label}
+              </button>
+            ))}
+            </div>
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );

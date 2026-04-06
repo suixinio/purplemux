@@ -1,0 +1,11 @@
+{
+  "workspaceList": "Lista de espacios de trabajo",
+  "addWorkspace": "Añadir espacio de trabajo",
+  "noWorkspaces": "Sin espacios de trabajo",
+  "deleteWorkspace": "Eliminar espacio de trabajo",
+  "deleteWorkspaceConfirm": "¿Cerrar el espacio de trabajo '{name}'?",
+  "notes": "Notas",
+  "stats": "Estadísticas de uso",
+  "collapseSidebar": "Contraer barra lateral",
+  "expandSidebar": "Expandir barra lateral"
+}

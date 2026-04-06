@@ -1,0 +1,11 @@
+{
+  "workspaceList": "Arbeitsbereich-Liste",
+  "addWorkspace": "Arbeitsbereich hinzufügen",
+  "noWorkspaces": "Keine Arbeitsbereiche",
+  "deleteWorkspace": "Arbeitsbereich löschen",
+  "deleteWorkspaceConfirm": "Arbeitsbereich ''{name}'' schließen?",
+  "notes": "Notizen",
+  "stats": "Nutzungsstatistiken",
+  "collapseSidebar": "Seitenleiste einklappen",
+  "expandSidebar": "Seitenleiste ausklappen"
+}

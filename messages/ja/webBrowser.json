@@ -1,0 +1,11 @@
+{
+  "back": "戻る",
+  "forward": "進む",
+  "reload": "再読み込み",
+  "switchToDesktop": "デスクトップモードに切り替え",
+  "switchToMobile": "モバイルモードに切り替え",
+  "mobileModeTip": "モバイルモード（クリックでデスクトップに切り替え）",
+  "desktopModeTip": "デスクトップモード（クリックでモバイルに切り替え）",
+  "urlPlaceholder": "URLを入力",
+  "emptyMessage": "URLを入力してWebページを開きます"
+}

@@ -1,0 +1,16 @@
+{
+  "pageTitle": "Iniciar sesión - purplemux",
+  "setupTitle": "Configuración - purplemux",
+  "missingTools": "Faltan herramientas necesarias",
+  "install": "Instalar",
+  "password": "Contraseña",
+  "passwordPlaceholder": "Introduce tu contraseña",
+  "invalidPassword": "Contraseña incorrecta.",
+  "loggingIn": "Iniciando sesión...",
+  "loginButton": "Iniciar sesión",
+  "forgotPassword": "¿Olvidaste tu contraseña?",
+  "resetPassword": "Restablecer contraseña",
+  "resetPasswordHelp": "Elimina el archivo de abajo y {action} para establecer una nueva contraseña en la pantalla de configuración.",
+  "restartServer": "reinicia el servidor",
+  "restartApp": "cierra y reinicia la aplicación"
+}

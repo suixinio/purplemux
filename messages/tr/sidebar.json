@@ -1,0 +1,11 @@
+{
+  "workspaceList": "Çalışma alanı listesi",
+  "addWorkspace": "Çalışma alanı ekle",
+  "noWorkspaces": "Çalışma alanı yok",
+  "deleteWorkspace": "Çalışma alanını sil",
+  "deleteWorkspaceConfirm": "''{name}'' çalışma alanı kapatılsın mı?",
+  "notes": "Notlar",
+  "stats": "Kullanım istatistikleri",
+  "collapseSidebar": "Kenar çubuğunu daralt",
+  "expandSidebar": "Kenar çubuğunu genişlet"
+}

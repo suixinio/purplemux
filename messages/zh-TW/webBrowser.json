@@ -1,0 +1,11 @@
+{
+  "back": "上一頁",
+  "forward": "下一頁",
+  "reload": "重新載入",
+  "switchToDesktop": "切換到桌面模式",
+  "switchToMobile": "切換到行動裝置模式",
+  "mobileModeTip": "行動裝置模式（點擊切換到桌面模式）",
+  "desktopModeTip": "桌面模式（點擊切換到行動裝置模式）",
+  "urlPlaceholder": "輸入 URL",
+  "emptyMessage": "輸入 URL 以開啟網頁"
+}

@@ -1,0 +1,8 @@
+{
+  "connecting": "連線中...",
+  "reconnecting": "重新連線中...（{count}/{max}）",
+  "maxConnections": "已超過最大連線數",
+  "ptyError": "終端機啟動失敗",
+  "disconnected": "已斷線",
+  "reconnect": "重新連線"
+}

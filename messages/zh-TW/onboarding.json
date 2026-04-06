@@ -1,0 +1,37 @@
+{
+  "steps": {
+    "preflight": "系統檢查",
+    "password": "設定密碼",
+    "appearance": "應用程式主題",
+    "theme": "終端機主題",
+    "claude": "Claude 設定",
+    "complete": "完成"
+  },
+  "checking": "檢查環境中...",
+  "missingTools": "缺少必要工具",
+  "installBrew": "安裝 Homebrew",
+  "installTmux": "安裝 tmux",
+  "upgradeTmux": "升級 tmux",
+  "password": "密碼",
+  "passwordPlaceholder": "至少 4 個字元",
+  "confirmPassword": "確認密碼",
+  "confirmPasswordPlaceholder": "再次輸入密碼",
+  "passwordMinLength": "密碼至少需要 4 個字元。",
+  "passwordMismatch": "密碼不一致。",
+  "appearanceDescription": "選擇應用程式的顯示主題。",
+  "skipPermissions": "跳過權限檢查",
+  "skipPermissionsDescription": "執行 Claude CLI 時加入 --dangerously-skip-permissions 選項。",
+  "summary": {
+    "password": "密碼",
+    "appTheme": "應用程式主題",
+    "darkTheme": "深色主題",
+    "lightTheme": "淺色主題",
+    "skipPermissions": "跳過權限",
+    "enabled": "已啟用",
+    "disabled": "已停用"
+  },
+  "submitting": "儲存中...",
+  "completeButton": "完成設定",
+  "setupFailed": "設定失敗。",
+  "connectionError": "無法連線至伺服器。"
+}

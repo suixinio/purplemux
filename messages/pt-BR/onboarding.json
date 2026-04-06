@@ -1,0 +1,37 @@
+{
+  "steps": {
+    "preflight": "Verificacao do Sistema",
+    "password": "Definir Senha",
+    "appearance": "Tema do Aplicativo",
+    "theme": "Tema do Terminal",
+    "claude": "Configuracoes do Claude",
+    "complete": "Concluido"
+  },
+  "checking": "Verificando ambiente...",
+  "missingTools": "Ferramentas necessarias nao encontradas",
+  "installBrew": "Instalar Homebrew",
+  "installTmux": "Instalar tmux",
+  "upgradeTmux": "Atualizar tmux",
+  "password": "Senha",
+  "passwordPlaceholder": "Minimo 4 caracteres",
+  "confirmPassword": "Confirmar senha",
+  "confirmPasswordPlaceholder": "Digite a senha novamente",
+  "passwordMinLength": "A senha deve ter no minimo 4 caracteres.",
+  "passwordMismatch": "As senhas nao coincidem.",
+  "appearanceDescription": "Selecione o tema de exibicao do aplicativo.",
+  "skipPermissions": "Pular Verificacao de Permissoes",
+  "skipPermissionsDescription": "Adiciona a opcao --dangerously-skip-permissions ao executar o Claude CLI.",
+  "summary": {
+    "password": "Senha",
+    "appTheme": "Tema do Aplicativo",
+    "darkTheme": "Tema Escuro",
+    "lightTheme": "Tema Claro",
+    "skipPermissions": "Pular Permissoes",
+    "enabled": "Ativado",
+    "disabled": "Desativado"
+  },
+  "submitting": "Salvando...",
+  "completeButton": "Concluir Configuracao",
+  "setupFailed": "Falha na configuracao.",
+  "connectionError": "Nao foi possivel conectar ao servidor."
+}

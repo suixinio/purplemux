@@ -1,0 +1,33 @@
+{
+  "noMessage": "（無訊息）",
+  "sessionLabel": "工作階段：{message}",
+  "turnCount": "{count} 輪對話",
+  "justNow": "剛剛",
+  "minutesAgo": "{count} 分鐘前",
+  "hoursAgo": "{count} 小時前",
+  "yesterday": "昨天",
+  "daysAgo": "{count} 天前",
+  "weeksAgo": "{count} 週前",
+  "monthsAgo": "{count} 個月前",
+  "yearsAgo": "{count} 年前",
+  "empty": {
+    "closeLabel": "關閉",
+    "noSession": "沒有工作階段",
+    "startNewSession": "在終端機中執行 claude{br}以開始新的工作階段",
+    "newConversation": "新對話",
+    "close": "關閉"
+  },
+  "meta": {
+    "message": "訊息",
+    "userAssistant": "使用者 {userCount} / 助手 {assistantCount}",
+    "tokens": "Token 數",
+    "inputOutputTotal": "輸入 {input} / 輸出 {output} / 總計 {total}",
+    "cost": "費用",
+    "created": "建立時間",
+    "updated": "更新時間",
+    "path": "路徑",
+    "process": "處理程序",
+    "size": "大小",
+    "session": "工作階段"
+  }
+}

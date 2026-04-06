@@ -1,0 +1,10 @@
+{
+  "title": "Historial de mensajes",
+  "searchPlaceholder": "Buscar en el historial...",
+  "loading": "Cargando..",
+  "fetchError": "Error al cargar",
+  "retry": "Reintentar",
+  "noSearchResults": "Sin resultados de búsqueda",
+  "noHistory": "Sin historial",
+  "deleteLabel": "Eliminar"
+}

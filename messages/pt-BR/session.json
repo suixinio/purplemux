@@ -1,0 +1,33 @@
+{
+  "noMessage": "(sem mensagem)",
+  "sessionLabel": "Sessao: {message}",
+  "turnCount": "{count} turnos",
+  "justNow": "agora",
+  "minutesAgo": "{count}min atras",
+  "hoursAgo": "{count}h atras",
+  "yesterday": "ontem",
+  "daysAgo": "{count}d atras",
+  "weeksAgo": "{count}sem atras",
+  "monthsAgo": "{count}m atras",
+  "yearsAgo": "{count}a atras",
+  "empty": {
+    "closeLabel": "Fechar",
+    "noSession": "Nenhuma sessao",
+    "startNewSession": "Execute claude no terminal{br}para iniciar uma nova sessao",
+    "newConversation": "Nova conversa",
+    "close": "Fechar"
+  },
+  "meta": {
+    "message": "Mensagens",
+    "userAssistant": "Usuario {userCount} / Assistente {assistantCount}",
+    "tokens": "Tokens",
+    "inputOutputTotal": "Entrada {input} / Saida {output} / Total {total}",
+    "cost": "Custo",
+    "created": "Criado",
+    "updated": "Atualizado",
+    "path": "Caminho",
+    "process": "Processo",
+    "size": "Tamanho",
+    "session": "Sessao"
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "steps": {
+    "preflight": "Sistem Kontrolü",
+    "password": "Şifre Belirleme",
+    "appearance": "Uygulama Teması",
+    "theme": "Terminal Teması",
+    "claude": "Claude Ayarları",
+    "complete": "Tamamlandı"
+  },
+  "checking": "Ortam kontrol ediliyor...",
+  "missingTools": "Gerekli araçlar eksik",
+  "installBrew": "Homebrew Yükle",
+  "installTmux": "tmux Yükle",
+  "upgradeTmux": "tmux Güncelle",
+  "password": "Şifre",
+  "passwordPlaceholder": "En az 4 karakter",
+  "confirmPassword": "Şifre onayı",
+  "confirmPasswordPlaceholder": "Şifrenizi tekrar girin",
+  "passwordMinLength": "Şifre en az 4 karakter olmalıdır.",
+  "passwordMismatch": "Şifreler eşleşmiyor.",
+  "appearanceDescription": "Uygulama genelinde görüntüleme temasını seçin.",
+  "skipPermissions": "İzin Kontrollerini Atla",
+  "skipPermissionsDescription": "Claude CLI çalıştırılırken --dangerously-skip-permissions seçeneğini ekler.",
+  "summary": {
+    "password": "Şifre",
+    "appTheme": "Uygulama Teması",
+    "darkTheme": "Koyu Tema",
+    "lightTheme": "Açık Tema",
+    "skipPermissions": "İzin Atlama",
+    "enabled": "Etkin",
+    "disabled": "Devre Dışı"
+  },
+  "submitting": "Kaydediliyor...",
+  "completeButton": "Kurulumu Tamamla",
+  "setupFailed": "Kurulum başarısız.",
+  "connectionError": "Sunucuya bağlanılamıyor."
+}

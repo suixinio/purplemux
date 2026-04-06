@@ -1,0 +1,33 @@
+{
+  "noMessage": "(нет сообщений)",
+  "sessionLabel": "Сессия: {message}",
+  "turnCount": "{count} обменов",
+  "justNow": "только что",
+  "minutesAgo": "{count} мин. назад",
+  "hoursAgo": "{count} ч. назад",
+  "yesterday": "вчера",
+  "daysAgo": "{count} дн. назад",
+  "weeksAgo": "{count} нед. назад",
+  "monthsAgo": "{count} мес. назад",
+  "yearsAgo": "{count} г. назад",
+  "empty": {
+    "closeLabel": "Закрыть",
+    "noSession": "Нет сессий",
+    "startNewSession": "Запустите claude в терминале,{br}чтобы начать новую сессию",
+    "newConversation": "Новая беседа",
+    "close": "Закрыть"
+  },
+  "meta": {
+    "message": "Сообщения",
+    "userAssistant": "Пользователь {userCount} / Ассистент {assistantCount}",
+    "tokens": "Токены",
+    "inputOutputTotal": "Вход {input} / Выход {output} / Всего {total}",
+    "cost": "Стоимость",
+    "created": "Создано",
+    "updated": "Обновлено",
+    "path": "Путь",
+    "process": "Процесс",
+    "size": "Размер",
+    "session": "Сессия"
+  }
+}

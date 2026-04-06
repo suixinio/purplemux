@@ -1,0 +1,8 @@
+{
+  "title": "Notifications",
+  "empty": "Aucune tâche en cours",
+  "busySection": "En cours ({count})",
+  "reviewSection": "À vérifier ({count})",
+  "dismiss": "Ignorer",
+  "navigate": "Accéder"
+}

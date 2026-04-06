@@ -1,0 +1,7 @@
+{
+  "add": "Añadir espacio de trabajo",
+  "projectDirectory": "Directorio del proyecto",
+  "directoryPlaceholder": "Introduce la ruta del directorio",
+  "validating": "Validando...",
+  "addButton": "Añadir"
+}

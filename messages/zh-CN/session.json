@@ -1,0 +1,33 @@
+{
+  "noMessage": "（无消息）",
+  "sessionLabel": "会话：{message}",
+  "turnCount": "{count}轮对话",
+  "justNow": "刚刚",
+  "minutesAgo": "{count}分钟前",
+  "hoursAgo": "{count}小时前",
+  "yesterday": "昨天",
+  "daysAgo": "{count}天前",
+  "weeksAgo": "{count}周前",
+  "monthsAgo": "{count}个月前",
+  "yearsAgo": "{count}年前",
+  "empty": {
+    "closeLabel": "关闭",
+    "noSession": "没有会话",
+    "startNewSession": "在终端中运行claude{br}开始新会话",
+    "newConversation": "新对话",
+    "close": "关闭"
+  },
+  "meta": {
+    "message": "消息",
+    "userAssistant": "用户 {userCount} / 助手 {assistantCount}",
+    "tokens": "令牌",
+    "inputOutputTotal": "输入 {input} / 输出 {output} / 总计 {total}",
+    "cost": "费用",
+    "created": "创建时间",
+    "updated": "更新时间",
+    "path": "路径",
+    "process": "进程",
+    "size": "大小",
+    "session": "会话"
+  }
+}

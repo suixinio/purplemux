@@ -1,0 +1,37 @@
+{
+  "steps": {
+    "preflight": "システムチェック",
+    "password": "パスワード設定",
+    "appearance": "アプリテーマ",
+    "theme": "ターミナルテーマ",
+    "claude": "Claude設定",
+    "complete": "完了"
+  },
+  "checking": "環境を確認中...",
+  "missingTools": "必要なツールがインストールされていません",
+  "installBrew": "Homebrewをインストール",
+  "installTmux": "tmuxをインストール",
+  "upgradeTmux": "tmuxをアップグレード",
+  "password": "パスワード",
+  "passwordPlaceholder": "4文字以上",
+  "confirmPassword": "パスワード確認",
+  "confirmPasswordPlaceholder": "パスワードを再入力",
+  "passwordMinLength": "パスワードは4文字以上で入力してください。",
+  "passwordMismatch": "パスワードが一致しません。",
+  "appearanceDescription": "アプリ全体の表示テーマを選択します。",
+  "skipPermissions": "権限チェックをスキップ",
+  "skipPermissionsDescription": "Claude CLI実行時に--dangerously-skip-permissionsオプションを追加します。",
+  "summary": {
+    "password": "パスワード",
+    "appTheme": "アプリテーマ",
+    "darkTheme": "ダークテーマ",
+    "lightTheme": "ライトテーマ",
+    "skipPermissions": "権限スキップ",
+    "enabled": "有効",
+    "disabled": "無効"
+  },
+  "submitting": "保存中...",
+  "completeButton": "セットアップを完了",
+  "setupFailed": "セットアップに失敗しました。",
+  "connectionError": "サーバーに接続できません。"
+}

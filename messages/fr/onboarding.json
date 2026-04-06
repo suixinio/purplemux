@@ -1,0 +1,37 @@
+{
+  "steps": {
+    "preflight": "Vérification système",
+    "password": "Définir le mot de passe",
+    "appearance": "Thème de l'application",
+    "theme": "Thème du terminal",
+    "claude": "Paramètres Claude",
+    "complete": "Terminé"
+  },
+  "checking": "Vérification de l'environnement...",
+  "missingTools": "Des outils requis sont manquants",
+  "installBrew": "Installer Homebrew",
+  "installTmux": "Installer tmux",
+  "upgradeTmux": "Mettre à jour tmux",
+  "password": "Mot de passe",
+  "passwordPlaceholder": "4 caractères minimum",
+  "confirmPassword": "Confirmer le mot de passe",
+  "confirmPasswordPlaceholder": "Ressaisissez votre mot de passe",
+  "passwordMinLength": "Le mot de passe doit contenir au moins 4 caractères.",
+  "passwordMismatch": "Les mots de passe ne correspondent pas.",
+  "appearanceDescription": "Sélectionnez le thème d'affichage de l'application.",
+  "skipPermissions": "Ignorer les vérifications de permissions",
+  "skipPermissionsDescription": "Ajoute l'option --dangerously-skip-permissions lors de l'exécution de Claude CLI.",
+  "summary": {
+    "password": "Mot de passe",
+    "appTheme": "Thème de l'application",
+    "darkTheme": "Thème sombre",
+    "lightTheme": "Thème clair",
+    "skipPermissions": "Ignorer les permissions",
+    "enabled": "Activé",
+    "disabled": "Désactivé"
+  },
+  "submitting": "Enregistrement...",
+  "completeButton": "Terminer la configuration",
+  "setupFailed": "Échec de la configuration.",
+  "connectionError": "Impossible de se connecter au serveur."
+}

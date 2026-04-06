@@ -1,0 +1,8 @@
+{
+  "title": "Benachrichtigungen",
+  "empty": "Keine laufenden Aufgaben",
+  "busySection": "In Bearbeitung ({count})",
+  "reviewSection": "Überprüfung ({count})",
+  "dismiss": "Schließen",
+  "navigate": "Aufrufen"
+}

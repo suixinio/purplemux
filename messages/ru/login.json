@@ -1,0 +1,16 @@
+{
+  "pageTitle": "Вход - purplemux",
+  "setupTitle": "Настройка - purplemux",
+  "missingTools": "Отсутствуют необходимые инструменты",
+  "install": "Установить",
+  "password": "Пароль",
+  "passwordPlaceholder": "Введите пароль",
+  "invalidPassword": "Неверный пароль.",
+  "loggingIn": "Вход...",
+  "loginButton": "Войти",
+  "forgotPassword": "Забыли пароль?",
+  "resetPassword": "Сбросить пароль",
+  "resetPasswordHelp": "Удалите указанный ниже файл и {action}, чтобы задать новый пароль на экране начальной настройки.",
+  "restartServer": "перезапустите сервер",
+  "restartApp": "закройте и перезапустите приложение"
+}

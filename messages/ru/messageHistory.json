@@ -1,0 +1,10 @@
+{
+  "title": "История сообщений",
+  "searchPlaceholder": "Поиск по истории...",
+  "loading": "Загрузка..",
+  "fetchError": "Не удалось загрузить",
+  "retry": "Повторить",
+  "noSearchResults": "Ничего не найдено",
+  "noHistory": "История пуста",
+  "deleteLabel": "Удалить"
+}
