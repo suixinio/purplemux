@@ -262,6 +262,7 @@ class StatusManager {
     const { workspaces } = await getWorkspaces();
     const panesInfo = await getAllPanesInfo();
     const knownTabIds = new Set<string>();
+    const tabsBeforePoll = new Set(this.tabs.keys());
 
     for (const ws of workspaces) {
       const layout = await readLayoutFile(resolveLayoutFile(ws.id));
@@ -336,8 +337,8 @@ class StatusManager {
       }
     }
 
-    for (const [tabId] of this.tabs) {
-      if (!knownTabIds.has(tabId)) {
+    for (const tabId of tabsBeforePoll) {
+      if (!knownTabIds.has(tabId) && this.tabs.has(tabId)) {
         this.tabs.delete(tabId);
         this.broadcastRemove(tabId);
       }

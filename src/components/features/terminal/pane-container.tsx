@@ -97,7 +97,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const [sessionSwitching, setSessionSwitching] = useState(false);
   const sessionSwitchTimerRef = useRef(0);
   const [isCreating, setIsCreating] = useState(false);
-  const [closingTabId, setClosingTabId] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isPanelTransitioning, setIsPanelTransitioning] = useState(false);
 
@@ -344,12 +343,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     }
 
     closingTabIdRef.current = currentActiveTabId;
-    setClosingTabId(currentActiveTabId);
     try {
       await deleteTabInPane(paneId, currentActiveTabId);
     } finally {
       closingTabIdRef.current = null;
-      setClosingTabId(null);
     }
   }, [paneId, switchTabInPane, deleteTabInPane, closePane]);
 
@@ -507,12 +504,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         return;
       }
       closingTabIdRef.current = tabId;
-      setClosingTabId(tabId);
       try {
         await deleteTabInPane(paneId, tabId);
       } finally {
         closingTabIdRef.current = null;
-        setClosingTabId(null);
       }
     },
     [paneId, tabs, paneCount, deleteTabInPane, closePane],
@@ -841,13 +836,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
               )}
               새 탭 열기
             </Button>
-          </div>
-        )}
-
-        {closingTabId && (
-          <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-3 bg-background/80 animate-delayed-fade-in">
-            <Spinner className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">프로세스 정리 중...</span>
           </div>
         )}
 

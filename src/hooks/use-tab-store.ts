@@ -94,7 +94,7 @@ const useTabStore = create<ITabStore>((set) => ({
 
   removeTab: (tabId) =>
     set((state) => {
-      const { [tabId]: _removed, ...rest } = state.tabs;  
+      const { [tabId]: _removed, ...rest } = state.tabs;
       return { tabs: rest };
     }),
 

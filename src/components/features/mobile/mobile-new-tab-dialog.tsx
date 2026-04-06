@@ -24,17 +24,17 @@ const MENU_ITEMS = [
 ] as const;
 
 const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDialogProps) => {
-  const [isCreating, setIsCreating] = useState(false);
+  const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   const handleSelect = async (item: (typeof MENU_ITEMS)[number]) => {
-    setIsCreating(true);
-    onOpenChange(false);
+    setCreatingKey(item.key);
     if ('startClaude' in item && item.startClaude) {
       await onCreateTab(item.type, { command: 'claude-new' });
     } else {
       await onCreateTab(item.type);
     }
-    setIsCreating(false);
+    setCreatingKey(null);
+    onOpenChange(false);
   };
 
   return (
@@ -48,10 +48,10 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
             <button
               key={item.key}
               className="flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border border-border bg-background text-foreground transition-colors active:bg-accent disabled:pointer-events-none disabled:opacity-50"
-              disabled={isCreating}
+              disabled={creatingKey !== null}
               onClick={() => handleSelect(item)}
             >
-              {isCreating ? <Spinner className="h-4 w-4" /> : item.icon}
+              {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
               <span className="text-xs">{item.label}</span>
             </button>
           ))}
