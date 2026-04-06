@@ -7,18 +7,28 @@ const log = createLogger('hooks');
 
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const HOOKS_FILE = path.join(BASE_DIR, 'hooks.json');
+const PORT_FILE = path.join(BASE_DIR, 'port');
+const HOOK_SCRIPT = path.join(BASE_DIR, 'status-hook.sh');
 
 export const HOOK_SETTINGS_PATH = HOOKS_FILE;
 
-const buildHookSettings = (port: number) => ({
+const HOOK_SCRIPT_CONTENT = `#!/bin/sh
+PORT_FILE="$HOME/.purplemux/port"
+[ -f "$PORT_FILE" ] || exit 0
+PORT=$(cat "$PORT_FILE")
+curl -s -X POST -o /dev/null "http://localhost:\${PORT}/api/status/hook" 2>/dev/null
+exit 0
+`;
+
+const buildHookSettings = () => ({
   hooks: {
     Stop: [
       {
         matcher: '',
         hooks: [
           {
-            type: 'http',
-            url: `http://localhost:${port}/api/status/hook`,
+            type: 'command',
+            command: `sh "${HOOK_SCRIPT}"`,
             timeout: 3,
           },
         ],
@@ -29,8 +39,8 @@ const buildHookSettings = (port: number) => ({
         matcher: '',
         hooks: [
           {
-            type: 'http',
-            url: `http://localhost:${port}/api/status/hook`,
+            type: 'command',
+            command: `sh "${HOOK_SCRIPT}"`,
             timeout: 3,
           },
         ],
@@ -97,9 +107,24 @@ export const buildAgentBrainHookSettings = (port: number, agentId: string) => ({
   },
 });
 
-export const ensureHookSettings = async (actualPort?: number): Promise<void> => {
-  const port = actualPort ?? parseInt(process.env.PORT || '8022', 10);
-  const settings = buildHookSettings(port);
+export const ensureHookSettings = async (port: number): Promise<void> => {
+  await fs.mkdir(BASE_DIR, { recursive: true });
+
+  // port 파일 기록
+  await fs.writeFile(PORT_FILE, String(port), 'utf-8');
+
+  // hook 스크립트 생성
+  try {
+    const existing = await fs.readFile(HOOK_SCRIPT, 'utf-8');
+    if (existing !== HOOK_SCRIPT_CONTENT) {
+      await fs.writeFile(HOOK_SCRIPT, HOOK_SCRIPT_CONTENT, { mode: 0o755 });
+    }
+  } catch {
+    await fs.writeFile(HOOK_SCRIPT, HOOK_SCRIPT_CONTENT, { mode: 0o755 });
+  }
+
+  // hooks.json 생성
+  const settings = buildHookSettings();
   const content = JSON.stringify(settings, null, 2) + '\n';
 
   try {
@@ -109,7 +134,14 @@ export const ensureHookSettings = async (actualPort?: number): Promise<void> => 
     // file doesn't exist yet
   }
 
-  await fs.mkdir(BASE_DIR, { recursive: true });
   await fs.writeFile(HOOKS_FILE, content, 'utf-8');
   log.debug(`${HOOKS_FILE} 생성 완료`);
+};
+
+export const removePortFile = async (): Promise<void> => {
+  try {
+    await fs.unlink(PORT_FILE);
+  } catch {
+    // already removed
+  }
 };

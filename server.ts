@@ -13,7 +13,7 @@ import { handleStatusConnection, gracefulStatusShutdown } from './src/lib/status
 import { handleAgentStatusConnection, gracefulAgentStatusShutdown } from './src/lib/agent-status-server';
 import { getStatusManager } from './src/lib/status-manager';
 import { getAgentManager } from './src/lib/agent-manager';
-import { ensureHookSettings } from './src/lib/hook-settings';
+import { ensureHookSettings, removePortFile } from './src/lib/hook-settings';
 import { scanSessions, applyConfig } from './src/lib/tmux';
 import { initWorkspaceStore } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
@@ -253,6 +253,7 @@ const startDev = async (port: number, appDir: string): Promise<IStartResult> => 
   });
 
   const shutdown = async () => {
+    await removePortFile();
     server.close();
     await shutdownWs();
   };
@@ -312,6 +313,7 @@ const startProd = async (port: number, appDir: string): Promise<IStartResult> =>
   });
 
   const shutdown = async () => {
+    await removePortFile();
     server.close();
     await shutdownWs();
   };
