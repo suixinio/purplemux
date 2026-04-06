@@ -1,6 +1,7 @@
 import Document, { Html, Head, Main, NextScript, type DocumentContext, type DocumentInitialProps } from 'next/document';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { getConfig } from '@/lib/config-store';
+import type { IWorkspace } from '@/types/terminal';
 
 interface IDocumentProps extends DocumentInitialProps {
   sidebarWidth: number;
@@ -9,6 +10,7 @@ interface IDocumentProps extends DocumentInitialProps {
   editorUrl: string;
   dangerouslySkipPermissions: boolean;
   hasAuthPassword: boolean;
+  workspaces: IWorkspace[];
 }
 
 const safeJson = (v: unknown) =>
@@ -24,6 +26,7 @@ class MyDocument extends Document<IDocumentProps> {
       editorUrl: '',
       dangerouslySkipPermissions: false,
       hasAuthPassword: false,
+      workspaces: [] as IWorkspace[],
     };
     try {
       const [wsData, cfgData] = await Promise.all([getWorkspaces(), getConfig()]);
@@ -35,6 +38,7 @@ class MyDocument extends Document<IDocumentProps> {
         editorUrl: cfgData.editorUrl ?? '',
         dangerouslySkipPermissions: cfgData.dangerouslySkipPermissions ?? false,
         hasAuthPassword: !!cfgData.authPassword,
+        workspaces: wsData.workspaces,
       };
     } catch {
       return { ...initialProps, ...defaults };
@@ -42,13 +46,14 @@ class MyDocument extends Document<IDocumentProps> {
   }
 
   render() {
-    const { sidebarWidth, sidebarCollapsed, agentEnabled, editorUrl, dangerouslySkipPermissions, hasAuthPassword } = this.props;
+    const { sidebarWidth, sidebarCollapsed, agentEnabled, editorUrl, dangerouslySkipPermissions, hasAuthPassword, workspaces } = this.props;
     const effectiveWidth = sidebarCollapsed ? 0 : sidebarWidth;
     const effectiveMinWidth = sidebarCollapsed ? 0 : 160;
 
     const initScript = [
       `window.__SB__={w:${sidebarWidth},c:${sidebarCollapsed}}`,
       `window.__CFG__={ae:${agentEnabled},eu:${safeJson(editorUrl)},dsp:${dangerouslySkipPermissions},hap:${hasAuthPassword}}`,
+      `window.__WS__=${safeJson(workspaces)}`,
     ].join(';');
 
     return (

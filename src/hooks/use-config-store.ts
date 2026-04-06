@@ -29,7 +29,7 @@ const getInitialConfig = (): Pick<IConfigState, 'agentEnabled' | 'editorUrl' | '
       | undefined;
     if (cfg) {
       return {
-        agentEnabled: false,
+        agentEnabled: cfg.ae,
         editorUrl: cfg.eu,
         dangerouslySkipPermissions: cfg.dsp,
         hasAuthPassword: cfg.hap,

@@ -361,7 +361,7 @@ const Sidebar = () => {
           className="flex-1 overflow-y-auto"
           style={{ scrollbarWidth: 'none' }}
         >
-          {workspaces.length === 0 && (
+          {!isLoading && workspaces.length === 0 && (
             <div className="flex flex-col items-center gap-2 p-4">
               <span className="text-xs text-muted-foreground">
                 Workspace가 없습니다

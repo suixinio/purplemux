@@ -50,6 +50,18 @@ const getInitialSidebar = (): { sidebarWidth: number; sidebarCollapsed: boolean 
 
 const initialSidebar = getInitialSidebar();
 
+const getInitialWorkspaceData = (): { workspaces: IWorkspace[]; activeWorkspaceId: string | null; isLoading: boolean } => {
+  if (typeof window !== 'undefined') {
+    const ws = (window as unknown as Record<string, unknown>).__WS__ as IWorkspace[] | undefined;
+    if (ws && ws.length > 0) {
+      return { workspaces: ws, activeWorkspaceId: null, isLoading: false };
+    }
+  }
+  return { workspaces: [], activeWorkspaceId: null, isLoading: true };
+};
+
+const initialWs = getInitialWorkspaceData();
+
 const getStoredActiveWorkspaceId = (): string | null => {
   try {
     return localStorage.getItem(STORAGE_KEY);
@@ -90,11 +102,11 @@ const saveActive = (updates: {
 };
 
 const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
-  workspaces: [],
-  activeWorkspaceId: null,
+  workspaces: initialWs.workspaces,
+  activeWorkspaceId: initialWs.workspaces.length > 0 ? resolveActiveWorkspaceId(initialWs.workspaces) : null,
   sidebarCollapsed: initialSidebar.sidebarCollapsed,
   sidebarWidth: initialSidebar.sidebarWidth,
-  isLoading: true,
+  isLoading: initialWs.isLoading,
   error: null,
 
   hydrate: (data) => {
