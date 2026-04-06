@@ -38,6 +38,7 @@ const ClaudeCodePanel = ({
 
   const claudeStatus = useTabStore((s) => s.tabs[tabId]?.claudeStatus ?? 'unknown');
   const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
+  const storeTimelineLoading = useTabStore((s) => s.tabs[tabId]?.isTimelineLoading ?? true);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
 
   const handleResumeStarted = useCallback(
@@ -143,10 +144,10 @@ const ClaudeCodePanel = ({
       restartNeedsExitRef.current = false;
     }
 
-    if (isCliIdle(cliState) && !restartNeedsExitRef.current) {
+    if (isCliIdle(cliState) && !restartNeedsExitRef.current && claudeStatus === 'running' && !storeTimelineLoading) {
       useTabStore.getState().setRestarting(tabId, false);
     }
-  }, [isRestarting, claudeStatus, cliState, tabId]);
+  }, [isRestarting, claudeStatus, cliState, storeTimelineLoading, tabId]);
 
   const effectiveCliState = claudeStatus !== 'running' && claudeStatus !== 'starting' && cliState !== 'inactive'
     ? 'inactive' as const
