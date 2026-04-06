@@ -56,7 +56,7 @@ const PreflightError = ({ checks }: { checks: IToolCheck[] }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-amber-400">
+      <div className="flex items-center gap-2 text-ui-amber">
         <AlertTriangle className="h-5 w-5 shrink-0" />
         <p className="text-sm font-medium">{t('missingTools')}</p>
       </div>
@@ -64,9 +64,9 @@ const PreflightError = ({ checks }: { checks: IToolCheck[] }) => {
         {checks.map((check) => (
           <div key={check.name} className="flex items-center gap-2 text-sm">
             {check.ok ? (
-              <Check className="h-4 w-4 shrink-0 text-green-400" />
+              <Check className="h-4 w-4 shrink-0 text-positive" />
             ) : (
-              <X className="h-4 w-4 shrink-0 text-red-400" />
+              <X className="h-4 w-4 shrink-0 text-negative" />
             )}
             <span className={check.ok ? 'text-muted-foreground' : 'text-foreground font-medium'}>
               {check.name}

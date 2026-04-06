@@ -270,36 +270,36 @@ const MobileNavigationSheet = ({
             <Plus size={16} />
             Workspace
           </button>
-          <div className="flex items-center gap-1 px-3 pb-3">
+          <div className="flex items-center gap-0.5 px-3 pb-3">
             <button
-              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
               onClick={() => {
                 onOpenChange(false);
                 router.push('/reports');
               }}
+              aria-label={t('notes')}
             >
               <FileText size={15} />
-              {t('notes')}
             </button>
             <button
-              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
               onClick={() => {
                 onOpenChange(false);
                 router.push('/stats');
               }}
+              aria-label={t('stats')}
             >
               <BarChart3 size={15} />
-              {t('stats')}
             </button>
             <button
-              className="flex items-center gap-1.5 rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent"
               onClick={() => {
                 onOpenChange(false);
                 onOpenSettings();
               }}
+              aria-label={tc('settings')}
             >
               <Settings size={15} />
-              {tc('settings')}
             </button>
           </div>
         </div>

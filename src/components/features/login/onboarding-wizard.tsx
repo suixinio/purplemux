@@ -237,19 +237,19 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
               : { command: 'tmux-install', label: t('installTmux') };
             return (
             <div className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-amber-400">
+              <div className="flex items-center gap-2 text-ui-amber">
                 <AlertTriangle className="h-5 w-5 shrink-0" />
                 <p className="text-sm font-medium">{t('missingTools')}</p>
               </div>
               <div className="space-y-1.5">
                 {!preflightStatus.brew.installed && (
                   <div className="flex items-center gap-2 text-sm">
-                    <X className="h-4 w-4 shrink-0 text-red-400" />
+                    <X className="h-4 w-4 shrink-0 text-negative" />
                     <span className="text-foreground font-medium">Homebrew</span>
                   </div>
                 )}
                 <div className="flex items-center gap-2 text-sm">
-                  <X className="h-4 w-4 shrink-0 text-red-400" />
+                  <X className="h-4 w-4 shrink-0 text-negative" />
                   <span className="text-foreground font-medium">tmux</span>
                   {preflightStatus.tmux.version && (
                     <span className="text-xs text-muted-foreground">({preflightStatus.tmux.version})</span>

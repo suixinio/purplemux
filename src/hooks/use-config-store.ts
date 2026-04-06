@@ -3,6 +3,7 @@ import { create } from 'zustand';
 export interface IConfigInitialData {
   appTheme?: string | null;
   terminalTheme?: { light: string; dark: string } | null;
+  customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
   agentEnabled?: boolean;
@@ -18,6 +19,7 @@ interface IConfigState {
   notificationsEnabled: boolean;
   hasAuthPassword: boolean;
   locale: string;
+  customCSS: string;
 
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
@@ -26,9 +28,10 @@ interface IConfigState {
   setNotificationsEnabled: (enabled: boolean) => void;
   changePassword: (password: string) => void;
   setLocale: (locale: string) => void;
+  setCustomCSS: (css: string) => void;
 }
 
-const initialConfig = { agentEnabled: false, notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en' };
+const initialConfig = { agentEnabled: false, notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '' };
 
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
@@ -47,6 +50,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   notificationsEnabled: initialConfig.notificationsEnabled,
   hasAuthPassword: initialConfig.hasAuthPassword,
   locale: initialConfig.locale,
+  customCSS: initialConfig.customCSS,
 
   hydrate: (data) => {
     set({
@@ -56,6 +60,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
       notificationsEnabled: data.notificationsEnabled ?? true,
       hasAuthPassword: data.hasAuthPassword ?? false,
       locale: data.locale ?? 'en',
+      customCSS: data.customCSS ?? '',
     });
   },
 
@@ -88,6 +93,11 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   setLocale: (locale) => {
     set({ locale });
     saveConfig({ locale });
+  },
+
+  setCustomCSS: (css) => {
+    set({ customCSS: css });
+    saveConfig({ customCSS: css });
   },
 }));
 

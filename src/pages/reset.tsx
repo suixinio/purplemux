@@ -14,11 +14,11 @@ interface IStep {
 const StepIcon = ({ status }: { status: TStepStatus }) => {
   switch (status) {
     case 'running':
-      return <Spinner className="h-4 w-4 text-purple-400" />;
+      return <Spinner className="h-4 w-4 text-ui-purple" />;
     case 'done':
-      return <Check className="h-4 w-4 text-green-400" />;
+      return <Check className="h-4 w-4 text-positive" />;
     case 'error':
-      return <Circle className="h-4 w-4 text-red-400" />;
+      return <Circle className="h-4 w-4 text-negative" />;
     default:
       return <Circle className="h-4 w-4 text-muted-foreground/40" />;
   }
@@ -97,7 +97,7 @@ const ResetPage = () => {
             ))}
           </div>
           {errorMsg && (
-            <p className="text-sm text-red-400 text-center">{errorMsg}</p>
+            <p className="text-sm text-negative text-center">{errorMsg}</p>
           )}
         </div>
       </div>

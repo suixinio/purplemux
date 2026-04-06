@@ -236,7 +236,7 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
           <button
             className={cn(
               'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
-              mobileUA ? 'text-blue-400' : 'text-muted-foreground hover:text-foreground',
+              mobileUA ? 'text-accent-color' : 'text-muted-foreground hover:text-foreground',
             )}
             onClick={handleToggleMobileUA}
             aria-label={mobileUA ? t('switchToDesktop') : t('switchToMobile')}

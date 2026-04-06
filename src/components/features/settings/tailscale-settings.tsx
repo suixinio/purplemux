@@ -36,7 +36,7 @@ const CopyButton = ({ text }: { text: string }) => {
 
   return (
     <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleCopy}>
-      {copied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+      {copied ? <Check className="h-3 w-3 text-positive" /> : <Copy className="h-3 w-3" />}
     </Button>
   );
 };
@@ -46,8 +46,8 @@ const NotInstalledGuide = () => {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start gap-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-4">
-        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+      <div className="flex items-start gap-3 rounded-md border border-ui-amber/30 bg-ui-amber/5 p-4">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-ui-amber" />
         <div className="space-y-1">
           <p className="text-sm font-medium">{t('notInstalled')}</p>
           <p className="text-sm text-muted-foreground">
@@ -177,8 +177,8 @@ const TailscaleSettings = () => {
   if (!status.running) {
     return (
       <div className="space-y-4">
-        <div className="flex items-start gap-3 rounded-md border border-yellow-500/30 bg-yellow-500/5 p-4">
-          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+        <div className="flex items-start gap-3 rounded-md border border-ui-amber/30 bg-ui-amber/5 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-ui-amber" />
           <div className="space-y-1">
             <p className="text-sm font-medium">{t('notRunning')}</p>
             <p className="text-sm text-muted-foreground">{t('notRunningDescription')}</p>
@@ -227,8 +227,8 @@ const TailscaleSettings = () => {
       </div>
 
       {isNonDefaultPort && (
-        <div className="flex items-start gap-3 rounded-md border border-blue-500/30 bg-blue-500/5 p-4">
-          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-500" />
+        <div className="flex items-start gap-3 rounded-md border border-accent-color/30 bg-accent-color/5 p-4">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-accent-color" />
           <div className="space-y-2">
             <p className="text-sm font-medium">
               {t('nonDefaultPortTitle', { port: currentPort })}

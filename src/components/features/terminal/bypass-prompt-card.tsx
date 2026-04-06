@@ -39,8 +39,8 @@ const BypassPromptCard = ({ sessionName, options, fallback }: IBypassPromptCardP
   };
 
   return (
-    <div className="mt-4 w-full max-w-xs rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
-      <div className="mb-2.5 flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+    <div className="mt-4 w-full max-w-xs rounded-lg border border-ui-amber/20 bg-ui-amber/5 px-4 py-3">
+      <div className="mb-2.5 flex items-center gap-2 text-xs font-medium text-ui-amber">
         <ShieldAlert size={14} />
         <span>{t('bypassPermissions')}</span>
       </div>
@@ -50,7 +50,7 @@ const BypassPromptCard = ({ sessionName, options, fallback }: IBypassPromptCardP
             key={i}
             disabled={sent}
             onClick={() => handleSelect(i)}
-            className="flex items-center gap-2.5 rounded-md border border-border/50 px-3 py-2 text-left text-sm transition-colors hover:border-amber-500/30 hover:bg-amber-500/5 disabled:opacity-50"
+            className="flex items-center gap-2.5 rounded-md border border-border/50 px-3 py-2 text-left text-sm transition-colors hover:border-ui-amber/30 hover:bg-ui-amber/5 disabled:opacity-50"
           >
             <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-xs font-medium text-muted-foreground">
               {i + 1}

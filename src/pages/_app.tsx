@@ -82,6 +82,27 @@ const TerminalThemeSync = () => {
   return null;
 };
 
+const CustomCSSSync = () => {
+  const customCSS = useConfigStore((s) => s.customCSS);
+
+  useEffect(() => {
+    const id = 'purplemux-custom-css';
+    let el = document.getElementById(id) as HTMLStyleElement | null;
+    if (!customCSS) {
+      el?.remove();
+      return;
+    }
+    if (!el) {
+      el = document.createElement('style');
+      el.id = id;
+      document.head.appendChild(el);
+    }
+    el.textContent = customCSS;
+  }, [customCSS]);
+
+  return null;
+};
+
 const ClaudeStatusProvider = () => {
   useClaudeStatus();
   useNativeNotification();
@@ -140,6 +161,7 @@ export default function App({ Component, pageProps }: TAppPropsWithLayout) {
           <ElectronTitlebar />
           {getLayout(<Component {...pageProps} />)}
           <TerminalThemeSync />
+          <CustomCSSSync />
           <ClaudeStatusProvider />
           <ThemedToaster />
         </main>

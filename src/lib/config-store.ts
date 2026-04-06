@@ -12,6 +12,7 @@ export interface IConfigData {
   authSecret?: string;
   appTheme?: string;
   terminalTheme?: { light: string; dark: string };
+  customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
   agentEnabled?: boolean;

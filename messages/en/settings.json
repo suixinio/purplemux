@@ -2,6 +2,7 @@
   "title": "Settings",
   "tabs": {
     "general": "General",
+    "appearance": "Appearance",
     "terminal": "Terminal",
     "editor": "Editor",
     "claude": "Claude",
@@ -17,6 +18,16 @@
     "themeDescription": "Select the display theme.",
     "language": "Language",
     "languageDescription": "Select the interface language."
+  },
+  "appearance": {
+    "customCSS": "Custom CSS",
+    "customCSSDescription": "Override CSS variables to customize colors and styles.",
+    "apply": "Apply",
+    "reset": "Reset",
+    "resetConfirm": "Reset all custom CSS?",
+    "applied": "Custom CSS applied.",
+    "availableVariables": "Available Variables",
+    "placeholder": ":root {\n  --background: oklch(0.98 0 0);\n  --sidebar: oklch(0.95 0.01 220);\n}\n.dark {\n  --background: oklch(0.08 0 0);\n}"
   },
   "terminal": {
     "theme": "Terminal Theme",

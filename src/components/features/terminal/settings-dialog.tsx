@@ -38,6 +38,7 @@ interface ISettingsItem {
   id: TSettingsTab;
   labelKey: string;
   icon: React.ReactNode;
+  electronOnly?: boolean;
 }
 
 const settingsItems: ISettingsItem[] = [
@@ -45,7 +46,7 @@ const settingsItems: ISettingsItem[] = [
   { id: 'terminal', labelKey: 'terminal', icon: <Terminal className="h-4 w-4" /> },
   { id: 'editor', labelKey: 'editor', icon: <Code className="h-4 w-4" /> },
   { id: 'claude', labelKey: 'claude', icon: <ClaudeLogo className="h-4 w-4" /> },
-  { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" /> },
+  { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" />, electronOnly: true },
   { id: 'auth', labelKey: 'auth', icon: <Lock className="h-4 w-4" /> },
   { id: 'tailscale', labelKey: 'tailscale', icon: <Globe className="h-4 w-4" /> },
   { id: 'quick-prompts', labelKey: 'quickPrompts', icon: <Zap className="h-4 w-4" /> },
@@ -493,7 +494,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
               </Button>
             </div>
             <nav className="flex gap-1 overflow-x-auto px-1 pb-2 md:flex-col md:px-0 md:pb-0">
-              {settingsItems.map((item) => (
+              {settingsItems.filter((item) => !item.electronOnly || isElectron).map((item) => (
                 <Button
                   key={item.id}
                   variant="ghost"
