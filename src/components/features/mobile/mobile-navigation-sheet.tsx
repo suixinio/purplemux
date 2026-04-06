@@ -131,7 +131,7 @@ const MobileNavigationSheet = ({
             'flex w-full items-center gap-2 py-2.5 pr-4 text-left text-sm transition-colors',
             indent,
             isTabActive
-              ? 'font-medium text-foreground'
+              ? 'bg-accent font-medium text-foreground'
               : 'text-muted-foreground hover:bg-accent/50',
           )}
           onClick={() => {
