@@ -135,6 +135,7 @@ const QuickPromptsSettings = () => {
     useQuickPrompts();
   const [form, setForm] = useState<IFormState | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -152,10 +153,17 @@ const QuickPromptsSettings = () => {
 
   const handleDelete = useCallback(
     (id: string) => {
-      deletePrompt(id);
+      setDeleteTargetId(id);
     },
-    [deletePrompt],
+    [],
   );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (deleteTargetId) {
+      deletePrompt(deleteTargetId);
+      setDeleteTargetId(null);
+    }
+  }, [deleteTargetId, deletePrompt]);
 
   const handleEdit = useCallback((p: IQuickPrompt) => {
     setForm({ mode: 'edit', id: p.id, name: p.name, prompt: p.prompt });
@@ -292,6 +300,19 @@ const QuickPromptsSettings = () => {
         <RotateCcw className="mr-1 h-3.5 w-3.5" />
         {t('resetToDefault')}
       </Button>
+
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>{t('deleteConfirm')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>

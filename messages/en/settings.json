@@ -122,7 +122,11 @@
     "resetTitle": "Reset to Default",
     "resetDescription": "All custom prompts will be deleted and built-in prompts will be enabled.",
     "resetCancel": "Cancel",
-    "resetConfirm": "Reset"
+    "resetConfirm": "Reset",
+    "deleteTitle": "Delete Prompt",
+    "deleteDescription": "Are you sure you want to delete this prompt?",
+    "deleteCancel": "Cancel",
+    "deleteConfirm": "Delete"
   },
   "sidebarItems": {
     "title": "Sidebar Items",
@@ -144,6 +148,10 @@
     "resetTitle": "Reset to Default",
     "resetDescription": "All custom items will be deleted and built-in items will be enabled.",
     "resetCancel": "Cancel",
-    "resetConfirm": "Reset"
+    "resetConfirm": "Reset",
+    "deleteTitle": "Delete Item",
+    "deleteDescription": "Are you sure you want to delete this item?",
+    "deleteCancel": "Cancel",
+    "deleteConfirm": "Delete"
   }
 }

@@ -147,6 +147,7 @@ const SidebarItemsSettings = () => {
   const { allOrderedItems, customItems, toggleBuiltin, saveCustom, saveOrder, deleteItem, resetAll } = useSidebarItems();
   const [form, setForm] = useState<IFormState | null>(null);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -164,10 +165,17 @@ const SidebarItemsSettings = () => {
 
   const handleDelete = useCallback(
     (id: string) => {
-      deleteItem(id);
+      setDeleteTargetId(id);
     },
-    [deleteItem],
+    [],
   );
+
+  const handleDeleteConfirm = useCallback(() => {
+    if (deleteTargetId) {
+      deleteItem(deleteTargetId);
+      setDeleteTargetId(null);
+    }
+  }, [deleteTargetId, deleteItem]);
 
   const handleEdit = useCallback((item: ISidebarItem) => {
     setForm({ mode: 'edit', id: item.id, name: item.name, icon: item.icon, url: item.url });
@@ -304,6 +312,19 @@ const SidebarItemsSettings = () => {
         <RotateCcw className="mr-1 h-3.5 w-3.5" />
         {t('resetToDefault')}
       </Button>
+
+      <AlertDialog open={!!deleteTargetId} onOpenChange={(open) => !open && setDeleteTargetId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('deleteTitle')}</AlertDialogTitle>
+            <AlertDialogDescription>{t('deleteDescription')}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('deleteCancel')}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm}>{t('deleteConfirm')}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
         <AlertDialogContent>
