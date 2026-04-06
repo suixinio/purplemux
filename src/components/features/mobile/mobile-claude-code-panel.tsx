@@ -64,7 +64,6 @@ const MobileClaudeCodePanel = ({
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
   const claudeStatus = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeStatus ?? 'unknown' : 'unknown');
-  const storeTimelineLoading = useTabStore((s) => tabId ? s.tabs[tabId]?.isTimelineLoading ?? true : true);
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
@@ -175,10 +174,10 @@ const MobileClaudeCodePanel = ({
       restartNeedsExitRef.current = false;
     }
 
-    if (isCliIdle(cliState) && !restartNeedsExitRef.current && claudeStatus === 'running' && !storeTimelineLoading) {
+    if (isCliIdle(cliState) && !restartNeedsExitRef.current && (effectiveClaudeStatus === 'running' || effectiveClaudeStatus === 'starting') && !isTimelineLoading) {
       onRestartComplete?.();
     }
-  }, [isRestarting, claudeStatus, cliState, storeTimelineLoading, onRestartComplete]);
+  }, [isRestarting, effectiveClaudeStatus, cliState, isTimelineLoading, onRestartComplete]);
 
   const isInputVisible = view === 'timeline';
 
