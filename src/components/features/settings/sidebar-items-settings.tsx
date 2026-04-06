@@ -262,9 +262,8 @@ const SidebarItemsSettings = () => {
 
         {form && (
           <div className="space-y-3 rounded-lg border p-3">
-            <p className="text-sm font-medium">{form.mode === 'add' ? t('addItem') : t('editItem')}</p>
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">{t('nameLabel')}</label>
+            <div className="flex items-center gap-2">
+              <IconPicker value={form.icon} onChange={(icon) => setForm({ ...form, icon })} />
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -272,18 +271,11 @@ const SidebarItemsSettings = () => {
                 autoFocus
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">{t('iconLabel')}</label>
-              <IconPicker value={form.icon} onChange={(icon) => setForm({ ...form, icon })} />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs text-muted-foreground">{t('urlLabel')}</label>
-              <Input
-                value={form.url}
-                onChange={(e) => setForm({ ...form, url: e.target.value })}
-                placeholder={t('urlPlaceholder')}
-              />
-            </div>
+            <Input
+              value={form.url}
+              onChange={(e) => setForm({ ...form, url: e.target.value })}
+              placeholder={t('urlPlaceholder')}
+            />
             <div className="flex justify-end gap-2">
               <Button variant="outline" size="sm" onClick={() => setForm(null)}>
                 {t('cancel')}

@@ -64,7 +64,7 @@ const IconPicker = ({ value, onChange, readonly, size = 16 }: IIconPickerProps) 
           className="mb-2 h-8 text-xs"
           autoFocus
         />
-        <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto">
+        <div className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto p-1">
           {filtered.map((name) => {
             if (!getIcon(name)) return null;
             return (

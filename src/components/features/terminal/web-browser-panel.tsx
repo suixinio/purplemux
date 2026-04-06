@@ -42,11 +42,41 @@ const checkSameOrigin = (iframe: HTMLIFrameElement): boolean => {
   }
 };
 
+const sessionUrlCache = new Map<string, string>();
+
+const getLastViewedUrl = (configuredUrl: string): string | null => {
+  const cached = sessionUrlCache.get(configuredUrl);
+  if (cached) return cached;
+  if (isElectron) {
+    try { return localStorage.getItem(`webview-last:${configuredUrl}`); }
+    catch { return null; }
+  }
+  return null;
+};
+
+const saveLastViewedUrl = (configuredUrl: string, currentUrl: string) => {
+  sessionUrlCache.set(configuredUrl, currentUrl);
+  if (isElectron) {
+    try { localStorage.setItem(`webview-last:${configuredUrl}`, currentUrl); }
+    catch { /* noop */ }
+  }
+};
+
 const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => {
   const t = useTranslations('webBrowser');
-  const [url, setUrl] = useState(initialUrl || '');
-  const [addressValue, setAddressValue] = useState(initialUrl || '');
+  const resolvedUrl = initialUrl ? (getLastViewedUrl(initialUrl) ?? initialUrl) : '';
+  const [url, setUrl] = useState(resolvedUrl);
+  const [addressValue, setAddressValue] = useState(resolvedUrl);
   const [canNavigate, setCanNavigate] = useState(isElectron);
+
+  useEffect(() => {
+    if (!initialUrl) return;
+    const restored = getLastViewedUrl(initialUrl) ?? initialUrl;
+    if (restored !== url) {
+      setUrl(restored);
+      setAddressValue(restored);
+    }
+  }, [initialUrl]);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [mobileUA, setMobileUA] = useState(false);
@@ -55,6 +85,14 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
   const webviewContainerRef = useRef<HTMLDivElement>(null);
   const onUrlChangeRef = useRef(onUrlChange);
   useEffect(() => { onUrlChangeRef.current = onUrlChange; });
+  const initialUrlRef = useRef(initialUrl);
+  useEffect(() => { initialUrlRef.current = initialUrl; });
+
+  useEffect(() => {
+    if (initialUrl && addressValue) {
+      saveLastViewedUrl(initialUrl, addressValue);
+    }
+  }, [addressValue, initialUrl]);
 
   // Electron webview: 생성 및 이벤트 바인딩
   useEffect(() => {
