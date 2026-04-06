@@ -24,7 +24,6 @@ export interface ITabState {
   terminalStatus?: TTerminalStatus;
   listeningPorts?: number[];
   currentProcess?: string;
-  currentProcessSetAt?: number;
   claudeSummary?: string | null;
   lastUserMessage?: string | null;
   readyForReviewAt?: number | null;
@@ -178,7 +177,7 @@ const useTabStore = create<ITabStore>((set) => ({
       if (!prev) return state;
       const value = process ?? undefined;
       if (prev.currentProcess === value) return state;
-      return { tabs: updateTab(state.tabs, tabId, { currentProcess: value, currentProcessSetAt: Date.now() }) };
+      return { tabs: updateTab(state.tabs, tabId, { currentProcess: value }) };
     }),
 
   setTabOrder: (workspaceId, tabIds) =>
@@ -197,10 +196,7 @@ const useTabStore = create<ITabStore>((set) => ({
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = state.tabs[tabId];
         if (existing) {
-          const processPatch = shouldAcceptServerProcess(existing, entry.currentProcess)
-            ? { currentProcess: entry.currentProcess }
-            : {};
-          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, ...processPatch };
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince };
         } else {
           next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince };
         }
@@ -216,10 +212,7 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
-        const processPatch = shouldAcceptServerProcess(existing, update.currentProcess)
-          ? { currentProcess: update.currentProcess }
-          : {};
-        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, ...processPatch }) };
+        return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince }) };
       }
       return {
         tabs: {
@@ -230,13 +223,6 @@ const useTabStore = create<ITabStore>((set) => ({
     }),
 }));
 
-// 클라이언트가 최근에 설정한 값이 있으면 서버 값으로 덮어쓰지 않음
-const SERVER_PROCESS_GRACE_MS = 10_000;
-const shouldAcceptServerProcess = (existing: ITabState, serverProcess?: string): boolean => {
-  if (!existing.currentProcessSetAt) return true;
-  if (existing.currentProcess === serverProcess) return true;
-  return Date.now() - existing.currentProcessSetAt > SERVER_PROCESS_GRACE_MS;
-};
 
 // --- helpers ---
 

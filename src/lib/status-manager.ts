@@ -26,6 +26,7 @@ const STALE_MS_AWAITING_API = 90_000;
 const TERMINAL_OUTPUT_STALE_MS = 5_000;
 const WINDOW_ACTIVITY_STALE_MS = 10_000;
 const HOOK_GRACE_MS = 15_000;
+const PROCESS_RETRY_COUNT = 3;
 
 
 interface IJsonlIdleCache {
@@ -323,6 +324,14 @@ class StatusManager {
         existing.claudeSummary = tab.claudeSummary;
         existing.lastUserMessage = tab.lastUserMessage;
 
+        if (processChanged) {
+          existing.processRetries = PROCESS_RETRY_COUNT;
+        }
+        const processRetryNeeded = !processChanged && (existing.processRetries ?? 0) > 0;
+        if (processRetryNeeded) {
+          existing.processRetries = existing.processRetries! - 1;
+        }
+
         const prevPorts = existing.listeningPorts;
         const portsChanged = prevPorts?.length !== listeningPorts.length
           || listeningPorts.some((p, i) => prevPorts![i] !== p);
@@ -342,7 +351,7 @@ class StatusManager {
           this.applyCliState(existing, promoted ? 'ready-for-review' : newCliState);
         }
 
-        if (cliChanged || terminalChanged || processChanged || messageChanged || panelTypeChanged) {
+        if (cliChanged || terminalChanged || processChanged || processRetryNeeded || messageChanged || panelTypeChanged) {
           if (cliChanged) this.persistToLayout(existing);
           this.broadcastUpdate(tab.id, existing);
         }
