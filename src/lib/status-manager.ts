@@ -441,7 +441,7 @@ class StatusManager {
         newState = 'busy';
         break;
       case 'notification':
-        newState = 'needs-input';
+        newState = prevState === 'busy' ? 'needs-input' : prevState;
         break;
       case 'stop':
         newState = prevState === 'busy' || prevState === 'needs-input' ? 'ready-for-review' : 'idle';
