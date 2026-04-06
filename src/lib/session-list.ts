@@ -54,86 +54,71 @@ const truncateMessage = (text: string): string =>
     ? text
     : text.slice(0, MAX_FIRST_MESSAGE_LENGTH) + '…';
 
-const extractFirstHumanMessage = async (filePath: string): Promise<string> => {
+interface IJsonlScanResult {
+  startedAt: string | null;
+  firstMessage: string;
+  turnCount: number;
+}
+
+const scanJsonl = async (filePath: string): Promise<IJsonlScanResult> => {
   const stream = createReadStream(filePath, { encoding: 'utf-8' });
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
 
+  let startedAt: string | null = null;
+  let firstMessage = '';
+  let turnCount = 0;
+  let isFirstLine = true;
+
   try {
     for await (const line of rl) {
-      if (!line.trim()) continue;
-      try {
-        const entry = JSON.parse(line);
-        if ((entry.type === 'human' || entry.type === 'user') && !entry.isMeta) {
-          const msg = entry.message;
-          if (!msg) continue;
-          if (typeof msg === 'string') return truncateMessage(msg);
-          if (Array.isArray(msg.content)) {
-            const textBlock = msg.content.find(
-              (b: { type: string; text?: string }) => b.type === 'text' && b.text,
-            );
-            if (textBlock) return truncateMessage(textBlock.text);
-          }
-          if (typeof msg.content === 'string') return truncateMessage(msg.content);
+      if (isFirstLine) {
+        isFirstLine = false;
+        if (line.trim()) {
+          try {
+            const entry = JSON.parse(line);
+            if (entry.timestamp) {
+              startedAt = new Date(entry.timestamp).toISOString();
+            }
+          } catch {}
         }
-      } catch {
-        continue;
       }
-    }
-  } finally {
-    rl.close();
-    stream.destroy();
-  }
 
-  return '';
-};
-
-const countHumanTurns = async (filePath: string): Promise<number> => {
-  const stream = createReadStream(filePath, { encoding: 'utf-8' });
-  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-  let count = 0;
-
-  try {
-    for await (const line of rl) {
       const isHumanOrUser =
         line.includes('"type":"human"') ||
         line.includes('"type": "human"') ||
         line.includes('"type":"user"') ||
         line.includes('"type": "user"');
       if (isHumanOrUser && !line.includes('"isMeta":true') && !line.includes('"isMeta": true')) {
-        count++;
-      }
-    }
-  } finally {
-    rl.close();
-    stream.destroy();
-  }
+        turnCount++;
 
-  return count;
-};
-
-const extractStartedAt = async (filePath: string): Promise<string | null> => {
-  const stream = createReadStream(filePath, { encoding: 'utf-8' });
-  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-  try {
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-      try {
-        const entry = JSON.parse(line);
-        if (entry.timestamp) {
-          return new Date(entry.timestamp).toISOString();
+        if (!firstMessage) {
+          try {
+            const entry = JSON.parse(line);
+            if ((entry.type === 'human' || entry.type === 'user') && !entry.isMeta) {
+              const msg = entry.message;
+              if (msg) {
+                if (typeof msg === 'string') {
+                  firstMessage = truncateMessage(msg);
+                } else if (Array.isArray(msg.content)) {
+                  const textBlock = msg.content.find(
+                    (b: { type: string; text?: string }) => b.type === 'text' && b.text,
+                  );
+                  if (textBlock) firstMessage = truncateMessage(textBlock.text);
+                } else if (typeof msg.content === 'string') {
+                  firstMessage = truncateMessage(msg.content);
+                }
+              }
+            }
+          } catch {}
         }
-      } catch {
-        break;
       }
-      break;
     }
   } finally {
     rl.close();
     stream.destroy();
   }
 
-  return null;
+  return { startedAt, firstMessage, turnCount };
 };
 
 export const parseSessionMeta = async (jsonlPath: string): Promise<ISessionMeta | null> => {
@@ -146,11 +131,7 @@ export const parseSessionMeta = async (jsonlPath: string): Promise<ISessionMeta 
       return cached;
     }
 
-    const [startedAtFromFile, firstMessage, turnCount] = await Promise.all([
-      extractStartedAt(jsonlPath),
-      extractFirstHumanMessage(jsonlPath),
-      countHumanTurns(jsonlPath),
-    ]);
+    const { startedAt: startedAtFromFile, firstMessage, turnCount } = await scanJsonl(jsonlPath);
 
     const startedAt = startedAtFromFile || stat.birthtime.toISOString();
     const lastActivityAt = stat.mtime.toISOString();

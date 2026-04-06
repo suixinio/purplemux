@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
 import { getAllPanesInfo, capturePaneContent, getListeningPorts, SAFE_SHELLS } from '@/lib/tmux';
-import { detectActiveSession, isClaudeRunning } from '@/lib/session-detection';
+import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
 import { hasPermissionPrompt } from '@/lib/permission-prompt';
 import { getLastTerminalOutput } from '@/lib/terminal-server';
 import { INTERRUPT_PREFIX } from '@/lib/session-parser';
@@ -191,10 +191,12 @@ class StatusManager {
   private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<TCliState> {
     if (!paneInfo || !paneInfo.pid) return 'inactive';
 
-    const claudeRunning = await isClaudeRunning(paneInfo.pid);
+    const childPids = await getChildPids(paneInfo.pid);
+
+    const claudeRunning = await isClaudeRunning(paneInfo.pid, childPids);
     if (!claudeRunning) return 'inactive';
 
-    const session = await detectActiveSession(paneInfo.pid);
+    const session = await detectActiveSession(paneInfo.pid, childPids);
     if (session.status !== 'running') return 'idle';
 
     if (!session.jsonlPath) return 'idle';

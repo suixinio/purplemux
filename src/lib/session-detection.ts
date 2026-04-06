@@ -32,7 +32,7 @@ export const isProcessRunning = (pid: number): Promise<boolean> =>
     });
   });
 
-const getChildPids = async (parentPid: number): Promise<number[]> => {
+export const getChildPids = async (parentPid: number): Promise<number[]> => {
   try {
     const { stdout } = await execFile('pgrep', ['-P', String(parentPid)]);
     return stdout.trim().split('\n').map((s) => parseInt(s, 10)).filter((n) => !Number.isNaN(n));
@@ -91,8 +91,8 @@ const findJsonlPath = async (projectDir: string, sessionId: string): Promise<str
   }
 };
 
-export const isClaudeRunning = async (panePid: number): Promise<boolean> => {
-  const childPids = await getChildPids(panePid);
+export const isClaudeRunning = async (panePid: number, preloadedChildPids?: number[]): Promise<boolean> => {
+  const childPids = preloadedChildPids ?? await getChildPids(panePid);
   for (const pid of childPids) {
     try {
       const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'args=']);
@@ -104,14 +104,14 @@ export const isClaudeRunning = async (panePid: number): Promise<boolean> => {
   return false;
 };
 
-export const detectActiveSession = async (panePid: number): Promise<ISessionInfo> => {
+export const detectActiveSession = async (panePid: number, preloadedChildPids?: number[]): Promise<ISessionInfo> => {
   try {
     await fs.access(CLAUDE_DIR);
   } catch {
     return { status: 'not-installed', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
-  const childPids = await getChildPids(panePid);
+  const childPids = preloadedChildPids ?? await getChildPids(panePid);
 
   if (childPids.length === 0) {
     return { status: 'not-running', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
