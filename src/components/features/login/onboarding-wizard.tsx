@@ -243,9 +243,11 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             preflightStatus.claude.installed
           ) ? (() => {
             const claudeNeedsPath = !preflightStatus.claude.installed && !!preflightStatus.claude.binaryPath;
+            const brewInstalled = preflightStatus.brew?.installed ?? true;
+            const cltInstalled = preflightStatus.clt?.installed ?? true;
             const missingTools: { name: string; show: boolean }[] = [
-              { name: 'Command Line Tools', show: !preflightStatus.clt.installed && !preflightStatus.brew.installed },
-              { name: 'Homebrew', show: !preflightStatus.brew.installed },
+              { name: 'Command Line Tools', show: !cltInstalled && !brewInstalled },
+              { name: 'Homebrew', show: !brewInstalled },
               { name: 'tmux', show: !(preflightStatus.tmux.installed && preflightStatus.tmux.compatible) },
               { name: 'Git', show: !preflightStatus.git.installed },
               { name: claudeNeedsPath ? t('claudePathMissing') : 'Claude Code', show: !preflightStatus.claude.installed },
@@ -253,9 +255,9 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
 
             const needsUpgrade = preflightStatus.tmux.installed && !preflightStatus.tmux.compatible;
             const nextInstall =
-              !preflightStatus.clt.installed && !preflightStatus.brew.installed
+              !cltInstalled && !brewInstalled
                 ? { command: 'clt', label: t('installClt') }
-              : !preflightStatus.brew.installed
+              : !brewInstalled
                 ? { command: 'brew', label: t('installBrew') }
               : !(preflightStatus.tmux.installed && preflightStatus.tmux.compatible)
                 ? { command: needsUpgrade ? 'tmux-upgrade' : 'tmux-install', label: needsUpgrade ? t('upgradeTmux') : t('installTmux') }

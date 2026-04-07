@@ -7,8 +7,8 @@ export interface IPreflightResult {
   tmux: IToolStatus & { compatible: boolean };
   git: IToolStatus;
   claude: IToolStatus & { binaryPath: string | null; loggedIn: boolean };
-  brew: IToolStatus;
-  clt: { installed: boolean };
+  brew?: IToolStatus;
+  clt?: { installed: boolean };
 }
 
 export interface IRuntimePreflightResult {

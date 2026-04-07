@@ -33,8 +33,8 @@ interface IPreflightResult {
   tmux: IToolStatus & { compatible: boolean };
   git: IToolStatus;
   claude: IToolStatus & { binaryPath: string | null; loggedIn: boolean };
-  brew: IToolStatus;
-  clt: { installed: boolean };
+  brew?: IToolStatus;
+  clt?: { installed: boolean };
 }
 
 const checkTool = async (
@@ -81,13 +81,13 @@ const checkClt = async (): Promise<{ installed: boolean }> => {
 
 export const getPreflightStatus = async (): Promise<IPreflightResult> => {
   shellPath = resolveShellPath();
-  const [tmux, git, claude, brew, clt] = await Promise.all([
+  const [tmux, git, claude] = await Promise.all([
     checkTool('tmux', ['-V'], parseSemanticVersion),
     checkTool('git', ['--version'], parseSemanticVersion),
     checkTool('claude', ['--version'], parseSemanticVersion),
-    checkTool('brew', ['--version'], parseSemanticVersion),
-    checkClt(),
   ]);
+
+  const coreReady = isTmuxCompatible(tmux) && git.installed && claude.installed;
 
   const claudeBinaryPath = claude.installed ? null : await findClaudeBinary();
   let claudeLoggedIn = false;
@@ -100,13 +100,22 @@ export const getPreflightStatus = async (): Promise<IPreflightResult> => {
     }
   }
 
-  return {
+  const result: IPreflightResult = {
     tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },
     git,
     claude: { ...claude, binaryPath: claudeBinaryPath, loggedIn: claudeLoggedIn },
-    brew,
-    clt,
   };
+
+  if (!coreReady) {
+    const [brew, clt] = await Promise.all([
+      checkTool('brew', ['--version'], parseSemanticVersion),
+      checkClt(),
+    ]);
+    result.brew = brew;
+    result.clt = clt;
+  }
+
+  return result;
 };
 
 const RUNTIME_CACHE_TTL = 30_000;
