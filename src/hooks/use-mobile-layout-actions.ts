@@ -27,8 +27,6 @@ const useMobileLayoutActions = create<IMobileLayoutActionsState>((set) => ({
     set({
       onSelectWorkspace: null,
       onSelectSurface: null,
-      selectedPaneId: null,
-      selectedTabId: null,
     }),
   setSelectedSurface: (paneId, tabId) =>
     set({ selectedPaneId: paneId, selectedTabId: tabId }),
