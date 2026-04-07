@@ -332,12 +332,6 @@ const ThemedToaster = () => {
 };
 
 const ElectronTitlebar = () => {
-  useEffect(() => {
-    if (isElectron) {
-      document.documentElement.style.setProperty('--titlebar-height', '24px');
-    }
-  }, []);
-
   if (!isElectron) return null;
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex h-titlebar items-center justify-end" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>

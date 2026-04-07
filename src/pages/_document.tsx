@@ -43,6 +43,7 @@ class MyDocument extends Document<IDocumentProps> {
           <meta name="theme-color" content="#ffffff" />
           <style dangerouslySetInnerHTML={{ __html: `:root{--initial-sb-w:${effectiveWidth}px;--initial-sb-mw:${effectiveMinWidth}px}` }} />
           <script dangerouslySetInnerHTML={{ __html: initScript }} />
+          <script dangerouslySetInnerHTML={{ __html: `if(window.electronAPI)document.documentElement.style.setProperty('--titlebar-height','24px')` }} />
         </Head>
         <body className="antialiased">
           <Main />
