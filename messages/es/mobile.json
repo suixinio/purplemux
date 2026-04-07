@@ -3,7 +3,7 @@
   "commandPlaceholder": "Introduce un comando...",
   "newTab": "Nueva pestaña",
   "closeTab": "Cerrar pestaña",
-  "closeTabConfirm": "¿Cerrar la pestaña '{name}'?",
+  "closeTabConfirm": "¿Cerrar la pestaña ''{name}''?",
   "closeMenu": "Cerrar menú",
   "notes": "Notas",
   "stats": "Estadísticas",

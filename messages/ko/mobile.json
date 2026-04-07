@@ -3,7 +3,7 @@
   "commandPlaceholder": "명령어 입력...",
   "newTab": "새 탭",
   "closeTab": "탭 닫기",
-  "closeTabConfirm": "'{name}' 탭을 닫으시겠습니까?",
+  "closeTabConfirm": "''{name}'' 탭을 닫으시겠습니까?",
   "closeMenu": "메뉴 닫기",
   "notes": "노트",
   "stats": "통계",

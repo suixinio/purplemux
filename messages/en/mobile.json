@@ -3,7 +3,7 @@
   "commandPlaceholder": "Enter command...",
   "newTab": "New Tab",
   "closeTab": "Close Tab",
-  "closeTabConfirm": "Close '{name}' tab?",
+  "closeTabConfirm": "Close ''{name}'' tab?",
   "closeMenu": "Close menu",
   "notes": "Notes",
   "stats": "Statistics",

@@ -3,7 +3,7 @@
   "commandPlaceholder": "Digite um comando...",
   "newTab": "Nova Aba",
   "closeTab": "Fechar Aba",
-  "closeTabConfirm": "Fechar a aba '{name}'?",
+  "closeTabConfirm": "Fechar a aba ''{name}''?",
   "closeMenu": "Fechar menu",
   "notes": "Notas",
   "stats": "Estatisticas",

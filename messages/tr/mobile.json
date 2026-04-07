@@ -3,7 +3,7 @@
   "commandPlaceholder": "Komut girin...",
   "newTab": "Yeni Sekme",
   "closeTab": "Sekmeyi Kapat",
-  "closeTabConfirm": "'{name}' sekmesi kapatılsın mı?",
+  "closeTabConfirm": "''{name}'' sekmesi kapatılsın mı?",
   "closeMenu": "Menüyü kapat",
   "notes": "Notlar",
   "stats": "İstatistikler",
