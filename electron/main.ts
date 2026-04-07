@@ -454,7 +454,7 @@ var pool='abcdefghijklmnopqrstuvwxyz.!?@#$%&*';
 function go(){tg=ws[wi].split('');ch=tg.map(function(c){return c===' '?' ':pool[Math.floor(Math.random()*pool.length)]});rs=true;st=0;wi=(wi+1)%ws.length}
 go();
 setInterval(function(){sEl.textContent=sc[si];si=(si+1)%sc.length},80);
-setInterval(function(){if(rs){if(st<tg.length){for(var i=0;i<ch.length;i++){if(i<=st){ch[i]=tg[i]}else if(tg[i]!==' '){ch[i]=pool[Math.floor(Math.random()*pool.length)]}}st+=2}else{rs=false;setTimeout(go,1500)}}wEl.textContent=ch.join('')},40);
+setInterval(function(){if(rs){if(st<tg.length){for(var i=0;i<ch.length;i++){if(i<=st){ch[i]=tg[i]}else if(tg[i]!==' '){ch[i]=pool[Math.floor(Math.random()*pool.length)]}}st+=2}else{for(var i=0;i<tg.length;i++){ch[i]=tg[i]}rs=false;setTimeout(go,1500)}}wEl.textContent=ch.join('')},40);
 </script></body></html>`;
 };
 

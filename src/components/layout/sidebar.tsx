@@ -29,7 +29,12 @@ import {
 import type { IWorkspace } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import WorkspaceItem from '@/components/features/terminal/workspace-item';
-import SettingsDialog from '@/components/features/terminal/settings-dialog';
+import dynamic from 'next/dynamic';
+
+const SettingsDialog = dynamic(
+  () => import('@/components/features/terminal/settings-dialog'),
+  { ssr: false },
+);
 import NotificationSheet from '@/components/features/terminal/notification-sheet';
 import useAgentStore, { selectBlockedCount, selectHasWorkingAgent, selectUnreadCount } from '@/hooks/use-agent-store';
 import useConfigStore from '@/hooks/use-config-store';
@@ -521,7 +526,7 @@ const Sidebar = () => {
         </div>
       )}
 
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      {settingsOpen && <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />}
       <NotificationSheet
         open={notificationOpen}
         onOpenChange={setNotificationOpen}
