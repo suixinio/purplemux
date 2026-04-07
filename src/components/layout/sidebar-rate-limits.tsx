@@ -26,7 +26,7 @@ const LimitBar = ({ label, window }: { label: string; window: IRateLimitWindow }
     <div className="space-y-0.5">
       <div className="flex justify-between text-[10px] tabular-nums text-muted-foreground/60">
         <span>{label}</span>
-        <span>{remaining}</span>
+        <span>{remaining} ({pct}%)</span>
       </div>
       <div className="h-1 w-full rounded-full bg-muted-foreground/10">
         <div
