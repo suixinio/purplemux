@@ -9,6 +9,7 @@
   },
   "checking": "環境を確認中...",
   "missingTools": "必要なツールがインストールされていません",
+  "installClt": "Command Line Toolsをインストール",
   "installBrew": "Homebrewをインストール",
   "installTmux": "tmuxをインストール",
   "upgradeTmux": "tmuxをアップグレード",

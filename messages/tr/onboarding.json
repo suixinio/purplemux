@@ -9,6 +9,7 @@
   },
   "checking": "Ortam kontrol ediliyor...",
   "missingTools": "Gerekli araçlar eksik",
+  "installClt": "Command Line Tools Yükle",
   "installBrew": "Homebrew Yükle",
   "installTmux": "tmux Yükle",
   "upgradeTmux": "tmux Güncelle",

@@ -31,6 +31,7 @@ interface IPreflightResult {
   git: IToolStatus;
   claude: IToolStatus;
   brew: IToolStatus;
+  clt: { installed: boolean };
 }
 
 const checkTool = async (
@@ -49,13 +50,23 @@ const checkTool = async (
 const parseSemanticVersion = (stdout: string): string | null =>
   stdout.trim().match(/(\d+\.\d+[\d.]*)/)?.[1] ?? null;
 
+const checkClt = async (): Promise<{ installed: boolean }> => {
+  try {
+    await execFile('xcode-select', ['-p'], { timeout: CMD_TIMEOUT });
+    return { installed: true };
+  } catch {
+    return { installed: false };
+  }
+};
+
 export const getPreflightStatus = async (): Promise<IPreflightResult> => {
   shellPath = resolveShellPath();
-  const [tmux, git, claude, brew] = await Promise.all([
+  const [tmux, git, claude, brew, clt] = await Promise.all([
     checkTool('tmux', ['-V'], parseSemanticVersion),
     checkTool('git', ['--version'], parseSemanticVersion),
     checkTool('claude', ['--version'], parseSemanticVersion),
     checkTool('brew', ['--version'], parseSemanticVersion),
+    checkClt(),
   ]);
 
   return {
@@ -66,5 +77,6 @@ export const getPreflightStatus = async (): Promise<IPreflightResult> => {
     git,
     claude,
     brew,
+    clt,
   };
 };

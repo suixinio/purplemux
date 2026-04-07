@@ -9,6 +9,7 @@
   },
   "checking": "Umgebung wird überprüft...",
   "missingTools": "Erforderliche Tools fehlen",
+  "installClt": "Command Line Tools installieren",
   "installBrew": "Homebrew installieren",
   "installTmux": "tmux installieren",
   "upgradeTmux": "tmux aktualisieren",

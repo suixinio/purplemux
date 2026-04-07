@@ -23,6 +23,7 @@ interface IPreflightResult {
   git: IToolStatus;
   claude: IToolStatus;
   brew: IToolStatus;
+  clt: { installed: boolean };
 }
 
 type TStep = 'preflight' | 'password' | 'appearance' | 'theme' | 'claude' | 'complete';
@@ -235,6 +236,11 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             const tmuxAction = needsUpgrade
               ? { command: 'tmux-upgrade', label: t('upgradeTmux') }
               : { command: 'tmux-install', label: t('installTmux') };
+            const nextInstall = !preflightStatus.clt.installed && !preflightStatus.brew.installed
+              ? { command: 'clt', label: t('installClt') }
+              : !preflightStatus.brew.installed
+                ? { command: 'brew', label: t('installBrew') }
+                : tmuxAction;
             return (
             <div className="flex flex-col gap-4">
               <div className="flex items-center gap-2 text-ui-amber">
@@ -242,6 +248,12 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
                 <p className="text-sm font-medium">{t('missingTools')}</p>
               </div>
               <div className="space-y-1.5">
+                {!preflightStatus.clt.installed && !preflightStatus.brew.installed && (
+                  <div className="flex items-center gap-2 text-sm">
+                    <X className="h-4 w-4 shrink-0 text-negative" />
+                    <span className="text-foreground font-medium">Command Line Tools</span>
+                  </div>
+                )}
                 {!preflightStatus.brew.installed && (
                   <div className="flex items-center gap-2 text-sm">
                     <X className="h-4 w-4 shrink-0 text-negative" />
@@ -257,25 +269,14 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
                 </div>
               </div>
               <div className="flex flex-col gap-2">
-                {!preflightStatus.brew.installed ? (
-                  <Button
-                    size="lg"
-                    className="h-12 w-full"
-                    onClick={() => setInstallTarget({ command: 'brew', label: t('installBrew') })}
-                  >
-                    <Download className="mr-1 h-4 w-4" />
-                    {t('installBrew')}
-                  </Button>
-                ) : (
-                  <Button
-                    size="lg"
-                    className="h-12 w-full"
-                    onClick={() => setInstallTarget(tmuxAction)}
-                  >
-                    <Download className="mr-1 h-4 w-4" />
-                    {tmuxAction.label}
-                  </Button>
-                )}
+                <Button
+                  size="lg"
+                  className="h-12 w-full"
+                  onClick={() => setInstallTarget(nextInstall)}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  {nextInstall.label}
+                </Button>
                 <Button
                   variant="outline"
                   size="lg"

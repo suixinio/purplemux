@@ -9,6 +9,7 @@
   },
   "checking": "환경을 확인하는 중...",
   "missingTools": "필수 도구가 누락되었습니다",
+  "installClt": "Command Line Tools 설치",
   "installBrew": "Homebrew 설치",
   "installTmux": "tmux 설치",
   "upgradeTmux": "tmux 업그레이드",

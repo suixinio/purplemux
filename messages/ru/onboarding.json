@@ -9,6 +9,7 @@
   },
   "checking": "Проверка окружения...",
   "missingTools": "Отсутствуют необходимые инструменты",
+  "installClt": "Установить Command Line Tools",
   "installBrew": "Установить Homebrew",
   "installTmux": "Установить tmux",
   "upgradeTmux": "Обновить tmux",

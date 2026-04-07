@@ -9,6 +9,7 @@
   },
   "checking": "正在检查环境...",
   "missingTools": "缺少必要的工具",
+  "installClt": "安装Command Line Tools",
   "installBrew": "安装Homebrew",
   "installTmux": "安装tmux",
   "upgradeTmux": "升级tmux",
