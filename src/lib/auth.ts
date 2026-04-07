@@ -41,3 +41,14 @@ export const isSecureRequest = (req: { headers: Record<string, string | string[]
   if (typeof proto === 'string') return proto === 'https';
   return false;
 };
+
+export const extractCookie = (header: string, name: string): string | undefined => {
+  for (const part of header.split(';')) {
+    const trimmed = part.trim();
+    const eq = trimmed.indexOf('=');
+    if (eq !== -1 && trimmed.slice(0, eq) === name) {
+      return trimmed.slice(eq + 1);
+    }
+  }
+  return undefined;
+};

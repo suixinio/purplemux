@@ -3,12 +3,17 @@ import { IncomingMessage } from 'http';
 import * as pty from 'node-pty';
 import os from 'os';
 import { needsSetup } from '@/lib/config-store';
+import { verifySessionToken, SESSION_COOKIE, extractCookie } from '@/lib/auth';
 import { sanitizedEnv } from '@/lib/tmux';
 import { shellPath } from '@/lib/preflight';
 import { MSG_STDIN, MSG_RESIZE, encodeStdout, textDecoder } from '@/lib/terminal-protocol';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('install');
+
+const RUNTIME_INSTALL_COMMANDS = new Set([
+  'tmux-install', 'tmux-upgrade', 'git', 'claude', 'claude-path', 'claude-login',
+]);
 
 const INSTALL_COMMANDS: Record<string, string> = Object.freeze({
   clt: 'xcode-select --install 2>&1; sleep 1; open -b com.apple.dt.CommandLineTools.installondemand 2>/dev/null; echo ""; echo "Waiting for installation..."; while ! xcode-select -p &>/dev/null; do sleep 3; done; echo ""; echo "Command Line Tools installed."',
@@ -45,18 +50,25 @@ const disposeAll = (disposables: pty.IDisposable[]) => {
 };
 
 export const handleInstallConnection = async (ws: WebSocket, request: IncomingMessage) => {
-  const isOnboarding = await needsSetup();
-  if (!isOnboarding) {
-    ws.close(1008, 'Setup already completed');
-    return;
-  }
-
   const url = new URL(request.url || '', 'http://localhost');
   const command = url.searchParams.get('command');
 
   if (!command || !(command in INSTALL_COMMANDS)) {
     ws.close(1008, 'Invalid command');
     return;
+  }
+
+  const isOnboarding = await needsSetup();
+  if (!isOnboarding) {
+    if (!RUNTIME_INSTALL_COMMANDS.has(command)) {
+      ws.close(1008, 'Command only available during onboarding');
+      return;
+    }
+    const token = extractCookie(request.headers.cookie ?? '', SESSION_COOKIE);
+    if (!token || !(await verifySessionToken(token))) {
+      ws.close(1008, 'Unauthorized');
+      return;
+    }
   }
 
   if (activeConn) {

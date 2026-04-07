@@ -108,7 +108,7 @@ const ResetPage = () => {
 
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const { requireAuth } = await import('@/lib/require-auth');
-  return requireAuth(context);
+  return requireAuth(context, undefined, { skipPreflight: true });
 };
 
 export default ResetPage;

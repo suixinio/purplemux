@@ -10,3 +10,12 @@ export interface IPreflightResult {
   brew: IToolStatus;
   clt: { installed: boolean };
 }
+
+export interface IRuntimePreflightResult {
+  tmux: IToolStatus & { compatible: boolean };
+  git: IToolStatus;
+  claude: IToolStatus;
+}
+
+export const isRuntimeOk = (status: IRuntimePreflightResult): boolean =>
+  status.tmux.installed && status.tmux.compatible && status.git.installed && status.claude.installed;

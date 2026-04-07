@@ -4,7 +4,7 @@ import { createConnection } from 'net';
 import path from 'path';
 import next from 'next';
 import { WebSocketServer } from 'ws';
-import { verifySessionToken, SESSION_COOKIE } from './src/lib/auth';
+import { verifySessionToken, SESSION_COOKIE, extractCookie } from './src/lib/auth';
 import { handleConnection, gracefulShutdown } from './src/lib/terminal-server';
 import { handleInstallConnection, gracefulInstallShutdown } from './src/lib/install-server';
 import { handleTimelineConnection, gracefulTimelineShutdown } from './src/lib/timeline-server';
@@ -24,17 +24,6 @@ import pkg from './package.json';
 
 const log = createLogger('server');
 const dev = process.env.NODE_ENV !== 'production';
-
-const extractCookie = (header: string, name: string): string | undefined => {
-  for (const part of header.split(';')) {
-    const trimmed = part.trim();
-    const eq = trimmed.indexOf('=');
-    if (eq !== -1 && trimmed.slice(0, eq) === name) {
-      return trimmed.slice(eq + 1);
-    }
-  }
-  return undefined;
-};
 
 const verifyWebSocketAuth = async (request: IncomingMessage): Promise<boolean> => {
   const value = extractCookie(request.headers.cookie ?? '', SESSION_COOKIE);

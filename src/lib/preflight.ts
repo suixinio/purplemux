@@ -3,6 +3,7 @@ import { access } from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
+import type { IRuntimePreflightResult } from '@/types/preflight';
 
 const execFile = promisify(execFileCb);
 const CMD_TIMEOUT = 5000;
@@ -66,6 +67,9 @@ const findClaudeBinary = async (): Promise<string | null> => {
   return null;
 };
 
+const isTmuxCompatible = (tool: IToolStatus): boolean =>
+  tool.installed && tool.version !== null && parseFloat(tool.version) >= MIN_TMUX_VERSION;
+
 const checkClt = async (): Promise<{ installed: boolean }> => {
   try {
     await execFile('xcode-select', ['-p'], { timeout: CMD_TIMEOUT });
@@ -97,13 +101,53 @@ export const getPreflightStatus = async (): Promise<IPreflightResult> => {
   }
 
   return {
-    tmux: {
-      ...tmux,
-      compatible: tmux.installed && tmux.version !== null && parseFloat(tmux.version) >= MIN_TMUX_VERSION,
-    },
+    tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },
     git,
     claude: { ...claude, binaryPath: claudeBinaryPath, loggedIn: claudeLoggedIn },
     brew,
     clt,
   };
+};
+
+const RUNTIME_CACHE_TTL = 30_000;
+let runtimeCache: { result: IRuntimePreflightResult; checkedAt: number } | null = null;
+let inflightRequest: Promise<IRuntimePreflightResult> | null = null;
+
+export const getRuntimePreflightStatus = async (): Promise<IRuntimePreflightResult> => {
+  const [tmux, git, claude] = await Promise.all([
+    checkTool('tmux', ['-V'], parseSemanticVersion),
+    checkTool('git', ['--version'], parseSemanticVersion),
+    checkTool('claude', ['--version'], parseSemanticVersion),
+  ]);
+
+  return {
+    tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },
+    git,
+    claude,
+  };
+};
+
+export const getCachedRuntimePreflight = async (): Promise<IRuntimePreflightResult> => {
+  if (runtimeCache && Date.now() - runtimeCache.checkedAt < RUNTIME_CACHE_TTL) {
+    return runtimeCache.result;
+  }
+  if (inflightRequest) return inflightRequest;
+
+  inflightRequest = getRuntimePreflightStatus()
+    .then((result) => {
+      runtimeCache = { result, checkedAt: Date.now() };
+      inflightRequest = null;
+      return result;
+    })
+    .catch((err) => {
+      inflightRequest = null;
+      throw err;
+    });
+
+  return inflightRequest;
+};
+
+export const invalidateRuntimeCache = (): void => {
+  runtimeCache = null;
+  inflightRequest = null;
 };

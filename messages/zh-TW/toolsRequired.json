@@ -1,0 +1,15 @@
+{
+  "pageTitle": "Tools Required - purplemux",
+  "title": "Required tools are missing",
+  "description": "The following tools must be installed for purplemux to work.",
+  "checking": "Checking tools...",
+  "installTmux": "Install tmux",
+  "upgradeTmux": "Upgrade tmux",
+  "installGit": "Install git",
+  "installClaude": "Install Claude CLI",
+  "fixClaudePath": "Configure Claude CLI PATH",
+  "claudePathMissing": "Claude CLI (PATH not configured)",
+  "recheck": "Recheck",
+  "allGood": "All tools are available!",
+  "redirecting": "Redirecting..."
+}

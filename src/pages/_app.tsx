@@ -50,6 +50,7 @@ import koSession from "../../messages/ko/session.json";
 import koMessageHistory from "../../messages/ko/messageHistory.json";
 import koWebBrowser from "../../messages/ko/webBrowser.json";
 import koMobile from "../../messages/ko/mobile.json";
+import koToolsRequired from "../../messages/ko/toolsRequired.json";
 
 import jaCommon from "../../messages/ja/common.json";
 import jaSidebar from "../../messages/ja/sidebar.json";
@@ -71,6 +72,7 @@ import jaSession from "../../messages/ja/session.json";
 import jaMessageHistory from "../../messages/ja/messageHistory.json";
 import jaWebBrowser from "../../messages/ja/webBrowser.json";
 import jaMobile from "../../messages/ja/mobile.json";
+import jaToolsRequired from "../../messages/ja/toolsRequired.json";
 
 import zhCNCommon from "../../messages/zh-CN/common.json";
 import zhCNSidebar from "../../messages/zh-CN/sidebar.json";
@@ -92,6 +94,7 @@ import zhCNSession from "../../messages/zh-CN/session.json";
 import zhCNMessageHistory from "../../messages/zh-CN/messageHistory.json";
 import zhCNWebBrowser from "../../messages/zh-CN/webBrowser.json";
 import zhCNMobile from "../../messages/zh-CN/mobile.json";
+import zhCNToolsRequired from "../../messages/zh-CN/toolsRequired.json";
 
 import esCommon from "../../messages/es/common.json";
 import esSidebar from "../../messages/es/sidebar.json";
@@ -113,6 +116,7 @@ import esSession from "../../messages/es/session.json";
 import esMessageHistory from "../../messages/es/messageHistory.json";
 import esWebBrowser from "../../messages/es/webBrowser.json";
 import esMobile from "../../messages/es/mobile.json";
+import esToolsRequired from "../../messages/es/toolsRequired.json";
 
 import deCommon from "../../messages/de/common.json";
 import deSidebar from "../../messages/de/sidebar.json";
@@ -134,6 +138,7 @@ import deSession from "../../messages/de/session.json";
 import deMessageHistory from "../../messages/de/messageHistory.json";
 import deWebBrowser from "../../messages/de/webBrowser.json";
 import deMobile from "../../messages/de/mobile.json";
+import deToolsRequired from "../../messages/de/toolsRequired.json";
 
 import frCommon from "../../messages/fr/common.json";
 import frSidebar from "../../messages/fr/sidebar.json";
@@ -155,6 +160,7 @@ import frSession from "../../messages/fr/session.json";
 import frMessageHistory from "../../messages/fr/messageHistory.json";
 import frWebBrowser from "../../messages/fr/webBrowser.json";
 import frMobile from "../../messages/fr/mobile.json";
+import frToolsRequired from "../../messages/fr/toolsRequired.json";
 
 import ptBRCommon from "../../messages/pt-BR/common.json";
 import ptBRSidebar from "../../messages/pt-BR/sidebar.json";
@@ -176,6 +182,7 @@ import ptBRSession from "../../messages/pt-BR/session.json";
 import ptBRMessageHistory from "../../messages/pt-BR/messageHistory.json";
 import ptBRWebBrowser from "../../messages/pt-BR/webBrowser.json";
 import ptBRMobile from "../../messages/pt-BR/mobile.json";
+import ptBRToolsRequired from "../../messages/pt-BR/toolsRequired.json";
 
 import zhTWCommon from "../../messages/zh-TW/common.json";
 import zhTWSidebar from "../../messages/zh-TW/sidebar.json";
@@ -197,6 +204,7 @@ import zhTWSession from "../../messages/zh-TW/session.json";
 import zhTWMessageHistory from "../../messages/zh-TW/messageHistory.json";
 import zhTWWebBrowser from "../../messages/zh-TW/webBrowser.json";
 import zhTWMobile from "../../messages/zh-TW/mobile.json";
+import zhTWToolsRequired from "../../messages/zh-TW/toolsRequired.json";
 
 import ruCommon from "../../messages/ru/common.json";
 import ruSidebar from "../../messages/ru/sidebar.json";
@@ -218,6 +226,7 @@ import ruSession from "../../messages/ru/session.json";
 import ruMessageHistory from "../../messages/ru/messageHistory.json";
 import ruWebBrowser from "../../messages/ru/webBrowser.json";
 import ruMobile from "../../messages/ru/mobile.json";
+import ruToolsRequired from "../../messages/ru/toolsRequired.json";
 
 import trCommon from "../../messages/tr/common.json";
 import trSidebar from "../../messages/tr/sidebar.json";
@@ -239,6 +248,7 @@ import trSession from "../../messages/tr/session.json";
 import trMessageHistory from "../../messages/tr/messageHistory.json";
 import trWebBrowser from "../../messages/tr/webBrowser.json";
 import trMobile from "../../messages/tr/mobile.json";
+import trToolsRequired from "../../messages/tr/toolsRequired.json";
 
 import enCommon from "../../messages/en/common.json";
 import enSidebar from "../../messages/en/sidebar.json";
@@ -260,6 +270,7 @@ import enSession from "../../messages/en/session.json";
 import enMessageHistory from "../../messages/en/messageHistory.json";
 import enWebBrowser from "../../messages/en/webBrowser.json";
 import enMobile from "../../messages/en/mobile.json";
+import enToolsRequired from "../../messages/en/toolsRequired.json";
 
 export type TNextPageWithLayout<P = object, IP = P> = NextPage<P, IP> & {
   getLayout?: (page: ReactElement) => ReactNode;
@@ -343,17 +354,17 @@ const ElectronTitlebar = () => {
 };
 
 const messages: Record<string, Record<string, unknown>> = {
-  ko: { common: koCommon, sidebar: koSidebar, header: koHeader, terminal: koTerminal, connection: koConnection, workspace: koWorkspace, login: koLogin, onboarding: koOnboarding, settings: koSettings, stats: koStats, reset: koReset, reports: koReports, agents: koAgents, agent: koAgent, timeline: koTimeline, notification: koNotification, session: koSession, messageHistory: koMessageHistory, webBrowser: koWebBrowser, mobile: koMobile },
-  en: { common: enCommon, sidebar: enSidebar, header: enHeader, terminal: enTerminal, connection: enConnection, workspace: enWorkspace, login: enLogin, onboarding: enOnboarding, settings: enSettings, stats: enStats, reset: enReset, reports: enReports, agents: enAgents, agent: enAgent, timeline: enTimeline, notification: enNotification, session: enSession, messageHistory: enMessageHistory, webBrowser: enWebBrowser, mobile: enMobile },
-  ja: { common: jaCommon, sidebar: jaSidebar, header: jaHeader, terminal: jaTerminal, connection: jaConnection, workspace: jaWorkspace, login: jaLogin, onboarding: jaOnboarding, settings: jaSettings, stats: jaStats, reset: jaReset, reports: jaReports, agents: jaAgents, agent: jaAgent, timeline: jaTimeline, notification: jaNotification, session: jaSession, messageHistory: jaMessageHistory, webBrowser: jaWebBrowser, mobile: jaMobile },
-  'zh-CN': { common: zhCNCommon, sidebar: zhCNSidebar, header: zhCNHeader, terminal: zhCNTerminal, connection: zhCNConnection, workspace: zhCNWorkspace, login: zhCNLogin, onboarding: zhCNOnboarding, settings: zhCNSettings, stats: zhCNStats, reset: zhCNReset, reports: zhCNReports, agents: zhCNAgents, agent: zhCNAgent, timeline: zhCNTimeline, notification: zhCNNotification, session: zhCNSession, messageHistory: zhCNMessageHistory, webBrowser: zhCNWebBrowser, mobile: zhCNMobile },
-  es: { common: esCommon, sidebar: esSidebar, header: esHeader, terminal: esTerminal, connection: esConnection, workspace: esWorkspace, login: esLogin, onboarding: esOnboarding, settings: esSettings, stats: esStats, reset: esReset, reports: esReports, agents: esAgents, agent: esAgent, timeline: esTimeline, notification: esNotification, session: esSession, messageHistory: esMessageHistory, webBrowser: esWebBrowser, mobile: esMobile },
-  de: { common: deCommon, sidebar: deSidebar, header: deHeader, terminal: deTerminal, connection: deConnection, workspace: deWorkspace, login: deLogin, onboarding: deOnboarding, settings: deSettings, stats: deStats, reset: deReset, reports: deReports, agents: deAgents, agent: deAgent, timeline: deTimeline, notification: deNotification, session: deSession, messageHistory: deMessageHistory, webBrowser: deWebBrowser, mobile: deMobile },
-  fr: { common: frCommon, sidebar: frSidebar, header: frHeader, terminal: frTerminal, connection: frConnection, workspace: frWorkspace, login: frLogin, onboarding: frOnboarding, settings: frSettings, stats: frStats, reset: frReset, reports: frReports, agents: frAgents, agent: frAgent, timeline: frTimeline, notification: frNotification, session: frSession, messageHistory: frMessageHistory, webBrowser: frWebBrowser, mobile: frMobile },
-  'pt-BR': { common: ptBRCommon, sidebar: ptBRSidebar, header: ptBRHeader, terminal: ptBRTerminal, connection: ptBRConnection, workspace: ptBRWorkspace, login: ptBRLogin, onboarding: ptBROnboarding, settings: ptBRSettings, stats: ptBRStats, reset: ptBRReset, reports: ptBRReports, agents: ptBRAgents, agent: ptBRAgent, timeline: ptBRTimeline, notification: ptBRNotification, session: ptBRSession, messageHistory: ptBRMessageHistory, webBrowser: ptBRWebBrowser, mobile: ptBRMobile },
-  'zh-TW': { common: zhTWCommon, sidebar: zhTWSidebar, header: zhTWHeader, terminal: zhTWTerminal, connection: zhTWConnection, workspace: zhTWWorkspace, login: zhTWLogin, onboarding: zhTWOnboarding, settings: zhTWSettings, stats: zhTWStats, reset: zhTWReset, reports: zhTWReports, agents: zhTWAgents, agent: zhTWAgent, timeline: zhTWTimeline, notification: zhTWNotification, session: zhTWSession, messageHistory: zhTWMessageHistory, webBrowser: zhTWWebBrowser, mobile: zhTWMobile },
-  ru: { common: ruCommon, sidebar: ruSidebar, header: ruHeader, terminal: ruTerminal, connection: ruConnection, workspace: ruWorkspace, login: ruLogin, onboarding: ruOnboarding, settings: ruSettings, stats: ruStats, reset: ruReset, reports: ruReports, agents: ruAgents, agent: ruAgent, timeline: ruTimeline, notification: ruNotification, session: ruSession, messageHistory: ruMessageHistory, webBrowser: ruWebBrowser, mobile: ruMobile },
-  tr: { common: trCommon, sidebar: trSidebar, header: trHeader, terminal: trTerminal, connection: trConnection, workspace: trWorkspace, login: trLogin, onboarding: trOnboarding, settings: trSettings, stats: trStats, reset: trReset, reports: trReports, agents: trAgents, agent: trAgent, timeline: trTimeline, notification: trNotification, session: trSession, messageHistory: trMessageHistory, webBrowser: trWebBrowser, mobile: trMobile },
+  ko: { common: koCommon, sidebar: koSidebar, header: koHeader, terminal: koTerminal, connection: koConnection, workspace: koWorkspace, login: koLogin, onboarding: koOnboarding, settings: koSettings, stats: koStats, reset: koReset, reports: koReports, agents: koAgents, agent: koAgent, timeline: koTimeline, notification: koNotification, session: koSession, messageHistory: koMessageHistory, webBrowser: koWebBrowser, mobile: koMobile, toolsRequired: koToolsRequired },
+  en: { common: enCommon, sidebar: enSidebar, header: enHeader, terminal: enTerminal, connection: enConnection, workspace: enWorkspace, login: enLogin, onboarding: enOnboarding, settings: enSettings, stats: enStats, reset: enReset, reports: enReports, agents: enAgents, agent: enAgent, timeline: enTimeline, notification: enNotification, session: enSession, messageHistory: enMessageHistory, webBrowser: enWebBrowser, mobile: enMobile, toolsRequired: enToolsRequired },
+  ja: { common: jaCommon, sidebar: jaSidebar, header: jaHeader, terminal: jaTerminal, connection: jaConnection, workspace: jaWorkspace, login: jaLogin, onboarding: jaOnboarding, settings: jaSettings, stats: jaStats, reset: jaReset, reports: jaReports, agents: jaAgents, agent: jaAgent, timeline: jaTimeline, notification: jaNotification, session: jaSession, messageHistory: jaMessageHistory, webBrowser: jaWebBrowser, mobile: jaMobile, toolsRequired: jaToolsRequired },
+  'zh-CN': { common: zhCNCommon, sidebar: zhCNSidebar, header: zhCNHeader, terminal: zhCNTerminal, connection: zhCNConnection, workspace: zhCNWorkspace, login: zhCNLogin, onboarding: zhCNOnboarding, settings: zhCNSettings, stats: zhCNStats, reset: zhCNReset, reports: zhCNReports, agents: zhCNAgents, agent: zhCNAgent, timeline: zhCNTimeline, notification: zhCNNotification, session: zhCNSession, messageHistory: zhCNMessageHistory, webBrowser: zhCNWebBrowser, mobile: zhCNMobile, toolsRequired: zhCNToolsRequired },
+  es: { common: esCommon, sidebar: esSidebar, header: esHeader, terminal: esTerminal, connection: esConnection, workspace: esWorkspace, login: esLogin, onboarding: esOnboarding, settings: esSettings, stats: esStats, reset: esReset, reports: esReports, agents: esAgents, agent: esAgent, timeline: esTimeline, notification: esNotification, session: esSession, messageHistory: esMessageHistory, webBrowser: esWebBrowser, mobile: esMobile, toolsRequired: esToolsRequired },
+  de: { common: deCommon, sidebar: deSidebar, header: deHeader, terminal: deTerminal, connection: deConnection, workspace: deWorkspace, login: deLogin, onboarding: deOnboarding, settings: deSettings, stats: deStats, reset: deReset, reports: deReports, agents: deAgents, agent: deAgent, timeline: deTimeline, notification: deNotification, session: deSession, messageHistory: deMessageHistory, webBrowser: deWebBrowser, mobile: deMobile, toolsRequired: deToolsRequired },
+  fr: { common: frCommon, sidebar: frSidebar, header: frHeader, terminal: frTerminal, connection: frConnection, workspace: frWorkspace, login: frLogin, onboarding: frOnboarding, settings: frSettings, stats: frStats, reset: frReset, reports: frReports, agents: frAgents, agent: frAgent, timeline: frTimeline, notification: frNotification, session: frSession, messageHistory: frMessageHistory, webBrowser: frWebBrowser, mobile: frMobile, toolsRequired: frToolsRequired },
+  'pt-BR': { common: ptBRCommon, sidebar: ptBRSidebar, header: ptBRHeader, terminal: ptBRTerminal, connection: ptBRConnection, workspace: ptBRWorkspace, login: ptBRLogin, onboarding: ptBROnboarding, settings: ptBRSettings, stats: ptBRStats, reset: ptBRReset, reports: ptBRReports, agents: ptBRAgents, agent: ptBRAgent, timeline: ptBRTimeline, notification: ptBRNotification, session: ptBRSession, messageHistory: ptBRMessageHistory, webBrowser: ptBRWebBrowser, mobile: ptBRMobile, toolsRequired: ptBRToolsRequired },
+  'zh-TW': { common: zhTWCommon, sidebar: zhTWSidebar, header: zhTWHeader, terminal: zhTWTerminal, connection: zhTWConnection, workspace: zhTWWorkspace, login: zhTWLogin, onboarding: zhTWOnboarding, settings: zhTWSettings, stats: zhTWStats, reset: zhTWReset, reports: zhTWReports, agents: zhTWAgents, agent: zhTWAgent, timeline: zhTWTimeline, notification: zhTWNotification, session: zhTWSession, messageHistory: zhTWMessageHistory, webBrowser: zhTWWebBrowser, mobile: zhTWMobile, toolsRequired: zhTWToolsRequired },
+  ru: { common: ruCommon, sidebar: ruSidebar, header: ruHeader, terminal: ruTerminal, connection: ruConnection, workspace: ruWorkspace, login: ruLogin, onboarding: ruOnboarding, settings: ruSettings, stats: ruStats, reset: ruReset, reports: ruReports, agents: ruAgents, agent: ruAgent, timeline: ruTimeline, notification: ruNotification, session: ruSession, messageHistory: ruMessageHistory, webBrowser: ruWebBrowser, mobile: ruMobile, toolsRequired: ruToolsRequired },
+  tr: { common: trCommon, sidebar: trSidebar, header: trHeader, terminal: trTerminal, connection: trConnection, workspace: trWorkspace, login: trLogin, onboarding: trOnboarding, settings: trSettings, stats: trStats, reset: trReset, reports: trReports, agents: trAgents, agent: trAgent, timeline: trTimeline, notification: trNotification, session: trSession, messageHistory: trMessageHistory, webBrowser: trWebBrowser, mobile: trMobile, toolsRequired: trToolsRequired },
 };
 setMessages(messages);
 
