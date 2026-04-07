@@ -87,6 +87,7 @@ interface ILayoutState {
 let _abortController: AbortController | null = null;
 let _onFetchError: (() => void) | null = null;
 let _ratioTimer: ReturnType<typeof setTimeout> | null = null;
+let _suppressFetch = false;
 
 const wsQuery = (base: string, wsId: string | null): string => {
   if (!wsId) return base;
@@ -164,6 +165,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   pendingFocusTabId: null,
 
   setWorkspaceId: (id) => {
+    _suppressFetch = false;
     set({ workspaceId: id });
   },
 
@@ -172,6 +174,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   },
 
   fetchLayout: async (wsId?, preserveActive?) => {
+    if (_suppressFetch) return;
     const targetWsId = wsId ?? get().workspaceId;
     if (!targetWsId) return;
     const shouldPreserve = preserveActive !== false;
@@ -555,6 +558,8 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   },
 
   clearLayout: () => {
+    _suppressFetch = true;
+    _abortController?.abort();
     set({ layout: null, paneCount: 0, canSplit: false });
   },
 
