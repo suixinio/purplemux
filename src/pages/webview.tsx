@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react';
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
 import { useRouter } from 'next/router';
 import useBrowserTitle from '@/hooks/use-browser-title';
 import { getPageShellWithTitlebarLayout } from '@/components/layout/page-shell';
@@ -34,5 +35,10 @@ const WebviewPage = () => {
 };
 
 WebviewPage.getLayout = getPageShellWithTitlebarLayout;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { requireAuth } = await import('@/lib/require-auth');
+  return requireAuth(context);
+};
 
 export default WebviewPage;

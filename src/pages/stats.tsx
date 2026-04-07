@@ -1,4 +1,5 @@
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
@@ -180,5 +181,10 @@ const StatsPage = () => {
 };
 
 StatsPage.getLayout = getPageShellWithTitlebarLayout;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { requireAuth } = await import('@/lib/require-auth');
+  return requireAuth(context);
+};
 
 export default StatsPage;

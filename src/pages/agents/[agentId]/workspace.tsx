@@ -1,6 +1,7 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 import { Zap, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
@@ -402,5 +403,10 @@ const AgentWorkspacePage = () => {
 };
 
 AgentWorkspacePage.getLayout = getPageShellWithTitlebarLayout;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { requireAuth } = await import('@/lib/require-auth');
+  return requireAuth(context);
+};
 
 export default AgentWorkspacePage;

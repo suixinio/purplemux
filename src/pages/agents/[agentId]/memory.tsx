@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 import { FileText, FolderTree, Eye } from 'lucide-react';
 import { toast } from 'sonner';
@@ -378,5 +379,10 @@ const MemoryPage = () => {
 };
 
 MemoryPage.getLayout = getPageShellWithTitlebarLayout;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { requireAuth } = await import('@/lib/require-auth');
+  return requireAuth(context);
+};
 
 export default MemoryPage;

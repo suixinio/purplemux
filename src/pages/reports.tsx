@@ -1,5 +1,6 @@
 import { useCallback, useState, useEffect, useRef } from 'react';
 import Head from 'next/head';
+import type { GetServerSideProps } from 'next';
 import { useTranslations } from 'next-intl';
 import { FileText, Sparkles, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -151,5 +152,10 @@ const ReportsPage = () => {
 };
 
 ReportsPage.getLayout = getPageShellWithTitlebarLayout;
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const { requireAuth } = await import('@/lib/require-auth');
+  return requireAuth(context);
+};
 
 export default ReportsPage;
