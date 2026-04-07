@@ -24,5 +24,8 @@
   "goToChat": "チャットへ移動",
   "wsDisconnected": "リアルタイム接続が切断されました。ページを更新してください。",
   "agentRestarted": "エージェントが再起動されました",
-  "restartFailed": "再起動に失敗しました"
+  "restartFailed": "再起動に失敗しました",
+  "fetchError": "エージェント一覧を読み込めません",
+  "settingsSaved": "設定が保存されました",
+  "deleteFailed": "エージェントの削除に失敗しました"
 }

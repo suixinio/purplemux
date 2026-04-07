@@ -56,5 +56,13 @@
   "tabStatus": "Tab status",
   "messageHistory": "Message history",
   "installRunning": "Running...",
-  "installDone": "Done"
+  "installDone": "Done",
+  "fallbackLayout": "Starting with default layout",
+  "layoutFetchError": "Failed to load layout",
+  "splitFailed": "Failed to split pane",
+  "tabCreateFailed": "Failed to create tab",
+  "tabDeleteError": "Error while deleting tab",
+  "sessionRestartFailed": "Failed to restart session",
+  "tabRenameFailed": "Failed to rename tab",
+  "tabReorderFailed": "Failed to reorder tabs"
 }

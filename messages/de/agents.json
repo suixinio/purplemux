@@ -24,5 +24,8 @@
   "goToChat": "Zum Chat",
   "wsDisconnected": "Echtzeitverbindung verloren. Bitte aktualisieren.",
   "agentRestarted": "Agent wurde neugestartet",
-  "restartFailed": "Neustart fehlgeschlagen"
+  "restartFailed": "Neustart fehlgeschlagen",
+  "fetchError": "Agenten konnten nicht geladen werden",
+  "settingsSaved": "Einstellungen gespeichert",
+  "deleteFailed": "Agent konnte nicht gelöscht werden"
 }

@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} archivos, {size}",
   "brainPlanning": "Planificando",
   "sessionLabel": "Sesión {session}",
-  "backendRolePlaceholder": "Desarrollo backend dedicado"
+  "backendRolePlaceholder": "Desarrollo backend dedicado",
+  "chatHistoryFailed": "No se pudo cargar el historial de chat",
+  "messageFailed": "Error al enviar el mensaje"
 }

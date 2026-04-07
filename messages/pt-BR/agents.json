@@ -24,5 +24,8 @@
   "goToChat": "Ir para o Chat",
   "wsDisconnected": "Conexao em tempo real perdida. Atualize a pagina.",
   "agentRestarted": "Agente reiniciado",
-  "restartFailed": "Falha ao reiniciar"
+  "restartFailed": "Falha ao reiniciar",
+  "fetchError": "Falha ao carregar agentes",
+  "settingsSaved": "Configurações salvas",
+  "deleteFailed": "Falha ao excluir agente"
 }

@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} dosya, {size}",
   "brainPlanning": "Planlıyor",
   "sessionLabel": "{session} oturumu",
-  "backendRolePlaceholder": "Backend geliştirmeye adanmış"
+  "backendRolePlaceholder": "Backend geliştirmeye adanmış",
+  "chatHistoryFailed": "Sohbet geçmişi yüklenemedi",
+  "messageFailed": "Mesaj gönderilemedi"
 }

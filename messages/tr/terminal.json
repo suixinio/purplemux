@@ -56,5 +56,13 @@
   "tabStatus": "Sekme durumu",
   "messageHistory": "Mesaj geçmişi",
   "installRunning": "Çalıştırılıyor...",
-  "installDone": "Tamamlandı"
+  "installDone": "Tamamlandı",
+  "fallbackLayout": "Varsayılan düzenle başlatılıyor",
+  "layoutFetchError": "Düzen yüklenemedi",
+  "splitFailed": "Panel bölünemedi",
+  "tabCreateFailed": "Sekme oluşturulamadı",
+  "tabDeleteError": "Sekme silinirken hata oluştu",
+  "sessionRestartFailed": "Oturum yeniden başlatılamadı",
+  "tabRenameFailed": "Sekme yeniden adlandırılamadı",
+  "tabReorderFailed": "Sekme sıralaması değiştirilemedi"
 }

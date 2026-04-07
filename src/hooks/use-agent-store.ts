@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import type {
   IAgentInfo,
   ICreateAgentRequest,
@@ -64,8 +65,8 @@ const useAgentStore = create<IAgentState>((set) => ({
       }
       set({ agents, isLoading: false });
     } catch {
-      set({ error: '에이전트 목록을 불러올 수 없습니다', isLoading: false });
-      toast.error('에이전트 목록을 불러올 수 없습니다');
+      set({ error: t('agents', 'fetchError'), isLoading: false });
+      toast.error(t('agents', 'fetchError'));
     }
   },
 
@@ -150,7 +151,7 @@ const useAgentStore = create<IAgentState>((set) => ({
           },
         },
       }));
-      toast.success('설정이 저장되었습니다');
+      toast.success(t('agents', 'settingsSaved'));
       return true;
     } catch (err) {
       const msg = err instanceof Error ? err.message : '설정 저장에 실패했습니다';
@@ -177,7 +178,7 @@ const useAgentStore = create<IAgentState>((set) => ({
           agents: { ...state.agents, [id]: backup },
         }));
       }
-      toast.error('에이전트 삭제에 실패했습니다');
+      toast.error(t('agents', 'deleteFailed'));
       return false;
     }
   },

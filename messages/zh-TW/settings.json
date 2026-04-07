@@ -158,5 +158,6 @@
     "deleteDescription": "確定要刪除此項目嗎？",
     "deleteCancel": "取消",
     "deleteConfirm": "刪除"
-  }
+  },
+  "saveFailed": "無法儲存設定"
 }

@@ -4,5 +4,6 @@
   "maxConnections": "Max connections exceeded",
   "ptyError": "Terminal start failed",
   "disconnected": "Disconnected",
-  "reconnect": "Reconnect"
+  "reconnect": "Reconnect",
+  "terminalDisconnected": "Terminal disconnected"
 }

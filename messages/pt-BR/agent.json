@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} arquivos, {size}",
   "brainPlanning": "Planejando",
   "sessionLabel": "Sessao {session}",
-  "backendRolePlaceholder": "Desenvolvimento backend dedicado"
+  "backendRolePlaceholder": "Desenvolvimento backend dedicado",
+  "chatHistoryFailed": "Falha ao carregar histórico do chat",
+  "messageFailed": "Falha ao enviar mensagem"
 }

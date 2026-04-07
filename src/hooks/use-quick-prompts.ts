@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 
 interface IQuickPrompt {
   id: string;
@@ -95,7 +96,7 @@ const useQuickPrompts = (): IUseQuickPromptsReturn => {
           return next;
         },
         { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
-      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+      ).catch(() => toast.error(t('settings', 'saveFailed')));
     },
     [mutate, persist],
   );
@@ -111,7 +112,7 @@ const useQuickPrompts = (): IUseQuickPromptsReturn => {
           return next;
         },
         { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
-      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+      ).catch(() => toast.error(t('settings', 'saveFailed')));
     },
     [mutate, persist],
   );
@@ -127,7 +128,7 @@ const useQuickPrompts = (): IUseQuickPromptsReturn => {
           return next;
         },
         { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
-      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+      ).catch(() => toast.error(t('settings', 'saveFailed')));
     },
     [mutate, persist],
   );
@@ -147,7 +148,7 @@ const useQuickPrompts = (): IUseQuickPromptsReturn => {
           return next;
         },
         { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
-      ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+      ).catch(() => toast.error(t('settings', 'saveFailed')));
     },
     [mutate, persist],
   );
@@ -166,7 +167,7 @@ const useQuickPrompts = (): IUseQuickPromptsReturn => {
         return next;
       },
       { optimisticData: (current) => update(current ?? EMPTY), rollbackOnError: true, revalidate: false },
-    ).catch(() => toast.error('설정을 저장할 수 없습니다'));
+    ).catch(() => toast.error(t('settings', 'saveFailed')));
   }, [mutate, persist]);
 
   return {

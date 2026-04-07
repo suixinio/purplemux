@@ -3,6 +3,7 @@ import Router from 'next/router';
 import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import type { ILayoutData, ITab, IPaneNode, TPanelType } from '@/types/terminal';
 import { clearInputDraft } from '@/hooks/use-web-input';
 import useTabStore from '@/hooks/use-tab-store';
@@ -253,13 +254,13 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
               updatedAt: new Date().toISOString(),
             };
             set({ layout: fallback, ...updateDerived(fallback, get().isSplitting) });
-            toast.info('기본 레이아웃으로 시작합니다');
+            toast.info(t('terminal', 'fallbackLayout'));
             set({ retryCount: 0 });
             return;
           }
         } catch { /* fallthrough */ }
       }
-      set({ error: '레이아웃을 불러올 수 없습니다' });
+      set({ error: t('terminal', 'layoutFetchError') });
       _onFetchError?.();
     } finally {
       if (!controller.signal.aborted) {
@@ -296,7 +297,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       const data: ILayoutData = await res.json();
       applyLayout(set, get, data);
     } catch {
-      toast.error('분할할 수 없습니다');
+      toast.error(t('terminal', 'splitFailed'));
     } finally {
       set((s) => ({ isSplitting: false, canSplit: (s.paneCount) < 10 }));
     }
@@ -424,7 +425,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       get().fetchLayout();
       return newTab;
     } catch {
-      toast.error('탭을 생성할 수 없습니다');
+      toast.error(t('terminal', 'tabCreateFailed'));
       return null;
     }
   },
@@ -449,11 +450,11 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     try {
       const res = await fetch(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { method: 'DELETE' });
       if (!res.ok && res.status !== 404) {
-        toast.error('탭 삭제 중 오류가 발생했습니다');
+        toast.error(t('terminal', 'tabDeleteError'));
         await get().fetchLayout();
       }
     } catch {
-      toast.error('탭 삭제 중 오류가 발생했습니다');
+      toast.error(t('terminal', 'tabDeleteError'));
       await get().fetchLayout();
     }
   },
@@ -468,7 +469,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       });
       return res.ok;
     } catch {
-      toast.error('세션을 재시작할 수 없습니다');
+      toast.error(t('terminal', 'sessionRestartFailed'));
       return false;
     }
   },
@@ -493,7 +494,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     if (data) {
       applyLayoutPreserveFocus(set, get, data);
     } else {
-      toast.error('탭 이름 변경에 실패했습니다');
+      toast.error(t('terminal', 'tabRenameFailed'));
     }
   },
 

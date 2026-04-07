@@ -158,5 +158,6 @@
     "deleteDescription": "确定要删除此项目吗？",
     "deleteCancel": "取消",
     "deleteConfirm": "删除"
-  }
+  },
+  "saveFailed": "无法保存设置"
 }

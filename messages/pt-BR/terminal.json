@@ -56,5 +56,13 @@
   "tabStatus": "Status da aba",
   "messageHistory": "Historico de mensagens",
   "installRunning": "Executando...",
-  "installDone": "Concluido"
+  "installDone": "Concluido",
+  "fallbackLayout": "Iniciando com layout padrão",
+  "layoutFetchError": "Falha ao carregar layout",
+  "splitFailed": "Falha ao dividir painel",
+  "tabCreateFailed": "Falha ao criar aba",
+  "tabDeleteError": "Erro ao excluir aba",
+  "sessionRestartFailed": "Falha ao reiniciar sessão",
+  "tabRenameFailed": "Falha ao renomear aba",
+  "tabReorderFailed": "Falha ao reordenar abas"
 }

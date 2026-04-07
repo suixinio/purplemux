@@ -3,5 +3,11 @@
   "projectDirectory": "Project directory",
   "directoryPlaceholder": "Enter directory path",
   "validating": "Validating...",
-  "addButton": "Add"
+  "addButton": "Add",
+  "fetchError": "Failed to load workspaces",
+  "createFailed": "Failed to create workspace",
+  "deleteFailed": "Failed to delete",
+  "renameFailed": "Failed to rename",
+  "reorderFailed": "Failed to reorder",
+  "validateFailed": "Failed to validate"
 }

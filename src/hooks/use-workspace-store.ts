@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import type { IWorkspace } from '@/types/terminal';
 
 interface IValidateResponse {
@@ -134,7 +135,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         isLoading: false,
       });
     } catch {
-      set({ error: 'Workspace 목록을 불러올 수 없습니다', isLoading: false });
+      set({ error: t('workspace', 'fetchError'), isLoading: false });
     }
   },
 
@@ -160,13 +161,13 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       });
       if (!res.ok) {
         const data = await res.json();
-        throw new Error(data.error || 'Workspace를 생성할 수 없습니다');
+        throw new Error(data.error || t('workspace', 'createFailed'));
       }
       const ws: IWorkspace = await res.json();
       set((state) => ({ workspaces: [...state.workspaces, ws] }));
       return ws;
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Workspace를 생성할 수 없습니다';
+      const msg = err instanceof Error ? err.message : t('workspace', 'createFailed');
       toast.error(msg);
       return null;
     }
@@ -178,7 +179,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       if (!res.ok && res.status !== 204 && res.status !== 404) throw new Error();
       return true;
     } catch {
-      toast.error('삭제할 수 없습니다');
+      toast.error(t('workspace', 'deleteFailed'));
       return false;
     }
   },
@@ -220,7 +221,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
           w.id === workspaceId ? { ...w, name: previousName } : w,
         ),
       }));
-      toast.error('이름 변경에 실패했습니다');
+      toast.error(t('workspace', 'renameFailed'));
       return false;
     }
   },
@@ -236,7 +237,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workspaceIds: list.map((w) => w.id) }),
     }).catch(() => {
-      toast.error('순서 변경에 실패했습니다');
+      toast.error(t('workspace', 'reorderFailed'));
       get().fetchWorkspaces();
     });
   },
@@ -273,7 +274,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       if (!res.ok) throw new Error();
       return await res.json();
     } catch {
-      return { valid: false, error: '검증할 수 없습니다' };
+      return { valid: false, error: t('workspace', 'validateFailed') };
     }
   },
 }));

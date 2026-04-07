@@ -24,5 +24,8 @@
   "goToChat": "Go to Chat",
   "wsDisconnected": "Real-time connection lost. Please refresh.",
   "agentRestarted": "Agent has been restarted",
-  "restartFailed": "Failed to restart"
+  "restartFailed": "Failed to restart",
+  "fetchError": "Failed to load agents",
+  "settingsSaved": "Settings saved",
+  "deleteFailed": "Failed to delete agent"
 }

@@ -158,5 +158,6 @@
     "deleteDescription": "이 항목을 삭제하시겠습니까?",
     "deleteCancel": "취소",
     "deleteConfirm": "삭제"
-  }
+  },
+  "saveFailed": "설정을 저장할 수 없습니다"
 }

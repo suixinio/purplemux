@@ -56,5 +56,13 @@
   "tabStatus": "Tab-Status",
   "messageHistory": "Nachrichtenverlauf",
   "installRunning": "Wird ausgeführt...",
-  "installDone": "Fertig"
+  "installDone": "Fertig",
+  "fallbackLayout": "Starte mit Standard-Layout",
+  "layoutFetchError": "Layout konnte nicht geladen werden",
+  "splitFailed": "Teilen fehlgeschlagen",
+  "tabCreateFailed": "Tab konnte nicht erstellt werden",
+  "tabDeleteError": "Fehler beim Löschen des Tabs",
+  "sessionRestartFailed": "Sitzung konnte nicht neu gestartet werden",
+  "tabRenameFailed": "Tab-Umbenennung fehlgeschlagen",
+  "tabReorderFailed": "Tab-Neuanordnung fehlgeschlagen"
 }

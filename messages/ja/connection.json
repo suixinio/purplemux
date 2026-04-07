@@ -4,5 +4,6 @@
   "maxConnections": "最大接続数を超えました",
   "ptyError": "ターミナルの起動に失敗しました",
   "disconnected": "切断されました",
-  "reconnect": "再接続"
+  "reconnect": "再接続",
+  "terminalDisconnected": "ターミナル接続が切断されました"
 }

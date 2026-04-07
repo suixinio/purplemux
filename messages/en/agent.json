@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} files, {size}",
   "brainPlanning": "Planning",
   "sessionLabel": "{session} session",
-  "backendRolePlaceholder": "Dedicated backend development"
+  "backendRolePlaceholder": "Dedicated backend development",
+  "chatHistoryFailed": "Failed to load chat history",
+  "messageFailed": "Failed to send message"
 }

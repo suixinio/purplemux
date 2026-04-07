@@ -3,5 +3,11 @@
   "projectDirectory": "Diretorio do projeto",
   "directoryPlaceholder": "Digite o caminho do diretorio",
   "validating": "Validando...",
-  "addButton": "Adicionar"
+  "addButton": "Adicionar",
+  "fetchError": "Falha ao carregar workspaces",
+  "createFailed": "Falha ao criar workspace",
+  "deleteFailed": "Falha ao excluir",
+  "renameFailed": "Falha ao renomear",
+  "reorderFailed": "Falha ao reordenar",
+  "validateFailed": "Falha ao validar"
 }

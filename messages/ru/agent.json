@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} файлов, {size}",
   "brainPlanning": "Планирование",
   "sessionLabel": "Сессия {session}",
-  "backendRolePlaceholder": "Выделенная бэкенд-разработка"
+  "backendRolePlaceholder": "Выделенная бэкенд-разработка",
+  "chatHistoryFailed": "Не удалось загрузить историю чата",
+  "messageFailed": "Не удалось отправить сообщение"
 }

@@ -24,5 +24,8 @@
   "goToChat": "前往聊天",
   "wsDisconnected": "即時連線已中斷，請重新整理頁面。",
   "agentRestarted": "代理已重新啟動",
-  "restartFailed": "重新啟動失敗"
+  "restartFailed": "重新啟動失敗",
+  "fetchError": "無法載入代理列表",
+  "settingsSaved": "設定已儲存",
+  "deleteFailed": "代理刪除失敗"
 }

@@ -158,5 +158,6 @@
     "deleteDescription": "Möchtest du diesen Eintrag wirklich löschen?",
     "deleteCancel": "Abbrechen",
     "deleteConfirm": "Löschen"
-  }
+  },
+  "saveFailed": "Einstellungen konnten nicht gespeichert werden"
 }

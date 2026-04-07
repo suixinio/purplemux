@@ -158,5 +158,6 @@
     "deleteDescription": "Tem certeza de que deseja excluir este item?",
     "deleteCancel": "Cancelar",
     "deleteConfirm": "Excluir"
-  }
+  },
+  "saveFailed": "Falha ao salvar configurações"
 }

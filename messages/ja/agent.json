@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files}ファイル、{size}",
   "brainPlanning": "プランニング中",
   "sessionLabel": "{session}セッション",
-  "backendRolePlaceholder": "専任バックエンド開発"
+  "backendRolePlaceholder": "専任バックエンド開発",
+  "chatHistoryFailed": "チャット履歴を読み込めません",
+  "messageFailed": "メッセージの送信に失敗しました"
 }

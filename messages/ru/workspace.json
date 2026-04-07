@@ -3,5 +3,11 @@
   "projectDirectory": "Каталог проекта",
   "directoryPlaceholder": "Введите путь к каталогу",
   "validating": "Проверка...",
-  "addButton": "Добавить"
+  "addButton": "Добавить",
+  "fetchError": "Не удалось загрузить рабочие области",
+  "createFailed": "Не удалось создать рабочую область",
+  "deleteFailed": "Не удалось удалить",
+  "renameFailed": "Не удалось переименовать",
+  "reorderFailed": "Не удалось изменить порядок",
+  "validateFailed": "Не удалось проверить"
 }

@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import type { TCliState } from '@/types/timeline';
 import { isCliIdle } from '@/hooks/use-tab-store';
 
@@ -89,7 +90,7 @@ const useWebInput = (
     }
 
     if (!terminalWsConnected) {
-      toast.error('터미널 연결이 끊어졌습니다');
+      toast.error(t('connection', 'terminalDisconnected'));
       return;
     }
 
@@ -119,7 +120,7 @@ const useWebInput = (
 
   const interrupt = useCallback(() => {
     if (!terminalWsConnected) {
-      toast.error('터미널 연결이 끊어졌습니다');
+      toast.error(t('connection', 'terminalDisconnected'));
       return;
     }
     sendStdin('\x1b\x1b');

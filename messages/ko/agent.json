@@ -85,5 +85,7 @@
   "agentStats": "{name}: {files} 파일, {size}",
   "brainPlanning": "계획 수립 중",
   "sessionLabel": "{session} 세션",
-  "backendRolePlaceholder": "백엔드 개발 전담"
+  "backendRolePlaceholder": "백엔드 개발 전담",
+  "chatHistoryFailed": "채팅 이력을 불러올 수 없습니다",
+  "messageFailed": "메시지 전송에 실패했습니다"
 }

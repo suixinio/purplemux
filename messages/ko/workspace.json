@@ -3,5 +3,11 @@
   "projectDirectory": "프로젝트 디렉토리",
   "directoryPlaceholder": "디렉토리 경로 입력",
   "validating": "검증 중...",
-  "addButton": "추가"
+  "addButton": "추가",
+  "fetchError": "Workspace 목록을 불러올 수 없습니다",
+  "createFailed": "Workspace를 생성할 수 없습니다",
+  "deleteFailed": "삭제할 수 없습니다",
+  "renameFailed": "이름 변경에 실패했습니다",
+  "reorderFailed": "순서 변경에 실패했습니다",
+  "validateFailed": "검증할 수 없습니다"
 }

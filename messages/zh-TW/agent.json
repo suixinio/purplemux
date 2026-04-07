@@ -85,5 +85,7 @@
   "agentStats": "{name}：{files} 個檔案，{size}",
   "brainPlanning": "規劃中",
   "sessionLabel": "{session} 工作階段",
-  "backendRolePlaceholder": "專職後端開發"
+  "backendRolePlaceholder": "專職後端開發",
+  "chatHistoryFailed": "無法載入聊天紀錄",
+  "messageFailed": "訊息傳送失敗"
 }

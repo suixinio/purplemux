@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import type { ITab } from '@/types/terminal';
 
 interface IUseTabs {
@@ -99,7 +100,7 @@ const useTabs = (): IUseTabs => {
         }
         return newTab;
       } catch {
-        toast.error('탭을 생성할 수 없습니다');
+        toast.error(t('terminal', 'tabCreateFailed'));
         return null;
       } finally {
         setIsCreating(false);
@@ -113,7 +114,7 @@ const useTabs = (): IUseTabs => {
     try {
       await fetch(`/api/tabs/${tabId}`, { method: 'DELETE' });
     } catch {
-      toast.error('탭 삭제 중 오류가 발생했습니다');
+      toast.error(t('terminal', 'tabDeleteError'));
     }
   }, []);
 
@@ -135,7 +136,7 @@ const useTabs = (): IUseTabs => {
       });
       if (!res.ok) throw new Error();
     } catch {
-      toast.error('탭 이름 변경에 실패했습니다');
+      toast.error(t('terminal', 'tabRenameFailed'));
     }
   }, []);
 
@@ -160,7 +161,7 @@ const useTabs = (): IUseTabs => {
       if (!res.ok) throw new Error();
     } catch {
       setTabs(snapshot);
-      toast.error('탭 순서 변경에 실패했습니다');
+      toast.error(t('terminal', 'tabReorderFailed'));
     }
   }, []);
 

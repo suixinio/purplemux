@@ -158,5 +158,6 @@
     "deleteDescription": "Are you sure you want to delete this item?",
     "deleteCancel": "Cancel",
     "deleteConfirm": "Delete"
-  }
+  },
+  "saveFailed": "Failed to save settings"
 }

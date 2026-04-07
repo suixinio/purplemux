@@ -24,5 +24,8 @@
   "goToChat": "前往聊天",
   "wsDisconnected": "实时连接已断开。请刷新页面。",
   "agentRestarted": "智能体已重启",
-  "restartFailed": "重启失败"
+  "restartFailed": "重启失败",
+  "fetchError": "无法加载智能体列表",
+  "settingsSaved": "设置已保存",
+  "deleteFailed": "智能体删除失败"
 }

@@ -158,5 +158,6 @@
     "deleteDescription": "この項目を削除しますか？",
     "deleteCancel": "キャンセル",
     "deleteConfirm": "削除"
-  }
+  },
+  "saveFailed": "設定を保存できません"
 }

@@ -24,5 +24,8 @@
   "goToChat": "Aller au chat",
   "wsDisconnected": "Connexion en temps réel perdue. Veuillez actualiser.",
   "agentRestarted": "L'agent a été redémarré",
-  "restartFailed": "Échec du redémarrage"
+  "restartFailed": "Échec du redémarrage",
+  "fetchError": "Impossible de charger les agents",
+  "settingsSaved": "Paramètres enregistrés",
+  "deleteFailed": "Échec de la suppression de l'agent"
 }

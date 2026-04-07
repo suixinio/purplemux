@@ -24,5 +24,8 @@
   "goToChat": "Sohbete Git",
   "wsDisconnected": "Gerçek zamanlı bağlantı kesildi. Lütfen sayfayı yenileyin.",
   "agentRestarted": "Ajan yeniden başlatıldı",
-  "restartFailed": "Yeniden başlatma başarısız"
+  "restartFailed": "Yeniden başlatma başarısız",
+  "fetchError": "Ajanlar yüklenemedi",
+  "settingsSaved": "Ayarlar kaydedildi",
+  "deleteFailed": "Ajan silinemedi"
 }

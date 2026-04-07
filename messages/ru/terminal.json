@@ -56,5 +56,13 @@
   "tabStatus": "Статус вкладки",
   "messageHistory": "История сообщений",
   "installRunning": "Выполняется...",
-  "installDone": "Готово"
+  "installDone": "Готово",
+  "fallbackLayout": "Запуск с макетом по умолчанию",
+  "layoutFetchError": "Не удалось загрузить макет",
+  "splitFailed": "Не удалось разделить панель",
+  "tabCreateFailed": "Не удалось создать вкладку",
+  "tabDeleteError": "Ошибка при удалении вкладки",
+  "sessionRestartFailed": "Не удалось перезапустить сессию",
+  "tabRenameFailed": "Не удалось переименовать вкладку",
+  "tabReorderFailed": "Не удалось изменить порядок вкладок"
 }

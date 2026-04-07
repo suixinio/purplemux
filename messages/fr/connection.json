@@ -4,5 +4,6 @@
   "maxConnections": "Nombre maximal de connexions atteint",
   "ptyError": "Échec du démarrage du terminal",
   "disconnected": "Déconnecté",
-  "reconnect": "Reconnecter"
+  "reconnect": "Reconnecter",
+  "terminalDisconnected": "Terminal déconnecté"
 }

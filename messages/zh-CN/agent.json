@@ -85,5 +85,7 @@
   "agentStats": "{name}：{files}个文件，{size}",
   "brainPlanning": "规划中",
   "sessionLabel": "{session}会话",
-  "backendRolePlaceholder": "专职后端开发"
+  "backendRolePlaceholder": "专职后端开发",
+  "chatHistoryFailed": "无法加载聊天记录",
+  "messageFailed": "消息发送失败"
 }

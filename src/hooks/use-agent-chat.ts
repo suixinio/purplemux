@@ -1,5 +1,6 @@
 import { useEffect, useReducer, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import useAgentStore from '@/hooks/use-agent-store';
 import type {
   IChatMessage,
@@ -168,7 +169,7 @@ const useAgentChat = (agentId: string) => {
       dispatch({ type: 'INIT_SUCCESS', payload: data });
     } catch {
       dispatch({ type: 'INIT_ERROR' });
-      toast.error('채팅 이력을 불러올 수 없습니다');
+      toast.error(t('agent', 'chatHistoryFailed'));
     }
   }, [agentId]);
 
@@ -220,7 +221,7 @@ const useAgentChat = (agentId: string) => {
         });
       } catch {
         dispatch({ type: 'SEND_FAILURE', payload: { tempId } });
-        toast.error('메시지 전송에 실패했습니다');
+        toast.error(t('agent', 'messageFailed'));
       } finally {
         sendingRef.current = false;
       }

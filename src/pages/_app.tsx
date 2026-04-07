@@ -28,6 +28,7 @@ import isElectron from "@/hooks/use-is-electron";
 import SystemResources from "@/components/layout/system-resources";
 import useWorkspaceStore from "@/hooks/use-workspace-store";
 import useConfigStore from "@/hooks/use-config-store";
+import { setMessages } from "@/lib/i18n";
 
 import koCommon from "../../messages/ko/common.json";
 import koSidebar from "../../messages/ko/sidebar.json";
@@ -360,6 +361,7 @@ const messages: Record<string, Record<string, unknown>> = {
   ru: { common: ruCommon, sidebar: ruSidebar, header: ruHeader, terminal: ruTerminal, connection: ruConnection, workspace: ruWorkspace, login: ruLogin, onboarding: ruOnboarding, settings: ruSettings, stats: ruStats, reset: ruReset, reports: ruReports, agents: ruAgents, agent: ruAgent, timeline: ruTimeline, notification: ruNotification, session: ruSession, messageHistory: ruMessageHistory, webBrowser: ruWebBrowser, mobile: ruMobile },
   tr: { common: trCommon, sidebar: trSidebar, header: trHeader, terminal: trTerminal, connection: trConnection, workspace: trWorkspace, login: trLogin, onboarding: trOnboarding, settings: trSettings, stats: trStats, reset: trReset, reports: trReports, agents: trAgents, agent: trAgent, timeline: trTimeline, notification: trNotification, session: trSession, messageHistory: trMessageHistory, webBrowser: trWebBrowser, mobile: trMobile },
 };
+setMessages(messages);
 
 export default function App({ Component, pageProps }: TAppPropsWithLayout) {
   const storeHydrated = useRef(false);

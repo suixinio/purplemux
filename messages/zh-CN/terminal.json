@@ -56,5 +56,13 @@
   "tabStatus": "标签状态",
   "messageHistory": "消息历史",
   "installRunning": "运行中...",
-  "installDone": "完成"
+  "installDone": "完成",
+  "fallbackLayout": "使用默认布局启动",
+  "layoutFetchError": "无法加载布局",
+  "splitFailed": "无法分割",
+  "tabCreateFailed": "无法创建标签页",
+  "tabDeleteError": "删除标签页时出错",
+  "sessionRestartFailed": "无法重启会话",
+  "tabRenameFailed": "标签页重命名失败",
+  "tabReorderFailed": "标签页排序失败"
 }

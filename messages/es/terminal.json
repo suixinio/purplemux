@@ -56,5 +56,13 @@
   "tabStatus": "Estado de la pestaña",
   "messageHistory": "Historial de mensajes",
   "installRunning": "Ejecutando...",
-  "installDone": "Completado"
+  "installDone": "Completado",
+  "fallbackLayout": "Iniciando con diseño predeterminado",
+  "layoutFetchError": "No se pudo cargar el diseño",
+  "splitFailed": "No se pudo dividir el panel",
+  "tabCreateFailed": "No se pudo crear la pestaña",
+  "tabDeleteError": "Error al eliminar la pestaña",
+  "sessionRestartFailed": "No se pudo reiniciar la sesión",
+  "tabRenameFailed": "Error al renombrar la pestaña",
+  "tabReorderFailed": "Error al reordenar las pestañas"
 }

@@ -3,5 +3,11 @@
   "projectDirectory": "Proje dizini",
   "directoryPlaceholder": "Dizin yolunu girin",
   "validating": "Doğrulanıyor...",
-  "addButton": "Ekle"
+  "addButton": "Ekle",
+  "fetchError": "Çalışma alanları yüklenemedi",
+  "createFailed": "Çalışma alanı oluşturulamadı",
+  "deleteFailed": "Silinemedi",
+  "renameFailed": "Yeniden adlandırma başarısız",
+  "reorderFailed": "Yeniden sıralama başarısız",
+  "validateFailed": "Doğrulama başarısız"
 }

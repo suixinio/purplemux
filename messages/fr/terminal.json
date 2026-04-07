@@ -56,5 +56,13 @@
   "tabStatus": "État de l'onglet",
   "messageHistory": "Historique des messages",
   "installRunning": "Exécution...",
-  "installDone": "Terminé"
+  "installDone": "Terminé",
+  "fallbackLayout": "Démarrage avec la disposition par défaut",
+  "layoutFetchError": "Impossible de charger la disposition",
+  "splitFailed": "Impossible de diviser le panneau",
+  "tabCreateFailed": "Impossible de créer l'onglet",
+  "tabDeleteError": "Erreur lors de la suppression de l'onglet",
+  "sessionRestartFailed": "Impossible de redémarrer la session",
+  "tabRenameFailed": "Échec du renommage de l'onglet",
+  "tabReorderFailed": "Échec de la réorganisation des onglets"
 }
