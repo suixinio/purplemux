@@ -73,7 +73,7 @@ const TerminalPage = () => {
   useEffect(() => {
     if (!allTabsEmpty) return;
 
-    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace, createWorkspace } = useWorkspaceStore.getState();
+    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace } = useWorkspaceStore.getState();
     if (!activeWorkspaceId) return;
 
     const idx = workspaces.findIndex((w) => w.id === activeWorkspaceId);
@@ -85,10 +85,6 @@ const TerminalPage = () => {
 
     if (adjacent) {
       switchWorkspace(adjacent.id);
-    } else {
-      createWorkspace('').then((ws) => {
-        if (ws) switchWorkspace(ws.id);
-      });
     }
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
