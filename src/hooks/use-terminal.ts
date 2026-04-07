@@ -45,7 +45,10 @@ const loadFonts = () => {
 };
 
 const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, onTitleChange, customKeyEventHandler }: IUseTerminalOptions = {}) => {
-  const terminalRef = useRef<HTMLDivElement>(null);
+  const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
+  const terminalRef = useCallback((node: HTMLDivElement | null) => {
+    setContainerNode(node);
+  }, []);
   const terminalInstance = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const writeQueueRef = useRef<Uint8Array[]>([]);
@@ -115,8 +118,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
   }, []);
 
   useEffect(() => {
-    const container = terminalRef.current;
-    if (!container) return;
+    if (!containerNode) return;
 
     let disposed = false;
     let resizeRaf = 0;
@@ -157,7 +159,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       terminal.loadAddon(unicode11Addon);
       terminal.unicode.activeVersion = "11";
 
-      terminal.open(container);
+      terminal.open(containerNode);
 
       terminalInstance.current = terminal;
       fitAddonRef.current = fitAddon;
@@ -209,12 +211,12 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
         });
       });
 
-      resizeObserver.observe(container);
+      resizeObserver.observe(containerNode);
 
       // 모바일 터치 → 합성 WheelEvent 변환 (tmux 스크롤 지원)
       // tmux mouse mode 시 xterm.js가 .xterm-screen에 wheel 리스너를 붙이므로 해당 요소에 dispatch
       const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
-      const screenEl = container.querySelector('.xterm-screen');
+      const screenEl = containerNode.querySelector('.xterm-screen');
 
       if (isTouchDevice && screenEl) {
         let lastY = 0;
@@ -241,11 +243,11 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
           );
         };
 
-        container.addEventListener('touchstart', onTouchStart, { passive: true });
-        container.addEventListener('touchmove', onTouchMove, { passive: false });
+        containerNode.addEventListener('touchstart', onTouchStart, { passive: true });
+        containerNode.addEventListener('touchmove', onTouchMove, { passive: false });
         cleanupTouch = () => {
-          container.removeEventListener('touchstart', onTouchStart);
-          container.removeEventListener('touchmove', onTouchMove);
+          containerNode.removeEventListener('touchstart', onTouchStart);
+          containerNode.removeEventListener('touchmove', onTouchMove);
         };
       }
     });
@@ -261,7 +263,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       terminalInstance.current = null;
       fitAddonRef.current = null;
     };
-  }, []);
+  }, [containerNode]);
 
   useEffect(() => {
     if (terminalInstance.current && theme) {
