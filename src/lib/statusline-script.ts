@@ -25,5 +25,28 @@ if [ "$HAS_LIMITS" = "yes" ]; then
     cost: .cost
   }' > "$OUTPUT" 2>/dev/null
 fi
-echo ""
+
+MODEL=$(echo "$input" | jq -r '.model.display_name // empty')
+CTX=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
+IN_TOK=$(echo "$input" | jq -r '.context_window.total_input_tokens // 0')
+OUT_TOK=$(echo "$input" | jq -r '.context_window.total_output_tokens // 0')
+ADDED=$(echo "$input" | jq -r '.cost.total_lines_added // 0')
+REMOVED=$(echo "$input" | jq -r '.cost.total_lines_removed // 0')
+
+fmt_tokens() {
+  val=\$1
+  if [ "\$val" -ge 1000000 ] 2>/dev/null; then
+    printf "%.1fM" "\$(echo "\$val / 1000000" | bc -l)"
+  elif [ "\$val" -ge 1000 ] 2>/dev/null; then
+    printf "%.0fk" "\$(echo "\$val / 1000" | bc -l)"
+  else
+    echo "\$val"
+  fi
+}
+
+TOKENS="\$(fmt_tokens \$((IN_TOK + OUT_TOK)))"
+CTX_FMT=""
+[ -n "$CTX" ] && CTX_FMT=" · ctx \$(printf '%.0f' "$CTX")%"
+
+echo "\${MODEL}\${CTX_FMT} · \${TOKENS} · +\${ADDED} -\${REMOVED}"
 `;
