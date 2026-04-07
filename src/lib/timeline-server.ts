@@ -1,7 +1,7 @@
 import { IncomingMessage } from 'http';
 import { WebSocket } from 'ws';
 import { watch, type FSWatcher } from 'fs';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { detectActiveSession, isClaudeRunning, watchSessionsDir, type ISessionWatcher } from './session-detection';
 import { readTailEntries, parseIncremental, parseJsonlContent } from './session-parser';
 import { open as fsOpen } from 'fs/promises';
@@ -526,6 +526,7 @@ const watchForJsonlFile = (
     const projectsDir = path.dirname(projectDir);
     const projectDirName = path.basename(projectDir);
     try {
+      mkdirSync(projectsDir, { recursive: true });
       parentWatcher = watch(projectsDir, (_event, filename) => {
         if (stopped) return;
         if (filename === projectDirName && existsSync(projectDir)) {
