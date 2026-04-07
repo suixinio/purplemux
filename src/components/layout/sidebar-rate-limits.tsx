@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import useRateLimitsStore from '@/hooks/use-rate-limits-store';
 import type { IRateLimitWindow } from '@/types/status';
 
@@ -40,6 +41,14 @@ const LimitBar = ({ label, window }: { label: string; window: IRateLimitWindow }
 
 const SidebarRateLimits = () => {
   const data = useRateLimitsStore((s) => s.data);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    if (!data) return;
+    const id = setInterval(() => setTick((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, [data]);
+
   if (!data) return null;
   if (!data.five_hour && !data.seven_day) return null;
 
