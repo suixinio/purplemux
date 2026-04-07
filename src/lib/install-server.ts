@@ -16,7 +16,7 @@ const INSTALL_COMMANDS: Record<string, string> = Object.freeze({
   'tmux-install': 'brew install tmux',
   'tmux-upgrade': 'brew upgrade tmux',
   git: 'brew install git',
-  claude: 'npm install -g @anthropic-ai/claude-code',
+  claude: 'curl -fsSL https://claude.ai/install.sh | bash',
 });
 
 let activeConn: { ws: WebSocket; pty: pty.IPty } | null = null;
