@@ -52,8 +52,6 @@ interface INotificationItem {
   workspaceId: string;
   lastUserMessage?: string | null;
   currentAction?: string | null;
-  lastAssistantMessage?: string | null;
-  claudeSummary?: string | null;
   readyForReviewAt?: number | null;
   busySince?: number | null;
 }
@@ -79,8 +77,6 @@ const collectItems = (
       workspaceId: tab.workspaceId,
       lastUserMessage: tab.lastUserMessage,
       currentAction: tab.currentAction,
-      lastAssistantMessage: tab.lastAssistantMessage,
-      claudeSummary: tab.claudeSummary,
       readyForReviewAt: tab.readyForReviewAt,
       busySince: tab.busySince,
     });
@@ -111,7 +107,7 @@ const NotificationItem = ({
   onNavigate?: (workspaceId: string, tabId: string) => void;
 }) => {
   const t = useTranslations('notification');
-  const progressText = item.currentAction || item.lastAssistantMessage || item.claudeSummary;
+  const progressText = item.currentAction;
 
   return (
     <div
@@ -148,7 +144,7 @@ const NotificationItem = ({
             {item.lastUserMessage}
           </p>
         )}
-        {(progressText || (!showActions && !variant)) && (
+        {!showActions && !variant && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground/60">
             {progressText || t('starting')}
           </p>

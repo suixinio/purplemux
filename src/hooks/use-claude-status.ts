@@ -68,7 +68,6 @@ const useClaudeStatus = () => {
             }
 
             case 'status:update':
-              console.log('[title:status:update]', JSON.stringify({ tabId: msg.tabId, paneTitle: msg.paneTitle, formatted: msg.paneTitle ? formatTabTitle(msg.paneTitle) : null, process: msg.currentProcess }));
               useTabStore.getState().updateFromServer(msg.tabId, {
                 cliState: msg.cliState,
                 workspaceId: msg.workspaceId,

@@ -291,11 +291,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const activeTab = tabsRef.current.find((t) => t.id === tabId);
       if (activeTab?.panelType === 'web-browser') return;
       if (title === lastTitleRef.current) return;
-
-      const prevTitle = lastTitleRef.current;
       lastTitleRef.current = title;
-
-      console.log('[title]', JSON.stringify({ prev: prevTitle, next: title, formatted: formatTabTitle(title), process: parseCurrentCommand(title) }));
 
       const formatted = formatTabTitle(title);
       const process = parseCurrentCommand(title);
