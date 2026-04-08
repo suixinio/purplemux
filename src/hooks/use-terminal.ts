@@ -125,6 +125,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
     let reFitTimer = 0;
     let resizeObserver: ResizeObserver | null = null;
     let cleanupTouch: (() => void) | null = null;
+    let cleanupDragSelect: (() => void) | null = null;
 
     loadFonts().then(() => {
       if (disposed) return;
@@ -213,12 +214,42 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
 
       resizeObserver.observe(containerNode);
 
-      // 모바일 터치 → 합성 WheelEvent 변환 (xterm.js 스크롤백 탐색)
-      // xterm.js는 .xterm-viewport에서 wheel 이벤트로 스크롤을 처리
-      const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
-      const viewportEl = containerNode.querySelector('.xterm-viewport');
+      // tmux mouse on 상태에서 Shift 없이 드래그 선택 지원
+      // 일반 mousedown은 mouse report로 TTY에 전달되지만, shiftKey가 있으면
+      // xterm.js가 selection으로 전환한다. 따라서 수식어 없는 left mousedown을
+      // shiftKey=true로 합성해 재발행한다.
+      const forceShiftOnDrag = (e: MouseEvent) => {
+        if (e.button !== 0) return;
+        if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+        e.stopImmediatePropagation();
+        const target = e.target as HTMLElement | null;
+        if (!target) return;
+        target.dispatchEvent(
+          new MouseEvent('mousedown', {
+            bubbles: true,
+            cancelable: true,
+            view: window,
+            button: 0,
+            buttons: e.buttons,
+            clientX: e.clientX,
+            clientY: e.clientY,
+            screenX: e.screenX,
+            screenY: e.screenY,
+            shiftKey: true,
+          }),
+        );
+      };
+      containerNode.addEventListener('mousedown', forceShiftOnDrag, { capture: true });
+      cleanupDragSelect = () => {
+        containerNode.removeEventListener('mousedown', forceShiftOnDrag, { capture: true });
+      };
 
-      if (isTouchDevice && viewportEl) {
+      // 모바일 터치 → 합성 WheelEvent 변환 (tmux 스크롤 지원)
+      // tmux mouse mode 시 xterm.js가 .xterm-screen에 wheel 리스너를 붙이므로 해당 요소에 dispatch
+      const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
+      const screenEl = containerNode.querySelector('.xterm-screen');
+
+      if (isTouchDevice && screenEl) {
         let lastY = 0;
 
         const onTouchStart = (e: TouchEvent) => {
@@ -233,7 +264,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
           if (Math.abs(deltaY) < 3) return;
 
           e.preventDefault();
-          viewportEl.dispatchEvent(
+          screenEl.dispatchEvent(
             new WheelEvent('wheel', {
               deltaY,
               clientX: e.touches[0].clientX,
@@ -259,6 +290,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       clearTimeout(reFitTimer);
       resizeObserver?.disconnect();
       cleanupTouch?.();
+      cleanupDragSelect?.();
       terminalInstance.current?.dispose();
       terminalInstance.current = null;
       fitAddonRef.current = null;

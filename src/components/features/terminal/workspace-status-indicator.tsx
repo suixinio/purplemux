@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import { getProcessIcon } from '@/lib/process-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import type { TTabDisplayStatus, TTerminalStatus } from '@/types/status';
 import type { TPanelType } from '@/types/terminal';
 
@@ -13,11 +14,16 @@ interface IWorkspaceStatusIndicatorProps {
 
 const NERD_FONT_STYLE = { fontFamily: 'MesloLGLDZ, monospace' };
 
-const TerminalNerdIcon = ({ className, process }: { className: string; process?: string | null }) => (
-  <span className={`text-sm leading-none ${className}`} style={NERD_FONT_STYLE} aria-hidden="true">
-    {getProcessIcon(process)}
-  </span>
-);
+const TerminalNerdIcon = ({ className, process }: { className: string; process?: string | null }) => {
+  if (process === 'codex') {
+    return <OpenAIIcon className={`h-3 w-3 ${className}`} />;
+  }
+  return (
+    <span className={`text-sm leading-none ${className}`} style={NERD_FONT_STYLE} aria-hidden="true">
+      {getProcessIcon(process)}
+    </span>
+  );
+};
 
 const DotByStatus = ({ status, panelType, terminalStatus, process }: { status: TTabDisplayStatus; panelType?: TPanelType; terminalStatus?: TTerminalStatus; process?: string | null }) => {
   let inner: React.ReactNode;
