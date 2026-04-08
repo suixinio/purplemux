@@ -14,6 +14,8 @@ export interface IGitStatus {
   ahead: number;
   behind: number;
   stash: number;
+  insertions: number;
+  deletions: number;
 }
 
 const parsePortcelain = (stdout: string): Pick<IGitStatus, 'staged' | 'modified' | 'untracked'> => {
@@ -67,6 +69,28 @@ const getStashCount = async (cwd: string): Promise<number> => {
   }
 };
 
+const getDiffStats = async (cwd: string): Promise<Pick<IGitStatus, 'insertions' | 'deletions'>> => {
+  try {
+    const { stdout } = await execFile(
+      'git',
+      ['-C', cwd, 'diff', '--numstat'],
+      { timeout: CMD_TIMEOUT },
+    );
+    let insertions = 0;
+    let deletions = 0;
+    for (const line of stdout.split('\n')) {
+      if (!line) continue;
+      const [add, del] = line.split('\t');
+      if (add === '-' || del === '-') continue; // binary
+      insertions += parseInt(add, 10) || 0;
+      deletions += parseInt(del, 10) || 0;
+    }
+    return { insertions, deletions };
+  } catch {
+    return { insertions: 0, deletions: 0 };
+  }
+};
+
 const GIT_STATUS_TTL = 15_000;
 
 export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | null> => {
@@ -87,15 +111,17 @@ export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | nu
     );
 
     const porcelain = parsePortcelain(stdout);
-    const [aheadBehind, stash] = await Promise.all([
+    const [aheadBehind, stash, diffStats] = await Promise.all([
       getAheadBehind(cwd),
       getStashCount(cwd),
+      getDiffStats(cwd),
     ]);
 
     const status: IGitStatus = {
       ...porcelain,
       ...aheadBehind,
       stash,
+      ...diffStats,
     };
     setCached(cacheKey, status, GIT_STATUS_TTL);
     return status;

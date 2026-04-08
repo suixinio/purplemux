@@ -283,6 +283,11 @@ export const MetaDetail = ({
                 <span className="flex items-center gap-1 font-mono text-xs text-ui-amber">
                   <FilePen size={11} />
                   {gitStatus.modified} modified
+                  {(gitStatus.insertions > 0 || gitStatus.deletions > 0) && (
+                    <span className="text-muted-foreground/70">
+                      (<span className="text-ui-green">+{gitStatus.insertions}</span>{' '}<span className="text-ui-red">-{gitStatus.deletions}</span>)
+                    </span>
+                  )}
                 </span>
               )}
               {gitStatus.untracked > 0 && (
