@@ -2,6 +2,20 @@ import { useEffect, useState } from 'react';
 import useRateLimitsStore from '@/hooks/use-rate-limits-store';
 import type { IRateLimitWindow } from '@/types/status';
 
+const PERIOD_SECS = { '5h': 5 * 3600, '7d': 7 * 86400 } as const;
+type TLimitLabel = keyof typeof PERIOD_SECS;
+
+const getEffectiveWindow = (window: IRateLimitWindow, label: TLimitLabel) => {
+  const nowSecs = Date.now() / 1000;
+  if (window.resets_at > nowSecs) {
+    return { resetsAt: window.resets_at, usedPct: window.used_percentage };
+  }
+  const elapsed = nowSecs - window.resets_at;
+  const period = PERIOD_SECS[label];
+  const nextResetsAt = window.resets_at + Math.ceil(elapsed / period) * period;
+  return { resetsAt: nextResetsAt, usedPct: 0 };
+};
+
 const formatRemaining = (resetsAt: number): string => {
   const secs = Math.max(0, Math.floor(resetsAt - Date.now() / 1000));
   if (secs <= 0) return 'now';
@@ -19,9 +33,10 @@ const barColor = (pct: number): string => {
   return 'bg-ui-teal';
 };
 
-const LimitBar = ({ label, window }: { label: string; window: IRateLimitWindow }) => {
-  const pct = Math.min(100, Math.round(window.used_percentage));
-  const remaining = formatRemaining(window.resets_at);
+const LimitBar = ({ label, window }: { label: TLimitLabel; window: IRateLimitWindow }) => {
+  const { resetsAt, usedPct } = getEffectiveWindow(window, label);
+  const pct = Math.min(100, Math.round(usedPct));
+  const remaining = formatRemaining(resetsAt);
 
   return (
     <div className="space-y-0.5">

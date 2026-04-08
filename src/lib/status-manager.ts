@@ -90,7 +90,9 @@ const extractAssistantInfo = (lines: string[]): IAssistantExtract => {
       if (entry.isSidechain) continue;
 
       if (entry.type === 'user') {
-        userMessageSeen = true;
+        const c = entry.message?.content;
+        const isToolResult = Array.isArray(c) && c.some((b: unknown) => (b as { type?: string }).type === 'tool_result');
+        if (!isToolResult) userMessageSeen = true;
         continue;
       }
 
