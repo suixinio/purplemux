@@ -28,6 +28,7 @@ import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle, parseCurrentCommand } from '@/lib/tab-title';
+import { isInterpreter } from '@/lib/process-icon';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
@@ -283,7 +284,9 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const formatted = formatTabTitle(title);
       const process = parseCurrentCommand(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
-      useTabStore.getState().setCurrentProcess(tabId, process);
+      if (!isInterpreter(process)) {
+        useTabStore.getState().setCurrentProcess(tabId, process);
+      }
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;
