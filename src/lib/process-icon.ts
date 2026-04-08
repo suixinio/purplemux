@@ -48,8 +48,8 @@ const PROCESS_ICONS: Record<string, string> = {
   scala: '\ue737',    //
   zig: '\u21af',      // ↯
   // package managers
-  npm: '\ue71e',      //
-  pnpm: '\ue71e',     //
+  npm: '\ue718',      //
+  pnpm: '\ue718',     //
   yarn: '\ue718',     //
   pip: '\ue73c',      //
   pip3: '\ue73c',     //
