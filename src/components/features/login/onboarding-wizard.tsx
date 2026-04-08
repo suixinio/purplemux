@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
 import { AlertTriangle, ArrowLeft, ArrowRight, Check, Download, Eye, EyeOff, ListChecks, Lock, Loader2, LogIn, RefreshCcw, Terminal, Bot, Sun, Moon, Monitor, X } from 'lucide-react';
@@ -117,6 +117,12 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
   });
   const [installTarget, setInstallTarget] = useState<{ command: string; label: string } | null>(null);
 
+  useEffect(() => {
+    if (step === 'password') {
+      document.getElementById('setup-password')?.focus();
+    }
+  }, [step]);
+
   const appThemeOptions: { value: TAppTheme; icon: React.ReactNode; label: string }[] = [
     { value: 'dark', icon: <Moon className="h-4 w-4" />, label: tc('dark') },
     { value: 'light', icon: <Sun className="h-4 w-4" />, label: tc('light') },
@@ -197,8 +203,8 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
         <span className="font-medium text-foreground">{t(`steps.${step}`)}</span>
       </div>
 
-      {step === 'preflight' && (
-        <div className="flex flex-col gap-4">
+      <div className="grid">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'preflight' && 'invisible')} aria-hidden={step !== 'preflight'}>
           {preflightChecking ? (
             <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
@@ -312,10 +318,8 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             );
           })() : null}
         </div>
-      )}
 
-      {step === 'password' && (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'password' && 'invisible')} aria-hidden={step !== 'password'}>
           <div className="flex flex-col gap-2">
             <Label htmlFor="setup-password">{t('password')}</Label>
             <div className="relative">
@@ -328,12 +332,13 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
                   setPassword(e.target.value);
                   setError('');
                 }}
-                autoFocus
+                tabIndex={step === 'password' ? 0 : -1}
                 className="h-12 pr-10 text-base"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
+                tabIndex={step === 'password' ? 0 : -1}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -354,19 +359,18 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && canProceed()) handlePasswordNext();
               }}
+              tabIndex={step === 'password' ? 0 : -1}
               className="h-12 text-base"
             />
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
-          <Button size="lg" className="h-12 w-full" disabled={!canProceed()} onClick={handlePasswordNext}>
+          <Button size="lg" className="h-12 w-full" disabled={!canProceed()} tabIndex={step === 'password' ? 0 : -1} onClick={handlePasswordNext}>
             {tc('next')}
             <ArrowRight className="ml-1 h-4 w-4" />
           </Button>
         </div>
-      )}
 
-      {step === 'appearance' && (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'appearance' && 'invisible')} aria-hidden={step !== 'appearance'}>
           <p className="text-sm text-muted-foreground">{t('appearanceDescription')}</p>
           <div className="grid grid-cols-3 gap-2">
             {appThemeOptions.map((opt) => (
@@ -374,6 +378,7 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
                 key={opt.value}
                 type="button"
                 onClick={() => { setAppTheme(opt.value); setNextTheme(opt.value); }}
+                tabIndex={step === 'appearance' ? 0 : -1}
                 className={cn(
                   'flex flex-col items-center gap-2 rounded-lg border p-4 transition-colors',
                   appTheme === opt.value
@@ -387,24 +392,22 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="lg" className="h-12" onClick={goBack}>
+            <Button variant="outline" size="lg" className="h-12" tabIndex={step === 'appearance' ? 0 : -1} onClick={goBack}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               {tc('back')}
             </Button>
-            <Button size="lg" className="h-12 flex-1" onClick={goNext}>
+            <Button size="lg" className="h-12 flex-1" tabIndex={step === 'appearance' ? 0 : -1} onClick={goNext}>
               {tc('next')}
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
-      )}
 
-      {step === 'theme' && (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'theme' && 'invisible')} aria-hidden={step !== 'theme'}>
           <Tabs defaultValue="dark">
             <TabsList className="w-full">
-              <TabsTrigger value="dark" className="flex-1">{tc('dark')}</TabsTrigger>
-              <TabsTrigger value="light" className="flex-1">{tc('light')}</TabsTrigger>
+              <TabsTrigger value="dark" className="flex-1" tabIndex={step === 'theme' ? 0 : -1}>{tc('dark')}</TabsTrigger>
+              <TabsTrigger value="light" className="flex-1" tabIndex={step === 'theme' ? 0 : -1}>{tc('light')}</TabsTrigger>
             </TabsList>
             <TabsContent value="dark" className="mt-3">
               <ThemeGrid list={darkThemes} selectedId={darkTheme} onSelect={setDarkTheme} />
@@ -414,20 +417,18 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             </TabsContent>
           </Tabs>
           <div className="flex gap-2">
-            <Button variant="outline" size="lg" className="h-12" onClick={goBack}>
+            <Button variant="outline" size="lg" className="h-12" tabIndex={step === 'theme' ? 0 : -1} onClick={goBack}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               {tc('back')}
             </Button>
-            <Button size="lg" className="h-12 flex-1" onClick={goNext}>
+            <Button size="lg" className="h-12 flex-1" tabIndex={step === 'theme' ? 0 : -1} onClick={goNext}>
               {tc('next')}
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
-      )}
 
-      {step === 'claude' && (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'claude' && 'invisible')} aria-hidden={step !== 'claude'}>
           <div className="flex items-center justify-between rounded-lg border p-4">
             <div className="space-y-1 pr-4">
               <p className="text-sm font-medium">{t('skipPermissions')}</p>
@@ -438,23 +439,22 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
             <Switch
               checked={skipPermissions}
               onCheckedChange={setSkipPermissions}
+              tabIndex={step === 'claude' ? 0 : -1}
             />
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="lg" className="h-12" onClick={goBack}>
+            <Button variant="outline" size="lg" className="h-12" tabIndex={step === 'claude' ? 0 : -1} onClick={goBack}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               {tc('back')}
             </Button>
-            <Button size="lg" className="h-12 flex-1" onClick={goNext}>
+            <Button size="lg" className="h-12 flex-1" tabIndex={step === 'claude' ? 0 : -1} onClick={goNext}>
               {tc('next')}
               <ArrowRight className="ml-1 h-4 w-4" />
             </Button>
           </div>
         </div>
-      )}
 
-      {step === 'complete' && (
-        <div className="flex flex-col gap-4">
+        <div className={cn('flex flex-col gap-4 [grid-area:1/1]', step !== 'complete' && 'invisible')} aria-hidden={step !== 'complete'}>
           <div className="rounded-lg border p-4 space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted-foreground">{t('summary.password')}</span>
@@ -479,17 +479,17 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <div className="flex gap-2">
-            <Button variant="outline" size="lg" className="h-12" onClick={goBack}>
+            <Button variant="outline" size="lg" className="h-12" tabIndex={step === 'complete' ? 0 : -1} onClick={goBack}>
               <ArrowLeft className="mr-1 h-4 w-4" />
               {tc('back')}
             </Button>
-            <Button size="lg" className="h-12 flex-1" disabled={isSubmitting} onClick={handleSubmit}>
+            <Button size="lg" className="h-12 flex-1" disabled={isSubmitting} tabIndex={step === 'complete' ? 0 : -1} onClick={handleSubmit}>
               <Check className="mr-1 h-4 w-4" />
               {isSubmitting ? t('submitting') : t('completeButton')}
             </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
