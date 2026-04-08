@@ -147,7 +147,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     const result: Record<string, string> = {};
     for (const id of tabIds) {
       const p = rawTabProcesses[id];
-      if (p) result[id] = resolveProcess(p, tabLastCommands[id]);
+      if (p) {
+        const resolved = resolveProcess(p, tabLastCommands[id]);
+        result[id] = resolved;
+        console.log('[tabProcesses]', { tabId: id, raw: p, lastCommand: tabLastCommands[id], resolved });
+      }
     }
     return result;
   }, [tabIds, rawTabProcesses, tabLastCommands]);
@@ -190,6 +194,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const res = await fetch(`/api/layout/cwd?session=${tab.sessionName}`);
       if (!res.ok) return;
       const { cwd, lastCommand } = await res.json();
+      console.log('[fetchAndUpdateCwd]', { tabId: tab.id, session: tab.sessionName, cwd, lastCommand });
       if (cwd) useTabMetadataStore.getState().setCwd(tab.id, cwd);
       useTabMetadataStore.getState().setLastCommand(tab.id, lastCommand ?? null);
     } catch {
