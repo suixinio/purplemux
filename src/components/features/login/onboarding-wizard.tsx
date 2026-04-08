@@ -216,6 +216,17 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
         return;
       }
 
+      const loginRes = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
+
+      if (loginRes.ok) {
+        window.location.href = '/';
+        return;
+      }
+
       onComplete();
     } catch {
       setError(t('connectionError'));
