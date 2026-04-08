@@ -64,5 +64,6 @@
   "tabDeleteError": "Erro ao excluir aba",
   "sessionRestartFailed": "Falha ao reiniciar sessão",
   "tabRenameFailed": "Falha ao renomear aba",
-  "tabReorderFailed": "Falha ao reordenar abas"
+  "tabReorderFailed": "Falha ao reordenar abas",
+  "dragCopyHint": "Mantenha Shift pressionado e arraste para copiar o texto"
 }

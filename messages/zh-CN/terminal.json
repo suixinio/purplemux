@@ -64,5 +64,6 @@
   "tabDeleteError": "删除标签页时出错",
   "sessionRestartFailed": "无法重启会话",
   "tabRenameFailed": "标签页重命名失败",
-  "tabReorderFailed": "标签页排序失败"
+  "tabReorderFailed": "标签页排序失败",
+  "dragCopyHint": "按住 Shift 拖动以复制文本"
 }

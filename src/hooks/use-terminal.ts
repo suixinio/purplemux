@@ -14,6 +14,7 @@ interface IUseTerminalOptions {
   onResize?: (cols: number, rows: number) => void;
   onTitleChange?: (title: string) => void;
   customKeyEventHandler?: (event: KeyboardEvent) => boolean;
+  onDragWithoutShift?: () => void;
 }
 
 const DEFAULT_FONT_SIZE = 12;
@@ -44,7 +45,7 @@ const loadFonts = () => {
   return fontLoadPromise;
 };
 
-const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, onTitleChange, customKeyEventHandler }: IUseTerminalOptions = {}) => {
+const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, onTitleChange, customKeyEventHandler, onDragWithoutShift }: IUseTerminalOptions = {}) => {
   const [containerNode, setContainerNode] = useState<HTMLDivElement | null>(null);
   const terminalRef = useCallback((node: HTMLDivElement | null) => {
     setContainerNode(node);
@@ -55,11 +56,11 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
   const isWritingRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
 
-  const callbacksRef = useRef({ theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler });
+  const callbacksRef = useRef({ theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler, onDragWithoutShift });
 
   useEffect(() => {
-    callbacksRef.current = { theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler };
-  }, [theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler]);
+    callbacksRef.current = { theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler, onDragWithoutShift };
+  }, [theme, fontSize, onInput, onResize, onTitleChange, customKeyEventHandler, onDragWithoutShift]);
 
   const write = useCallback((data: Uint8Array) => {
     writeQueueRef.current.push(data);
@@ -125,6 +126,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
     let reFitTimer = 0;
     let resizeObserver: ResizeObserver | null = null;
     let cleanupTouch: (() => void) | null = null;
+    let cleanupDragHint: (() => void) | null = null;
 
     loadFonts().then(() => {
       if (disposed) return;
@@ -213,6 +215,43 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
 
       resizeObserver.observe(containerNode);
 
+      // tmux mouse on 상태에서 shift 없이 드래그하면 mouse report로 tmux copy-mode만
+      // 진입해 시각적 선택만 되고 시스템 클립보드엔 안 들어간다. 드래그 제스처를
+      // DOM 레벨에서 감지해 선택이 실패하면 Shift 안내 힌트를 띄운다.
+      const DRAG_HINT_THRESHOLD = 24;
+      let dragHintStart: { x: number; y: number } | null = null;
+
+      const onHintPointerDown = (e: PointerEvent) => {
+        if (e.pointerType !== 'mouse') return;
+        if (e.button !== 0) return;
+        if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+        dragHintStart = { x: e.clientX, y: e.clientY };
+      };
+
+      const onHintPointerUp = (e: PointerEvent) => {
+        const start = dragHintStart;
+        dragHintStart = null;
+        if (!start) return;
+        if (e.pointerType !== 'mouse') return;
+        const dist = Math.hypot(e.clientX - start.x, e.clientY - start.y);
+        if (dist < DRAG_HINT_THRESHOLD) return;
+        if (terminal.hasSelection()) return;
+        callbacksRef.current.onDragWithoutShift?.();
+      };
+
+      const onHintPointerCancel = () => {
+        dragHintStart = null;
+      };
+
+      containerNode.addEventListener('pointerdown', onHintPointerDown, { capture: true });
+      containerNode.addEventListener('pointerup', onHintPointerUp, { capture: true });
+      containerNode.addEventListener('pointercancel', onHintPointerCancel, { capture: true });
+      cleanupDragHint = () => {
+        containerNode.removeEventListener('pointerdown', onHintPointerDown, { capture: true });
+        containerNode.removeEventListener('pointerup', onHintPointerUp, { capture: true });
+        containerNode.removeEventListener('pointercancel', onHintPointerCancel, { capture: true });
+      };
+
       // 모바일 터치 → 합성 WheelEvent 변환 (tmux 스크롤 지원)
       // tmux mouse mode 시 xterm.js가 .xterm-screen에 wheel 리스너를 붙이므로 해당 요소에 dispatch
       const isTouchDevice = 'ontouchstart' in window && navigator.maxTouchPoints > 0;
@@ -259,6 +298,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
       clearTimeout(reFitTimer);
       resizeObserver?.disconnect();
       cleanupTouch?.();
+      cleanupDragHint?.();
       terminalInstance.current?.dispose();
       terminalInstance.current = null;
       fitAddonRef.current = null;

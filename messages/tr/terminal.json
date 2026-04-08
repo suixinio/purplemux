@@ -64,5 +64,6 @@
   "tabDeleteError": "Sekme silinirken hata oluştu",
   "sessionRestartFailed": "Oturum yeniden başlatılamadı",
   "tabRenameFailed": "Sekme yeniden adlandırılamadı",
-  "tabReorderFailed": "Sekme sıralaması değiştirilemedi"
+  "tabReorderFailed": "Sekme sıralaması değiştirilemedi",
+  "dragCopyHint": "Metni kopyalamak için Shift tuşuna basılı tutup sürükleyin"
 }

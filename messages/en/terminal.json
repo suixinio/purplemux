@@ -64,5 +64,6 @@
   "tabDeleteError": "Error while deleting tab",
   "sessionRestartFailed": "Failed to restart session",
   "tabRenameFailed": "Failed to rename tab",
-  "tabReorderFailed": "Failed to reorder tabs"
+  "tabReorderFailed": "Failed to reorder tabs",
+  "dragCopyHint": "Hold Shift and drag to copy text"
 }

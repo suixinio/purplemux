@@ -64,5 +64,6 @@
   "tabDeleteError": "탭 삭제 중 오류가 발생했습니다",
   "sessionRestartFailed": "세션을 재시작할 수 없습니다",
   "tabRenameFailed": "탭 이름 변경에 실패했습니다",
-  "tabReorderFailed": "탭 순서 변경에 실패했습니다"
+  "tabReorderFailed": "탭 순서 변경에 실패했습니다",
+  "dragCopyHint": "텍스트를 복사하려면 Shift를 누른 채 드래그하세요"
 }

@@ -64,5 +64,6 @@
   "tabDeleteError": "Error al eliminar la pestaña",
   "sessionRestartFailed": "No se pudo reiniciar la sesión",
   "tabRenameFailed": "Error al renombrar la pestaña",
-  "tabReorderFailed": "Error al reordenar las pestañas"
+  "tabReorderFailed": "Error al reordenar las pestañas",
+  "dragCopyHint": "Mantén Shift presionado y arrastra para copiar texto"
 }

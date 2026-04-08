@@ -64,5 +64,6 @@
   "tabDeleteError": "Erreur lors de la suppression de l'onglet",
   "sessionRestartFailed": "Impossible de redémarrer la session",
   "tabRenameFailed": "Échec du renommage de l'onglet",
-  "tabReorderFailed": "Échec de la réorganisation des onglets"
+  "tabReorderFailed": "Échec de la réorganisation des onglets",
+  "dragCopyHint": "Maintenez Shift et glissez pour copier le texte"
 }

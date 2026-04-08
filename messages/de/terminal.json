@@ -64,5 +64,6 @@
   "tabDeleteError": "Fehler beim Löschen des Tabs",
   "sessionRestartFailed": "Sitzung konnte nicht neu gestartet werden",
   "tabRenameFailed": "Tab-Umbenennung fehlgeschlagen",
-  "tabReorderFailed": "Tab-Neuanordnung fehlgeschlagen"
+  "tabReorderFailed": "Tab-Neuanordnung fehlgeschlagen",
+  "dragCopyHint": "Halten Sie Shift gedrückt und ziehen Sie, um Text zu kopieren"
 }

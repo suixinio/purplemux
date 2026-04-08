@@ -1,6 +1,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo, memo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/router';
+import { toast } from 'sonner';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import { ChevronDown, ChevronUp, Plus, TerminalSquare } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
@@ -187,6 +188,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, []);
 
   const clearRef = useRef<() => void>(() => {});
+  const dragHintLastShownRef = useRef(0);
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
   const clickedTerminalRef = useRef(false);
@@ -321,6 +323,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       fetchAndUpdateCwd();
     },
     customKeyEventHandler: handleCustomKeyEvent,
+    onDragWithoutShift: () => {
+      const now = Date.now();
+      if (now - dragHintLastShownRef.current < 30_000) return;
+      dragHintLastShownRef.current = now;
+      toast.info(t('dragCopyHint'), { id: 'drag-copy-hint', duration: 4000 });
+    },
   });
 
   useEffect(() => {
