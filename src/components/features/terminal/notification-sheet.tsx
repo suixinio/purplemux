@@ -144,9 +144,9 @@ const NotificationItem = ({
             {item.lastUserMessage}
           </p>
         )}
-        {!showActions && !variant && (
+        {!variant && (
           <p className="mt-0.5 truncate text-xs text-muted-foreground/60">
-            {progressText || t('starting')}
+            {showActions ? progressText : (progressText || t('starting'))}
           </p>
         )}
         {showActions && !isActiveTab && (

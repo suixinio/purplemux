@@ -78,6 +78,8 @@ const useClaudeStatus = () => {
                 currentProcess: msg.currentProcess,
                 claudeSummary: msg.claudeSummary,
                 lastUserMessage: msg.lastUserMessage,
+                lastAssistantMessage: msg.lastAssistantMessage,
+                currentAction: msg.currentAction,
                 readyForReviewAt: msg.readyForReviewAt,
                 busySince: msg.busySince,
               });
