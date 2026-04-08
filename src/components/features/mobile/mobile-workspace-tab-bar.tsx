@@ -2,7 +2,8 @@ import { useRef, useEffect, useMemo } from 'react';
 import { Globe } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
-import { getProcessIcon } from '@/lib/process-icon';
+import { getProcessIcon, resolveProcess } from '@/lib/process-icon';
+import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { IWorkspace, IPaneNode, TPanelType } from '@/types/terminal';
 
 interface IMobileWorkspaceTabBarProps {
@@ -31,6 +32,7 @@ const MobileWorkspaceTabBar = ({
 }: IMobileWorkspaceTabBarProps) => {
   const activeRef = useRef<HTMLButtonElement>(null);
   const statusTabs = useTabStore((s) => s.tabs);
+  const metadata = useTabMetadataStore((s) => s.metadata);
   const items = useMemo(() => {
     const result: (ITabDot | 'divider')[] = [];
 
@@ -84,7 +86,8 @@ const MobileWorkspaceTabBar = ({
           const isClaude = item.panelType === 'claude-code';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
           const termStatus = statusTabs[item.tabId]?.terminalStatus;
-          const nerdIcon = getProcessIcon(statusTabs[item.tabId]?.currentProcess);
+          const rawProcess = statusTabs[item.tabId]?.currentProcess;
+          const nerdIcon = getProcessIcon(rawProcess ? resolveProcess(rawProcess, metadata[item.tabId]?.lastCommand) : rawProcess);
           const nerdStyle = { fontFamily: 'MesloLGLDZ, monospace' } as const;
 
           return (

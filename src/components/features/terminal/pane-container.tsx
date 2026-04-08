@@ -28,6 +28,7 @@ import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
 import { formatTabTitle, parseCurrentCommand } from '@/lib/tab-title';
+import { resolveProcess } from '@/lib/process-icon';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
@@ -120,7 +121,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     }),
   );
 
-  const tabProcesses = useTabStore(
+  const rawTabProcesses = useTabStore(
     useShallow((state) => {
       const result: Record<string, string> = {};
       for (const id of tabIds) {
@@ -130,6 +131,26 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       return result;
     }),
   );
+
+  const tabLastCommands = useTabMetadataStore(
+    useShallow((state) => {
+      const result: Record<string, string | null> = {};
+      for (const id of tabIds) {
+        const lc = state.metadata[id]?.lastCommand;
+        if (lc !== undefined) result[id] = lc;
+      }
+      return result;
+    }),
+  );
+
+  const tabProcesses = useMemo(() => {
+    const result: Record<string, string> = {};
+    for (const id of tabIds) {
+      const p = rawTabProcesses[id];
+      if (p) result[id] = resolveProcess(p, tabLastCommands[id]);
+    }
+    return result;
+  }, [tabIds, rawTabProcesses, tabLastCommands]);
 
   const activeTabCwd = useTabMetadataStore(
     (state) => (activeTabId ? state.metadata[activeTabId]?.cwd : undefined),

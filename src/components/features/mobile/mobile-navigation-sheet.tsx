@@ -22,7 +22,7 @@ import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
 import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
-import { getProcessIcon } from '@/lib/process-icon';
+import { getProcessIcon, resolveProcess } from '@/lib/process-icon';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 import WorkspaceStatusIndicator from '@/components/features/terminal/workspace-status-indicator';
 import SidebarRateLimits from '@/components/layout/sidebar-rate-limits';
@@ -110,7 +110,10 @@ const MobileNavigationSheet = ({
 
   const tabs = useTabStore((s) => s.tabs);
 
-  const getTabProcessIcon = (tab: ITab) => getProcessIcon(tabs[tab.id]?.currentProcess);
+  const getTabProcessIcon = (tab: ITab) => {
+    const raw = tabs[tab.id]?.currentProcess;
+    return getProcessIcon(raw ? resolveProcess(raw, metadata[tab.id]?.lastCommand) : raw);
+  };
 
   const getTabNerdColor = (tab: ITab) => {
     const terminalStatus = tabs[tab.id]?.terminalStatus;

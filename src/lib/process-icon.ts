@@ -116,6 +116,8 @@ const PROCESS_ICONS: Record<string, string> = {
   jest: '\uf0c3',     //
   // claude
   claude: '\uf4a5',   //
+  // ai tools
+  codex: '\ue71e',    //
 };
 
 const FALLBACK_ICON = '\ue795'; //
@@ -128,4 +130,17 @@ export const getProcessIcon = (processName: string | null | undefined): string =
 export const hasProcessIcon = (processName: string | null | undefined): boolean => {
   if (!processName) return false;
   return processName in PROCESS_ICONS;
+};
+
+const INTERPRETERS = new Set(['node', 'python', 'python3', 'ruby', 'perl', 'deno', 'bun']);
+
+export const isInterpreter = (processName: string | null | undefined): boolean => {
+  if (!processName) return false;
+  return INTERPRETERS.has(processName);
+};
+
+export const resolveProcess = (currentProcess: string, lastCommand: string | null | undefined): string => {
+  if (!isInterpreter(currentProcess) || !lastCommand) return currentProcess;
+  const name = lastCommand.split(/\s+/)[0];
+  return name && hasProcessIcon(name) ? name : currentProcess;
 };
