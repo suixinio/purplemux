@@ -134,7 +134,7 @@ const NotificationItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-foreground">
+          <span className="truncate text-xs text-muted-foreground">
             {item.workspaceName}
           </span>
           {(item.readyForReviewAt || item.busySince) && (
@@ -144,13 +144,15 @@ const NotificationItem = ({
           )}
         </div>
         {item.lastUserMessage && (
-          <p className="mt-0.5 truncate text-sm text-muted-foreground">
+          <p className="mt-0.5 truncate text-sm text-foreground">
             {item.lastUserMessage}
           </p>
         )}
-        <p className="mt-0.5 truncate text-xs text-muted-foreground/60">
-          {progressText || t('starting')}
-        </p>
+        {(progressText || (!showActions && !variant)) && (
+          <p className="mt-0.5 truncate text-xs text-muted-foreground/60">
+            {progressText || t('starting')}
+          </p>
+        )}
         {showActions && !isActiveTab && (
           <div className="mt-2 flex items-center gap-1.5">
             <Button
