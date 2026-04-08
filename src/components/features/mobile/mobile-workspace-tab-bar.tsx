@@ -2,8 +2,9 @@ import { useRef, useEffect, useMemo } from 'react';
 import { Globe } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
-import { getProcessIcon, resolveProcess } from '@/lib/process-icon';
-import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import { getProcessIcon } from '@/lib/process-icon';
+import { cn } from '@/lib/utils';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import type { IWorkspace, IPaneNode, TPanelType } from '@/types/terminal';
 
 interface IMobileWorkspaceTabBarProps {
@@ -32,7 +33,6 @@ const MobileWorkspaceTabBar = ({
 }: IMobileWorkspaceTabBarProps) => {
   const activeRef = useRef<HTMLButtonElement>(null);
   const statusTabs = useTabStore((s) => s.tabs);
-  const metadata = useTabMetadataStore((s) => s.metadata);
   const items = useMemo(() => {
     const result: (ITabDot | 'divider')[] = [];
 
@@ -86,9 +86,15 @@ const MobileWorkspaceTabBar = ({
           const isClaude = item.panelType === 'claude-code';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
           const termStatus = statusTabs[item.tabId]?.terminalStatus;
-          const rawProcess = statusTabs[item.tabId]?.currentProcess;
-          const nerdIcon = getProcessIcon(rawProcess ? resolveProcess(rawProcess, metadata[item.tabId]?.lastCommand) : rawProcess);
+          const currentProcess = statusTabs[item.tabId]?.currentProcess;
+          const isCodex = currentProcess === 'codex';
+          const nerdIcon = getProcessIcon(currentProcess);
           const nerdStyle = { fontFamily: 'MesloLGLDZ, monospace' } as const;
+          const iconColorClass = termStatus === 'server'
+            ? 'text-ui-green'
+            : termStatus === 'running'
+              ? 'text-ui-blue'
+              : 'text-muted-foreground/50';
 
           return (
             <button
@@ -110,12 +116,10 @@ const MobileWorkspaceTabBar = ({
                 <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
               ) : item.panelType === 'web-browser' ? (
                 <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
-              ) : termStatus === 'server' ? (
-                <span className="text-sm leading-none text-ui-green" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
-              ) : termStatus === 'running' ? (
-                <span className="text-sm leading-none text-ui-blue" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
+              ) : isCodex ? (
+                <OpenAIIcon className={cn('h-3 w-3', iconColorClass)} />
               ) : (
-                <span className="text-sm leading-none text-muted-foreground/50" style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
+                <span className={cn('text-sm leading-none', iconColorClass)} style={nerdStyle} aria-hidden="true">{nerdIcon}</span>
               )}
             </button>
           );

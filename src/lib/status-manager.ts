@@ -1,8 +1,9 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus } from '@/lib/layout-store';
-import { getAllPanesInfo, capturePaneContent, getListeningPorts, SAFE_SHELLS } from '@/lib/tmux';
+import { getAllPanesInfo, capturePaneContent, getListeningPorts, SAFE_SHELLS, getLastCommand } from '@/lib/tmux';
 import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
+import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
 import { hasPermissionPrompt } from '@/lib/permission-prompt';
 import { getLastTerminalOutput } from '@/lib/terminal-server';
 import { INTERRUPT_PREFIX } from '@/lib/session-parser';
@@ -163,6 +164,14 @@ class StatusManager {
     this.rateLimitsWatcher.start();
   }
 
+  private async resolveCurrentProcess(sessionName: string, command: string | undefined): Promise<string | undefined> {
+    if (!command || !isInterpreter(command)) return command;
+    const last = await getLastCommand(sessionName);
+    if (!last) return command;
+    const name = last.split(/\s+/)[0];
+    return name && hasProcessIcon(name) ? name : command;
+  }
+
   private async scanAll(): Promise<void> {
     const { workspaces } = await getWorkspaces();
     const panesInfo = await getAllPanesInfo();
@@ -182,11 +191,12 @@ class StatusManager {
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
+        const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
         this.tabs.set(tab.id, {
           cliState,
           workspaceId: ws.id,
           tabName: tab.name,
-          currentProcess: paneInfo?.command,
+          currentProcess: resolvedProcess,
           paneTitle: paneInfo ? `${paneInfo.command}|${paneInfo.path}` : undefined,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
@@ -306,13 +316,14 @@ class StatusManager {
           : await this.detectTerminalStatus(paneInfo);
 
         const newPaneTitle = paneInfo ? `${paneInfo.command}|${paneInfo.path}` : undefined;
+        const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
 
         if (!existing) {
           const entry: ITabStatusEntry = {
             cliState: newCliState,
             workspaceId: ws.id,
             tabName: tab.name,
-            currentProcess: paneInfo?.command,
+            currentProcess: resolvedProcess,
             paneTitle: newPaneTitle,
             tmuxSession: tab.sessionName,
             panelType: tab.panelType,
@@ -327,11 +338,11 @@ class StatusManager {
           continue;
         }
 
-        const processChanged = existing.currentProcess !== paneInfo?.command;
+        const processChanged = existing.currentProcess !== resolvedProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         const panelTypeChanged = existing.panelType !== tab.panelType;
         existing.tabName = tab.name;
-        existing.currentProcess = paneInfo?.command;
+        existing.currentProcess = resolvedProcess;
         existing.paneTitle = newPaneTitle;
         existing.workspaceId = ws.id;
         existing.panelType = tab.panelType;

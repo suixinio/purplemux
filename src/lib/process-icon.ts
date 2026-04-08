@@ -138,9 +138,3 @@ export const isInterpreter = (processName: string | null | undefined): boolean =
   if (!processName) return false;
   return INTERPRETERS.has(processName);
 };
-
-export const resolveProcess = (currentProcess: string, lastCommand: string | null | undefined): string => {
-  if (!isInterpreter(currentProcess) || !lastCommand) return currentProcess;
-  const name = lastCommand.split(/\s+/)[0];
-  return name && hasProcessIcon(name) ? name : currentProcess;
-};

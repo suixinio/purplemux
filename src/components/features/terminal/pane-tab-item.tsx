@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Globe } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import { cn } from '@/lib/utils';
 import type { ITab } from '@/types/terminal';
 import { isAutoTabName } from '@/lib/tab-title';
@@ -121,6 +122,8 @@ const PaneTabItem = ({
             <ClaudeCodeIcon className="h-3.5 w-3.5" />
           ) : tab.panelType === 'web-browser' ? (
             <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : currentProcess === 'codex' ? (
+            <OpenAIIcon className="h-3 w-3 text-muted-foreground" />
           ) : (
             <span className="shrink-0 text-sm leading-none text-muted-foreground" style={{ fontFamily: 'MesloLGLDZ, monospace' }}>
               {getProcessIcon(currentProcess ?? displayTitle)}

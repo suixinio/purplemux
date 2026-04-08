@@ -3,8 +3,8 @@ import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 import useTabStore from '@/hooks/use-tab-store';
-import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
-import { getProcessIcon, resolveProcess } from '@/lib/process-icon';
+import { getProcessIcon } from '@/lib/process-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,9 +39,8 @@ const MobileTabHeader = ({
   const t = useTranslations('mobile');
   const tc = useTranslations('common');
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
-  const lastCommand = useTabMetadataStore((s) => s.metadata[tabId]?.lastCommand);
-  const resolved = tabEntry?.currentProcess ? resolveProcess(tabEntry.currentProcess, lastCommand) : tabEntry?.currentProcess;
-  const processIcon = getProcessIcon(resolved);
+  const isCodex = tabEntry?.currentProcess === 'codex';
+  const processIcon = getProcessIcon(tabEntry?.currentProcess);
   const nerdColor = tabEntry?.terminalStatus === 'server'
     ? 'text-ui-green'
     : tabEntry?.terminalStatus === 'running'
@@ -54,6 +53,8 @@ const MobileTabHeader = ({
         <TabStatusIndicator tabId={tabId} panelType={panelType} />
         {panelType === 'claude-code' ? (
           <ClaudeCodeIcon size={16} />
+        ) : isCodex ? (
+          <OpenAIIcon size={14} className={`shrink-0 ${nerdColor}`} />
         ) : (
           <span
             className={`mt-0.5 shrink-0 text-sm leading-none ${nerdColor}`}
