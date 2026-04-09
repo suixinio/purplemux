@@ -154,6 +154,12 @@ export default function App({ Component, pageProps }: TAppPropsWithLayout) {
     document.documentElement.lang = locale;
   }, [locale]);
 
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js');
+    }
+  }, []);
+
   dayjs.extend(relativeTime);
   const dayjsLocaleMap: Record<string, string> = { 'zh-CN': 'zh-cn', 'pt-BR': 'pt-br', 'zh-TW': 'zh-tw' };
   dayjs.locale(dayjsLocaleMap[locale] ?? locale);
