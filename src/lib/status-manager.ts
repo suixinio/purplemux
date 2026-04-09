@@ -42,6 +42,7 @@ interface IJsonlIdleCache {
   staleMs: number;
   lastAssistantSnippet: string | null;
   currentAction: string | null;
+  reset: boolean;
 }
 
 const MAX_JSONL_CACHE = 256;
@@ -82,6 +83,7 @@ const formatToolAction = (block: { name?: string; input?: Record<string, unknown
 interface IAssistantExtract {
   lastAssistantSnippet: string | null;
   currentAction: string | null;
+  reset: boolean;
 }
 
 const extractAssistantInfo = (lines: string[]): IAssistantExtract => {
@@ -100,27 +102,28 @@ const extractAssistantInfo = (lines: string[]): IAssistantExtract => {
       }
 
       if (entry.type !== 'assistant' || !entry.message?.content) continue;
+
+      if (userMessageSeen) return { lastAssistantSnippet: null, currentAction: null, reset: true };
+
       const content = entry.message.content;
       if (!Array.isArray(content)) continue;
 
       let lastAssistantSnippet: string | null = null;
       let currentAction: string | null = null;
 
-      if (!userMessageSeen) {
-        // currentAction: last content block (text or tool_use)
-        for (let j = content.length - 1; j >= 0; j--) {
-          const block = content[j];
-          if (block.type === 'tool_use') {
-            currentAction = formatToolAction(block);
-            break;
-          }
-          if (block.type === 'text' && block.text?.trim()) {
-            const text = block.text.trim();
-            currentAction = text.length > MAX_SNIPPET_LENGTH
-              ? text.slice(0, MAX_SNIPPET_LENGTH) + '…'
-              : text;
-            break;
-          }
+      // currentAction: last content block (text or tool_use)
+      for (let j = content.length - 1; j >= 0; j--) {
+        const block = content[j];
+        if (block.type === 'tool_use') {
+          currentAction = formatToolAction(block);
+          break;
+        }
+        if (block.type === 'text' && block.text?.trim()) {
+          const text = block.text.trim();
+          currentAction = text.length > MAX_SNIPPET_LENGTH
+            ? text.slice(0, MAX_SNIPPET_LENGTH) + '…'
+            : text;
+          break;
         }
       }
 
@@ -135,10 +138,10 @@ const extractAssistantInfo = (lines: string[]): IAssistantExtract => {
         }
       }
 
-      return { lastAssistantSnippet, currentAction };
+      return { lastAssistantSnippet, currentAction, reset: false };
     } catch { continue; }
   }
-  return { lastAssistantSnippet: null, currentAction: null };
+  return { lastAssistantSnippet: null, currentAction: null, reset: false };
 };
 
 interface IScanResult {
@@ -190,21 +193,22 @@ interface IJsonlCheckResult {
   stale: boolean;
   lastAssistantSnippet: string | null;
   currentAction: string | null;
+  reset: boolean;
 }
 
 const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => {
   try {
     const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return { idle: true, stale: false, lastAssistantSnippet: null, currentAction: null };
+    if (stat.size === 0) return { idle: true, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false };
 
     const cached = jsonlIdleCache.get(jsonlPath);
     if (cached && cached.mtimeMs === stat.mtimeMs) {
-      if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction };
+      if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
       if (cached.needsStaleRecheck) {
         const idle = Date.now() - stat.mtimeMs > cached.staleMs;
-        return { idle, stale: true, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction };
+        return { idle, stale: true, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
       }
-      return { idle: false, stale: false, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction };
+      return { idle: false, stale: false, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
     }
 
     const handle = await fs.open(jsonlPath, 'r');
@@ -231,13 +235,13 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
       if (jsonlIdleCache.size >= MAX_JSONL_CACHE) {
         jsonlIdleCache.delete(jsonlIdleCache.keys().next().value!);
       }
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction });
-      return { idle: scan.idle, stale: scan.stale, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction };
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset });
+      return { idle: scan.idle, stale: scan.stale, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset };
     } finally {
       await handle.close();
     }
   } catch {
-    return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null };
+    return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false };
   }
 };
 
@@ -334,8 +338,8 @@ class StatusManager {
     }
   }
 
-  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<{ cliState: TCliState; lastAssistantSnippet: string | null; currentAction: string | null; jsonlPath: string | null }> {
-    const empty = { cliState: 'inactive' as const, lastAssistantSnippet: null, currentAction: null, jsonlPath: null };
+  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo): Promise<{ cliState: TCliState; lastAssistantSnippet: string | null; currentAction: string | null; jsonlPath: string | null; reset: boolean }> {
+    const empty = { cliState: 'inactive' as const, lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
     if (!paneInfo || !paneInfo.pid) return empty;
 
     const childPids = await getChildPids(paneInfo.pid);
@@ -344,11 +348,11 @@ class StatusManager {
     if (!claudeRunning) return empty;
 
     const session = await detectActiveSession(paneInfo.pid, childPids);
-    if (session.status !== 'running') return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null };
+    if (session.status !== 'running') return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
 
-    if (!session.jsonlPath) return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null };
+    if (!session.jsonlPath) return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
 
-    const { idle: jsonlIdle, stale, lastAssistantSnippet, currentAction } = await checkJsonlIdle(session.jsonlPath);
+    const { idle: jsonlIdle, stale, lastAssistantSnippet, currentAction, reset } = await checkJsonlIdle(session.jsonlPath);
 
     let state: TCliState;
     if (!stale) {
@@ -366,10 +370,10 @@ class StatusManager {
 
     if (state === 'busy') {
       const paneContent = await capturePaneContent(tmuxSession);
-      if (paneContent && hasPermissionPrompt(paneContent)) return { cliState: 'needs-input', lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath };
+      if (paneContent && hasPermissionPrompt(paneContent)) return { cliState: 'needs-input', lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath, reset };
     }
 
-    return { cliState: state, lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath };
+    return { cliState: state, lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath, reset };
   }
 
   private async detectTerminalStatus(
@@ -436,10 +440,10 @@ class StatusManager {
         const needsJsonlPath = hookRecent && existing && !existing.jsonlPath
           && (existing.cliState === 'busy' || existing.cliState === 'needs-input');
         if (hookRecent && existing && !needsJsonlPath) {
-          let actionSnippet = { lastAssistantSnippet: existing.lastAssistantMessage ?? null, currentAction: existing.currentAction ?? null };
+          let actionSnippet = { lastAssistantSnippet: existing.lastAssistantMessage ?? null, currentAction: existing.currentAction ?? null, reset: false };
           if (existing.jsonlPath && (existing.cliState === 'busy' || existing.cliState === 'needs-input')) {
             const jsonlResult = await checkJsonlIdle(existing.jsonlPath);
-            actionSnippet = { lastAssistantSnippet: jsonlResult.lastAssistantSnippet, currentAction: jsonlResult.currentAction };
+            actionSnippet = { lastAssistantSnippet: jsonlResult.lastAssistantSnippet, currentAction: jsonlResult.currentAction, reset: jsonlResult.reset };
           }
           detected = { cliState: existing.cliState, ...actionSnippet, jsonlPath: existing.jsonlPath ?? null };
         } else {
@@ -481,8 +485,10 @@ class StatusManager {
 
         const processChanged = existing.currentProcess !== resolvedProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
-        const assistantMessageChanged = detected.lastAssistantSnippet !== null && existing.lastAssistantMessage !== detected.lastAssistantSnippet;
-        const actionChanged = detected.currentAction !== null && existing.currentAction !== detected.currentAction;
+        const assistantMessageChanged = (detected.reset && existing.lastAssistantMessage !== null)
+          || (detected.lastAssistantSnippet !== null && existing.lastAssistantMessage !== detected.lastAssistantSnippet);
+        const actionChanged = (detected.reset && existing.currentAction !== null)
+          || (detected.currentAction !== null && existing.currentAction !== detected.currentAction);
         const panelTypeChanged = existing.panelType !== tab.panelType;
         existing.tabName = tab.name;
         existing.currentProcess = resolvedProcess;
@@ -491,10 +497,10 @@ class StatusManager {
         existing.panelType = tab.panelType;
         existing.lastUserMessage = tab.lastUserMessage;
         if (assistantMessageChanged) {
-          existing.lastAssistantMessage = detected.lastAssistantSnippet;
+          existing.lastAssistantMessage = detected.reset ? null : detected.lastAssistantSnippet;
         }
         if (actionChanged) {
-          existing.currentAction = detected.currentAction;
+          existing.currentAction = detected.reset ? null : detected.currentAction;
         }
         if (detected.jsonlPath && existing.jsonlPath !== detected.jsonlPath) {
           existing.jsonlPath = detected.jsonlPath;
@@ -605,9 +611,10 @@ class StatusManager {
     if (newState === 'busy') entry.dismissedAt = null;
 
     const shouldWatch = (newState === 'busy' || newState === 'needs-input') && entry.jsonlPath;
+    const keepForFinalRead = newState === 'ready-for-review' && this.jsonlWatchers.has(tabId);
     if (shouldWatch && !this.jsonlWatchers.has(tabId)) {
       this.startJsonlWatch(tabId, entry.jsonlPath!);
-    } else if (!shouldWatch && this.jsonlWatchers.has(tabId)) {
+    } else if (!shouldWatch && !keepForFinalRead && this.jsonlWatchers.has(tabId)) {
       this.stopJsonlWatch(tabId);
     }
   }
@@ -634,6 +641,7 @@ class StatusManager {
     entry.cliState = 'idle';
     entry.readyForReviewAt = null;
     entry.dismissedAt = Date.now();
+    this.stopJsonlWatch(tabId);
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
   }
@@ -686,18 +694,30 @@ class StatusManager {
     }
 
     if (event === 'stop' && entry.jsonlPath) {
-      checkJsonlIdle(entry.jsonlPath).then(({ currentAction, lastAssistantSnippet }) => {
-        let updated = false;
-        if (currentAction !== null && entry.currentAction !== currentAction) {
-          entry.currentAction = currentAction;
-          updated = true;
-        }
-        if (lastAssistantSnippet !== null && entry.lastAssistantMessage !== lastAssistantSnippet) {
-          entry.lastAssistantMessage = lastAssistantSnippet;
-          updated = true;
-        }
-        if (updated) this.broadcastUpdate(tabId, entry);
-      }).catch(() => {});
+      const refreshSnippet = () => {
+        checkJsonlIdle(entry.jsonlPath!).then(({ currentAction, lastAssistantSnippet, reset }) => {
+          let updated = false;
+          if (reset) {
+            if (entry.currentAction !== null) { entry.currentAction = null; updated = true; }
+            if (entry.lastAssistantMessage !== null) { entry.lastAssistantMessage = null; updated = true; }
+          } else {
+            if (currentAction !== null && entry.currentAction !== currentAction) {
+              entry.currentAction = currentAction;
+              updated = true;
+            }
+            if (lastAssistantSnippet !== null && entry.lastAssistantMessage !== lastAssistantSnippet) {
+              entry.lastAssistantMessage = lastAssistantSnippet;
+              updated = true;
+            }
+          }
+          if (updated) this.broadcastUpdate(tabId, entry);
+        }).catch(() => {});
+      };
+      refreshSnippet();
+      setTimeout(() => {
+        jsonlIdleCache.delete(entry.jsonlPath!);
+        refreshSnippet();
+      }, 500);
     }
   }
 
@@ -856,30 +876,38 @@ class StatusManager {
       this.stopJsonlWatch(tabId);
       return;
     }
-    if (entry.cliState !== 'busy' && entry.cliState !== 'needs-input') {
+    const isActive = entry.cliState === 'busy' || entry.cliState === 'needs-input';
+    if (!isActive && entry.cliState !== 'ready-for-review') {
       this.stopJsonlWatch(tabId);
       return;
     }
 
-    const { idle, stale, currentAction, lastAssistantSnippet } = await checkJsonlIdle(jsonlPath);
+    const { idle, stale, currentAction, lastAssistantSnippet, reset } = await checkJsonlIdle(jsonlPath);
     log.debug('onJsonlFileChange tabId=%s idle=%s action=%s', tabId, idle, currentAction?.slice(0, 40));
 
     let changed = false;
 
-    if (idle && !stale) {
+    if (isActive && idle && !stale) {
       this.applyCliState(tabId, entry, 'ready-for-review');
       this.persistToLayout(entry);
       this.stopJsonlWatch(tabId);
       changed = true;
+    } else if (!isActive) {
+      this.stopJsonlWatch(tabId);
     }
 
-    if (currentAction !== null && entry.currentAction !== currentAction) {
-      entry.currentAction = currentAction;
-      changed = true;
-    }
-    if (lastAssistantSnippet !== null && entry.lastAssistantMessage !== lastAssistantSnippet) {
-      entry.lastAssistantMessage = lastAssistantSnippet;
-      changed = true;
+    if (reset) {
+      if (entry.currentAction !== null) { entry.currentAction = null; changed = true; }
+      if (entry.lastAssistantMessage !== null) { entry.lastAssistantMessage = null; changed = true; }
+    } else {
+      if (currentAction !== null && entry.currentAction !== currentAction) {
+        entry.currentAction = currentAction;
+        changed = true;
+      }
+      if (lastAssistantSnippet !== null && entry.lastAssistantMessage !== lastAssistantSnippet) {
+        entry.lastAssistantMessage = lastAssistantSnippet;
+        changed = true;
+      }
     }
 
     if (changed) {
