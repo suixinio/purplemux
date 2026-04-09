@@ -168,10 +168,12 @@ const formatHistoryTime = (ts: number): string => {
 const TaskHistoryItem = ({
   entry,
   isTabOpen,
+  compact,
   onNavigate,
 }: {
   entry: ITaskHistoryEntry;
   isTabOpen: boolean;
+  compact?: boolean;
   onNavigate?: (workspaceId: string, tabId: string) => void;
 }) => {
   const t = useTranslations('notification');
@@ -193,6 +195,37 @@ const TaskHistoryItem = ({
     }
     return parts.join(' · ');
   }, [entry.touchedFiles, entry.toolUsage, t]);
+
+  if (compact) {
+    return (
+      <div
+        className={cn(
+          'rounded px-2 py-1.5 transition-colors',
+          isTabOpen
+            ? 'hover:bg-muted/40 cursor-pointer'
+            : 'cursor-default opacity-50',
+        )}
+        onClick={isTabOpen ? () => onNavigate?.(entry.workspaceId, entry.tabId) : undefined}
+      >
+        <div className="flex items-center justify-between gap-2">
+          {entry.prompt ? (
+            <p className="truncate text-xs text-foreground/70">
+              {stripMarkdown(entry.prompt)}
+            </p>
+          ) : (
+            <span />
+          )}
+          <span className="shrink-0 text-xs text-muted-foreground/40">
+            {formatHistoryTime(entry.completedAt)}
+          </span>
+        </div>
+        <p className="mt-0.5 truncate text-xs text-muted-foreground/40">
+          {durationText}
+          {summaryText && ` · ${summaryText}`}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -474,7 +507,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                           {hasOlder && (
                             <button
                               type="button"
-                              className="mt-1 flex w-full items-center gap-1 py-0.5 pl-[26px] text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                              className="mt-1 flex w-full items-center gap-1 py-0.5 pl-9 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
                               onClick={() => toggleExpanded(group.sessionId)}
                             >
                               <ChevronRight className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-90')} />
@@ -482,12 +515,13 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                             </button>
                           )}
                           {isExpanded && (
-                            <div className="mt-1 flex flex-col gap-1.5 border-l border-border/30 ml-2 pl-2">
+                            <div className="mt-1 flex flex-col border-l border-border/30 ml-5 pl-2">
                               {group.olderEntries.map((entry) => (
                                 <TaskHistoryItem
                                   key={entry.id}
                                   entry={entry}
                                   isTabOpen={group.tabId in tabs}
+                                  compact
                                   onNavigate={handleNavigate}
                                 />
                               ))}

@@ -754,7 +754,7 @@ class StatusManager {
       startedAt,
       completedAt,
       duration: completedAt - startedAt,
-      dismissedAt: null,
+      dismissedAt: completedAt,
       toolUsage: stats.toolUsage,
       touchedFiles: stats.touchedFiles,
     };
