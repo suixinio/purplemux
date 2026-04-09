@@ -277,7 +277,7 @@ const TaskHistoryItem = ({
           </span>
         </div>
         {entry.prompt && (
-          <p className="mt-0.5 truncate text-sm text-foreground">
+          <p className={cn('mt-0.5 truncate text-sm', isActiveSession ? 'text-foreground' : 'text-muted-foreground')}>
             {stripMarkdown(entry.prompt)}
           </p>
         )}
@@ -358,7 +358,7 @@ const NotificationItem = ({
           )}
         </div>
         {item.lastUserMessage && (
-          <p className="mt-0.5 truncate text-sm text-foreground">
+          <p className={cn('mt-0.5 truncate text-sm', isActiveTab ? 'text-foreground' : 'text-muted-foreground')}>
             {stripMarkdown(item.lastUserMessage)}
           </p>
         )}
