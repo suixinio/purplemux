@@ -1136,9 +1136,12 @@ class StatusManager {
       workspaceId: entry.workspaceId,
     });
 
-    const { isEndpointVisible } = await import('@/lib/push-subscriptions');
+    const { isEndpointVisible, getSessionPushEndpoint } = await import('@/lib/push-subscriptions');
 
+    const target = entry.claudeSessionId ? getSessionPushEndpoint(entry.claudeSessionId) : null;
+    if (!target) return;
     for (const sub of subs) {
+      if (sub.endpoint !== target) continue;
       if (isEndpointVisible(sub.endpoint)) continue;
       try {
         await webpush.sendNotification(sub, payload);

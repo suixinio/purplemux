@@ -88,3 +88,14 @@ export const isEndpointVisible = (endpoint: string): boolean => {
   }
   return true;
 };
+
+const gActive = globalThis as unknown as { __ptSessionPushTarget?: Map<string, string> };
+if (!gActive.__ptSessionPushTarget) gActive.__ptSessionPushTarget = new Map();
+const sessionPushTarget = gActive.__ptSessionPushTarget;
+
+export const setSessionPushTarget = (sessionId: string, endpoint: string): void => {
+  sessionPushTarget.set(sessionId, endpoint);
+};
+
+export const getSessionPushEndpoint = (sessionId: string): string | null =>
+  sessionPushTarget.get(sessionId) ?? null;

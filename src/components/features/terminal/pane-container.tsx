@@ -790,6 +790,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   key={activeTabId}
                   tabId={activeTabId ?? undefined}
                   wsId={layoutWsId ?? undefined}
+                  claudeSessionId={activeTab?.claudeSessionId}
                   cliState={claudeCliState}
                   sendStdin={sendWebStdin}
                   terminalWsConnected={status === 'connected'}

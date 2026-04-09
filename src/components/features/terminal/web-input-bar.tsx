@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import useWebInput from '@/hooks/use-web-input';
 import useIsMobileDevice from '@/hooks/use-is-mobile-device';
 import useMessageHistory from '@/hooks/use-message-history';
+import { registerPushTarget } from '@/hooks/use-web-push';
 import InterruptDialog from '@/components/features/terminal/interrupt-dialog';
 import MessageHistoryPicker from '@/components/features/terminal/message-history-picker';
 import type { TCliState } from '@/types/timeline';
@@ -17,6 +18,7 @@ const PADDING_Y = 16;
 interface IWebInputBarProps {
   tabId?: string;
   wsId?: string;
+  claudeSessionId?: string | null;
   cliState: TCliState;
   sendStdin: (data: string) => void;
   terminalWsConnected: boolean;
@@ -32,6 +34,7 @@ interface IWebInputBarProps {
 const WebInputBar = ({
   tabId,
   wsId,
+  claudeSessionId,
   cliState,
   sendStdin,
   terminalWsConnected,
@@ -100,14 +103,20 @@ const WebInputBar = ({
     if (e.key === 'Enter' && !isMobileDevice) {
       if (e.shiftKey) return;
       e.preventDefault();
-      if (hasValue) onSend?.();
+      if (hasValue) {
+        onSend?.();
+        if (claudeSessionId) registerPushTarget(claudeSessionId);
+      }
       send();
       return;
     }
   };
 
   const handleSendClick = () => {
-    if (hasValue) onSend?.();
+    if (hasValue) {
+      onSend?.();
+      if (claudeSessionId) registerPushTarget(claudeSessionId);
+    }
     send();
     if (isMobileDevice) {
       textareaRef.current?.blur();

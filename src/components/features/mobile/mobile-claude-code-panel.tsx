@@ -315,6 +315,7 @@ const MobileClaudeCodePanel = ({
         <WebInputBar
           tabId={tabId}
           wsId={wsId}
+          claudeSessionId={claudeSessionId}
           cliState={cliState}
           sendStdin={sendStdin}
           terminalWsConnected={terminalWsConnected}
