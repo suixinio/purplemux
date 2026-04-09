@@ -43,6 +43,7 @@ interface IJsonlIdleCache {
   lastAssistantSnippet: string | null;
   currentAction: ICurrentAction | null;
   reset: boolean;
+  lastEntryTs: number | null;
 }
 
 const MAX_JSONL_CACHE = 256;
@@ -125,6 +126,7 @@ interface IScanResult {
   stale: boolean;
   needsStaleRecheck: boolean;
   staleMs: number;
+  lastEntryTs: number | null;
 }
 
 const scanLines = (lines: string[], elapsed: number): IScanResult => {
@@ -134,33 +136,35 @@ const scanLines = (lines: string[], elapsed: number): IScanResult => {
 
       if (entry.isSidechain) continue;
 
+      const entryTs: number | null = entry.timestamp ? new Date(entry.timestamp).getTime() : null;
+
       if (entry.type === 'system' && (entry.subtype === 'stop_hook_summary' || entry.subtype === 'turn_duration')) {
-        return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0 };
+        return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs };
       }
 
       if (entry.type === 'assistant') {
         const stopReason = entry.message?.stop_reason;
         if (!stopReason) {
           const idle = elapsed > STALE_MS_INTERRUPTED;
-          return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED };
+          return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED, lastEntryTs: entryTs };
         }
-        return { matched: true, idle: stopReason !== 'tool_use', stale: false, needsStaleRecheck: false, staleMs: 0 };
+        return { matched: true, idle: stopReason !== 'tool_use', stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs };
       }
 
       if (entry.type === 'user') {
         const content = entry.message?.content;
         if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
-          return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0 };
+          return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs };
         }
         const idle = elapsed > STALE_MS_AWAITING_API;
-        return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API };
+        return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API, lastEntryTs: entryTs };
       }
     } catch {
       continue;
     }
   }
 
-  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, stale: true, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API };
+  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, stale: true, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API, lastEntryTs: null };
 };
 
 interface IJsonlCheckResult {
@@ -169,21 +173,23 @@ interface IJsonlCheckResult {
   lastAssistantSnippet: string | null;
   currentAction: ICurrentAction | null;
   reset: boolean;
+  lastEntryTs: number | null;
+  staleMs: number;
 }
 
 const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => {
   try {
     const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return { idle: true, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false };
+    if (stat.size === 0) return { idle: true, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false, lastEntryTs: null, staleMs: 0 };
 
     const cached = jsonlIdleCache.get(jsonlPath);
     if (cached && cached.mtimeMs === stat.mtimeMs) {
-      if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
+      if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs };
       if (cached.needsStaleRecheck) {
         const idle = Date.now() - stat.mtimeMs > cached.staleMs;
-        return { idle, stale: true, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
+        return { idle, stale: true, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs };
       }
-      return { idle: false, stale: false, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset };
+      return { idle: false, stale: false, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs };
     }
 
     const handle = await fs.open(jsonlPath, 'r');
@@ -210,13 +216,13 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
       if (jsonlIdleCache.size >= MAX_JSONL_CACHE) {
         jsonlIdleCache.delete(jsonlIdleCache.keys().next().value!);
       }
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset });
-      return { idle: scan.idle, stale: scan.stale, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset };
+      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset, lastEntryTs: scan.lastEntryTs });
+      return { idle: scan.idle, stale: scan.stale, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset, lastEntryTs: scan.lastEntryTs, staleMs: scan.staleMs };
     } finally {
       await handle.close();
     }
   } catch {
-    return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false };
+    return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false, lastEntryTs: null, staleMs: 0 };
   }
 };
 
@@ -283,6 +289,7 @@ class StatusManager {
         const cliState = tab.cliState === 'ready-for-review' && detected.cliState === 'idle'
           ? 'ready-for-review' as const
           : detected.cliState;
+
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
@@ -327,19 +334,27 @@ class StatusManager {
 
     if (!session.jsonlPath) return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
 
-    const { idle: jsonlIdle, stale, lastAssistantSnippet, currentAction, reset } = await checkJsonlIdle(session.jsonlPath);
+    const { idle: jsonlIdle, stale, lastAssistantSnippet, currentAction, reset, lastEntryTs, staleMs: entryStaleMs } = await checkJsonlIdle(session.jsonlPath);
 
     let state: TCliState;
     if (!stale) {
       state = jsonlIdle ? 'idle' : 'busy';
     } else {
-      const lastOutput = getLastTerminalOutput(tmuxSession);
-      if (lastOutput !== undefined) {
-        state = Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
-      } else if (paneInfo?.windowActivity) {
-        state = Date.now() - paneInfo.windowActivity * 1000 < WINDOW_ACTIVITY_STALE_MS ? 'busy' : 'idle';
+      const entryExpired = lastEntryTs !== null
+        ? Date.now() - lastEntryTs > entryStaleMs
+        : jsonlIdle;
+
+      if (entryExpired) {
+        state = 'idle';
       } else {
-        state = jsonlIdle ? 'idle' : 'busy';
+        const lastOutput = getLastTerminalOutput(tmuxSession);
+        if (lastOutput !== undefined) {
+          state = Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
+        } else if (paneInfo?.windowActivity) {
+          state = Date.now() - paneInfo.windowActivity * 1000 < WINDOW_ACTIVITY_STALE_MS ? 'busy' : 'idle';
+        } else {
+          state = 'busy';
+        }
       }
     }
 

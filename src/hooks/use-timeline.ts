@@ -9,6 +9,8 @@ import type {
 } from '@/types/timeline';
 import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
 
+const STALE_BUSY_MS = 90_000;
+
 const deriveCliState = (
   claudeStatus: TClaudeStatus,
   entries: ITimelineEntry[],
@@ -31,6 +33,10 @@ const deriveCliState = (
   }
 
   if (lastEntry.type === 'ask-user-question' && lastEntry.status === 'pending') {
+    return 'idle';
+  }
+
+  if (Date.now() - lastEntry.timestamp > STALE_BUSY_MS) {
     return 'idle';
   }
 
