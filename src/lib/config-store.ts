@@ -67,8 +67,13 @@ export const writeConfig = async (data: IConfigData): Promise<void> => {
 
   data.updatedAt = new Date().toISOString();
   const tmpFile = CONFIG_FILE + '.tmp';
-  await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
-  await fs.rename(tmpFile, CONFIG_FILE);
+  try {
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await fs.rename(tmpFile, CONFIG_FILE);
+  } catch (err) {
+    await fs.unlink(tmpFile).catch(() => {});
+    throw err;
+  }
 
   g.__ptConfigContentCache = contentKey;
   broadcastSync({ type: 'config' });

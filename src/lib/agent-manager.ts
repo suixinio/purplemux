@@ -1746,8 +1746,13 @@ class AgentManager {
     };
     try {
       const tmpFile = tabsFile + '.tmp';
-      await fs.writeFile(tmpFile, JSON.stringify(data, null, 2));
-      await fs.rename(tmpFile, tabsFile);
+      try {
+        await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+        await fs.rename(tmpFile, tabsFile);
+      } catch (writeErr) {
+        await fs.unlink(tmpFile).catch(() => {});
+        throw writeErr;
+      }
     } catch (err) {
       log.error(`failed to persist tabs for ${runtime.info.id}: ${err instanceof Error ? err.message : err}`);
     }

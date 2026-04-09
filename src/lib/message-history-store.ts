@@ -52,8 +52,13 @@ const writeFile = async (filePath: string, data: IMessageHistoryFile): Promise<v
   const dir = path.dirname(filePath);
   await fs.mkdir(dir, { recursive: true });
   const tmpFile = filePath + '.tmp';
-  await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
-  await fs.rename(tmpFile, filePath);
+  try {
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await fs.rename(tmpFile, filePath);
+  } catch (err) {
+    await fs.unlink(tmpFile).catch(() => {});
+    throw err;
+  }
 };
 
 export const readMessageHistory = async (wsId: string): Promise<IHistoryEntry[]> => {

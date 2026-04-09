@@ -56,8 +56,13 @@ const writeTaskHistory = async (data: ITaskHistoryData): Promise<void> => {
   if (g.__purplemuxTaskHistoryContentCache === contentKey) return;
 
   const tmpFile = TASK_HISTORY_FILE + '.tmp';
-  await fs.writeFile(tmpFile, JSON.stringify(data, null, 2));
-  await fs.rename(tmpFile, TASK_HISTORY_FILE);
+  try {
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await fs.rename(tmpFile, TASK_HISTORY_FILE);
+  } catch (err) {
+    await fs.unlink(tmpFile).catch(() => {});
+    throw err;
+  }
 
   g.__purplemuxTaskHistoryContentCache = contentKey;
 };

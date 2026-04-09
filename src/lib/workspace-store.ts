@@ -101,8 +101,13 @@ const writeWorkspacesFile = async (data: IWorkspacesData): Promise<void> => {
 
   data.updatedAt = new Date().toISOString();
   const tmpFile = WORKSPACES_FILE + '.tmp';
-  await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
-  await fs.rename(tmpFile, WORKSPACES_FILE);
+  try {
+    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await fs.rename(tmpFile, WORKSPACES_FILE);
+  } catch (err) {
+    await fs.unlink(tmpFile).catch(() => {});
+    throw err;
+  }
 
   g.__purplemuxWorkspacesContentCache = contentKey;
   broadcastSync({ type: 'workspace' });
@@ -152,8 +157,13 @@ const migrateFromTabs = async (): Promise<IWorkspacesData | null> => {
     };
 
     const tmpFile = LEGACY_LAYOUT_FILE + '.tmp';
-    await fs.writeFile(tmpFile, JSON.stringify(legacyLayout, null, 2), { mode: 0o600 });
-    await fs.rename(tmpFile, LEGACY_LAYOUT_FILE);
+    try {
+      await fs.writeFile(tmpFile, JSON.stringify(legacyLayout, null, 2), { mode: 0o600 });
+      await fs.rename(tmpFile, LEGACY_LAYOUT_FILE);
+    } catch (err) {
+      await fs.unlink(tmpFile).catch(() => {});
+      throw err;
+    }
     log.info('tabs.json → layout.json migration complete');
 
     return await migrateFromPhase4();
