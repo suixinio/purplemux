@@ -24,11 +24,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useTaskHistoryStore from '@/hooks/use-task-history-store';
 import { dismissTab } from '@/hooks/use-claude-status';
 import { navigateToTab, useLayoutStore } from '@/hooks/use-layout';
 import { findPane } from '@/lib/layout-tree';
 import type { ITabState } from '@/hooks/use-tab-store';
 import type { ICurrentAction } from '@/types/status';
+import type { ITaskHistoryEntry } from '@/types/task-history';
 import { stripMarkdown } from '@/lib/strip-markdown';
 
 const ACTION_ICONS: Record<string, typeof FileText> = {
@@ -117,31 +119,108 @@ const collectItems = (
   return items;
 };
 
-const collectDoneItems = (
-  tabs: Record<string, ITabState>,
-  workspaces: { id: string; name: string }[],
-): INotificationItem[] => {
-  const wsMap = new Map(workspaces.map((ws) => [ws.id, ws.name]));
-  const items: INotificationItem[] = [];
+type TDateGroup = 'today' | 'yesterday' | 'thisWeek' | 'older';
 
-  for (const [tabId, tab] of Object.entries(tabs)) {
-    if (!tab.dismissedAt) continue;
-    if (tab.cliState !== 'idle' && tab.cliState !== 'inactive') continue;
-    items.push({
-      tabId,
-      workspaceName: wsMap.get(tab.workspaceId) || tab.workspaceId,
-      workspaceId: tab.workspaceId,
-      lastUserMessage: tab.lastUserMessage,
-      lastAssistantMessage: tab.lastAssistantMessage,
-      currentAction: tab.currentAction,
-      readyForReviewAt: tab.readyForReviewAt,
-      busySince: tab.busySince,
-      dismissedAt: tab.dismissedAt,
-    });
+const groupHistoryByDate = (entries: ITaskHistoryEntry[]): { group: TDateGroup; items: ITaskHistoryEntry[] }[] => {
+  const now = dayjs();
+  const todayStart = now.startOf('day');
+  const yesterdayStart = todayStart.subtract(1, 'day');
+  const weekStart = todayStart.subtract(6, 'day');
+
+  const groups: Record<TDateGroup, ITaskHistoryEntry[]> = {
+    today: [],
+    yesterday: [],
+    thisWeek: [],
+    older: [],
+  };
+
+  for (const entry of entries) {
+    const time = dayjs(entry.completedAt);
+    if (time.isAfter(todayStart)) groups.today.push(entry);
+    else if (time.isAfter(yesterdayStart)) groups.yesterday.push(entry);
+    else if (time.isAfter(weekStart)) groups.thisWeek.push(entry);
+    else groups.older.push(entry);
   }
 
-  items.sort((a, b) => (b.dismissedAt ?? 0) - (a.dismissedAt ?? 0));
-  return items;
+  return (['today', 'yesterday', 'thisWeek', 'older'] as TDateGroup[])
+    .filter((g) => groups[g].length > 0)
+    .map((g) => ({ group: g, items: groups[g] }));
+};
+
+const formatHistoryTime = (ts: number): string => {
+  const d = dayjs(ts);
+  const now = dayjs();
+  if (d.isAfter(now.startOf('day'))) return d.format('HH:mm');
+  if (d.isAfter(now.subtract(1, 'day').startOf('day'))) return d.format('HH:mm');
+  return d.format('M/D HH:mm');
+};
+
+
+
+
+const TaskHistoryItem = ({
+  entry,
+  isTabOpen,
+  onNavigate,
+}: {
+  entry: ITaskHistoryEntry;
+  isTabOpen: boolean;
+  onNavigate?: (workspaceId: string, tabId: string) => void;
+}) => {
+  const t = useTranslations('notification');
+
+  const durationText = useMemo(() => {
+    const minutes = Math.round(entry.duration / 60000);
+    if (minutes < 1) return t('durationUnderMinute');
+    return t('durationMinutes', { count: minutes });
+  }, [entry.duration, t]);
+
+  const summaryText = useMemo(() => {
+    const parts: string[] = [];
+    if (entry.touchedFiles.length > 0) {
+      parts.push(t('filesModified', { count: entry.touchedFiles.length }));
+    }
+    const total = Object.values(entry.toolUsage).reduce((a, b) => a + b, 0);
+    if (total > 0 && entry.touchedFiles.length === 0) {
+      parts.push(t('toolCalls', { count: total }));
+    }
+    return parts.join(' · ');
+  }, [entry.touchedFiles, entry.toolUsage, t]);
+
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
+        isTabOpen
+          ? 'border-border/50 bg-muted/30 hover:bg-muted/50 hover:border-foreground/20 cursor-pointer'
+          : 'border-border/30 bg-muted/20 cursor-default opacity-60',
+      )}
+      onClick={isTabOpen ? () => onNavigate?.(entry.workspaceId, entry.tabId) : undefined}
+    >
+      <span className="mt-1 shrink-0">
+        <CheckCircle2 className={cn('h-3.5 w-3.5', entry.dismissedAt ? 'text-muted-foreground' : 'text-muted-foreground/50')} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="truncate text-xs text-muted-foreground">
+            {entry.workspaceName}
+          </span>
+          <span className="shrink-0 text-xs text-muted-foreground/60">
+            {formatHistoryTime(entry.completedAt)}
+          </span>
+        </div>
+        {entry.prompt && (
+          <p className="mt-0.5 truncate text-sm text-foreground">
+            {stripMarkdown(entry.prompt)}
+          </p>
+        )}
+        <p className="mt-0.5 truncate text-xs text-muted-foreground/50">
+          {durationText}
+          {summaryText && ` · ${summaryText}`}
+        </p>
+      </div>
+    </div>
+  );
 };
 
 const NotificationItem = ({
@@ -244,6 +323,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeTabId = useActiveTabId();
+  const historyEntries = useTaskHistoryStore((s) => s.entries);
 
   const busyItems = useMemo(
     () => collectItems(tabs, workspaces, 'busy'),
@@ -260,9 +340,9 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
     [tabs, workspaces],
   );
 
-  const doneItems = useMemo(
-    () => collectDoneItems(tabs, workspaces),
-    [tabs, workspaces],
+  const dateGroups = useMemo(
+    () => groupHistoryByDate(historyEntries),
+    [historyEntries],
   );
 
   const handleDismiss = useCallback((tabId: string) => {
@@ -277,7 +357,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
     [onOpenChange],
   );
 
-  const isEmpty = busyItems.length === 0 && needsInputItems.length === 0 && reviewItems.length === 0 && doneItems.length === 0;
+  const isEmpty = busyItems.length === 0 && needsInputItems.length === 0 && reviewItems.length === 0 && dateGroups.length === 0;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -353,23 +433,28 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                 </section>
               )}
 
-              {doneItems.length > 0 && (
+              {dateGroups.length > 0 && (
                 <section className={busyItems.length > 0 || needsInputItems.length > 0 || reviewItems.length > 0 ? 'mt-4' : ''}>
                   <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    {t('doneSection', { count: doneItems.length })}
+                    {t('doneSection', { count: historyEntries.length })}
                   </h3>
-                  <div className="flex flex-col gap-2">
-                    {doneItems.map((item) => (
-                      <NotificationItem
-                        key={item.tabId}
-                        item={item}
-                        showActions={false}
-                        variant="done"
-                        isActiveTab={item.tabId === activeTabId}
-                        onNavigate={handleNavigate}
-                      />
-                    ))}
-                  </div>
+                  {dateGroups.map(({ group, items }) => (
+                    <div key={group}>
+                      <h4 className="mb-1.5 mt-3 text-xs text-muted-foreground/60">
+                        {t(`dateGroup_${group}`)}
+                      </h4>
+                      <div className="flex flex-col gap-1.5">
+                        {items.map((entry) => (
+                          <TaskHistoryItem
+                            key={entry.id}
+                            entry={entry}
+                            isTabOpen={entry.tabId in tabs}
+                            onNavigate={handleNavigate}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
                 </section>
               )}
             </>

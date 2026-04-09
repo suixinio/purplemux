@@ -7,5 +7,13 @@
   "doneSection": "Erledigt ({count})",
   "dismiss": "Schließen",
   "navigate": "Aufrufen",
-  "starting": "Wird gestartet..."
+  "starting": "Wird gestartet...",
+  "dateGroup_today": "Heute",
+  "dateGroup_yesterday": "Gestern",
+  "dateGroup_thisWeek": "Diese Woche",
+  "dateGroup_older": "Älter",
+  "durationUnderMinute": "< 1 Min.",
+  "durationMinutes": "{count} Min.",
+  "filesModified": "{count} Dateien geändert",
+  "toolCalls": "{count} Toolaufrufe"
 }

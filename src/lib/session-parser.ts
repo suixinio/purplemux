@@ -125,7 +125,8 @@ export const summarizeToolCall = (name: string, input: Record<string, unknown> =
       const newStr = String(input.new_string ?? '');
       const oldLines = oldStr ? oldStr.split('\n').length : 0;
       const newLines = newStr ? newStr.split('\n').length : 0;
-      return `Edit ${fp} (+${newLines}, -${oldLines})`;
+      const verb = oldStr ? 'Update' : 'Create';
+      return `${verb} ${fp} (+${newLines}, -${oldLines})`;
     }
     case 'Write':
       return `Write ${String(input.file_path ?? '')}`;
@@ -708,6 +709,20 @@ const parseContent = (content: string): IParseResult => {
       const att = rawObj.attachment as Record<string, unknown> | undefined;
       if (att?.type === 'plan_mode' && typeof att.planFilePath === 'string') {
         planFilePath = att.planFilePath;
+      }
+      if (att?.type === 'plan_file_reference' && typeof att.planContent === 'string' && att.planContent.length > 0) {
+        const timestamp = base.timestamp ? new Date(base.timestamp).getTime() : Date.now();
+        entries.push({
+          id: nanoid(),
+          type: 'plan',
+          timestamp,
+          toolUseId: '',
+          markdown: att.planContent,
+          filePath: typeof att.planFilePath === 'string' ? att.planFilePath : undefined,
+          status: 'success' as TToolStatus,
+        } satisfies ITimelinePlan);
+        entryLineOffsets.push(lineOffset);
+        if (typeof att.planFilePath === 'string') planFilePath = att.planFilePath;
       }
     }
 

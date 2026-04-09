@@ -7,5 +7,13 @@
   "doneSection": "Tamamlandı ({count})",
   "dismiss": "Kapat",
   "navigate": "Git",
-  "starting": "Başlatılıyor..."
+  "starting": "Başlatılıyor...",
+  "dateGroup_today": "Bugün",
+  "dateGroup_yesterday": "Dün",
+  "dateGroup_thisWeek": "Bu Hafta",
+  "dateGroup_older": "Daha Eski",
+  "durationUnderMinute": "< 1 dk",
+  "durationMinutes": "{count} dk",
+  "filesModified": "{count} dosya değiştirildi",
+  "toolCalls": "{count} araç çağrısı"
 }

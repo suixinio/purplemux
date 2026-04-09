@@ -7,5 +7,13 @@
   "doneSection": "Terminé ({count})",
   "dismiss": "Ignorer",
   "navigate": "Accéder",
-  "starting": "Démarrage..."
+  "starting": "Démarrage...",
+  "dateGroup_today": "Aujourd'hui",
+  "dateGroup_yesterday": "Hier",
+  "dateGroup_thisWeek": "Cette semaine",
+  "dateGroup_older": "Plus ancien",
+  "durationUnderMinute": "< 1 min",
+  "durationMinutes": "{count} min",
+  "filesModified": "{count} fichiers modifiés",
+  "toolCalls": "{count} appels d'outils"
 }

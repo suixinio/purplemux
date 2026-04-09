@@ -13,6 +13,9 @@ import { createLogger } from '@/lib/logger';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData } from '@/types/status';
+import type { ITaskHistoryEntry } from '@/types/task-history';
+import { addTaskHistoryEntry, updateTaskHistoryDismissedAt } from '@/lib/task-history';
+import { nanoid } from 'nanoid';
 import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
 
@@ -230,6 +233,66 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
     }
   } catch {
     return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false, lastEntryTs: null, staleMs: 0 };
+  }
+};
+
+interface IJsonlStats {
+  toolUsage: Record<string, number>;
+  touchedFiles: string[];
+  turnCount: number;
+}
+
+const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
+  const empty: IJsonlStats = { toolUsage: {}, touchedFiles: [], turnCount: 0 };
+  try {
+    const stat = await fs.stat(jsonlPath);
+    if (stat.size === 0) return empty;
+
+    const handle = await fs.open(jsonlPath, 'r');
+    try {
+      const readSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
+      const buffer = Buffer.alloc(readSize);
+      await handle.read(buffer, 0, readSize, stat.size - readSize);
+      const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
+
+      const toolUsage: Record<string, number> = {};
+      const touchedFiles = new Set<string>();
+      let turnCount = 0;
+
+      for (let i = lines.length - 1; i >= 0; i--) {
+        try {
+          const entry = JSON.parse(lines[i]);
+          if (entry.isSidechain) continue;
+
+          if (entry.type === 'user') {
+            const c = entry.message?.content;
+            const isToolResult = Array.isArray(c) && c.some((b: unknown) => (b as { type?: string }).type === 'tool_result');
+            if (!isToolResult) {
+              turnCount++;
+              break;
+            }
+            continue;
+          }
+
+          if (entry.type === 'assistant' && Array.isArray(entry.message?.content)) {
+            for (const block of entry.message.content) {
+              if (block.type === 'tool_use' && block.name) {
+                toolUsage[block.name] = (toolUsage[block.name] ?? 0) + 1;
+                if ((block.name === 'Edit' || block.name === 'Write') && block.input?.file_path) {
+                  touchedFiles.add(String(block.input.file_path));
+                }
+              }
+            }
+          }
+        } catch { continue; }
+      }
+
+      return { toolUsage, touchedFiles: [...touchedFiles], turnCount };
+    } finally {
+      await handle.close();
+    }
+  } catch {
+    return empty;
   }
 };
 
@@ -625,6 +688,7 @@ class StatusManager {
 
   private applyCliState(tabId: string, entry: ITabStatusEntry, newState: TCliState): void {
     const prevState = entry.cliState;
+    const prevBusySince = entry.busySince;
     entry.cliState = newState;
     entry.readyForReviewAt = newState === 'ready-for-review' ? Date.now() : null;
     entry.busySince = newState === 'busy' && prevState !== 'busy'
@@ -633,6 +697,12 @@ class StatusManager {
     if (newState === 'busy') entry.dismissedAt = null;
     if (newState !== 'busy' && newState !== 'needs-input') entry.lastCaptureHash = null;
 
+    if (newState === 'ready-for-review' && entry.jsonlPath) {
+      this.saveTaskHistory(tabId, entry, prevBusySince).catch((err) => {
+        log.warn('Failed to save task history: %s', err);
+      });
+    }
+
     const shouldWatch = (newState === 'busy' || newState === 'needs-input') && entry.jsonlPath;
     const keepForFinalRead = newState === 'ready-for-review' && this.jsonlWatchers.has(tabId);
     if (shouldWatch && !this.jsonlWatchers.has(tabId)) {
@@ -640,6 +710,35 @@ class StatusManager {
     } else if (!shouldWatch && !keepForFinalRead && this.jsonlWatchers.has(tabId)) {
       this.stopJsonlWatch(tabId);
     }
+  }
+
+  private async saveTaskHistory(tabId: string, entry: ITabStatusEntry, prevBusySince: number | null | undefined): Promise<void> {
+    if (!entry.lastUserMessage) return;
+
+    const stats = await parseJsonlStats(entry.jsonlPath!);
+    const { workspaces } = await getWorkspaces();
+    const ws = workspaces.find((w) => w.id === entry.workspaceId);
+    const now = Date.now();
+    const startedAt = prevBusySince ?? now;
+
+    const historyEntry: ITaskHistoryEntry = {
+      id: nanoid(),
+      workspaceId: entry.workspaceId,
+      workspaceName: ws?.name ?? entry.workspaceId,
+      tabId,
+      prompt: entry.lastUserMessage,
+      result: entry.lastAssistantMessage ?? null,
+      startedAt,
+      completedAt: now,
+      duration: now - startedAt,
+      dismissedAt: null,
+      toolUsage: stats.toolUsage,
+      touchedFiles: stats.touchedFiles,
+      turnCount: stats.turnCount,
+    };
+
+    await addTaskHistoryEntry(historyEntry);
+    this.broadcast({ type: 'task-history:update', entry: historyEntry });
   }
 
   updateTab(tabId: string, cliState: TCliState, exclude?: WebSocket): void {
@@ -663,10 +762,17 @@ class StatusManager {
 
     entry.cliState = 'idle';
     entry.readyForReviewAt = null;
-    entry.dismissedAt = Date.now();
+    const dismissedAt = Date.now();
+    entry.dismissedAt = dismissedAt;
     this.stopJsonlWatch(tabId);
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
+
+    updateTaskHistoryDismissedAt(tabId, dismissedAt).then((updated) => {
+      if (updated) this.broadcast({ type: 'task-history:update', entry: updated });
+    }).catch((err) => {
+      log.warn('Failed to update task history dismissedAt: %s', err);
+    });
   }
 
   private findTabIdBySession(tmuxSession: string): string | undefined {

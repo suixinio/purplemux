@@ -7,5 +7,13 @@
   "doneSection": "Concluído ({count})",
   "dismiss": "Dispensar",
   "navigate": "Ir para",
-  "starting": "Iniciando..."
+  "starting": "Iniciando...",
+  "dateGroup_today": "Hoje",
+  "dateGroup_yesterday": "Ontem",
+  "dateGroup_thisWeek": "Esta semana",
+  "dateGroup_older": "Anterior",
+  "durationUnderMinute": "< 1 min",
+  "durationMinutes": "{count} min",
+  "filesModified": "{count} arquivos modificados",
+  "toolCalls": "{count} chamadas de ferramentas"
 }

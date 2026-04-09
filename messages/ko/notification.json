@@ -7,5 +7,13 @@
   "doneSection": "완료 ({count})",
   "dismiss": "확인",
   "navigate": "이동",
-  "starting": "시작하는 중..."
+  "starting": "시작하는 중...",
+  "dateGroup_today": "오늘",
+  "dateGroup_yesterday": "어제",
+  "dateGroup_thisWeek": "이번 주",
+  "dateGroup_older": "이전",
+  "durationUnderMinute": "1분 미만",
+  "durationMinutes": "{count}분 소요",
+  "filesModified": "파일 {count}개 수정",
+  "toolCalls": "도구 {count}회"
 }

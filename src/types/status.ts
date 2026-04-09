@@ -1,5 +1,6 @@
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { TPanelType } from '@/types/terminal';
+import type { ITaskHistoryEntry } from '@/types/task-history';
 
 export type TTerminalStatus = 'idle' | 'running' | 'server';
 
@@ -89,7 +90,17 @@ export interface IRateLimitsUpdateMessage {
   data: IRateLimitsData;
 }
 
-export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage | IRateLimitsUpdateMessage;
+export interface ITaskHistorySyncMessage {
+  type: 'task-history:sync';
+  entries: ITaskHistoryEntry[];
+}
+
+export interface ITaskHistoryUpdateMessage {
+  type: 'task-history:update';
+  entry: ITaskHistoryEntry;
+}
+
+export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage | IRateLimitsUpdateMessage | ITaskHistorySyncMessage | ITaskHistoryUpdateMessage;
 
 export interface IStatusTabDismissedMessage {
   type: 'status:tab-dismissed';

@@ -8,6 +8,8 @@ import {
   Search,
   Wrench,
   Users,
+  Globe,
+  SearchCode,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ITimelineToolCall, ITimelineToolResult, TToolName } from '@/types/timeline';
@@ -25,6 +27,9 @@ const TOOL_ICONS: Record<string, typeof FileText> = {
   Grep: Search,
   Glob: Search,
   Agent: Users,
+  WebSearch: Globe,
+  WebFetch: Globe,
+  ToolSearch: SearchCode,
 };
 
 const renderToolIcon = (toolName: TToolName, size: number) => {
