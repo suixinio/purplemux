@@ -25,5 +25,11 @@ export const requireAuth = async <T extends Record<string, unknown>>(
     }
   }
 
-  return handler ? handler() : ({ props: {} } as GetServerSidePropsResult<T>);
+  const result = handler ? await handler() : ({ props: {} } as GetServerSidePropsResult<T>);
+
+  if ('props' in result && result.props && !(result.props instanceof Promise)) {
+    (result.props as Record<string, unknown>).isElectron = /Electron/i.test(context.req.headers['user-agent'] ?? '');
+  }
+
+  return result;
 };

@@ -45,9 +45,10 @@ const LoginPage = () => {
   );
 };
 
-export const getServerSideProps: GetServerSideProps = async () => {
+export const getServerSideProps: GetServerSideProps = async (context) => {
   const messages = await loadMessagesServer();
-  return { props: { messages } };
+  const isElectron = /Electron/i.test(context.req.headers['user-agent'] ?? '');
+  return { props: { messages, isElectron } };
 };
 
 export default LoginPage;

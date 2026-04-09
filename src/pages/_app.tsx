@@ -25,7 +25,6 @@ import useTerminalTheme from "@/hooks/use-terminal-theme";
 import useClaudeStatus from "@/hooks/use-claude-status";
 import useNativeNotification from "@/hooks/use-native-notification";
 import useWebPush from "@/hooks/use-web-push";
-import isElectron from "@/hooks/use-is-electron";
 import SystemResources from "@/components/layout/system-resources";
 import useWorkspaceStore from "@/hooks/use-workspace-store";
 import useConfigStore from "@/hooks/use-config-store";
@@ -102,7 +101,7 @@ const ThemedToaster = () => {
   return <Toaster position="bottom-right" theme={resolvedTheme as 'light' | 'dark'} closeButton />;
 };
 
-const ElectronTitlebar = () => {
+const ElectronTitlebar = ({ isElectron }: { isElectron: boolean }) => {
   if (!isElectron) return null;
   return (
     <div className="fixed top-0 left-0 right-0 z-50 flex h-titlebar items-center justify-end" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
@@ -177,7 +176,7 @@ export default function App({ Component, pageProps }: TAppPropsWithLayout) {
           <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
         </Head>
         <main className="font-sans antialiased">
-          <ElectronTitlebar />
+          <ElectronTitlebar isElectron={!!pageProps.isElectron} />
           {getLayout(<Component {...pageProps} />)}
           <TerminalThemeSync />
           <FontSizeSync />
