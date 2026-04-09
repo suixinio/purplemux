@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRouter } from 'next/router';
-import { Bell, Bot, LogOut, Menu } from 'lucide-react';
+import { Bot, LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -17,7 +16,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
-import NotificationSheet, { useNotificationCount } from '@/components/features/terminal/notification-sheet';
+import { useNotificationCount } from '@/components/features/terminal/notification-sheet';
 import useAgentStore, { selectBlockedCount, selectHasWorkingAgent, selectUnreadCount } from '@/hooks/use-agent-store';
 import useConfigStore from '@/hooks/use-config-store';
 
@@ -36,24 +35,27 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
   const tc = useTranslations('common');
   const router = useRouter();
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
-  const { busyCount, attentionCount } = useNotificationCount();
-  const hasActive = busyCount > 0 || attentionCount > 0;
+  const { attentionCount } = useNotificationCount();
   const blockedCount = useAgentStore(selectBlockedCount);
   const unreadCount = useAgentStore(selectUnreadCount);
   const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
   const agentEnabled = useConfigStore((s) => s.agentEnabled);
-  const [notificationOpen, setNotificationOpen] = useState(false);
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-background px-3">
       <div className="flex min-w-0 items-center gap-1.5">
         {onMenuOpen && (
           <button
-            className="flex h-8 w-8 shrink-0 items-center justify-center text-foreground"
+            className="relative flex h-8 w-8 shrink-0 items-center justify-center text-foreground"
             onClick={onMenuOpen}
             aria-label={t('openMenu')}
           >
             <Menu className="h-5 w-5" />
+            {attentionCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
+                {attentionCount}
+              </span>
+            )}
           </button>
         )}
         <AppLogo shimmer={hasBusy} />
@@ -90,27 +92,6 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
             </Tooltip>
           )}
 
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-7 w-7"
-                  onClick={() => setNotificationOpen(true)}
-                />
-              }
-            >
-              <Bell className={`h-4 w-4 text-muted-foreground${hasActive ? ' fill-current' : ''}`} />
-              {attentionCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
-                  {attentionCount}
-                </span>
-              )}
-            </TooltipTrigger>
-            <TooltipContent>{tc('notifications')}</TooltipContent>
-          </Tooltip>
-
           <AlertDialog>
             <Tooltip>
               <TooltipTrigger
@@ -145,10 +126,6 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
           </AlertDialog>
         </div>
       </TooltipProvider>
-      <NotificationSheet
-        open={notificationOpen}
-        onOpenChange={setNotificationOpen}
-      />
     </header>
   );
 };

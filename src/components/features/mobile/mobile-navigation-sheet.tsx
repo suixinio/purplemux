@@ -12,6 +12,8 @@ import { useRouter } from 'next/router';
 import useSidebarItems from '@/hooks/use-sidebar-items';
 import IconRenderer from '@/components/features/settings/icon-renderer';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useNotificationCount, NotificationPanel } from '@/components/features/terminal/notification-sheet';
 import {
   Sheet,
   SheetContent,
@@ -64,6 +66,8 @@ const MobileNavigationSheet = ({
   const t = useTranslations('mobile');
   const tc = useTranslations('common');
   const router = useRouter();
+  const [mobileTab, setMobileTab] = useState<'workspace' | 'tasks'>('workspace');
+  const { attentionCount } = useNotificationCount();
   const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
   const [longPressTabId, setLongPressTabId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -215,68 +219,93 @@ const MobileNavigationSheet = ({
           >
             <X size={20} />
           </button>
-          <SheetTitle className="text-sm font-medium">Workspaces</SheetTitle>
+          <SheetTitle className="sr-only">Navigation</SheetTitle>
+          <Tabs
+            value={mobileTab}
+            onValueChange={(v) => setMobileTab(v as 'workspace' | 'tasks')}
+            className="gap-0"
+          >
+            <TabsList className="h-7 w-full">
+              <TabsTrigger value="workspace" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                WORKSPACE
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                TASKS
+                {attentionCount > 0 && (
+                  <span className="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
+                    {attentionCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </SheetHeader>
 
-        <div
-          className="flex-1 overflow-y-auto"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {workspaces.map((ws) => {
-            const isExpanded = ws.id === expandedWsId;
-            const isActive = ws.id === activeWorkspaceId;
-            return (
-              <div key={ws.id}>
-                <button
-                  className={cn(
-                    'flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors',
-                    isActive
-                      ? 'font-medium text-foreground'
-                      : 'text-foreground hover:bg-accent/50',
-                  )}
-                  onClick={() => handleToggleWorkspace(ws.id)}
-                >
-                  {isExpanded ? (
-                    <ChevronDown
-                      size={14}
-                      className="shrink-0 text-muted-foreground"
-                    />
-                  ) : (
-                    <ChevronRight
-                      size={14}
-                      className="shrink-0 text-muted-foreground"
-                    />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <span className="block truncate">{ws.name}</span>
-                    <WorkspacePortsLabel workspaceId={ws.id} />
-                    {!isExpanded && (
-                      <WorkspaceStatusIndicator workspaceId={ws.id} />
+        {mobileTab === 'workspace' ? (
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ scrollbarWidth: 'none' }}
+          >
+            {workspaces.map((ws) => {
+              const isExpanded = ws.id === expandedWsId;
+              const isActive = ws.id === activeWorkspaceId;
+              return (
+                <div key={ws.id}>
+                  <button
+                    className={cn(
+                      'flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors',
+                      isActive
+                        ? 'font-medium text-foreground'
+                        : 'text-foreground hover:bg-accent/50',
                     )}
-                  </div>
-                </button>
+                    onClick={() => handleToggleWorkspace(ws.id)}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown
+                        size={14}
+                        className="shrink-0 text-muted-foreground"
+                      />
+                    ) : (
+                      <ChevronRight
+                        size={14}
+                        className="shrink-0 text-muted-foreground"
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate">{ws.name}</span>
+                      <WorkspacePortsLabel workspaceId={ws.id} />
+                      {!isExpanded && (
+                        <WorkspaceStatusIndicator workspaceId={ws.id} />
+                      )}
+                    </div>
+                  </button>
 
-                <div
-                  className="grid transition-[grid-template-rows] duration-200 ease-in-out"
-                  style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
-                >
-                  <div className="overflow-hidden">
-                    {renderPaneTree(ws.id)}
+                  <div
+                    className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+                    style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+                  >
+                    <div className="overflow-hidden">
+                      {renderPaneTree(ws.id)}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        ) : (
+          <NotificationPanel onNavigated={() => onOpenChange(false)} className="px-3 pt-3 pb-3" />
+        )}
 
         <div className="shrink-0 border-t">
-          <button
-            className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
-            onClick={onCreateWorkspace}
-          >
-            <Plus size={16} />
-            Workspace
-          </button>
+          {mobileTab === 'workspace' && (
+            <button
+              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+              onClick={onCreateWorkspace}
+            >
+              <Plus size={16} />
+              Workspace
+            </button>
+          )}
           <SidebarRateLimits />
           <div className="flex items-center gap-0.5 px-3 pb-3">
             {sidebarItems.map((item) => {

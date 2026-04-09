@@ -256,11 +256,10 @@ const TaskHistoryItem = ({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
-        'border-border/50 hover:border-foreground/20',
+        'flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors',
         isActiveSession
           ? 'bg-claude-active/10'
-          : 'bg-muted/30 hover:bg-muted/50 cursor-pointer',
+          : 'hover:bg-muted/50 cursor-pointer',
       )}
       onClick={isActiveSession ? undefined : onClick}
     >
@@ -327,11 +326,10 @@ const NotificationItem = ({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
-        'border-border/50 hover:border-foreground/20',
+        'flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors',
         isActiveTab
           ? 'bg-claude-active/10'
-          : 'bg-muted/30 hover:bg-muted/50 cursor-pointer',
+          : 'hover:bg-muted/50 cursor-pointer',
       )}
       onClick={isActiveTab ? undefined : () => onNavigate?.(item.workspaceId, item.tabId)}
     >
@@ -391,7 +389,7 @@ const NotificationItem = ({
   );
 };
 
-const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
+export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: () => void; className?: string }) => {
   const t = useTranslations('notification');
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
@@ -406,30 +404,11 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   }, [tabs]);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
 
-  const busyItems = useMemo(
-    () => collectItems(tabs, workspaces, 'busy'),
-    [tabs, workspaces],
-  );
-
-  const needsInputItems = useMemo(
-    () => collectItems(tabs, workspaces, 'needs-input'),
-    [tabs, workspaces],
-  );
-
-  const reviewItems = useMemo(
-    () => collectItems(tabs, workspaces, 'ready-for-review'),
-    [tabs, workspaces],
-  );
-
-  const sessionGroups = useMemo(
-    () => groupHistoryBySession(historyEntries),
-    [historyEntries],
-  );
-
-  const dateGroups = useMemo(
-    () => groupSessionsByDate(sessionGroups),
-    [sessionGroups],
-  );
+  const busyItems = useMemo(() => collectItems(tabs, workspaces, 'busy'), [tabs, workspaces]);
+  const needsInputItems = useMemo(() => collectItems(tabs, workspaces, 'needs-input'), [tabs, workspaces]);
+  const reviewItems = useMemo(() => collectItems(tabs, workspaces, 'ready-for-review'), [tabs, workspaces]);
+  const sessionGroups = useMemo(() => groupHistoryBySession(historyEntries), [historyEntries]);
+  const dateGroups = useMemo(() => groupSessionsByDate(sessionGroups), [sessionGroups]);
 
   const toggleExpanded = useCallback((sessionId: string) => {
     setExpandedTabs((prev) => {
@@ -440,38 +419,130 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
     });
   }, []);
 
-  const handleDismiss = useCallback((tabId: string) => {
-    dismissTab(tabId);
-  }, []);
+  const handleDismiss = useCallback((tabId: string) => { dismissTab(tabId); }, []);
 
-  const handleNavigate = useCallback(
-    (workspaceId: string, tabId: string) => {
-      navigateToTab(workspaceId, tabId);
-      onOpenChange(false);
-    },
-    [onOpenChange],
-  );
+  const handleNavigate = useCallback((workspaceId: string, tabId: string) => {
+    navigateToTab(workspaceId, tabId);
+    onNavigated?.();
+  }, [onNavigated]);
 
-  const handleHistoryClick = useCallback(
-    (entry: ITaskHistoryEntry, resolvedTabId: string | null) => {
-      onOpenChange(false);
-      if (resolvedTabId) {
-        navigateToTab(entry.workspaceId, resolvedTabId);
-      } else {
-        navigateToTabOrCreate(
-          entry.workspaceId,
-          entry.tabId,
-          entry.claudeSessionId,
-          entry.workspaceName,
-          entry.workspaceDir,
-        );
-      }
-    },
-    [onOpenChange],
-  );
+  const handleHistoryClick = useCallback((entry: ITaskHistoryEntry, resolvedTabId: string | null) => {
+    onNavigated?.();
+    if (resolvedTabId) {
+      navigateToTab(entry.workspaceId, resolvedTabId);
+    } else {
+      navigateToTabOrCreate(entry.workspaceId, entry.tabId, entry.claudeSessionId, entry.workspaceName, entry.workspaceDir);
+    }
+  }, [onNavigated]);
 
   const isEmpty = busyItems.length === 0 && needsInputItems.length === 0 && reviewItems.length === 0 && dateGroups.length === 0;
 
+  return (
+    <div className={cn('flex-1 overflow-y-auto', className)} style={{ scrollbarWidth: 'none' }}>
+      {isEmpty ? (
+        <p className="py-8 text-center text-sm text-muted-foreground">{t('empty')}</p>
+      ) : (
+        <>
+          {busyItems.length > 0 && (
+            <section>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+                {t('busySection', { count: busyItems.length })}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {busyItems.map((item) => (
+                  <NotificationItem key={item.tabId} item={item} showActions={false} isActiveTab={item.tabId === activeTabId} onNavigate={handleNavigate} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {needsInputItems.length > 0 && (
+            <section className={busyItems.length > 0 ? 'mt-4' : ''}>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+                {t('needsInputSection', { count: needsInputItems.length })}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {needsInputItems.map((item) => (
+                  <NotificationItem key={item.tabId} item={item} showActions={false} variant="needs-input" isActiveTab={item.tabId === activeTabId} onNavigate={handleNavigate} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {reviewItems.length > 0 && (
+            <section className={busyItems.length > 0 || needsInputItems.length > 0 ? 'mt-4' : ''}>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+                {t('reviewSection', { count: reviewItems.length })}
+              </h3>
+              <div className="flex flex-col gap-2">
+                {reviewItems.map((item) => (
+                  <NotificationItem key={item.tabId} item={item} showActions isActiveTab={item.tabId === activeTabId} onDismiss={handleDismiss} onNavigate={handleNavigate} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {dateGroups.length > 0 && (
+            <section className={busyItems.length > 0 || needsInputItems.length > 0 || reviewItems.length > 0 ? 'mt-4' : ''}>
+              <h3 className="mb-2 text-xs font-medium text-muted-foreground">
+                {t('doneSection', { count: historyEntries.length >= 200 ? '200+' : historyEntries.length })}
+              </h3>
+              {dateGroups.map(({ group: dateGroup, sessions }) => (
+                <div key={dateGroup}>
+                  <h4 className="mb-1.5 mt-3 first:mt-0 text-xs text-muted-foreground/60">
+                    {t(`dateGroup_${dateGroup}`)}
+                  </h4>
+                  <div className="flex flex-col gap-2">
+                    {sessions.map((group) => {
+                      const isExpanded = expandedTabs.has(group.sessionId);
+                      const hasOlder = group.olderEntries.length > 0;
+                      const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId;
+                      const resolvedTabId = sessionTabMap.get(group.sessionId) ?? null;
+                      return (
+                        <div key={group.sessionId}>
+                          <TaskHistoryItem
+                            entry={group.latestEntry}
+                            isActiveSession={isActive}
+                            onClick={() => handleHistoryClick(group.latestEntry, resolvedTabId)}
+                          />
+                          {hasOlder && (
+                            <button
+                              type="button"
+                              className="mt-1 flex w-full items-center gap-1 py-0.5 pl-9 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
+                              onClick={() => toggleExpanded(group.sessionId)}
+                            >
+                              <ChevronRight className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-90')} />
+                              {isExpanded ? t('showLess') : t('showMore', { count: group.olderEntries.length })}
+                            </button>
+                          )}
+                          {isExpanded && (
+                            <div className="mt-1 flex flex-col border-l border-border/30 ml-5 pl-2">
+                              {group.olderEntries.map((entry) => (
+                                <TaskHistoryItem
+                                  key={entry.id}
+                                  entry={entry}
+                                  compact
+                                  onClick={() => handleHistoryClick(entry, resolvedTabId)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
+  const t = useTranslations('notification');
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" showCloseButton={false} className="w-80 sm:max-w-80">
@@ -479,129 +550,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
         <SheetHeader>
           <SheetTitle>{t('title')}</SheetTitle>
         </SheetHeader>
-
-        <div className="flex-1 overflow-y-auto px-4 pb-4" style={{ scrollbarWidth: 'none' }}>
-          {isEmpty ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">
-              {t('empty')}
-            </p>
-          ) : (
-            <>
-              {busyItems.length > 0 && (
-                <section>
-                  <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    {t('busySection', { count: busyItems.length })}
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {busyItems.map((item) => (
-                      <NotificationItem
-                        key={item.tabId}
-                        item={item}
-                        showActions={false}
-                        isActiveTab={item.tabId === activeTabId}
-                        onNavigate={handleNavigate}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {needsInputItems.length > 0 && (
-                <section className={busyItems.length > 0 ? 'mt-4' : ''}>
-                  <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    {t('needsInputSection', { count: needsInputItems.length })}
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {needsInputItems.map((item) => (
-                      <NotificationItem
-                        key={item.tabId}
-                        item={item}
-                        showActions={false}
-                        variant="needs-input"
-                        isActiveTab={item.tabId === activeTabId}
-                        onNavigate={handleNavigate}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {reviewItems.length > 0 && (
-                <section className={busyItems.length > 0 || needsInputItems.length > 0 ? 'mt-4' : ''}>
-                  <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    {t('reviewSection', { count: reviewItems.length })}
-                  </h3>
-                  <div className="flex flex-col gap-2">
-                    {reviewItems.map((item) => (
-                      <NotificationItem
-                        key={item.tabId}
-                        item={item}
-                        showActions
-                        isActiveTab={item.tabId === activeTabId}
-                        onDismiss={handleDismiss}
-                        onNavigate={handleNavigate}
-                      />
-                    ))}
-                  </div>
-                </section>
-              )}
-
-              {dateGroups.length > 0 && (
-                <section className={busyItems.length > 0 || needsInputItems.length > 0 || reviewItems.length > 0 ? 'mt-4' : ''}>
-                  <h3 className="mb-2 text-xs font-medium text-muted-foreground">
-                    {t('doneSection', { count: historyEntries.length >= 200 ? '200+' : historyEntries.length })}
-                  </h3>
-                  {dateGroups.map(({ group: dateGroup, sessions }) => (
-                    <div key={dateGroup}>
-                      <h4 className="mb-1.5 mt-3 first:mt-0 text-xs text-muted-foreground/60">
-                        {t(`dateGroup_${dateGroup}`)}
-                      </h4>
-                      <div className="flex flex-col gap-2">
-                        {sessions.map((group) => {
-                          const isExpanded = expandedTabs.has(group.sessionId);
-                          const hasOlder = group.olderEntries.length > 0;
-                          const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId;
-                          const resolvedTabId = sessionTabMap.get(group.sessionId) ?? null;
-                          return (
-                            <div key={group.sessionId}>
-                              <TaskHistoryItem
-                                entry={group.latestEntry}
-                                isActiveSession={isActive}
-                                onClick={() => handleHistoryClick(group.latestEntry, resolvedTabId)}
-                              />
-                              {hasOlder && (
-                                <button
-                                  type="button"
-                                  className="mt-1 flex w-full items-center gap-1 py-0.5 pl-9 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                                  onClick={() => toggleExpanded(group.sessionId)}
-                                >
-                                  <ChevronRight className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-90')} />
-                                  {isExpanded ? t('showLess') : t('showMore', { count: group.olderEntries.length })}
-                                </button>
-                              )}
-                              {isExpanded && (
-                                <div className="mt-1 flex flex-col border-l border-border/30 ml-5 pl-2">
-                                  {group.olderEntries.map((entry) => (
-                                    <TaskHistoryItem
-                                      key={entry.id}
-                                      entry={entry}
-                                      compact
-                                      onClick={() => handleHistoryClick(entry, resolvedTabId)}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                </section>
-              )}
-            </>
-          )}
-        </div>
+        <NotificationPanel onNavigated={() => onOpenChange(false)} className="px-4 pb-4" />
       </SheetContent>
     </Sheet>
   );

@@ -5,16 +5,16 @@ import {
   ChevronsRight,
   Plus,
   Settings,
-  Bell,
   LogOut,
   Bot,
 } from 'lucide-react';
 import useTabStore from '@/hooks/use-tab-store';
-import { useNotificationCount } from '@/components/features/terminal/notification-sheet';
+import { useNotificationCount, NotificationPanel } from '@/components/features/terminal/notification-sheet';
 import AppLogo from '@/components/layout/app-logo';
 import { isMac } from '@/lib/keyboard-shortcuts';
 import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,7 +35,6 @@ const SettingsDialog = dynamic(
   () => import('@/components/features/terminal/settings-dialog'),
   { ssr: false },
 );
-import NotificationSheet from '@/components/features/terminal/notification-sheet';
 import useAgentStore, { selectBlockedCount, selectHasWorkingAgent, selectUnreadCount } from '@/hooks/use-agent-store';
 import useConfigStore from '@/hooks/use-config-store';
 import { useSelectWorkspace } from '@/hooks/use-sidebar-actions';
@@ -67,8 +66,7 @@ const Sidebar = () => {
     }
     return false;
   });
-  const { busyCount, attentionCount } = useNotificationCount();
-  const hasActive = busyCount > 0 || attentionCount > 0;
+  const { attentionCount } = useNotificationCount();
   const blockedCount = useAgentStore(selectBlockedCount);
   const unreadCount = useAgentStore(selectUnreadCount);
   const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
@@ -78,7 +76,7 @@ const Sidebar = () => {
   const activeWebviewId = useWebviewStore((s) => s.activeId);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [sidebarTab, setSidebarTab] = useState<'workspace' | 'tasks'>('workspace');
   const [showShortcuts, setShowShortcuts] = useState(false);
   const modTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -330,18 +328,6 @@ const Sidebar = () => {
                 )}
               </button>
             )}
-            <button
-              className="relative flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-sidebar-accent"
-              onClick={() => setNotificationOpen(true)}
-              aria-label={tc('notifications')}
-            >
-              <Bell className={`h-3.5 w-3.5${hasActive ? ' fill-current' : ''}`} />
-              {attentionCount > 0 && (
-                <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
-                  {attentionCount}
-                </span>
-              )}
-            </button>
             <AlertDialog>
               <AlertDialogTrigger
                 render={
@@ -369,61 +355,89 @@ const Sidebar = () => {
           </div>
         </div>
 
-        <div
-          className="flex-1 overflow-y-auto"
-          style={{ scrollbarWidth: 'none' }}
-        >
-          {!isLoading && workspaces.length === 0 && (
-            <div className="flex flex-col items-center gap-2 p-4">
-              <span className="text-xs text-muted-foreground">
-                {t('noWorkspaces')}
-              </span>
-            </div>
-          )}
-
-          {workspaces.map((ws, i) => (
-            <div
-              key={ws.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, i)}
-              onDragEnd={handleDragEnd}
-              onDragOver={(e) => handleDragOver(e, i)}
-              onDrop={(e) => handleDrop(e, i)}
-              style={{
-                opacity: fadingOutIds.has(ws.id) ? 0 : undefined,
-                transition: 'opacity 150ms ease-out',
-                borderTop: dropIndex === i && dragIndex !== null && dragIndex > i
-                  ? '2px solid var(--focus-indicator)'
-                  : undefined,
-                borderBottom: dropIndex === i && dragIndex !== null && dragIndex < i
-                  ? '2px solid var(--focus-indicator)'
-                  : undefined,
-              }}
-            >
-              <WorkspaceItem
-                workspace={ws}
-                isActive={ws.id === activeWorkspaceId && router.pathname === '/' && !activeWebviewId}
-                isDeleting={deletingIds.has(ws.id)}
-                shortcutLabel={i < 8 ? `⌘${i + 1}` : i === workspaces.length - 1 ? '⌘9' : undefined}
-                showShortcut={showShortcuts}
-                onSelect={selectWorkspace}
-                onRename={handleRename}
-                onDelete={handleDeleteRequest}
-              />
-            </div>
-          ))}
+        <div className="shrink-0 border-b border-sidebar-border px-2 py-1.5">
+          <Tabs
+            value={sidebarTab}
+            onValueChange={(v) => setSidebarTab(v as 'workspace' | 'tasks')}
+            className="gap-0"
+          >
+            <TabsList className="h-7 w-full">
+              <TabsTrigger value="workspace" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                WORKSPACE
+              </TabsTrigger>
+              <TabsTrigger value="tasks" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                TASKS
+                {attentionCount > 0 && (
+                  <span className="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-ui-purple px-0.5 text-[9px] font-medium leading-none text-white">
+                    {attentionCount}
+                  </span>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
 
-        <div className="shrink-0 border-t border-sidebar-border">
-          <button
-            className="flex h-9 w-full items-center gap-2 px-3 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent disabled:opacity-50"
-            onClick={handleCreateWorkspace}
-            disabled={isCreating}
-            aria-label={t('addWorkspace')}
+        {sidebarTab === 'workspace' ? (
+          <div
+            className="flex-1 overflow-y-auto"
+            style={{ scrollbarWidth: 'none' }}
           >
-            <Plus className="h-3.5 w-3.5" />
-            Workspace
-          </button>
+            {!isLoading && workspaces.length === 0 && (
+              <div className="flex flex-col items-center gap-2 p-4">
+                <span className="text-xs text-muted-foreground">
+                  {t('noWorkspaces')}
+                </span>
+              </div>
+            )}
+
+            {workspaces.map((ws, i) => (
+              <div
+                key={ws.id}
+                draggable
+                onDragStart={(e) => handleDragStart(e, i)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleDragOver(e, i)}
+                onDrop={(e) => handleDrop(e, i)}
+                style={{
+                  opacity: fadingOutIds.has(ws.id) ? 0 : undefined,
+                  transition: 'opacity 150ms ease-out',
+                  borderTop: dropIndex === i && dragIndex !== null && dragIndex > i
+                    ? '2px solid var(--focus-indicator)'
+                    : undefined,
+                  borderBottom: dropIndex === i && dragIndex !== null && dragIndex < i
+                    ? '2px solid var(--focus-indicator)'
+                    : undefined,
+                }}
+              >
+                <WorkspaceItem
+                  workspace={ws}
+                  isActive={ws.id === activeWorkspaceId && router.pathname === '/' && !activeWebviewId}
+                  isDeleting={deletingIds.has(ws.id)}
+                  shortcutLabel={i < 8 ? `⌘${i + 1}` : i === workspaces.length - 1 ? '⌘9' : undefined}
+                  showShortcut={showShortcuts}
+                  onSelect={selectWorkspace}
+                  onRename={handleRename}
+                  onDelete={handleDeleteRequest}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <NotificationPanel className="px-2 pt-2 pb-2" />
+        )}
+
+        <div className="shrink-0 border-t border-sidebar-border">
+          {sidebarTab === 'workspace' && (
+            <button
+              className="flex h-9 w-full items-center gap-2 px-3 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent disabled:opacity-50"
+              onClick={handleCreateWorkspace}
+              disabled={isCreating}
+              aria-label={t('addWorkspace')}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Workspace
+            </button>
+          )}
 
           <SidebarRateLimits />
 
@@ -566,10 +580,6 @@ const Sidebar = () => {
       )}
 
       {settingsOpen && <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />}
-      <NotificationSheet
-        open={notificationOpen}
-        onOpenChange={setNotificationOpen}
-      />
 
       <AlertDialog
         open={!!deleteTarget}
