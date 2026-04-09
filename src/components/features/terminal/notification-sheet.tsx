@@ -84,6 +84,7 @@ interface INotificationItem {
   readyForReviewAt?: number | null;
   busySince?: number | null;
   dismissedAt?: number | null;
+  claudeSessionId?: string | null;
 }
 
 interface INotificationSheetProps {
@@ -111,6 +112,7 @@ const collectItems = (
       readyForReviewAt: tab.readyForReviewAt,
       busySince: tab.busySince,
       dismissedAt: tab.dismissedAt,
+      claudeSessionId: tab.claudeSessionId,
     });
   }
 
@@ -407,6 +409,15 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const busyItems = useMemo(() => collectItems(tabs, workspaces, 'busy'), [tabs, workspaces]);
   const needsInputItems = useMemo(() => collectItems(tabs, workspaces, 'needs-input'), [tabs, workspaces]);
   const reviewItems = useMemo(() => collectItems(tabs, workspaces, 'ready-for-review'), [tabs, workspaces]);
+  const liveSessionIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const [, tab] of Object.entries(tabs)) {
+      if ((tab.cliState === 'busy' || tab.cliState === 'needs-input' || tab.cliState === 'ready-for-review') && tab.claudeSessionId) {
+        ids.add(tab.claudeSessionId);
+      }
+    }
+    return ids;
+  }, [tabs]);
   const reviewSessionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const [, tab] of Object.entries(tabs)) {
@@ -414,6 +425,17 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
     }
     return ids;
   }, [tabs]);
+  const reviewHistoryMap = useMemo(() => {
+    const map = new Map<string, ITaskHistoryEntry>();
+    for (const entry of historyEntries) {
+      if (!entry.claudeSessionId || !reviewSessionIds.has(entry.claudeSessionId)) continue;
+      const existing = map.get(entry.claudeSessionId);
+      if (!existing || entry.completedAt > existing.completedAt) {
+        map.set(entry.claudeSessionId, entry);
+      }
+    }
+    return map;
+  }, [historyEntries, reviewSessionIds]);
   const sessionGroups = useMemo(() => {
     const filtered = reviewSessionIds.size > 0
       ? historyEntries.filter((e) => !e.claudeSessionId || !reviewSessionIds.has(e.claudeSessionId))
@@ -487,9 +509,35 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                 {t('reviewSection', { count: reviewItems.length })}
               </h3>
               <div className="flex flex-col gap-2">
-                {reviewItems.map((item) => (
-                  <NotificationItem key={item.tabId} item={item} showActions isActiveTab={item.tabId === activeTabId} onDismiss={handleDismiss} onNavigate={handleNavigate} />
-                ))}
+                {reviewItems.map((item) => {
+                  const entry = item.claudeSessionId ? reviewHistoryMap.get(item.claudeSessionId) : undefined;
+                  const isActive = item.tabId === activeTabId;
+                  if (!entry) {
+                    return <NotificationItem key={item.tabId} item={item} showActions isActiveTab={isActive} onDismiss={handleDismiss} onNavigate={handleNavigate} />;
+                  }
+                  return (
+                    <div key={item.tabId}>
+                      <TaskHistoryItem
+                        entry={entry}
+                        isActiveSession={isActive}
+                        onClick={isActive ? undefined : () => handleNavigate(item.workspaceId, item.tabId)}
+                      />
+                      {!isActive && (
+                        <div className="mt-1 flex items-center pl-9">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-6 px-2 text-xs"
+                            onClick={() => handleDismiss(item.tabId)}
+                          >
+                            <Check className="mr-1 h-3 w-3" />
+                            {t('dismiss')}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </section>
           )}
@@ -508,7 +556,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                     {sessions.map((group) => {
                       const isExpanded = expandedTabs.has(group.sessionId);
                       const hasOlder = group.olderEntries.length > 0;
-                      const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId;
+                      const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId && !liveSessionIds.has(group.sessionId);
                       const resolvedTabId = sessionTabMap.get(group.sessionId) ?? null;
                       return (
                         <div key={group.sessionId}>
