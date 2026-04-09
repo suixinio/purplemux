@@ -240,12 +240,13 @@ interface IJsonlStats {
   toolUsage: Record<string, number>;
   touchedFiles: string[];
   lastAssistantText: string | null;
+  lastUserText: string | null;
   firstUserTs: number | null;
   lastAssistantTs: number | null;
 }
 
 const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
-  const empty: IJsonlStats = { toolUsage: {}, touchedFiles: [], lastAssistantText: null, firstUserTs: null, lastAssistantTs: null };
+  const empty: IJsonlStats = { toolUsage: {}, touchedFiles: [], lastAssistantText: null, lastUserText: null, firstUserTs: null, lastAssistantTs: null };
   try {
     const stat = await fs.stat(jsonlPath);
     if (stat.size === 0) return empty;
@@ -260,6 +261,7 @@ const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
       const toolUsage: Record<string, number> = {};
       const touchedFiles = new Set<string>();
       let lastAssistantText: string | null = null;
+      let lastUserText: string | null = null;
       let lastAssistantTs: number | null = null;
       let firstUserTs: number | null = null;
 
@@ -271,8 +273,16 @@ const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
 
           const ts = entry.timestamp ? new Date(entry.timestamp).getTime() : null;
 
-          if (entry.type === 'user' && ts) {
-            firstUserTs = ts;
+          if (entry.type === 'user') {
+            if (ts) firstUserTs = ts;
+            if (!lastUserText && Array.isArray(entry.message?.content)) {
+              for (const block of entry.message.content) {
+                if (block.type === 'text' && block.text) {
+                  lastUserText = block.text;
+                  break;
+                }
+              }
+            }
           }
 
           if (entry.type === 'assistant') {
@@ -298,7 +308,7 @@ const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
         } catch { continue; }
       }
 
-      return { toolUsage, touchedFiles: [...touchedFiles], lastAssistantText, firstUserTs, lastAssistantTs };
+      return { toolUsage, touchedFiles: [...touchedFiles], lastAssistantText, lastUserText, firstUserTs, lastAssistantTs };
     } finally {
       await handle.close();
     }
@@ -709,7 +719,8 @@ class StatusManager {
     if (newState !== 'busy' && newState !== 'needs-input') entry.lastCaptureHash = null;
 
     if (newState === 'ready-for-review' && entry.jsonlPath) {
-      this.saveTaskHistory(tabId, entry, prevBusySince).catch((err) => {
+      const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+      delay(500).then(() => this.saveTaskHistory(tabId, entry, prevBusySince)).catch((err) => {
         log.warn('Failed to save task history: %s', err);
       });
     }
@@ -749,7 +760,7 @@ class StatusManager {
       workspaceName: ws?.name ?? entry.workspaceId,
       tabId,
       claudeSessionId,
-      prompt: entry.lastUserMessage,
+      prompt: stats.lastUserText ?? entry.lastUserMessage,
       result: stats.lastAssistantText,
       startedAt,
       completedAt,
