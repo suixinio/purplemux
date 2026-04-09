@@ -11,13 +11,7 @@ self.addEventListener('push', (event) => {
     data: { tabId: data.tabId, workspaceId: data.workspaceId },
   };
 
-  event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
-      const visible = windowClients.some((c) => c.visibilityState === 'visible');
-      if (visible) return;
-      return self.registration.showNotification(title, options);
-    })
-  );
+  event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
