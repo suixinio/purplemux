@@ -65,3 +65,26 @@ export const removeSubscription = async (endpoint: string): Promise<void> =>
       await writeSubs(filtered);
     }
   });
+
+const VISIBILITY_TTL = 60_000;
+const gVis = globalThis as unknown as { __ptVisibleEndpoints?: Map<string, number> };
+if (!gVis.__ptVisibleEndpoints) gVis.__ptVisibleEndpoints = new Map();
+const visibleEndpoints = gVis.__ptVisibleEndpoints;
+
+export const markVisible = (endpoint: string): void => {
+  visibleEndpoints.set(endpoint, Date.now());
+};
+
+export const markHidden = (endpoint: string): void => {
+  visibleEndpoints.delete(endpoint);
+};
+
+export const isEndpointVisible = (endpoint: string): boolean => {
+  const lastSeen = visibleEndpoints.get(endpoint);
+  if (!lastSeen) return false;
+  if (Date.now() - lastSeen > VISIBILITY_TTL) {
+    visibleEndpoints.delete(endpoint);
+    return false;
+  }
+  return true;
+};

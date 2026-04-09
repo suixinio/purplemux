@@ -75,6 +75,25 @@ const hasExistingSubscription = async (): Promise<boolean> => {
   }
 };
 
+const getEndpoint = async (): Promise<string | null> => {
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    return sub?.endpoint ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const sendVisibility = (endpoint: string, visible: boolean) => {
+  fetch('/api/push/visibility', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ endpoint, visible }),
+    keepalive: true,
+  }).catch(() => {});
+};
+
 const useWebPush = () => {
   const initialized = useRef(false);
 
@@ -117,9 +136,42 @@ const useWebPush = () => {
       }
     });
 
+    // Visibility tracking
+    let visibilityEndpoint: string | null = null;
+    let pingTimer: ReturnType<typeof setInterval> | null = null;
+
+    const startVisibilityTracking = (ep: string) => {
+      visibilityEndpoint = ep;
+      sendVisibility(ep, !document.hidden);
+
+      const handleVisChange = () => {
+        if (!visibilityEndpoint) return;
+        sendVisibility(visibilityEndpoint, !document.hidden);
+      };
+      document.addEventListener('visibilitychange', handleVisChange);
+
+      pingTimer = setInterval(() => {
+        if (visibilityEndpoint && !document.hidden) {
+          sendVisibility(visibilityEndpoint, true);
+        }
+      }, 30_000);
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisChange);
+        if (pingTimer) clearInterval(pingTimer);
+        if (visibilityEndpoint) sendVisibility(visibilityEndpoint, false);
+      };
+    };
+
+    let cleanupVisibility: (() => void) | null = null;
+    getEndpoint().then((ep) => {
+      if (ep) cleanupVisibility = startVisibilityTracking(ep);
+    });
+
     return () => {
       navigator.serviceWorker.removeEventListener('message', handleSwMessage);
       unsub();
+      cleanupVisibility?.();
     };
   }, []);
 };

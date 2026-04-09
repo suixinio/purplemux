@@ -1136,7 +1136,10 @@ class StatusManager {
       workspaceId: entry.workspaceId,
     });
 
+    const { isEndpointVisible } = await import('@/lib/push-subscriptions');
+
     for (const sub of subs) {
+      if (isEndpointVisible(sub.endpoint)) continue;
       try {
         await webpush.sendNotification(sub, payload);
       } catch (err: unknown) {
