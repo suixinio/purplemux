@@ -23,6 +23,7 @@ const log = createLogger('timeline');
 const HEARTBEAT_INTERVAL = 30_000;
 const HEARTBEAT_TIMEOUT = 90_000;
 const DEBOUNCE_MS = 50;
+const BACKPRESSURE_LIMIT = 1024 * 1024;
 const MAX_WATCHERS = 32;
 const MAX_CONNECTIONS = 32;
 const MAX_WATCHER_RETRIES = 3;
@@ -79,8 +80,11 @@ interface IJsonlWatcher {
 }
 const pendingJsonlWatchers = new Map<string, IJsonlWatcher>();
 
+const canSend = (ws: WebSocket): boolean =>
+  ws.readyState === WebSocket.OPEN && ws.bufferedAmount < BACKPRESSURE_LIMIT;
+
 const sendJson = (ws: WebSocket, msg: TTimelineServerMessage) => {
-  if (ws.readyState === WebSocket.OPEN) {
+  if (canSend(ws)) {
     ws.send(JSON.stringify(msg));
   }
 };
@@ -125,7 +129,7 @@ const broadcastToWatcher = (watcherKey: string, msg: TTimelineServerMessage) => 
   if (!fw) return;
   const str = JSON.stringify(msg);
   for (const ws of fw.connections) {
-    if (ws.readyState === WebSocket.OPEN) {
+    if (canSend(ws)) {
       ws.send(str);
     }
   }
@@ -165,7 +169,7 @@ const processFileChange = async (fw: IFileWatcher) => {
       const str = JSON.stringify(msg);
       const partialReads: Promise<void>[] = [];
       for (const ws of fw.connections) {
-        if (ws.readyState !== WebSocket.OPEN) continue;
+        if (!canSend(ws)) continue;
         const initOffset = fw.initOffsets.get(ws);
         if (initOffset !== undefined) {
           if (newOffset <= initOffset) {
@@ -176,7 +180,7 @@ const processFileChange = async (fw: IFileWatcher) => {
             partialReads.push(
               readBoundedEntries(fw.jsonlPath, initOffset, newOffset)
                 .then((entries) => {
-                  if (entries.length > 0 && ws.readyState === WebSocket.OPEN) {
+                  if (entries.length > 0 && canSend(ws)) {
                     const partialMsg: TTimelineServerMessage = { type: 'timeline:append', entries };
                     ws.send(JSON.stringify(partialMsg));
                   }

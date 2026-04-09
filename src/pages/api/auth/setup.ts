@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { needsSetup, updateConfig, generateSecret, hashPassword } from '@/lib/config-store';
 
+let setupLock: Promise<void> = Promise.resolve();
+
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const setup = await needsSetup();
@@ -8,32 +10,42 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'POST') {
-    const setup = await needsSetup();
-    if (!setup) {
-      return res.status(400).json({ error: 'Setup already completed.' });
-    }
-
     const { authPassword, locale, appTheme, terminalTheme, dangerouslySkipPermissions } = req.body ?? {};
     if (!authPassword || typeof authPassword !== 'string') {
       return res.status(400).json({ error: 'Password is required.' });
     }
 
-    const hashedPassword = await hashPassword(authPassword);
-    const authSecret = generateSecret();
+    let release: () => void;
+    const next = new Promise<void>((r) => { release = r; });
+    const prev = setupLock;
+    setupLock = next;
+    await prev;
 
-    await updateConfig({
-      authPassword: hashedPassword,
-      authSecret,
-      locale: locale || 'en',
-      appTheme: appTheme || 'dark',
-      terminalTheme,
-      dangerouslySkipPermissions: dangerouslySkipPermissions ?? false,
-    });
+    try {
+      const setup = await needsSetup();
+      if (!setup) {
+        return res.status(400).json({ error: 'Setup already completed.' });
+      }
 
-    process.env.AUTH_PASSWORD = hashedPassword;
-    process.env.NEXTAUTH_SECRET = authSecret;
+      const hashedPassword = await hashPassword(authPassword);
+      const authSecret = generateSecret();
 
-    return res.status(200).json({ ok: true });
+      await updateConfig({
+        authPassword: hashedPassword,
+        authSecret,
+        locale: locale || 'en',
+        appTheme: appTheme || 'dark',
+        terminalTheme,
+        dangerouslySkipPermissions: dangerouslySkipPermissions ?? false,
+      });
+
+      process.env.AUTH_PASSWORD = hashedPassword;
+      process.env.NEXTAUTH_SECRET = authSecret;
+
+      return res.status(200).json({ ok: true });
+    } finally {
+      release!();
+    }
   }
 
   res.setHeader('Allow', 'GET, POST');

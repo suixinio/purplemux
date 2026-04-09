@@ -137,10 +137,12 @@ class AgentManager {
     this.clients.delete(ws);
   }
 
+  private static readonly BACKPRESSURE_LIMIT = 1024 * 1024;
+
   private broadcast(event: IAgentStatusSync | IAgentStatusUpdate | IAgentChatMessage | TWorkspaceServerMessage): void {
     const msg = JSON.stringify(event);
     for (const ws of this.clients) {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < AgentManager.BACKPRESSURE_LIMIT) {
         ws.send(msg);
       }
     }

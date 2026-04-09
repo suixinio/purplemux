@@ -1,5 +1,6 @@
 import Head from 'next/head';
 import type { GetServerSideProps } from 'next';
+import dynamic from 'next/dynamic';
 import { useTranslations } from 'next-intl';
 import { BarChart3, AlertCircle, RefreshCw } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
@@ -10,12 +11,13 @@ import useStats from '@/hooks/use-stats';
 import PeriodFilter from '@/components/features/stats/period-filter';
 import SectionErrorBoundary from '@/components/features/stats/section-error-boundary';
 import SectionSkeleton from '@/components/features/stats/section-skeleton';
-import OverviewSection from '@/components/features/stats/overview-section';
-import TokenSection from '@/components/features/stats/token-section';
-import ActivitySection from '@/components/features/stats/activity-section';
-import ProjectSection from '@/components/features/stats/project-section';
-import SessionSection from '@/components/features/stats/session-section';
-import UptimeSection from '@/components/features/stats/uptime-section';
+
+const OverviewSection = dynamic(() => import('@/components/features/stats/overview-section'));
+const TokenSection = dynamic(() => import('@/components/features/stats/token-section'));
+const ActivitySection = dynamic(() => import('@/components/features/stats/activity-section'));
+const ProjectSection = dynamic(() => import('@/components/features/stats/project-section'));
+const SessionSection = dynamic(() => import('@/components/features/stats/session-section'));
+const UptimeSection = dynamic(() => import('@/components/features/stats/uptime-section'));
 
 const SectionError = ({ onRetry, message }: { onRetry: () => void; message: string }) => {
   const t = useTranslations('common');

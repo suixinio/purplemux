@@ -194,6 +194,8 @@ const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => 
 
     const cached = jsonlIdleCache.get(jsonlPath);
     if (cached && cached.mtimeMs === stat.mtimeMs) {
+      jsonlIdleCache.delete(jsonlPath);
+      jsonlIdleCache.set(jsonlPath, cached);
       if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs };
       if (cached.needsStaleRecheck) {
         const idle = Date.now() - stat.mtimeMs > cached.staleMs;
@@ -949,10 +951,12 @@ class StatusManager {
     this.broadcast(msg);
   }
 
+  private static readonly BACKPRESSURE_LIMIT = 1024 * 1024;
+
   broadcast(event: object, exclude?: WebSocket): void {
     const msg = JSON.stringify(event);
     for (const ws of this.clients) {
-      if (ws !== exclude && ws.readyState === WebSocket.OPEN) {
+      if (ws !== exclude && ws.readyState === WebSocket.OPEN && ws.bufferedAmount < StatusManager.BACKPRESSURE_LIMIT) {
         ws.send(msg);
       }
     }

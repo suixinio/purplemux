@@ -22,10 +22,12 @@ export const handleSyncConnection = (ws: WebSocket) => {
   });
 };
 
+const BACKPRESSURE_LIMIT = 1024 * 1024;
+
 export const broadcastSync = (event: TSyncEvent) => {
   const msg = JSON.stringify(event);
   for (const ws of clients) {
-    if (ws.readyState === WebSocket.OPEN) {
+    if (ws.readyState === WebSocket.OPEN && ws.bufferedAmount < BACKPRESSURE_LIMIT) {
       ws.send(msg);
     }
   }

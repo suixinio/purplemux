@@ -115,7 +115,7 @@ export const ensureHookSettings = async (port: number): Promise<void> => {
   await fs.mkdir(BASE_DIR, { recursive: true });
 
   // Write port file
-  await fs.writeFile(PORT_FILE, String(port), 'utf-8');
+  await fs.writeFile(PORT_FILE, String(port), { mode: 0o600 });
 
   // Create hook script
   try {
@@ -148,7 +148,7 @@ export const ensureHookSettings = async (port: number): Promise<void> => {
     // file doesn't exist yet
   }
 
-  await fs.writeFile(HOOKS_FILE, content, 'utf-8');
+  await fs.writeFile(HOOKS_FILE, content, { mode: 0o600 });
   log.debug(`${HOOKS_FILE} created`);
 };
 

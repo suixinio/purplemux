@@ -69,7 +69,7 @@ const buildData = (file: IQuickPromptsFile): IQuickPromptsData => {
 
 const writeQuickPrompts = async (data: IQuickPromptsFile): Promise<void> => {
   await fs.mkdir(BASE_DIR, { recursive: true });
-  await fs.writeFile(FILE_PATH, JSON.stringify(data, null, 2), 'utf-8');
+  await fs.writeFile(FILE_PATH, JSON.stringify(data, null, 2), { mode: 0o600 });
 };
 
 export { readQuickPrompts, writeQuickPrompts, BUILTIN_PROMPTS };
