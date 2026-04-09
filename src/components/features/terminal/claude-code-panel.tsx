@@ -100,7 +100,9 @@ const ClaudeCodePanel = ({
         return;
       }
       if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
-        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
+        // WebSocket 실시간 스트림이 API 폴링보다 권위 있으므로 항상 우선
+        const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
+        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
       }
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);

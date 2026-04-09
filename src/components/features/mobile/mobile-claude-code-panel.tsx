@@ -120,7 +120,8 @@ const MobileClaudeCodePanel = ({
         return;
       }
       if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
-        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, Date.now());
+        const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
+        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
       }
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);

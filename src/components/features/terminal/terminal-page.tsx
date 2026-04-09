@@ -115,7 +115,7 @@ const TerminalPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+      <div className="flex h-full w-full flex-col overflow-hidden bg-background animate-delayed-fade-in">
         <div className="flex h-12 shrink-0 items-center gap-1.5 border-b border-border bg-background px-2">
           {[1, 2, 3].map((i) => (
             <div
