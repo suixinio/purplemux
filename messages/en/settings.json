@@ -62,7 +62,9 @@
   },
   "notification": {
     "enable": "Enable Notifications",
-    "enableDescription": "Show system notifications when Claude tasks complete. Only works in the Electron app."
+    "enableDescription": "Show system notifications when Claude tasks complete.",
+    "permissionDenied": "Browser notification permission denied. Please allow in browser settings.",
+    "notSupported": "Web Push is not supported in this browser."
   },
   "agent": {
     "enableMenu": "Enable Agent Menu",

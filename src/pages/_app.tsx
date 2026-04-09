@@ -24,6 +24,7 @@ import { Toaster } from "sonner";
 import useTerminalTheme from "@/hooks/use-terminal-theme";
 import useClaudeStatus from "@/hooks/use-claude-status";
 import useNativeNotification from "@/hooks/use-native-notification";
+import useWebPush from "@/hooks/use-web-push";
 import isElectron from "@/hooks/use-is-electron";
 import SystemResources from "@/components/layout/system-resources";
 import useWorkspaceStore from "@/hooks/use-workspace-store";
@@ -92,6 +93,7 @@ const CustomCSSSync = () => {
 const ClaudeStatusProvider = () => {
   useClaudeStatus();
   useNativeNotification();
+  useWebPush();
   return null;
 };
 

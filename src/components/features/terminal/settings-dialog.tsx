@@ -50,7 +50,7 @@ const settingsItems: ISettingsItem[] = [
   { id: 'terminal', labelKey: 'terminal', icon: <Terminal className="h-4 w-4" /> },
   { id: 'editor', labelKey: 'editor', icon: <Code className="h-4 w-4" /> },
   { id: 'claude', labelKey: 'claude', icon: <ClaudeLogo className="h-4 w-4" /> },
-  { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" />, electronOnly: true },
+  { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" /> },
   { id: 'auth', labelKey: 'auth', icon: <Lock className="h-4 w-4" /> },
   { id: 'tailscale', labelKey: 'tailscale', icon: <Globe className="h-4 w-4" /> },
   { id: 'quick-prompts', labelKey: 'quickPrompts', icon: <Zap className="h-4 w-4" /> },
@@ -469,6 +469,15 @@ const NotificationTab = () => {
   const notificationsEnabled = useConfigStore((state) => state.notificationsEnabled);
   const setNotificationsEnabled = useConfigStore((state) => state.setNotificationsEnabled);
 
+  const showWebPushHint = typeof window !== 'undefined'
+    && !((window as unknown as Record<string, unknown>).electronAPI)
+    && !('PushManager' in window);
+
+  const showDeniedHint = typeof window !== 'undefined'
+    && !((window as unknown as Record<string, unknown>).electronAPI)
+    && 'Notification' in window
+    && Notification.permission === 'denied';
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -484,8 +493,15 @@ const NotificationTab = () => {
           id="notifications-enabled"
           checked={notificationsEnabled}
           onCheckedChange={setNotificationsEnabled}
+          disabled={showWebPushHint || showDeniedHint}
         />
       </div>
+      {showDeniedHint && (
+        <p className="text-sm text-destructive">{t('permissionDenied')}</p>
+      )}
+      {showWebPushHint && (
+        <p className="text-sm text-muted-foreground">{t('notSupported')}</p>
+      )}
     </div>
   );
 };

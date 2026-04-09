@@ -737,6 +737,12 @@ class StatusManager {
       });
     }
 
+    if (newState === 'ready-for-review' && prevState === 'busy') {
+      this.sendWebPush(tabId, entry).catch((err) => {
+        log.warn('Web push failed: %s', err);
+      });
+    }
+
     const shouldWatch = (newState === 'busy' || newState === 'needs-input') && entry.jsonlPath;
     const keepForFinalRead = newState === 'ready-for-review' && this.jsonlWatchers.has(tabId);
     if (shouldWatch && !this.jsonlWatchers.has(tabId)) {
@@ -1108,6 +1114,39 @@ class StatusManager {
     if (!entry || entry.lastUserMessage === message) return;
     entry.lastUserMessage = message;
     this.broadcastUpdate(parsed.tabId, entry);
+  }
+
+  private async sendWebPush(tabId: string, entry: ITabStatusEntry): Promise<void> {
+    const { getSubscriptions, removeSubscription } = await import('@/lib/push-subscriptions');
+    const { getVAPIDKeys } = await import('@/lib/vapid-keys');
+    const mod = await import('web-push');
+    const webpush = mod.default ?? mod;
+
+    const subs = await getSubscriptions();
+    if (subs.length === 0) return;
+
+    const keys = await getVAPIDKeys();
+    webpush.setVapidDetails('mailto:noreply@purplemux.app', keys.publicKey, keys.privateKey);
+
+    const body = entry.lastUserMessage?.slice(0, 100) || entry.tabName || tabId;
+    const payload = JSON.stringify({
+      title: 'Task Complete',
+      body,
+      tabId,
+      workspaceId: entry.workspaceId,
+    });
+
+    for (const sub of subs) {
+      try {
+        await webpush.sendNotification(sub, payload);
+      } catch (err: unknown) {
+        const status = (err as { statusCode?: number }).statusCode;
+        if (status === 410 || status === 404) {
+          await removeSubscription(sub.endpoint);
+        }
+        log.warn('Web push send error: %s', status);
+      }
+    }
   }
 }
 
