@@ -1,4 +1,5 @@
 import { useMemo, useCallback, useState } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import { useTranslations } from 'next-intl';
 import {
   Check,
@@ -45,20 +46,22 @@ const ACTION_ICONS: Record<string, typeof FileText> = {
 };
 
 
-const useActiveTabId = (): string | null => {
+const useActiveTab = (): { id: string | null; claudeSessionId: string | null } => {
   const router = useRouter();
   const isTerminalPage = router.pathname === '/';
-  return useLayoutStore((s) => {
-    if (!isTerminalPage) return null;
-    if (!s.layout?.activePaneId) return null;
+  return useLayoutStore(useShallow((s) => {
+    if (!isTerminalPage) return { id: null, claudeSessionId: null };
+    if (!s.layout?.activePaneId) return { id: null, claudeSessionId: null };
     const pane = findPane(s.layout.root, s.layout.activePaneId);
-    return pane?.activeTabId ?? null;
-  });
+    if (!pane?.activeTabId) return { id: null, claudeSessionId: null };
+    const tab = pane.tabs.find((t) => t.id === pane.activeTabId);
+    return { id: pane.activeTabId, claudeSessionId: tab?.claudeSessionId ?? null };
+  }));
 };
 
 export const useNotificationCount = (): { busyCount: number; attentionCount: number } => {
   const tabs = useTabStore((s) => s.tabs);
-  const activeTabId = useActiveTabId();
+  const { id: activeTabId } = useActiveTab();
   return useMemo(() => {
     let busyCount = 0;
     let attentionCount = 0;
@@ -154,11 +157,11 @@ const groupHistoryBySession = (entries: ITaskHistoryEntry[]): ISessionHistoryGro
   return groups;
 };
 
-const formatHistoryTime = (ts: number): string => {
+const formatNotificationTime = (ts: number): string => {
   const d = dayjs(ts);
   const now = dayjs();
+  if (now.diff(d, 'minute') < 60) return d.fromNow();
   if (d.isAfter(now.startOf('day'))) return d.format('HH:mm');
-  if (d.isAfter(now.subtract(1, 'day').startOf('day'))) return d.format('HH:mm');
   return d.format('M/D HH:mm');
 };
 
@@ -168,11 +171,13 @@ const formatHistoryTime = (ts: number): string => {
 const TaskHistoryItem = ({
   entry,
   isTabOpen,
+  isActiveSession,
   compact,
   onNavigate,
 }: {
   entry: ITaskHistoryEntry;
   isTabOpen: boolean;
+  isActiveSession?: boolean;
   compact?: boolean;
   onNavigate?: (workspaceId: string, tabId: string) => void;
 }) => {
@@ -216,7 +221,7 @@ const TaskHistoryItem = ({
             <span />
           )}
           <span className="shrink-0 text-xs text-muted-foreground/40">
-            {formatHistoryTime(entry.completedAt)}
+            {formatNotificationTime(entry.completedAt)}
           </span>
         </div>
         <p className="mt-0.5 truncate text-xs text-muted-foreground/40">
@@ -231,11 +236,14 @@ const TaskHistoryItem = ({
     <div
       className={cn(
         'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
-        isTabOpen
-          ? 'border-border/50 bg-muted/30 hover:bg-muted/50 hover:border-foreground/20 cursor-pointer'
-          : 'border-border/30 bg-muted/20 cursor-default opacity-60',
+        'border-border/50 hover:border-foreground/20',
+        isActiveSession
+          ? 'bg-claude-active/10'
+          : isTabOpen
+            ? 'bg-muted/30 hover:bg-muted/50 cursor-pointer'
+            : 'border-border/30 bg-muted/20 cursor-default opacity-60',
       )}
-      onClick={isTabOpen ? () => onNavigate?.(entry.workspaceId, entry.tabId) : undefined}
+      onClick={isActiveSession ? undefined : isTabOpen ? () => onNavigate?.(entry.workspaceId, entry.tabId) : undefined}
     >
       <span className="mt-1 shrink-0">
         <CheckCircle2 className={cn('h-3.5 w-3.5', entry.dismissedAt ? 'text-muted-foreground' : 'text-muted-foreground/50')} />
@@ -246,7 +254,7 @@ const TaskHistoryItem = ({
             {entry.workspaceName}
           </span>
           <span className="shrink-0 text-xs text-muted-foreground/60">
-            {formatHistoryTime(entry.completedAt)}
+            {formatNotificationTime(entry.completedAt)}
           </span>
         </div>
         {entry.prompt && (
@@ -301,9 +309,10 @@ const NotificationItem = ({
     <div
       className={cn(
         'flex items-start gap-3 rounded-md border px-3 py-2.5 transition-colors',
+        'border-border/50 hover:border-foreground/20',
         isActiveTab
-          ? 'border-claude-active/30 bg-claude-active/10'
-          : 'border-border/50 bg-muted/30 hover:bg-muted/50 hover:border-foreground/20 cursor-pointer',
+          ? 'bg-claude-active/10'
+          : 'bg-muted/30 hover:bg-muted/50 cursor-pointer',
       )}
       onClick={isActiveTab ? undefined : () => onNavigate?.(item.workspaceId, item.tabId)}
     >
@@ -325,7 +334,7 @@ const NotificationItem = ({
           </span>
           {(item.dismissedAt || item.readyForReviewAt || item.busySince) && (
             <span className="shrink-0 text-xs text-muted-foreground/60">
-              {dayjs(item.dismissedAt ?? item.readyForReviewAt ?? item.busySince).fromNow()}
+              {formatNotificationTime(item.dismissedAt ?? item.readyForReviewAt ?? item.busySince ?? Date.now())}
             </span>
           )}
         </div>
@@ -367,7 +376,7 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
   const t = useTranslations('notification');
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const activeTabId = useActiveTabId();
+  const { id: activeTabId, claudeSessionId: activeClaudeSessionId } = useActiveTab();
   const historyEntries = useTaskHistoryStore((s) => s.entries);
   const [expandedTabs, setExpandedTabs] = useState<Set<string>>(new Set());
 
@@ -497,11 +506,13 @@ const NotificationSheet = ({ open, onOpenChange }: INotificationSheetProps) => {
                     {sessionGroups.map((group) => {
                       const isExpanded = expandedTabs.has(group.sessionId);
                       const hasOlder = group.olderEntries.length > 0;
+                      const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId;
                       return (
                         <div key={group.sessionId}>
                           <TaskHistoryItem
                             entry={group.latestEntry}
                             isTabOpen={group.tabId in tabs}
+                            isActiveSession={isActive}
                             onNavigate={handleNavigate}
                           />
                           {hasOlder && (

@@ -262,7 +262,7 @@ export const MetaDetail = ({
             )}
             <div className="flex items-baseline gap-2">
               <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('session')}</span>
-              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground/50">{tmuxInfo.sessionName}</span>
+              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{tmuxInfo.sessionName}</span>
             </div>
           </div>
         </div>
