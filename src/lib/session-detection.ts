@@ -25,8 +25,24 @@ interface IPidFileData {
   startedAt: number;
 }
 
-export const toClaudeProjectName = (dirPath: string): string =>
-  dirPath.replace(/[/.]/g, '-');
+const MAX_SANITIZED_LENGTH = 200;
+
+export const toClaudeProjectName = (dirPath: string): string => {
+  const sanitized = dirPath.replace(/[^a-zA-Z0-9]/g, '-');
+  if (sanitized.length <= MAX_SANITIZED_LENGTH) {
+    return sanitized;
+  }
+  const hash = simpleHash(dirPath);
+  return `${sanitized.slice(0, MAX_SANITIZED_LENGTH)}-${hash}`;
+};
+
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+};
 
 export const isProcessRunning = (pid: number): Promise<boolean> =>
   new Promise((resolve) => {
