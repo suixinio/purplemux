@@ -1,5 +1,9 @@
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    new Promise((r) => setTimeout(r, 3000)).then(() => self.clients.claim())
+  );
+});
 
 self.addEventListener('push', (event) => {
   const data = event.data?.json() ?? {};
