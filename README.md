@@ -47,6 +47,7 @@ Monitor and manage multiple Claude Code sessions from any browser.
 - **모바일/태블릿 지원** — 반응형 UI로 모바일 기기에서도 터미널 조작 가능
 - **멀티 디바이스 동기화** — 여러 기기에서 동시 접속, 워크스페이스 변경사항 실시간 반영
 - **인증** — 비밀번호 기반 접근 제어로 외부 노출 시에도 안전하게 사용
+- **PWA 지원** — 홈 화면에 추가하여 네이티브 앱처럼 사용 가능 (iOS, Android, 데스크톱)
 - **Electron 앱** — 데스크톱 앱으로도 사용 가능
 
 ### AI 에이전트 (Beta)
