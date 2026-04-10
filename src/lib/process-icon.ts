@@ -43,10 +43,10 @@ const PROCESS_ICONS: Record<string, string> = {
   elixir: '\ue62d',   //
   perl: '\ue769',     //
   php: '\ue73d',      //
-  R: '\uf25d',        //
-  julia: '\ue624',    //
+  R: '\ue881',        //
+  julia: '\ue80d',    //
   scala: '\ue737',    //
-  zig: '\u21af',      // ↯
+  zig: '\ue8ef',      //
   // package managers
   npm: '\ue718',      //
   pnpm: '\ue718',     //
@@ -62,8 +62,8 @@ const PROCESS_ICONS: Record<string, string> = {
   // build tools
   make: '\uf423',     //
   cmake: '\uf423',    //
-  gradle: '\ue660',   //
-  maven: '\ue674',    //
+  gradle: '\ue7f2',   //
+  maven: '\ue82c',    //
   webpack: '\u{f072b}', // 󰜫
   tsc: '\ue628',      //
   // containers / k8s
@@ -75,10 +75,10 @@ const PROCESS_ICONS: Record<string, string> = {
   minikube: '\u{f10fe}', // 󱃾
   // cloud / infra
   aws: '\ue7ad',      //
-  gcloud: '\uf1a0',   //
-  terraform: '\uf1e0', //
-  ansible: '\uf109',  //
-  vagrant: '\uf27d',  //
+  gcloud: '\ue7f1',   //
+  terraform: '\ue8bd', //
+  ansible: '\ue723',  //
+  vagrant: '\ue8d0',  //
   // network / transfer
   ssh: '\u{f0ce0}',  // 󰳠
   scp: '\u{f0ce0}',  // 󰳠
@@ -115,9 +115,9 @@ const PROCESS_ICONS: Record<string, string> = {
   unzip: '\uf187',    //
   jest: '\uf0c3',     //
   // claude
-  claude: '\uf4a5',   //
+  claude: '\uf121',   //
   // ai tools
-  codex: '\ue71e',    //
+  codex: '\uf121',    //
 };
 
 const FALLBACK_ICON = '\ue795'; //
