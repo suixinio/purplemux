@@ -74,6 +74,11 @@ const MobileNavigationSheet = ({
   }, []);
   const { attentionCount } = useNotificationCount();
   const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
+  const [prevOpen, setPrevOpen] = useState(open);
+  if (open !== prevOpen) {
+    setPrevOpen(open);
+    if (open) setExpandedWsId(activeWorkspaceId);
+  }
   const [longPressTabId, setLongPressTabId] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const metadata = useTabMetadataStore((s) => s.metadata);

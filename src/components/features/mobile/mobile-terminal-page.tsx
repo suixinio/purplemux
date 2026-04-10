@@ -4,8 +4,7 @@ import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
-import useLayout, { collectPanes, useLayoutStore } from '@/hooks/use-layout';
-import { findPane } from '@/lib/layout-tree';
+import useLayout, { collectPanes } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
@@ -30,10 +29,6 @@ const MobileTerminalPage = () => {
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const workspaceCount = workspaces.length;
   const prevWorkspaceIdRef = useRef<string | null>(null);
-
-  const [selectedPaneId, setSelectedPaneId] = useState<string | null>(null);
-  const [selectedTabId, setSelectedTabId] = useState<string | null>(null);
-  const pendingSurfaceRef = useRef<{ paneId: string; tabId: string } | null>(null);
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -106,29 +101,13 @@ const MobileTerminalPage = () => {
     }
   }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const [prevLayoutSnapshot, setPrevLayoutSnapshot] = useState<{ layout: typeof layout.layout; panes: typeof panes }>({ layout: null, panes: [] });
-  if (layout.layout && panes.length > 0 && (layout.layout !== prevLayoutSnapshot.layout || panes !== prevLayoutSnapshot.panes)) {
-    setPrevLayoutSnapshot({ layout: layout.layout, panes });
-
-    const activePaneId = layout.layout.activePaneId;
-    const targetPane = activePaneId
-      ? panes.find((p) => p.id === activePaneId)
-      : null;
-    const firstPane = targetPane ?? panes[0];
-
-    const currentPane = selectedPaneId
-      ? panes.find((p) => p.id === selectedPaneId)
-      : null;
-
-    if (!currentPane) {
-      setSelectedPaneId(firstPane.id);
-      setSelectedTabId(firstPane.activeTabId);
-    } else if (selectedTabId && !currentPane.tabs.find((t) => t.id === selectedTabId)) {
-      const sorted = [...currentPane.tabs].sort((a, b) => a.order - b.order);
-      const adjacent = sorted[0];
-      setSelectedTabId(adjacent?.id ?? currentPane.activeTabId);
-    }
-  }
+  // Derive active pane/tab from layout store (same as desktop)
+  const activePaneId = layout.layout?.activePaneId ?? null;
+  const currentPane = (activePaneId ? panes.find((p) => p.id === activePaneId) : null) ?? panes[0] ?? null;
+  const selectedPaneId = currentPane?.id ?? null;
+  const selectedTabId = currentPane?.activeTabId ?? null;
+  const currentTab = currentPane?.tabs.find((t) => t.id === selectedTabId) ?? null;
+  const currentPanelType: TPanelType = currentTab?.panelType ?? 'terminal';
 
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {
@@ -138,67 +117,17 @@ const MobileTerminalPage = () => {
       prevWorkspaceIdRef.current = currentId;
       useTabMetadataStore.getState().reset();
       layout.clearLayout();
-      setSelectedPaneId(null);
-      setSelectedTabId(null);
       useWorkspaceStore.getState().switchWorkspace(workspaceId);
     },
     [layout],
   );
 
-  const handleSurfaceSelected = useCallback(
-    (workspaceId: string, paneId: string, tabId: string) => {
-      if (workspaceId !== activeWorkspaceId) {
-        pendingSurfaceRef.current = { paneId, tabId };
-      }
-      setSelectedPaneId(paneId);
-      setSelectedTabId(tabId);
-      if (workspaceId === activeWorkspaceId) {
-        layout.focusPane(paneId);
-        layout.switchTabInPane(paneId, tabId);
-      }
-    },
-    [activeWorkspaceId, layout],
-  );
-
-  // Register mobile layout actions
   useEffect(() => {
     useMobileLayoutActions.getState().register({
       onSelectWorkspace: handleSelectWorkspace,
-      onSelectSurface: handleSurfaceSelected,
     });
     return () => useMobileLayoutActions.getState().unregister();
-  }, [handleSelectWorkspace, handleSurfaceSelected]);
-
-  // Sync selected pane/tab to store
-  useEffect(() => {
-    useMobileLayoutActions.getState().setSelectedSurface(selectedPaneId, selectedTabId);
-  }, [selectedPaneId, selectedTabId]);
-
-  useEffect(() => {
-    let initialized = false;
-    return useLayoutStore.subscribe((state, prev) => {
-      if (!state.layout || state.layout === prev.layout) return;
-
-      const pending = pendingSurfaceRef.current;
-      if (pending) {
-        pendingSurfaceRef.current = null;
-        setSelectedPaneId(pending.paneId);
-        setSelectedTabId(pending.tabId);
-        return;
-      }
-
-      if (initialized) return;
-      initialized = true;
-
-      const activePaneId = state.layout.activePaneId;
-      if (!activePaneId) return;
-      const pane = findPane(state.layout.root, activePaneId);
-      if (pane?.activeTabId) {
-        setSelectedPaneId(activePaneId);
-        setSelectedTabId(pane.activeTabId);
-      }
-    });
-  }, []);
+  }, [handleSelectWorkspace]);
 
   const [newTabDialogOpen, setNewTabDialogOpen] = useState(false);
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
@@ -206,10 +135,6 @@ const MobileTerminalPage = () => {
   const handleCliStateChange = useCallback((state: TCliState) => {
     setClaudeCliState(state);
   }, []);
-
-  const currentPane = panes.find((p) => p.id === selectedPaneId);
-  const currentTab = currentPane?.tabs.find((t) => t.id === selectedTabId);
-  const currentPanelType: TPanelType = currentTab?.panelType ?? 'terminal';
 
   useEffect(() => {
     if (selectedTabId) dismissTab(selectedTabId);
@@ -270,9 +195,8 @@ const MobileTerminalPage = () => {
       if (options?.command === 'claude-new') {
         useTabStore.getState().setRestarting(newTab.id, true);
       }
-      setSelectedTabId(newTab.id);
     }
-  }, [currentPane, layout]);
+  }, [currentPane, layout, activeWorkspaceId]);
 
   const handleCloseTab = useCallback(() => {
     if (!currentPane || !selectedTabId) return;
@@ -376,10 +300,7 @@ const MobileTerminalPage = () => {
           panelType={currentPanelType}
           onCreateTab={layout.createTabInPane}
           onDeleteTab={layout.deleteTabInPane}
-          onSwitchTab={(paneId, tabId) => {
-            layout.switchTabInPane(paneId, tabId);
-            setSelectedTabId(tabId);
-          }}
+          onSwitchTab={layout.switchTabInPane}
           onRemoveTabLocally={layout.removeTabLocally}
           onUpdateTabPanelType={layout.updateTabPanelType}
           onCliStateChange={handleCliStateChange}

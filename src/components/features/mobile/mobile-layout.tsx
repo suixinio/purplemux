@@ -1,10 +1,11 @@
-import { useState, useCallback, useEffect, useMemo, useRef, type ReactNode } from 'react';
+import { useState, useCallback, useEffect, useMemo, type ReactNode } from 'react';
 import { useRouter } from 'next/router';
 import AppHeader from '@/components/layout/app-header';
 import MobileNavigationSheet from '@/components/features/mobile/mobile-navigation-sheet';
 import MobileWorkspaceTabBar from '@/components/features/mobile/mobile-workspace-tab-bar';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { useLayoutStore, collectPanes } from '@/hooks/use-layout';
+import { navigateToTab } from '@/hooks/use-layout';
 import SettingsDialog from '@/components/features/terminal/settings-dialog';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
 import type { ILayoutData, IPaneNode } from '@/types/terminal';
@@ -25,9 +26,6 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
   const storeWorkspaceId = useLayoutStore((s) => s.workspaceId);
 
   const registeredSelectWorkspace = useMobileLayoutActions((s) => s.onSelectWorkspace);
-  const registeredSelectSurface = useMobileLayoutActions((s) => s.onSelectSurface);
-  const registeredPaneId = useMobileLayoutActions((s) => s.selectedPaneId);
-  const registeredTabId = useMobileLayoutActions((s) => s.selectedTabId);
 
   const [layoutCache, setLayoutCache] = useState<Record<string, ILayoutData>>({});
 
@@ -128,23 +126,16 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
 
   const handleSelectSurface = useCallback(
     (workspaceId: string, paneId: string, tabId: string) => {
-      if (workspaceId !== activeWorkspaceId) {
-        onSelectWorkspace(workspaceId);
-      }
-
-      registeredSelectSurface?.(workspaceId, paneId, tabId);
-
       setMenuOpen(false);
       if (router.pathname !== '/') {
         try {
           sessionStorage.setItem(`pt-active-pane-${workspaceId}`, paneId);
           sessionStorage.setItem(`pt-active-tab-${paneId}`, tabId);
         } catch { /* */ }
-        useLayoutStore.getState().clearLayout();
-        router.push('/');
       }
+      navigateToTab(workspaceId, tabId);
     },
-    [activeWorkspaceId, onSelectWorkspace, registeredSelectSurface, router],
+    [router.pathname],
   );
 
   const handleCreateWorkspace = useCallback(async () => {
@@ -168,8 +159,8 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         workspaceLayouts={workspaceLayouts}
-        selectedPaneId={registeredPaneId ?? activePaneId}
-        selectedTabId={registeredTabId ?? activeTabId}
+        selectedPaneId={activePaneId}
+        selectedTabId={activeTabId}
         onSelect={handleSelectSurface}
       />
       <MobileNavigationSheet
@@ -178,8 +169,8 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
         workspaces={workspaces}
         activeWorkspaceId={activeWorkspaceId}
         workspaceLayouts={workspaceLayouts}
-        activePaneId={registeredPaneId ?? activePaneId}
-        activeTabId={registeredTabId ?? activeTabId}
+        activePaneId={activePaneId}
+        activeTabId={activeTabId}
         onSelectSurface={handleSelectSurface}
         onCreateWorkspace={handleCreateWorkspace}
         onOpenSettings={() => setSettingsOpen(true)}

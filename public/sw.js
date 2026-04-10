@@ -1,8 +1,6 @@
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    new Promise((r) => setTimeout(r, 3000)).then(() => self.clients.claim())
-  );
+  e.waitUntil(self.clients.claim());
 });
 
 self.addEventListener('push', (event) => {

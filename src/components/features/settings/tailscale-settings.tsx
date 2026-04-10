@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { Check, Copy, ExternalLink, Info, Plus, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
+import { Check, Copy, ExternalLink, Info, RefreshCw, Trash2, AlertTriangle } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import isElectron from '@/hooks/use-is-electron';
 
 interface IServeEntry {
@@ -88,8 +86,6 @@ const TailscaleSettings = () => {
   const [status, setStatus] = useState<ITailscaleStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [customHttpsPort, setCustomHttpsPort] = useState('');
-  const [customLocalPort, setCustomLocalPort] = useState('');
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -107,27 +103,6 @@ const TailscaleSettings = () => {
   useEffect(() => {
     fetchStatus();
   }, [fetchStatus]);
-
-  const handleAdd = async (httpsPort: string, localPort: string) => {
-    setActionLoading(`add-${httpsPort}`);
-    try {
-      const res = await fetch('/api/tailscale/serve', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ httpsPort, localPort }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || t('addFailed'));
-      }
-      toast.success(t('addedToast', { httpsPort, localPort }));
-      await fetchStatus();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('addFailed'));
-    } finally {
-      setActionLoading(null);
-    }
-  };
 
   const handleRemove = async (httpsPort: string) => {
     setActionLoading(`remove-${httpsPort}`);
@@ -148,18 +123,6 @@ const TailscaleSettings = () => {
     } finally {
       setActionLoading(null);
     }
-  };
-
-  const handleCustomAdd = () => {
-    const hp = customHttpsPort.trim();
-    const lp = customLocalPort.trim();
-    if (!hp || !lp) {
-      toast.error(t('enterPort'));
-      return;
-    }
-    handleAdd(hp, lp);
-    setCustomHttpsPort('');
-    setCustomLocalPort('');
   };
 
   if (loading) {
@@ -311,45 +274,14 @@ const TailscaleSettings = () => {
       </div>
 
       <div className="space-y-3">
-        <p className="text-sm font-medium">{t('addServe')}</p>
-        <div className="flex items-end gap-2">
-          <div className="space-y-1">
-            <Label htmlFor="ts-https-port" className="text-xs text-muted-foreground">
-              {t('httpsPort')}
-            </Label>
-            <Input
-              id="ts-https-port"
-              placeholder="443"
-              value={customHttpsPort}
-              onChange={(e) => setCustomHttpsPort(e.target.value)}
-              className="w-24"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="ts-local-port" className="text-xs text-muted-foreground">
-              {t('localPort')}
-            </Label>
-            <Input
-              id="ts-local-port"
-              placeholder="8022"
-              value={customLocalPort}
-              onChange={(e) => setCustomLocalPort(e.target.value)}
-              className="w-24"
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="default"
-            disabled={actionLoading !== null || !customHttpsPort.trim() || !customLocalPort.trim()}
-            onClick={handleCustomAdd}
-          >
-            {actionLoading?.startsWith('add-') ? (
-              <Spinner className="mr-1.5 h-3 w-3" />
-            ) : (
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            {t('add')}
-          </Button>
+        <p className="text-sm font-medium">{t('setupGuide')}</p>
+        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+          <p className="text-muted-foreground/60">{t('commentStep1Install')}</p>
+          <p>brew install tailscale</p>
+          <p className="mt-2 text-muted-foreground/60">{t('commentStep2Activate')}</p>
+          <p>tailscale up</p>
+          <p className="mt-2 text-muted-foreground/60">{t('commentStep3Add')}</p>
+          <p>tailscale serve --bg --https=443 http://localhost:{currentPort}</p>
         </div>
       </div>
     </div>

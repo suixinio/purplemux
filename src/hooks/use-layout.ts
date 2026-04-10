@@ -229,16 +229,28 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
           const pendingTabId = get().pendingFocusTabId;
           if (pendingTabId) {
             set({ pendingFocusTabId: null });
-            setTimeout(() => get().focusTab(pendingTabId), 0);
+            get().focusTab(pendingTabId);
           }
           return;
         }
       }
-      set({ layout: data, retryCount: 0, ...updateDerived(data, get().isSplitting) });
       const pendingTabId = get().pendingFocusTabId;
+      let pendingPaneId: string | null = null;
       if (pendingTabId) {
         set({ pendingFocusTabId: null });
-        setTimeout(() => get().focusTab(pendingTabId), 0);
+        for (const pane of collectPanes(data.root)) {
+          if (pane.tabs.some((t) => t.id === pendingTabId)) {
+            data.activePaneId = pane.id;
+            pane.activeTabId = pendingTabId;
+            pendingPaneId = pane.id;
+            break;
+          }
+        }
+      }
+      set({ layout: data, retryCount: 0, ...updateDerived(data, get().isSplitting) });
+      if (pendingPaneId) {
+        patchApi(wsQuery('/api/layout', targetWsId), { activePaneId: pendingPaneId });
+        patchApi(wsQuery(`/api/layout/pane/${pendingPaneId}`, targetWsId), { activeTabId: pendingTabId });
       }
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return;

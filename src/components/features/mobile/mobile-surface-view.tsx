@@ -277,9 +277,7 @@ const MobileSurfaceView = ({
     if (connectedSessionRef.current !== null) reset();
 
     useTabStore.getState().initTab(activeTabId, {
-      cliState: tab.cliState ?? 'inactive',
       terminalConnected: false,
-      claudeStatus: 'unknown',
       panelType: tab.panelType,
     });
 
