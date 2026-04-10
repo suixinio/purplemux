@@ -1,4 +1,4 @@
-export interface ITaskHistoryEntry {
+export interface ISessionHistoryEntry {
   id: string;
   workspaceId: string;
   workspaceName: string;
@@ -15,7 +15,7 @@ export interface ITaskHistoryEntry {
   touchedFiles: string[];
 }
 
-export interface ITaskHistoryData {
+export interface ISessionHistoryData {
   version: 1;
-  entries: ITaskHistoryEntry[];
+  entries: ISessionHistoryEntry[];
 }

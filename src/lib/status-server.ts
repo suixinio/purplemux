@@ -1,8 +1,8 @@
 import { WebSocket } from 'ws';
 import { getStatusManager } from '@/lib/status-manager';
-import { getTaskHistory } from '@/lib/task-history';
+import { getSessionHistory } from '@/lib/session-history';
 import { createLogger } from '@/lib/logger';
-import type { TStatusClientMessage, IStatusSyncMessage, ITaskHistorySyncMessage } from '@/types/status';
+import type { TStatusClientMessage, IStatusSyncMessage, ISessionHistorySyncMessage } from '@/types/status';
 
 const log = createLogger('status');
 
@@ -18,8 +18,8 @@ export const handleStatusConnection = (ws: WebSocket) => {
     ws.send(JSON.stringify(syncMsg));
   }
 
-  getTaskHistory().then((entries) => {
-    const historySync: ITaskHistorySyncMessage = { type: 'task-history:sync', entries };
+  getSessionHistory().then((entries) => {
+    const historySync: ISessionHistorySyncMessage = { type: 'session-history:sync', entries };
     if (ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify(historySync));
     }

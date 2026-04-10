@@ -26,13 +26,13 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
-import useTaskHistoryStore from '@/hooks/use-task-history-store';
+import useSessionHistoryStore from '@/hooks/use-session-history-store';
 import { dismissTab } from '@/hooks/use-claude-status';
 import { navigateToTab, navigateToTabOrCreate, useLayoutStore } from '@/hooks/use-layout';
 import { findPane } from '@/lib/layout-tree';
 import type { ITabState } from '@/hooks/use-tab-store';
 import type { ICurrentAction } from '@/types/status';
-import type { ITaskHistoryEntry } from '@/types/task-history';
+import type { ISessionHistoryEntry } from '@/types/session-history';
 import { stripMarkdown } from '@/lib/strip-markdown';
 
 const ACTION_ICONS: Record<string, typeof FileText> = {
@@ -129,12 +129,12 @@ interface ISessionHistoryGroup {
   sessionId: string;
   tabId: string;
   workspaceName: string;
-  latestEntry: ITaskHistoryEntry;
-  olderEntries: ITaskHistoryEntry[];
+  latestEntry: ISessionHistoryEntry;
+  olderEntries: ISessionHistoryEntry[];
 }
 
-const groupHistoryBySession = (entries: ITaskHistoryEntry[]): ISessionHistoryGroup[] => {
-  const sessionMap = new Map<string, ITaskHistoryEntry[]>();
+const groupHistoryBySession = (entries: ISessionHistoryEntry[]): ISessionHistoryGroup[] => {
+  const sessionMap = new Map<string, ISessionHistoryEntry[]>();
 
   for (const entry of entries) {
     const key = entry.claudeSessionId ?? entry.id;
@@ -198,14 +198,14 @@ const formatNotificationTime = (ts: number): string => {
 
 
 
-const TaskHistoryItem = ({
+const SessionHistoryItem = ({
   entry,
   isActiveSession,
   compact,
   icon,
   onClick,
 }: {
-  entry: ITaskHistoryEntry;
+  entry: ISessionHistoryEntry;
   isActiveSession?: boolean;
   compact?: boolean;
   icon?: React.ReactNode;
@@ -398,7 +398,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const { id: activeTabId, claudeSessionId: activeClaudeSessionId } = useActiveTab();
-  const historyEntries = useTaskHistoryStore((s) => s.entries);
+  const historyEntries = useSessionHistoryStore((s) => s.entries);
   const sessionTabMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const [tabId, tab] of Object.entries(tabs)) {
@@ -428,7 +428,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
     return ids;
   }, [tabs]);
   const reviewHistoryMap = useMemo(() => {
-    const map = new Map<string, ITaskHistoryEntry>();
+    const map = new Map<string, ISessionHistoryEntry>();
     for (const entry of historyEntries) {
       if (!entry.claudeSessionId || !reviewSessionIds.has(entry.claudeSessionId)) continue;
       const existing = map.get(entry.claudeSessionId);
@@ -462,7 +462,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
     onNavigated?.();
   }, [onNavigated]);
 
-  const handleHistoryClick = useCallback((entry: ITaskHistoryEntry, resolvedTabId: string | null) => {
+  const handleHistoryClick = useCallback((entry: ISessionHistoryEntry, resolvedTabId: string | null) => {
     onNavigated?.();
     if (resolvedTabId) {
       navigateToTab(entry.workspaceId, resolvedTabId);
@@ -519,7 +519,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                   }
                   return (
                     <div key={item.tabId}>
-                      <TaskHistoryItem
+                      <SessionHistoryItem
                         entry={entry}
                         isActiveSession={isActive}
                         icon={<span className="mt-px block h-2 w-2 rounded-full bg-claude-active" />}
@@ -563,7 +563,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                       const resolvedTabId = sessionTabMap.get(group.sessionId) ?? null;
                       return (
                         <div key={group.sessionId}>
-                          <TaskHistoryItem
+                          <SessionHistoryItem
                             entry={group.latestEntry}
                             isActiveSession={isActive}
                             onClick={() => handleHistoryClick(group.latestEntry, resolvedTabId)}
@@ -586,7 +586,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                               <div className="overflow-hidden min-h-0">
                                 <div className="mt-1 flex flex-col border-l border-border/30 ml-5 pl-2">
                                   {group.olderEntries.map((entry) => (
-                                    <TaskHistoryItem
+                                    <SessionHistoryItem
                                       key={entry.id}
                                       entry={entry}
                                       compact

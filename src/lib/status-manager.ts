@@ -13,8 +13,8 @@ import { createLogger } from '@/lib/logger';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData } from '@/types/status';
-import type { ITaskHistoryEntry } from '@/types/task-history';
-import { addTaskHistoryEntry, updateTaskHistoryDismissedAt } from '@/lib/task-history';
+import type { ISessionHistoryEntry } from '@/types/session-history';
+import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
 import { nanoid } from 'nanoid';
 import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
@@ -732,8 +732,8 @@ class StatusManager {
 
     if (newState === 'ready-for-review' && entry.jsonlPath) {
       const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-      delay(500).then(() => this.saveTaskHistory(tabId, entry, prevBusySince)).catch((err) => {
-        log.warn('Failed to save task history: %s', err);
+      delay(500).then(() => this.saveSessionHistory(tabId, entry, prevBusySince)).catch((err) => {
+        log.warn('Failed to save session history: %s', err);
       });
     }
 
@@ -752,7 +752,7 @@ class StatusManager {
     }
   }
 
-  private async saveTaskHistory(tabId: string, entry: ITabStatusEntry, prevBusySince: number | null | undefined): Promise<void> {
+  private async saveSessionHistory(tabId: string, entry: ITabStatusEntry, prevBusySince: number | null | undefined): Promise<void> {
     if (!entry.lastUserMessage) return;
 
     const stats = await parseJsonlStats(entry.jsonlPath!);
@@ -763,7 +763,7 @@ class StatusManager {
     const completedAt = stats.lastAssistantTs ?? now;
     const duration = stats.turnDurationMs ?? (completedAt - startedAt);
 
-    const historyEntry: ITaskHistoryEntry = {
+    const historyEntry: ISessionHistoryEntry = {
       id: nanoid(),
       workspaceId: entry.workspaceId,
       workspaceName: ws?.name ?? entry.workspaceId,
@@ -780,8 +780,8 @@ class StatusManager {
       touchedFiles: stats.touchedFiles,
     };
 
-    await addTaskHistoryEntry(historyEntry);
-    this.broadcast({ type: 'task-history:update', entry: historyEntry });
+    await addSessionHistoryEntry(historyEntry);
+    this.broadcast({ type: 'session-history:update', entry: historyEntry });
   }
 
   updateTab(tabId: string, cliState: TCliState, exclude?: WebSocket): void {
@@ -811,10 +811,10 @@ class StatusManager {
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
 
-    updateTaskHistoryDismissedAt(tabId, dismissedAt).then((updated) => {
-      if (updated) this.broadcast({ type: 'task-history:update', entry: updated });
+    updateSessionHistoryDismissedAt(tabId, dismissedAt).then((updated) => {
+      if (updated) this.broadcast({ type: 'session-history:update', entry: updated });
     }).catch((err) => {
-      log.warn('Failed to update task history dismissedAt: %s', err);
+      log.warn('Failed to update session history dismissedAt: %s', err);
     });
   }
 

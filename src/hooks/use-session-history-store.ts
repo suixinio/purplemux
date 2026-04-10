@@ -1,13 +1,13 @@
 import { create } from 'zustand';
-import type { ITaskHistoryEntry } from '@/types/task-history';
+import type { ISessionHistoryEntry } from '@/types/session-history';
 
-interface ITaskHistoryStore {
-  entries: ITaskHistoryEntry[];
-  syncFromServer: (entries: ITaskHistoryEntry[]) => void;
-  upsertEntry: (entry: ITaskHistoryEntry) => void;
+interface ISessionHistoryStore {
+  entries: ISessionHistoryEntry[];
+  syncFromServer: (entries: ISessionHistoryEntry[]) => void;
+  upsertEntry: (entry: ISessionHistoryEntry) => void;
 }
 
-const useTaskHistoryStore = create<ITaskHistoryStore>((set) => ({
+const useSessionHistoryStore = create<ISessionHistoryStore>((set) => ({
   entries: [],
   syncFromServer: (entries) => set({ entries }),
   upsertEntry: (entry) =>
@@ -22,4 +22,4 @@ const useTaskHistoryStore = create<ITaskHistoryStore>((set) => ({
     }),
 }));
 
-export default useTaskHistoryStore;
+export default useSessionHistoryStore;

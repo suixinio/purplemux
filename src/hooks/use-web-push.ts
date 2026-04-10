@@ -140,9 +140,18 @@ const useWebPush = () => {
         subscribe().then((ok) => {
           if (!ok) {
             useConfigStore.getState().setNotificationsEnabled(false);
+            return;
           }
+          if (!useConfigStore.getState().notificationsEnabled) return;
+          getEndpoint().then((ep) => {
+            if (!ep) return;
+            cleanupVisibility?.();
+            cleanupVisibility = startVisibilityTracking(ep);
+          });
         });
       } else {
+        cleanupVisibility?.();
+        cleanupVisibility = null;
         unsubscribe();
       }
     });

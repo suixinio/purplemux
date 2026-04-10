@@ -175,6 +175,7 @@ const MobileTerminalPage = () => {
   }, [selectedPaneId, selectedTabId]);
 
   useEffect(() => {
+    let initialized = false;
     return useLayoutStore.subscribe((state, prev) => {
       if (!state.layout || state.layout === prev.layout) return;
 
@@ -185,6 +186,9 @@ const MobileTerminalPage = () => {
         setSelectedTabId(pending.tabId);
         return;
       }
+
+      if (initialized) return;
+      initialized = true;
 
       const activePaneId = state.layout.activePaneId;
       if (!activePaneId) return;
