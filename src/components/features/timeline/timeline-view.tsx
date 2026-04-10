@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Terminal, RefreshCw, OctagonX, LogOut, ChevronsUp } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
@@ -281,16 +281,35 @@ const TimelineView = ({
   const isLoadingMoreRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const scrollAnchorRef = useRef<{ scrollHeight: number } | null>(null);
 
   const triggerLoadMore = useCallback(() => {
     if (!hasMore || isLoadingMoreRef.current) return;
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
+
+    const scrollEl = scrollRef.current;
+    if (scrollEl) {
+      scrollAnchorRef.current = { scrollHeight: scrollEl.scrollHeight };
+    }
+
     onLoadMore().finally(() => {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
     });
-  }, [hasMore, onLoadMore]);
+  }, [hasMore, onLoadMore, scrollRef]);
+
+  useLayoutEffect(() => {
+    const anchor = scrollAnchorRef.current;
+    const scrollEl = scrollRef.current;
+    if (!anchor || !scrollEl || isLoadingMore) return;
+
+    const heightDiff = scrollEl.scrollHeight - anchor.scrollHeight;
+    if (heightDiff > 0) {
+      scrollEl.scrollTop += heightDiff;
+    }
+    scrollAnchorRef.current = null;
+  }, [isLoadingMore, scrollRef]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -332,6 +351,7 @@ const TimelineView = ({
         style={{
           opacity: skipAnimation ? 0 : 1,
           transitionDuration: '300ms',
+          overflowAnchor: 'none' as const,
         }}
         tabIndex={0}
         role="log"
