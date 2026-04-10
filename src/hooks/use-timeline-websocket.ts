@@ -207,11 +207,10 @@ const useTimelineWebSocket = ({
       if (document.visibilityState !== 'visible') return;
       if (!enabled) return;
       const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        retryCountRef.current = 0;
-        const id = ++connectIdRef.current;
-        doConnectRef.current(id);
-      }
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      retryCountRef.current = 0;
+      const id = ++connectIdRef.current;
+      doConnectRef.current(id);
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);

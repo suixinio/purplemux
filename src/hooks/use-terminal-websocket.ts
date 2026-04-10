@@ -233,12 +233,11 @@ const useTerminalWebSocket = ({
       if (document.visibilityState !== 'visible') return;
       if (!sessionNameRef.current) return;
       const ws = wsRef.current;
-      if (!ws || ws.readyState !== WebSocket.OPEN) {
-        retryCountRef.current = 0;
-        setRetryCount(0);
-        connectIdRef.current++;
-        doConnectRef.current(sessionNameRef.current, connectIdRef.current);
-      }
+      if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
+      retryCountRef.current = 0;
+      setRetryCount(0);
+      connectIdRef.current++;
+      doConnectRef.current(sessionNameRef.current, connectIdRef.current);
     };
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
