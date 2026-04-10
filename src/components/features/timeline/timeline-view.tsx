@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Terminal, RefreshCw, OctagonX, LogOut, ChevronsUp } from 'lucide-react';
+import { Terminal, RefreshCw, OctagonX, LogOut, ChevronsUp, MessageSquareDashed } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { useStickToBottom } from 'use-stick-to-bottom';
 import { Button } from '@/components/ui/button';
@@ -212,7 +212,7 @@ const EmptyState = ({ claudeStatus }: { claudeStatus: TClaudeStatus }) => {
   if (claudeStatus === 'running') {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-        <Terminal size={32} className="opacity-40" />
+        <MessageSquareDashed size={32} className="opacity-40" />
         <p className="text-xs">{t('emptyRunning')}</p>
       </div>
     );
@@ -281,6 +281,7 @@ const TimelineView = ({
   const isLoadingMoreRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const needsManualAnchor = typeof CSS !== 'undefined' && !CSS.supports?.('overflow-anchor', 'auto');
   const scrollAnchorRef = useRef<{ scrollHeight: number } | null>(null);
 
   const triggerLoadMore = useCallback(() => {
@@ -288,18 +289,22 @@ const TimelineView = ({
     isLoadingMoreRef.current = true;
     setIsLoadingMore(true);
 
-    const scrollEl = scrollRef.current;
-    if (scrollEl) {
-      scrollAnchorRef.current = { scrollHeight: scrollEl.scrollHeight };
+    if (needsManualAnchor) {
+      const scrollEl = scrollRef.current;
+      if (scrollEl) {
+        scrollAnchorRef.current = { scrollHeight: scrollEl.scrollHeight };
+      }
     }
 
     onLoadMore().finally(() => {
       isLoadingMoreRef.current = false;
       setIsLoadingMore(false);
     });
-  }, [hasMore, onLoadMore, scrollRef]);
+  }, [hasMore, onLoadMore, scrollRef, needsManualAnchor]);
 
   useLayoutEffect(() => {
+    if (!needsManualAnchor) return;
+
     const anchor = scrollAnchorRef.current;
     const scrollEl = scrollRef.current;
     if (!anchor || !scrollEl || isLoadingMore) return;
@@ -309,7 +314,7 @@ const TimelineView = ({
       scrollEl.scrollTop += heightDiff;
     }
     scrollAnchorRef.current = null;
-  }, [isLoadingMore, scrollRef]);
+  }, [isLoadingMore, scrollRef, needsManualAnchor]);
 
   useEffect(() => {
     const sentinel = sentinelRef.current;
@@ -351,7 +356,6 @@ const TimelineView = ({
         style={{
           opacity: skipAnimation ? 0 : 1,
           transitionDuration: '300ms',
-          overflowAnchor: 'none' as const,
         }}
         tabIndex={0}
         role="log"

@@ -771,6 +771,9 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     }
     await subscribeAndUpdateSummary(ws, sessionInfo.jsonlPath, sessionInfo.sessionId ?? undefined, conn.sessionName);
   } else if (effectiveSessionId) {
+    if (sessionInfo.sessionId) {
+      await updateTabClaudeSessionId(conn.sessionName, sessionInfo.sessionId).catch(() => {});
+    }
     const jsonlPath = await resolveJsonlPath(sessionName, effectiveSessionId);
     if (jsonlPath) {
       conn.currentJsonlPath = jsonlPath;
@@ -825,6 +828,9 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       }
 
       if (newInfo.status === 'running' && !newInfo.jsonlPath) {
+        if (newInfo.sessionId) {
+          await updateTabClaudeSessionId(sessionName, newInfo.sessionId).catch(() => {});
+        }
         for (const c of wsConns) {
           if (c.currentJsonlPath) {
             const currentFile = path.basename(c.currentJsonlPath, '.jsonl');
