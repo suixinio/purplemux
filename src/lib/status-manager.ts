@@ -1129,11 +1129,15 @@ class StatusManager {
     webpush.setVapidDetails('mailto:noreply@purplemux.app', keys.publicKey, keys.privateKey);
 
     const body = entry.lastUserMessage?.slice(0, 100) || entry.tabName || tabId;
+    const ws = (await getWorkspaces()).workspaces.find((w) => w.id === entry.workspaceId);
     const payload = JSON.stringify({
       title: 'Task Complete',
       body,
       tabId,
       workspaceId: entry.workspaceId,
+      claudeSessionId: entry.claudeSessionId ?? null,
+      workspaceName: ws?.name ?? '',
+      workspaceDir: ws?.directories[0] ?? null,
     });
 
     const { isEndpointVisible, getSessionPushEndpoint } = await import('@/lib/push-subscriptions');

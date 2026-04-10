@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import useConfigStore from '@/hooks/use-config-store';
-import { navigateToTab } from '@/hooks/use-layout';
+import { navigateToTab, navigateToTabOrCreate } from '@/hooks/use-layout';
 import isElectron from '@/hooks/use-is-electron';
 
 const urlBase64ToUint8Array = (base64String: string): ArrayBuffer => {
@@ -114,8 +114,18 @@ const useWebPush = () => {
 
     const handleSwMessage = (event: MessageEvent) => {
       const data = event.data;
-      if (data?.type === 'notification-click' && data.tabId && data.workspaceId) {
-        navigateToTab(data.workspaceId, data.tabId);
+      if (data?.type === 'notification-click' && data.workspaceId) {
+        if (data.claudeSessionId) {
+          navigateToTabOrCreate(
+            data.workspaceId,
+            data.tabId,
+            data.claudeSessionId,
+            data.workspaceName ?? '',
+            data.workspaceDir ?? null,
+          );
+        } else if (data.tabId) {
+          navigateToTab(data.workspaceId, data.tabId);
+        }
       }
     };
     navigator.serviceWorker.addEventListener('message', handleSwMessage);

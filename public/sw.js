@@ -10,7 +10,13 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
-    data: { tabId: data.tabId, workspaceId: data.workspaceId },
+    data: {
+      tabId: data.tabId,
+      workspaceId: data.workspaceId,
+      claudeSessionId: data.claudeSessionId || null,
+      workspaceName: data.workspaceName || '',
+      workspaceDir: data.workspaceDir || null,
+    },
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
@@ -18,7 +24,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const { tabId, workspaceId } = event.notification.data || {};
+  const { tabId, workspaceId, claudeSessionId, workspaceName, workspaceDir } = event.notification.data || {};
   const url = tabId && workspaceId ? `/?ws=${workspaceId}&tab=${tabId}` : '/';
 
   event.waitUntil(
@@ -26,7 +32,14 @@ self.addEventListener('notificationclick', (event) => {
       for (const client of windowClients) {
         if (client.url.includes(self.location.origin)) {
           client.focus();
-          client.postMessage({ type: 'notification-click', tabId, workspaceId });
+          client.postMessage({
+            type: 'notification-click',
+            tabId,
+            workspaceId,
+            claudeSessionId,
+            workspaceName,
+            workspaceDir,
+          });
           return;
         }
       }
