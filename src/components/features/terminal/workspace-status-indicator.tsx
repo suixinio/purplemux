@@ -1,5 +1,5 @@
 import { memo, useMemo } from 'react';
-import { Globe } from 'lucide-react';
+import { GitCompareArrows, Globe } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
@@ -41,6 +41,8 @@ const DotByStatus = ({ status, panelType, terminalStatus, process }: { status: T
     }
   } else if (panelType === 'web-browser') {
     inner = <Globe className="h-2.5 w-2.5 text-muted-foreground/50" aria-hidden="true" />;
+  } else if (panelType === 'diff') {
+    inner = <GitCompareArrows className="h-2.5 w-2.5 text-muted-foreground/50" aria-hidden="true" />;
   } else if (terminalStatus === 'server') {
     isNerd = true;
     inner = <TerminalNerdIcon className="text-ui-green" process={process} />;
