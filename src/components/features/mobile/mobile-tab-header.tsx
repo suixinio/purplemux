@@ -1,4 +1,4 @@
-import { X, Plus } from 'lucide-react';
+import { X, Plus, GitCompareArrows } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
@@ -59,6 +59,8 @@ const MobileTabHeader = ({
         <TabStatusIndicator tabId={tabId} panelType={panelType} />
         {panelType === 'claude-code' ? (
           <ClaudeCodeIcon size={16} />
+        ) : panelType === 'diff' ? (
+          <GitCompareArrows className="h-4 w-4 shrink-0 text-muted-foreground" />
         ) : isCodex ? (
           <OpenAIIcon size={14} className={`shrink-0 ${nerdColor}`} />
         ) : (
