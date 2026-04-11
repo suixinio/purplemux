@@ -24,6 +24,7 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
 
   const storeLayout = useLayoutStore((s) => s.layout);
   const storeWorkspaceId = useLayoutStore((s) => s.workspaceId);
+  const pendingFocusTabId = useLayoutStore((s) => s.pendingFocusTabId);
 
   const registeredSelectWorkspace = useMobileLayoutActions((s) => s.onSelectWorkspace);
 
@@ -111,9 +112,15 @@ const MobileLayout = ({ children }: IMobileLayoutProps) => {
     ? storeLayout
     : (activeWorkspaceId ? layoutCache[activeWorkspaceId] : null);
   const activePanes = activeWorkspaceId ? (workspaceLayouts[activeWorkspaceId] ?? []) : [];
-  const activePaneId = isWorkspacePage ? (activeLayout?.activePaneId ?? null) : null;
-  const activePane = activePanes.find((p) => p.id === activePaneId) ?? activePanes[0];
-  const activeTabId = isWorkspacePage ? (activePane?.activeTabId ?? null) : null;
+  const derivedPaneId = isWorkspacePage ? (activeLayout?.activePaneId ?? null) : null;
+  const derivedPane = activePanes.find((p) => p.id === derivedPaneId) ?? activePanes[0];
+  const derivedTabId = isWorkspacePage ? (derivedPane?.activeTabId ?? null) : null;
+
+  const pendingPane = pendingFocusTabId
+    ? activePanes.find((p) => p.tabs.some((t) => t.id === pendingFocusTabId))
+    : null;
+  const activePaneId = pendingPane ? pendingPane.id : derivedPaneId;
+  const activeTabId = pendingPane ? pendingFocusTabId : derivedTabId;
 
   const defaultSelectWorkspace = useCallback(
     (workspaceId: string) => {
