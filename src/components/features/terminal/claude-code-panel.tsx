@@ -107,7 +107,8 @@ const ClaudeCodePanel = ({
       }
       useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
-      notifyCliState(tabId, state.cliState);
+      const actualCliState = useTabStore.getState().tabs[tabId]?.cliState ?? state.cliState;
+      notifyCliState(tabId, actualCliState);
     },
   });
 
@@ -247,6 +248,7 @@ const ClaudeCodePanel = ({
           tasks={tasks}
           sessionId={sessionId}
           sessionName={sessionName}
+          tabId={tabId}
           initMeta={initMeta}
           cliState={effectiveCliState}
           claudeStatus={claudeStatusFromTimeline}

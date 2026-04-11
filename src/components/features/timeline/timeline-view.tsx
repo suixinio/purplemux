@@ -25,12 +25,14 @@ import TaskChecklist from '@/components/features/timeline/task-checklist';
 import TaskProgressItem from '@/components/features/timeline/task-progress-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 import PermissionPromptItem from '@/components/features/timeline/permission-prompt-item';
+import useTabStore from '@/hooks/use-tab-store';
 
 interface ITimelineViewProps {
   entries: ITimelineEntry[];
   tasks: ITaskItem[];
   sessionId: string | null;
   sessionName?: string;
+  tabId?: string;
   initMeta?: IInitMeta;
   cliState: TCliState;
   claudeStatus: TClaudeStatus;
@@ -242,6 +244,7 @@ const TimelineView = ({
   tasks,
   sessionId,
   sessionName,
+  tabId,
   initMeta,
   cliState,
   claudeStatus,
@@ -254,6 +257,7 @@ const TimelineView = ({
   scrollToBottomRef,
 }: ITimelineViewProps) => {
   const t = useTranslations('timeline');
+  const storeNeedsInput = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState === 'needs-input' : false);
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -277,6 +281,13 @@ const TimelineView = ({
 
   const groupedItems = useMemo(() => groupTimelineEntries(entries), [entries]);
   const hasDisplayItems = groupedItems.length > 0;
+
+  const hasPermissionInToolGroup = useMemo(() => {
+    const last = groupedItems[groupedItems.length - 1];
+    if (!last || last.type !== 'tool-group') return false;
+    const PERMISSION_TOOL_NAMES = new Set(['Edit', 'Write', 'Bash', 'Read', 'Glob', 'Grep', 'Agent']);
+    return last.toolCalls.some((tc) => tc.status === 'pending' && PERMISSION_TOOL_NAMES.has(tc.toolName));
+  }, [groupedItems]);
 
   const [showDialogPrompt, setShowDialogPrompt] = useState(false);
   const dialogDepsKey = `${cliState}:${initMeta?.contextWindowTokens ?? 0}:${initMeta?.lastTimestamp ?? 0}:${sessionName ?? ''}`;
@@ -422,6 +433,11 @@ const TimelineView = ({
             </div>
           ))}
           {showDialogPrompt && sessionName && (
+            <div className="px-4 py-1.5">
+              <PermissionPromptItem sessionName={sessionName} />
+            </div>
+          )}
+          {storeNeedsInput && !hasPermissionInToolGroup && sessionName && (
             <div className="px-4 py-1.5">
               <PermissionPromptItem sessionName={sessionName} />
             </div>

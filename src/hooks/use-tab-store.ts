@@ -196,15 +196,16 @@ const useTabStore = create<ITabStore>((set) => ({
 
   setStatusWsConnected: (connected) => set({ statusWsConnected: connected }),
 
-  // 서버 경로: 초기 sync. 최근 로컬 업데이트된 탭은 통째로 보존
+  // 서버 경로: 초기 sync. 최근 로컬 업데이트된 탭은 로컬 전용 필드만 보존하고 서버 상태는 반영
   syncAllFromServer: (serverTabs) =>
     set((state) => {
       const now = Date.now();
       const next: Record<string, ITabState> = {};
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = state.tabs[tabId];
-        if (existing?.localUpdatedAt && now - existing.localUpdatedAt < SYNC_GRACE_MS) {
-          next[tabId] = existing;
+        const graceActive = existing?.localUpdatedAt && now - existing.localUpdatedAt < SYNC_GRACE_MS;
+        if (graceActive) {
+          next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId };
         } else if (existing) {
           next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId };
         } else {
