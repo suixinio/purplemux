@@ -2,13 +2,15 @@ import { useTranslations } from 'next-intl';
 import dayjs from 'dayjs';
 import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/format-tokens';
+import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/claude-tokens';
 import type { IGitStatus } from '@/lib/git-status';
 
 export interface IModelTokens {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
   cost: number | null;
 }
@@ -83,7 +85,10 @@ export interface IMetaDetailProps {
   assistantCount: number;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
+  contextWindowTokens: number;
   totalCost: number | null;
   tokensByModel: IModelTokens[];
   branch: string | null;
@@ -118,7 +123,10 @@ export const MetaDetail = ({
   assistantCount,
   inputTokens,
   outputTokens,
+  cacheCreationTokens,
+  cacheReadTokens,
   totalTokens,
+  contextWindowTokens,
   totalCost,
   tokensByModel,
   branch,
@@ -163,6 +171,16 @@ export const MetaDetail = ({
             <span className="font-mono text-xs text-muted-foreground">
               {t('inputOutputTotal', { input: formatTokenDetail(inputTokens), output: formatTokenDetail(outputTokens), total: formatTokenDetail(totalTokens) })}
             </span>
+            {(cacheCreationTokens > 0 || cacheReadTokens > 0) && (
+              <span className="font-mono text-xs text-muted-foreground/60">
+                cache: {formatTokenCount(cacheCreationTokens)} write, {formatTokenCount(cacheReadTokens)} read
+              </span>
+            )}
+            {contextWindowTokens > 0 && (
+              <span className="font-mono text-xs text-muted-foreground/60">
+                context: {formatTokenCount(contextWindowTokens)}
+              </span>
+            )}
             {tokensByModel.map((m) => (
               <span key={m.model} className="font-mono text-xs text-muted-foreground/60">
                 {formatModelDisplayName(m.model)}

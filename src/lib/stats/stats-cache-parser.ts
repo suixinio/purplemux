@@ -12,26 +12,9 @@ import type {
   TPeriod,
 } from '@/types/stats';
 import { isDateStringWithinPeriod } from './period-filter';
+import { calculateCostByFullId } from '@/lib/claude-tokens';
 
 const STATS_CACHE_PATH = path.join(os.homedir(), '.claude', 'stats-cache.json');
-
-// $/M tokens
-const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  'claude-opus-4-6': { input: 15, output: 75 },
-  'claude-opus-4-5-20251101': { input: 15, output: 75 },
-  'claude-sonnet-4-6': { input: 3, output: 15 },
-  'claude-sonnet-4-5-20241022': { input: 3, output: 15 },
-  'claude-haiku-4-5-20251001': { input: 0.8, output: 4 },
-};
-
-export const getModelPricing = (model: string): { input: number; output: number } => {
-  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
-  const lower = model.toLowerCase();
-  if (lower.includes('opus')) return { input: 15, output: 75 };
-  if (lower.includes('sonnet')) return { input: 3, output: 15 };
-  if (lower.includes('haiku')) return { input: 0.8, output: 4 };
-  return { input: 3, output: 15 };
-};
 
 const estimateCostFromUsage = (
   model: string,
@@ -39,15 +22,7 @@ const estimateCostFromUsage = (
   output: number,
   cacheRead: number,
   cacheCreation: number,
-): number => {
-  const p = getModelPricing(model);
-  return (
-    (input / 1_000_000) * p.input +
-    (output / 1_000_000) * p.output +
-    (cacheRead / 1_000_000) * p.input * 0.1 +
-    (cacheCreation / 1_000_000) * p.input * 1.25
-  );
-};
+): number => calculateCostByFullId(model, input, output, cacheCreation, cacheRead);
 
 const EMPTY_CACHE: IStatsCache = {
   version: 0,

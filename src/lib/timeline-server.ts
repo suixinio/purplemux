@@ -12,7 +12,7 @@ import { cwdToProjectPath } from './session-list';
 import { updateTabClaudeSessionId, updateTabClaudeSummary, updateTabLastUserMessage } from './layout-store';
 import { getStatusManager } from './status-manager';
 import { buildResumeCommand, isValidSessionId } from './claude-command';
-import { calculateCost } from './format-tokens';
+import { calculateCost } from './claude-tokens';
 import type { TTimelineServerMessage, IInitMeta, ITimelineEntry } from '@/types/timeline';
 import path from 'path';
 import { isAllowedJsonlPath } from './path-validation';
@@ -285,6 +285,9 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
   let assistantCount = 0;
   let inputTokens = 0;
   let outputTokens = 0;
+  let cacheCreationTokens = 0;
+  let cacheReadTokens = 0;
+  let contextWindowTokens = 0;
   const modelMap = new Map<string, {
     inputTokens: number;
     outputTokens: number;
@@ -306,10 +309,14 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
     } else if (entry.type === 'assistant-message') {
       assistantCount++;
       if (entry.usage) {
-        const cacheCreation = entry.usage.cache_creation_input_tokens ?? 0;
-        const cacheRead = entry.usage.cache_read_input_tokens ?? 0;
-        inputTokens += entry.usage.input_tokens + cacheCreation + cacheRead;
+        const cc = entry.usage.cache_creation_input_tokens ?? 0;
+        const cr = entry.usage.cache_read_input_tokens ?? 0;
+        inputTokens += entry.usage.input_tokens;
         outputTokens += entry.usage.output_tokens;
+        cacheCreationTokens += cc;
+        cacheReadTokens += cr;
+
+        contextWindowTokens = entry.usage.input_tokens + entry.usage.output_tokens + cc + cr;
 
         const model = entry.model ?? 'unknown';
         const existing = modelMap.get(model) ?? {
@@ -317,8 +324,8 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
         };
         existing.inputTokens += entry.usage.input_tokens;
         existing.outputTokens += entry.usage.output_tokens;
-        existing.cacheCreationTokens += cacheCreation;
-        existing.cacheReadTokens += cacheRead;
+        existing.cacheCreationTokens += cc;
+        existing.cacheReadTokens += cr;
         modelMap.set(model, existing);
       }
     }
@@ -327,9 +334,11 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
   const tokensByModel = Array.from(modelMap.entries())
     .map(([model, tokens]) => ({
       model,
-      inputTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
+      inputTokens: tokens.inputTokens,
       outputTokens: tokens.outputTokens,
-      totalTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens + tokens.outputTokens,
+      cacheCreationTokens: tokens.cacheCreationTokens,
+      cacheReadTokens: tokens.cacheReadTokens,
+      totalTokens: tokens.inputTokens + tokens.outputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
       cost: calculateCost(model, tokens.inputTokens, tokens.outputTokens, tokens.cacheCreationTokens, tokens.cacheReadTokens),
     }))
     .sort((a, b) => b.totalTokens - a.totalTokens);
@@ -348,7 +357,10 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
     assistantCount,
     inputTokens,
     outputTokens,
-    totalTokens: inputTokens + outputTokens,
+    cacheCreationTokens,
+    cacheReadTokens,
+    totalTokens: inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens,
+    contextWindowTokens,
     totalCost,
     customTitle,
     tokensByModel,

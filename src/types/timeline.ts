@@ -218,13 +218,18 @@ export interface IInitMeta {
   assistantCount: number;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
+  contextWindowTokens: number;
   totalCost: number | null;
   customTitle?: string;
   tokensByModel: {
     model: string;
     inputTokens: number;
     outputTokens: number;
+    cacheCreationTokens: number;
+    cacheReadTokens: number;
     totalTokens: number;
     cost: number | null;
   }[];

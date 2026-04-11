@@ -1,11 +1,13 @@
 import { useState, useCallback, useMemo } from 'react';
 import type { ITimelineEntry, IInitMeta } from '@/types/timeline';
-import { calculateCost } from '@/lib/format-tokens';
+import { calculateCost } from '@/lib/claude-tokens';
 
 interface IModelTokens {
   model: string;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
   cost: number | null;
 }
@@ -19,7 +21,10 @@ export interface ISessionMetaData {
   assistantCount: number;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
+  contextWindowTokens: number;
   totalCost: number | null;
   tokensByModel: IModelTokens[];
 }
@@ -40,46 +45,60 @@ const EMPTY_META: ISessionMetaData = {
   assistantCount: 0,
   inputTokens: 0,
   outputTokens: 0,
+  cacheCreationTokens: 0,
+  cacheReadTokens: 0,
   totalTokens: 0,
+  contextWindowTokens: 0,
   totalCost: null,
   tokensByModel: [],
 };
 
-const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => {
-  if (entries.length === 0) return EMPTY_META;
+interface IAccumulator {
+  inputTokens: number;
+  outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
+}
 
-  let title = '(새 세션)';
-  let createdAt: string | null = null;
-  let updatedAt: string | null = null;
+const accumulateUsage = (
+  entries: ITimelineEntry[],
+  afterTimestamp?: number,
+): {
+  userCount: number;
+  assistantCount: number;
+  acc: IAccumulator;
+  contextWindowTokens: number;
+  updatedAt: string | null;
+  modelMap: Map<string, IAccumulator>;
+  firstUserMessage: string | null;
+} => {
   let userCount = 0;
   let assistantCount = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-  const modelMap = new Map<string, {
-    inputTokens: number;
-    outputTokens: number;
-    cacheCreationTokens: number;
-    cacheReadTokens: number;
-  }>();
+  let updatedAt: string | null = null;
+  let contextWindowTokens = 0;
+  let firstUserMessage: string | null = null;
+  const acc: IAccumulator = { inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0 };
+  const modelMap = new Map<string, IAccumulator>();
 
   for (const entry of entries) {
-    if (!createdAt && entry.timestamp) {
-      createdAt = new Date(entry.timestamp).toISOString();
-    }
+    if (afterTimestamp !== undefined && entry.timestamp <= afterTimestamp) continue;
+
     updatedAt = new Date(entry.timestamp).toISOString();
 
     if (entry.type === 'user-message') {
       userCount++;
-      if (title === '(새 세션)') {
-        title = entry.text;
-      }
+      if (firstUserMessage === null) firstUserMessage = entry.text;
     } else if (entry.type === 'assistant-message') {
       assistantCount++;
       if (entry.usage) {
-        const cacheCreation = entry.usage.cache_creation_input_tokens ?? 0;
-        const cacheRead = entry.usage.cache_read_input_tokens ?? 0;
-        inputTokens += entry.usage.input_tokens + cacheCreation + cacheRead;
-        outputTokens += entry.usage.output_tokens;
+        const cc = entry.usage.cache_creation_input_tokens ?? 0;
+        const cr = entry.usage.cache_read_input_tokens ?? 0;
+        acc.inputTokens += entry.usage.input_tokens;
+        acc.outputTokens += entry.usage.output_tokens;
+        acc.cacheCreationTokens += cc;
+        acc.cacheReadTokens += cr;
+
+        contextWindowTokens = entry.usage.input_tokens + entry.usage.output_tokens + cc + cr;
 
         const model = entry.model ?? 'unknown';
         const existing = modelMap.get(model) ?? {
@@ -87,99 +106,62 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
         };
         existing.inputTokens += entry.usage.input_tokens;
         existing.outputTokens += entry.usage.output_tokens;
-        existing.cacheCreationTokens += cacheCreation;
-        existing.cacheReadTokens += cacheRead;
+        existing.cacheCreationTokens += cc;
+        existing.cacheReadTokens += cr;
         modelMap.set(model, existing);
       }
     }
   }
 
-  const tokensByModel: IModelTokens[] = Array.from(modelMap.entries())
-    .map(([model, tokens]) => ({
+  return { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap, firstUserMessage };
+};
+
+const buildTokensByModel = (modelMap: Map<string, IAccumulator>): IModelTokens[] =>
+  Array.from(modelMap.entries())
+    .map(([model, t]) => ({
       model,
-      inputTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
-      outputTokens: tokens.outputTokens,
-      totalTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens + tokens.outputTokens,
-      cost: calculateCost(model, tokens.inputTokens, tokens.outputTokens, tokens.cacheCreationTokens, tokens.cacheReadTokens),
+      inputTokens: t.inputTokens,
+      outputTokens: t.outputTokens,
+      cacheCreationTokens: t.cacheCreationTokens,
+      cacheReadTokens: t.cacheReadTokens,
+      totalTokens: t.inputTokens + t.outputTokens + t.cacheCreationTokens + t.cacheReadTokens,
+      cost: calculateCost(model, t.inputTokens, t.outputTokens, t.cacheCreationTokens, t.cacheReadTokens),
     }))
     .sort((a, b) => b.totalTokens - a.totalTokens);
 
-  const totalCost = tokensByModel.reduce<number | null>((sum, m) => {
+const sumCost = (models: IModelTokens[]): number | null =>
+  models.reduce<number | null>((sum, m) => {
     if (m.cost === null) return sum;
     return (sum ?? 0) + m.cost;
   }, null);
 
+const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => {
+  if (entries.length === 0) return EMPTY_META;
+
+  const { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap, firstUserMessage } = accumulateUsage(entries);
+  const tokensByModel = buildTokensByModel(modelMap);
+
+  let createdAt: string | null = null;
+  if (entries.length > 0 && entries[0].timestamp) {
+    createdAt = new Date(entries[0].timestamp).toISOString();
+  }
+
   return {
-    title,
+    title: firstUserMessage ?? '(새 세션)',
     createdAt,
     updatedAt,
     fileSize: 0,
     userCount,
     assistantCount,
-    inputTokens,
-    outputTokens,
-    totalTokens: inputTokens + outputTokens,
-    totalCost,
+    inputTokens: acc.inputTokens,
+    outputTokens: acc.outputTokens,
+    cacheCreationTokens: acc.cacheCreationTokens,
+    cacheReadTokens: acc.cacheReadTokens,
+    totalTokens: acc.inputTokens + acc.outputTokens + acc.cacheCreationTokens + acc.cacheReadTokens,
+    contextWindowTokens,
+    totalCost: sumCost(tokensByModel),
     tokensByModel,
   };
-};
-
-const computeDelta = (entries: ITimelineEntry[], afterTimestamp: number) => {
-  let userCount = 0;
-  let assistantCount = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let updatedAt: string | null = null;
-  const modelMap = new Map<string, {
-    inputTokens: number;
-    outputTokens: number;
-    cacheCreationTokens: number;
-    cacheReadTokens: number;
-  }>();
-
-  for (const entry of entries) {
-    if (entry.timestamp <= afterTimestamp) continue;
-
-    updatedAt = new Date(entry.timestamp).toISOString();
-
-    if (entry.type === 'user-message') {
-      userCount++;
-    } else if (entry.type === 'assistant-message') {
-      assistantCount++;
-      if (entry.usage) {
-        const cacheCreation = entry.usage.cache_creation_input_tokens ?? 0;
-        const cacheRead = entry.usage.cache_read_input_tokens ?? 0;
-        inputTokens += entry.usage.input_tokens + cacheCreation + cacheRead;
-        outputTokens += entry.usage.output_tokens;
-
-        const model = entry.model ?? 'unknown';
-        const existing = modelMap.get(model) ?? {
-          inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0, cacheReadTokens: 0,
-        };
-        existing.inputTokens += entry.usage.input_tokens;
-        existing.outputTokens += entry.usage.output_tokens;
-        existing.cacheCreationTokens += cacheCreation;
-        existing.cacheReadTokens += cacheRead;
-        modelMap.set(model, existing);
-      }
-    }
-  }
-
-  const tokensByModel: IModelTokens[] = Array.from(modelMap.entries())
-    .map(([model, tokens]) => ({
-      model,
-      inputTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
-      outputTokens: tokens.outputTokens,
-      totalTokens: tokens.inputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens + tokens.outputTokens,
-      cost: calculateCost(model, tokens.inputTokens, tokens.outputTokens, tokens.cacheCreationTokens, tokens.cacheReadTokens),
-    }));
-
-  const totalCost = tokensByModel.reduce<number | null>((sum, m) => {
-    if (m.cost === null) return sum;
-    return (sum ?? 0) + m.cost;
-  }, null);
-
-  return { userCount, assistantCount, inputTokens, outputTokens, totalCost, tokensByModel, updatedAt };
 };
 
 const mergeTokensByModel = (base: IModelTokens[], delta: IModelTokens[]): IModelTokens[] => {
@@ -190,6 +172,8 @@ const mergeTokensByModel = (base: IModelTokens[], delta: IModelTokens[]): IModel
     if (existing) {
       existing.inputTokens += d.inputTokens;
       existing.outputTokens += d.outputTokens;
+      existing.cacheCreationTokens += d.cacheCreationTokens;
+      existing.cacheReadTokens += d.cacheReadTokens;
       existing.totalTokens += d.totalTokens;
       existing.cost = existing.cost !== null && d.cost !== null
         ? existing.cost + d.cost
@@ -212,25 +196,33 @@ const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta): ISes
     }
   }
 
-  const delta = computeDelta(entries, initMeta.lastTimestamp);
-  const mergedInput = initMeta.inputTokens + delta.inputTokens;
-  const mergedOutput = initMeta.outputTokens + delta.outputTokens;
-  const mergedCost = initMeta.totalCost !== null && delta.totalCost !== null
-    ? initMeta.totalCost + delta.totalCost
-    : initMeta.totalCost ?? delta.totalCost;
+  const { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap } = accumulateUsage(entries, initMeta.lastTimestamp);
+  const deltaTokensByModel = buildTokensByModel(modelMap);
+  const deltaCost = sumCost(deltaTokensByModel);
+
+  const mergedInput = initMeta.inputTokens + acc.inputTokens;
+  const mergedOutput = initMeta.outputTokens + acc.outputTokens;
+  const mergedCacheCreation = initMeta.cacheCreationTokens + acc.cacheCreationTokens;
+  const mergedCacheRead = initMeta.cacheReadTokens + acc.cacheReadTokens;
+  const mergedCost = initMeta.totalCost !== null && deltaCost !== null
+    ? initMeta.totalCost + deltaCost
+    : initMeta.totalCost ?? deltaCost;
 
   return {
     title,
     createdAt: initMeta.createdAt,
-    updatedAt: delta.updatedAt ?? initMeta.updatedAt,
+    updatedAt: updatedAt ?? initMeta.updatedAt,
     fileSize: initMeta.fileSize,
-    userCount: initMeta.userCount + delta.userCount,
-    assistantCount: initMeta.assistantCount + delta.assistantCount,
+    userCount: initMeta.userCount + userCount,
+    assistantCount: initMeta.assistantCount + assistantCount,
     inputTokens: mergedInput,
     outputTokens: mergedOutput,
-    totalTokens: mergedInput + mergedOutput,
+    cacheCreationTokens: mergedCacheCreation,
+    cacheReadTokens: mergedCacheRead,
+    totalTokens: mergedInput + mergedOutput + mergedCacheCreation + mergedCacheRead,
+    contextWindowTokens: contextWindowTokens || initMeta.contextWindowTokens,
     totalCost: mergedCost,
-    tokensByModel: mergeTokensByModel(initMeta.tokensByModel, delta.tokensByModel),
+    tokensByModel: mergeTokensByModel(initMeta.tokensByModel, deltaTokensByModel),
   };
 };
 

@@ -12,7 +12,10 @@ interface ISessionMetaData {
   assistantCount: number;
   inputTokens: number;
   outputTokens: number;
+  cacheCreationTokens: number;
+  cacheReadTokens: number;
   totalTokens: number;
+  contextWindowTokens: number;
   totalCost: number | null;
   tokensByModel: IMetaDetailProps['tokensByModel'];
 }
@@ -52,7 +55,10 @@ const MobileMetaSheet = ({
           assistantCount={meta.assistantCount}
           inputTokens={meta.inputTokens}
           outputTokens={meta.outputTokens}
+          cacheCreationTokens={meta.cacheCreationTokens}
+          cacheReadTokens={meta.cacheReadTokens}
           totalTokens={meta.totalTokens}
+          contextWindowTokens={meta.contextWindowTokens}
           totalCost={meta.totalCost}
           tokensByModel={meta.tokensByModel}
           branch={branch}
