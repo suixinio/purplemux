@@ -10,7 +10,7 @@ interface IDiffPanelProps {
   sessionName: string;
 }
 
-const POLL_INTERVAL = 60_000;
+const POLL_INTERVAL = 10_000;
 
 const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
   const t = useTranslations('diff');
