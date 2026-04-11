@@ -231,7 +231,19 @@ const useWebPush = () => {
       }
     });
 
-    // Visibility tracking (push 구독 여부와 무관하게 항상 실행)
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('pageshow', handlePageShow);
+      window.removeEventListener('focus', handlePageShow);
+      unsub();
+    };
+  }, []);
+
+  // Visibility tracking (push 구독·SW 지원 여부와 무관하게 항상 실행)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
     sendVisibility(!document.hidden);
 
     const handleDeviceVisChange = () => {
@@ -244,11 +256,6 @@ const useWebPush = () => {
     }, 30_000);
 
     return () => {
-      navigator.serviceWorker.removeEventListener('message', handleSwMessage);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pageshow', handlePageShow);
-      window.removeEventListener('focus', handlePageShow);
-      unsub();
       document.removeEventListener('visibilitychange', handleDeviceVisChange);
       clearInterval(pingTimer);
       sendVisibility(false);
