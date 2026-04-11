@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import type { GetServerSideProps } from 'next';
@@ -28,6 +28,8 @@ const AgentChatPage = () => {
   const markRead = useAgentStore((s) => s.markRead);
   const hasUnread = useAgentStore((s) => (agentId ? s.unreadAgentIds.has(agentId) : false));
   const isStoreLoading = useAgentStore((s) => s.isLoading);
+
+  const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -71,6 +73,7 @@ const AgentChatPage = () => {
   const handleSend = useCallback(
     (content: string) => {
       sendMessage(content);
+      scrollToBottomRef.current?.();
     },
     [sendMessage],
   );
@@ -78,6 +81,7 @@ const AgentChatPage = () => {
   const handleApproval = useCallback(
     (action: 'approve' | 'reject') => {
       sendMessage(action);
+      scrollToBottomRef.current?.();
     },
     [sendMessage],
   );
@@ -151,6 +155,7 @@ const AgentChatPage = () => {
           onLoadMore={loadMore}
           onResend={resendMessage}
           onApproval={handleApproval}
+          scrollToBottomRef={scrollToBottomRef}
         />
 
         <ChatInput
