@@ -71,7 +71,7 @@ const MobileSurfaceView = ({
   onCreateTab,
   onDeleteTab,
   onSwitchTab,
-  onRemoveTabLocally,
+  onRemoveTabLocally: _onRemoveTabLocally,
   onCliStateChange,
   onOpenNewTabDialog,
 }: IMobileSurfaceViewProps) => {

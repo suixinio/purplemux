@@ -2,7 +2,7 @@ import { memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { Activity, AlertCircle, CheckCircle2, Clock, HelpCircle, Loader2, ShieldQuestion } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle2, Clock, HelpCircle, ShieldQuestion } from 'lucide-react';
 import dayjs from 'dayjs';
 import { useTranslations } from 'next-intl';
 import ApprovalActions from '@/components/features/agent/approval-actions';

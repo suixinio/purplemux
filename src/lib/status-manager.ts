@@ -16,7 +16,7 @@ import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatus
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
 import webpush from 'web-push';
-import { getSubscriptions, removeSubscription, isAnyDeviceVisible, getSessionPushEndpoint } from '@/lib/push-subscriptions';
+import { getSubscriptions, removeSubscription, isAnyDeviceVisible } from '@/lib/push-subscriptions';
 import { getVAPIDKeys } from '@/lib/vapid-keys';
 import { nanoid } from 'nanoid';
 import fs from 'fs/promises';

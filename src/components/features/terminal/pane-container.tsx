@@ -522,7 +522,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       }
     }
     setIsCreating(false);
-  }, [paneId, createTabInPane]);
+  }, [paneId, createTabInPane, layoutWsId]);
 
   const handleDeleteTab = useCallback(
     async (tabId: string) => {

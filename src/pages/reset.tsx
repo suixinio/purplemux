@@ -77,7 +77,7 @@ const ResetPage = () => {
 
     run();
     return () => { cancelled = true; };
-  }, []);
+  }, [t]);
 
   return (
     <>

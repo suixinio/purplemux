@@ -355,7 +355,7 @@ const NotificationItem = ({
           </span>
           {(item.dismissedAt || item.readyForReviewAt || item.busySince) && (
             <span className="shrink-0 text-xs text-muted-foreground/60">
-              {formatNotificationTime(item.dismissedAt ?? item.readyForReviewAt ?? item.busySince ?? Date.now())}
+              {formatNotificationTime(item.dismissedAt ?? item.readyForReviewAt ?? item.busySince!)}
             </span>
           )}
         </div>
