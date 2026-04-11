@@ -15,6 +15,9 @@ import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData } from '@/types/status';
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
+import webpush from 'web-push';
+import { getSubscriptions, removeSubscription, isEndpointVisible, getSessionPushEndpoint } from '@/lib/push-subscriptions';
+import { getVAPIDKeys } from '@/lib/vapid-keys';
 import { nanoid } from 'nanoid';
 import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
@@ -1117,11 +1120,6 @@ class StatusManager {
   }
 
   private async sendWebPush(tabId: string, entry: ITabStatusEntry): Promise<void> {
-    const { getSubscriptions, removeSubscription } = await import('@/lib/push-subscriptions');
-    const { getVAPIDKeys } = await import('@/lib/vapid-keys');
-    const mod = await import('web-push');
-    const webpush = mod.default ?? mod;
-
     const subs = await getSubscriptions();
     if (subs.length === 0) return;
 
@@ -1139,8 +1137,6 @@ class StatusManager {
       workspaceName: ws?.name ?? '',
       workspaceDir: ws?.directories[0] ?? null,
     });
-
-    const { isEndpointVisible, getSessionPushEndpoint } = await import('@/lib/push-subscriptions');
 
     const target = entry.claudeSessionId ? getSessionPushEndpoint(entry.claudeSessionId) : null;
     if (!target) return;
