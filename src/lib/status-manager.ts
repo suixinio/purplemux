@@ -484,7 +484,7 @@ class StatusManager {
       }
     }
 
-    if (state === 'busy') {
+    if (state === 'busy' || capturedPaneContent) {
       const paneContent = capturedPaneContent ?? await capturePaneContent(tmuxSession);
       if (paneContent && hasPermissionPrompt(paneContent)) return { cliState: 'needs-input', lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath, reset };
     }
