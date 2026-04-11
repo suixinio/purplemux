@@ -3,7 +3,6 @@ import { useTranslations } from 'next-intl';
 import { RefreshCw, GitBranch, Columns2, Rows2 } from 'lucide-react';
 import type { OutputFormatType } from 'diff2html/lib/types';
 import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import Spinner from '@/components/ui/spinner';
 import useIsMobile from '@/hooks/use-is-mobile';
 
@@ -135,15 +134,7 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
         <div className="ml-auto flex items-center gap-1">
           {hasUpdate && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-7 gap-1.5 text-xs text-ui-blue"
-              onClick={fetchDiff}
-            >
-              <RefreshCw className="h-3 w-3" />
-              {t('hasChanges')}
-            </Button>
+            <span className="text-xs text-ui-blue">{t('hasChanges')}</span>
           )}
 
           {!isMobile && (
@@ -166,7 +157,10 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
           <button
             className={cn(
-              'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground',
+              'flex h-7 w-7 items-center justify-center rounded',
+              hasUpdate
+                ? 'text-ui-blue hover:bg-accent'
+                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
               loading && 'animate-spin',
             )}
             onClick={fetchDiff}

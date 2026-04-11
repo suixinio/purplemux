@@ -244,19 +244,20 @@ const useWebPush = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    sendVisibility(!document.hidden);
+    sendVisibility(document.hasFocus());
 
-    const handleDeviceVisChange = () => {
-      sendVisibility(!document.hidden);
-    };
-    document.addEventListener('visibilitychange', handleDeviceVisChange);
+    const handleFocus = () => sendVisibility(true);
+    const handleBlur = () => sendVisibility(false);
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('blur', handleBlur);
 
     const pingTimer = setInterval(() => {
-      if (!document.hidden) sendVisibility(true);
+      if (document.hasFocus()) sendVisibility(true);
     }, 30_000);
 
     return () => {
-      document.removeEventListener('visibilitychange', handleDeviceVisChange);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('blur', handleBlur);
       clearInterval(pingTimer);
       sendVisibility(false);
     };

@@ -2,7 +2,6 @@ import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
 import type { PushSubscription } from 'web-push';
-
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const SUBS_FILE = path.join(BASE_DIR, 'push-subscriptions.json');
 

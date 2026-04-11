@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { execFile as execFileCb } from 'child_process';
+import { createHash } from 'crypto';
 import { promisify } from 'util';
 import { getSessionCwd, hasSession } from '@/lib/tmux';
 import { createLogger } from '@/lib/logger';
@@ -7,6 +8,18 @@ import { createLogger } from '@/lib/logger';
 const execFile = promisify(execFileCb);
 const log = createLogger('diff');
 const CMD_TIMEOUT = 10000;
+
+const computeDiffHash = async (cwd: string) => {
+  const [{ stdout: headOut }, { stdout: statusOut }, { stdout: shortstatOut }] = await Promise.all([
+    execFile('git', ['rev-parse', 'HEAD'], { cwd, timeout: CMD_TIMEOUT }),
+    execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT }),
+    execFile('git', ['diff', 'HEAD', '--shortstat'], { cwd, timeout: CMD_TIMEOUT }),
+  ]);
+  return createHash('sha1')
+    .update(`${headOut.trim()}\n${statusOut}\n${shortstatOut}`)
+    .digest('hex')
+    .slice(0, 16);
+};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -39,15 +52,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   try {
     if (hashOnly) {
-      const { stdout: statusOut } = await execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT });
-      const { stdout: headOut } = await execFile('git', ['rev-parse', 'HEAD'], { cwd, timeout: CMD_TIMEOUT });
-      const hash = `${headOut.trim()}:${statusOut.length}`;
+      const hash = await computeDiffHash(cwd);
       return res.status(200).json({ isGitRepo: true, hash });
     }
 
-    const { stdout: diff } = await execFile('git', ['diff', 'HEAD'], { cwd, timeout: CMD_TIMEOUT, maxBuffer: 5 * 1024 * 1024 });
-    const { stdout: statusOut } = await execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT });
-    const { stdout: headOut } = await execFile('git', ['rev-parse', 'HEAD'], { cwd, timeout: CMD_TIMEOUT });
+    const [{ stdout: diff }, { stdout: statusOut }, hash] = await Promise.all([
+      execFile('git', ['diff', 'HEAD'], { cwd, timeout: CMD_TIMEOUT, maxBuffer: 5 * 1024 * 1024 }),
+      execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT }),
+      computeDiffHash(cwd),
+    ]);
 
     const untrackedFiles = statusOut
       .split('\n')
@@ -66,7 +79,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     }
 
-    const hash = `${headOut.trim()}:${statusOut.length}`;
     return res.status(200).json({ isGitRepo: true, diff: fullDiff, hash });
   } catch (err) {
     log.error(`git diff failed: ${err instanceof Error ? err.message : err}`);
