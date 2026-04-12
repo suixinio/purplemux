@@ -1,9 +1,36 @@
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import dayjs from 'dayjs';
-import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive } from 'lucide-react';
+import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive, Copy, Check } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/claude-tokens';
 import type { IGitStatus } from '@/lib/git-status';
+
+const CopyIconButton = ({ text, className }: { text: string; className?: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className={cn(
+        'inline-flex h-4 w-4 shrink-0 items-center justify-center text-muted-foreground/50 hover:text-foreground',
+        className,
+      )}
+      aria-label="Copy"
+    >
+      {copied ? <Check size={11} className="text-positive" /> : <Copy size={11} />}
+    </button>
+  );
+};
 
 export interface IModelTokens {
   model: string;
@@ -141,7 +168,10 @@ export const MetaDetail = ({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-xs text-muted-foreground/50">{sessionId}</span>
+        <div className="flex min-w-0 items-center gap-1">
+          <span className="truncate font-mono text-xs text-muted-foreground/50">{sessionId}</span>
+          {sessionId && <CopyIconButton text={sessionId} />}
+        </div>
         <div className="flex items-center gap-1">
           {isBranchLoading && (
             <span className="text-xs text-muted-foreground/50">...</span>
@@ -280,7 +310,10 @@ export const MetaDetail = ({
             )}
             <div className="flex items-baseline gap-2">
               <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('session')}</span>
-              <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{tmuxInfo.sessionName}</span>
+              <div className="flex min-w-0 items-center gap-1">
+                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">{tmuxInfo.sessionName}</span>
+                <CopyIconButton text={tmuxInfo.sessionName} />
+              </div>
             </div>
           </div>
         </div>
