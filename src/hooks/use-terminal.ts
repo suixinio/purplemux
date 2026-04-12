@@ -5,6 +5,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import type { ITerminalThemeColors } from "@/lib/terminal-themes";
+import { createMultilineUrlLinkProvider } from "@/lib/multiline-url-link-provider";
 import isElectron from "@/hooks/use-is-electron";
 
 interface IUseTerminalOptions {
@@ -169,6 +170,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
 
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
+      terminal.registerLinkProvider(createMultilineUrlLinkProvider(terminal, openExternalUrl));
       terminal.loadAddon(new WebLinksAddon((_event, uri) => openExternalUrl(uri)));
 
       const unicode11Addon = new Unicode11Addon();
