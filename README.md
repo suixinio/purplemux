@@ -1,8 +1,8 @@
 # purplemux
 
-**A web-native terminal multiplexer for Claude Code.**
+**Claude Code, 여러 개를 동시에. 더 빠르게.**
 
-Run from anywhere—your sessions never disconnect.
+한 화면에서 모든 세션을, 폰에서도 끊김 없이.
 
 <!-- TODO: 히어로 이미지 / GIF -->
 
