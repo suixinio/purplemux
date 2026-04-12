@@ -12,6 +12,8 @@ interface IMobileTerminalToolbarProps {
 interface IKeyDef {
   label: string;
   value: string;
+  nerd?: boolean;
+  rotate?: boolean;
 }
 
 const CTRL_TOGGLE = '__CTRL__';
@@ -19,19 +21,20 @@ const SHIFT_TOGGLE = '__SHIFT__';
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
 const MAX_ROWS = 3;
+const NERD_FONT_STYLE = { fontFamily: 'MesloLGLDZ, monospace' } as const;
 
 const KEYS: IKeyDef[] = [
   { label: 'Tab', value: '\t' },
   { label: 'Esc', value: '\x1b' },
   { label: 'Ctrl', value: CTRL_TOGGLE },
   { label: 'Shift', value: SHIFT_TOGGLE },
-  { label: '↵', value: '\r' },
-  { label: '↑', value: '\x1b[A' },
-  { label: '↓', value: '\x1b[B' },
-  { label: '←', value: '\x1b[D' },
-  { label: '→', value: '\x1b[C' },
-  { label: '|', value: '|' },
-  { label: '~', value: '~' },
+  { label: '\u{f17a5}', value: '\r', nerd: true },
+  { label: '\u{f005d}', value: '\x1b[A', nerd: true },
+  { label: '\u{f0045}', value: '\x1b[B', nerd: true },
+  { label: '\u{f004d}', value: '\x1b[D', nerd: true },
+  { label: '\u{f0054}', value: '\x1b[C', nerd: true },
+  { label: '\u{f0374}', value: '|', nerd: true, rotate: true },
+  { label: '\u{f0725}', value: '~', nerd: true },
 ];
 
 const MobileTerminalToolbar = ({ sendStdin, terminalConnected }: IMobileTerminalToolbarProps) => {
@@ -157,7 +160,12 @@ const MobileTerminalToolbar = ({ sendStdin, terminalConnected }: IMobileTerminal
             )}
             onClick={() => handleKeyButton(key)}
           >
-            {key.label}
+            <span
+              className={cn('inline-block', key.rotate && 'rotate-90')}
+              style={key.nerd ? NERD_FONT_STYLE : undefined}
+            >
+              {key.label}
+            </span>
           </button>
         ))}
       </div>
