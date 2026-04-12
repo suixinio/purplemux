@@ -11,6 +11,8 @@ const OPTION_KEYWORDS = [
 const INDICATOR_RE = /^\s*(?:[❯›>]\s+)?(.+)$/;
 const FOCUSED_RE = /^\s*[❯›>]\s+/;
 const NUMBER_PREFIX_RE = /^\d+\.\s+/;
+// 좁은 터미널에서 "2. Yes..."가 "2Yes..."로 렌더되는 wrap 아티팩트까지 허용하기 위해 period/space를 optional로 둠
+const NUMBERED_LINE_RE = /^\s*([❯›>])?\s*(\d+)\.?\s*(\S.*)$/;
 
 const stripPrefix = (o: string) => o.replace(NUMBER_PREFIX_RE, '');
 const hasOption = (options: string[], prefix: string) =>
@@ -26,8 +28,42 @@ const isKnownPromptPattern = (options: string[]): boolean => {
     || (hasOption(options, 'Continue this conversation') && hasOption(options, 'Send message as'));
 };
 
-export const parsePermissionOptions = (paneContent: string): { options: string[]; focusedIndex: number } => {
-  const lines = paneContent.split('\n');
+const parseNumberedOptions = (lines: string[]): { options: string[]; focusedIndex: number } => {
+  const options: string[] = [];
+  let focusedIndex = 0;
+  let expected = 1;
+  let started = false;
+
+  for (const line of lines) {
+    if (!line.trim()) {
+      if (started) break;
+      continue;
+    }
+
+    const match = line.match(NUMBERED_LINE_RE);
+    if (match) {
+      const marker = match[1];
+      const num = Number(match[2]);
+      const rest = match[3].trim();
+      if (num === expected && rest.length > 0) {
+        if (marker) focusedIndex = options.length;
+        options.push(`${num}. ${rest}`);
+        expected += 1;
+        started = true;
+        continue;
+      }
+    }
+
+    if (started) {
+      if (/^\s+\S/.test(line)) continue;
+      break;
+    }
+  }
+
+  return { options, focusedIndex };
+};
+
+const parseKeywordOptions = (lines: string[]): { options: string[]; focusedIndex: number } => {
   const options: string[] = [];
   let focusedIndex = 0;
   let foundFirst = false;
@@ -57,14 +93,24 @@ export const parsePermissionOptions = (paneContent: string): { options: string[]
       options.push(label);
       foundFirst = true;
     }
-    // foundFirst 이후 키워드 매치 안 되는 들여쓰기 라인은 이전 옵션의 wrap된 continuation → skip
-  }
-
-  if (!isKnownPromptPattern(options)) {
-    return { options: [], focusedIndex: 0 };
   }
 
   return { options, focusedIndex };
+};
+
+export const parsePermissionOptions = (paneContent: string): { options: string[]; focusedIndex: number } => {
+  const lines = paneContent.split('\n');
+
+  const numbered = parseNumberedOptions(lines);
+  if (numbered.options.length >= 2 && isKnownPromptPattern(numbered.options)) {
+    return numbered;
+  }
+
+  const keyword = parseKeywordOptions(lines);
+  if (!isKnownPromptPattern(keyword.options)) {
+    return { options: [], focusedIndex: 0 };
+  }
+  return keyword;
 };
 
 export const hasPermissionPrompt = (paneContent: string): boolean =>
