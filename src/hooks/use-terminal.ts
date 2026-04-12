@@ -19,6 +19,22 @@ interface IUseTerminalOptions {
 
 const DEFAULT_FONT_SIZE = 12;
 
+const ALLOWED_LINK_PROTOCOLS = ['http:', 'https:'];
+
+const openExternalUrl = (uri: string) => {
+  try {
+    const { protocol } = new URL(uri);
+    if (!ALLOWED_LINK_PROTOCOLS.includes(protocol)) return;
+  } catch {
+    return;
+  }
+  if (isElectron) {
+    (window as unknown as Record<string, { openExternal: (url: string) => void }>).electronAPI.openExternal(uri);
+  } else {
+    window.open(uri, '_blank');
+  }
+};
+
 const FONT_FAMILY =
   "'MesloLGLDZ', 'Apple SD Gothic Neo', 'Pretendard', 'Menlo', 'Monaco', 'Courier New', monospace";
 
@@ -145,17 +161,15 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
         allowProposedApi: true,
         macOptionIsMeta: true,
         theme: callbacksRef.current.theme,
+        linkHandler: {
+          activate: (_event, text) => openExternalUrl(text),
+          allowNonHttpProtocols: false,
+        },
       });
 
       const fitAddon = new FitAddon();
       terminal.loadAddon(fitAddon);
-      terminal.loadAddon(new WebLinksAddon((_event, uri) => {
-        if (isElectron) {
-          (window as unknown as Record<string, { openExternal: (url: string) => void }>).electronAPI.openExternal(uri);
-        } else {
-          window.open(uri, '_blank');
-        }
-      }));
+      terminal.loadAddon(new WebLinksAddon((_event, uri) => openExternalUrl(uri)));
 
       const unicode11Addon = new Unicode11Addon();
       terminal.loadAddon(unicode11Addon);
