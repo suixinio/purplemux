@@ -6,6 +6,8 @@ This document defines the rules and conventions Claude Code must follow when wor
 
 AI-generated code should look as if a senior engineer wrote it. Avoid excessive comments, unnecessary explanations, and AI-specific patterns.
 
+Always respond in the same language the user wrote in. Project rules like "commit messages in English" apply only to the artifacts they describe — they do not change the conversation language.
+
 ## Project Overview
 
 - **Framework**: Next.js (Pages Router)
