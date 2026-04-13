@@ -43,11 +43,11 @@ let fontLoadPromise: Promise<void> | null = null;
 const loadFonts = () => {
   fontLoadPromise ??= (async () => {
     const fontsToLoad = [
-      new FontFace('MesloLGLDZ', "url('/fonts/MesloLGLDZNerdFont-Regular.ttf')", {
+      new FontFace('MesloLGLDZ', "url('/fonts/MesloLGLDZNerdFont-Regular.woff2')", {
         weight: '400',
         style: 'normal',
       }),
-      new FontFace('MesloLGLDZ', "url('/fonts/MesloLGLDZNerdFont-Bold.ttf')", {
+      new FontFace('MesloLGLDZ', "url('/fonts/MesloLGLDZNerdFont-Bold.woff2')", {
         weight: '700',
         style: 'normal',
       }),
