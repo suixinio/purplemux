@@ -5,9 +5,12 @@ import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getLastCommand, getPan
 import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
 import { cwdToProjectPath } from '@/lib/session-list';
 import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
+import { formatTabTitle } from '@/lib/tab-title';
 import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
 import { createRateLimitsWatcher } from '@/lib/rate-limits-watcher';
 import { createLogger } from '@/lib/logger';
+import { capturePaneAtWidth } from '@/lib/capture-at-width';
+import { parsePermissionOptions } from '@/lib/permission-prompt';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData, TEventName, ILastEvent } from '@/types/status';
@@ -400,6 +403,7 @@ class StatusManager {
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
         const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
+        const paneTitle = paneInfo ? `${resolvedProcess ?? paneInfo.command}|${paneInfo.path}` : undefined;
         // lastEvent는 메모리 전용이라 재시작 시 유실. persisted needs-input 복원 시
         // 클라 ack가 seq=0과 매칭할 baseline이 필요하므로 합성한다.
         const syntheticLastEvent: ILastEvent | null = cliState === 'needs-input'
@@ -408,9 +412,9 @@ class StatusManager {
         this.tabs.set(tab.id, {
           cliState,
           workspaceId: ws.id,
-          tabName: tab.name,
+          tabName: tab.name || (paneTitle ? formatTabTitle(paneTitle) : ''),
           currentProcess: resolvedProcess,
-          paneTitle: paneInfo ? `${resolvedProcess ?? paneInfo.command}|${paneInfo.path}` : undefined,
+          paneTitle,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
           terminalStatus,
@@ -556,7 +560,7 @@ class StatusManager {
           const entry: ITabStatusEntry = {
             cliState: initialState,
             workspaceId: ws.id,
-            tabName: tab.name,
+            tabName: tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : ''),
             currentProcess: resolvedProcess,
             paneTitle: newPaneTitle,
             tmuxSession: tab.sessionName,
@@ -584,7 +588,7 @@ class StatusManager {
         const processChanged = existing.currentProcess !== resolvedProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         const panelTypeChanged = existing.panelType !== tab.panelType;
-        existing.tabName = tab.name;
+        existing.tabName = tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : '');
         existing.currentProcess = resolvedProcess;
         existing.paneTitle = newPaneTitle;
         existing.workspaceId = ws.id;
@@ -784,6 +788,32 @@ class StatusManager {
     this.applyCliState(tabId, entry, 'busy');
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry);
+  }
+
+  async recoverUnknownIfPending(tabId: string): Promise<{ recovered: boolean; reason?: string }> {
+    const entry = this.tabs.get(tabId);
+    if (!entry) return { recovered: false, reason: 'no-entry' };
+    if (entry.cliState !== 'unknown') return { recovered: false, reason: 'not-unknown' };
+
+    const content = await capturePaneAtWidth(entry.tmuxSession, 120, 50).catch((err) => {
+      log.warn('recoverUnknownIfPending capture failed: %s', err);
+      return null;
+    });
+    if (!content) return { recovered: false, reason: 'capture-failed' };
+
+    const { options } = parsePermissionOptions(content);
+    if (options.length === 0) return { recovered: false, reason: 'no-options' };
+
+    const now = Date.now();
+    const seq = (entry.eventSeq ?? 0) + 1;
+    entry.eventSeq = seq;
+    entry.lastEvent = { name: 'notification', at: now, seq };
+
+    hookLog.debug({ tabId, seq, options: options.length }, 'recover unknown→needs-input from pane capture');
+    this.applyCliState(tabId, entry, 'needs-input', { silent: true });
+    this.persistToLayout(entry);
+    this.broadcastUpdate(tabId, entry);
+    return { recovered: true };
   }
 
   private findTabIdBySession(tmuxSession: string): string | undefined {

@@ -12,7 +12,7 @@ import type { TPanelType } from '@/types/terminal';
 import MobileTabHeader from '@/components/features/mobile/mobile-tab-header';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileNewTabDialog from '@/components/features/mobile/mobile-new-tab-dialog';
-import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { dismissTab } from '@/hooks/use-claude-status';
 import useTabStore from '@/hooks/use-tab-store';
 import type { TCliState } from '@/types/timeline';
@@ -164,7 +164,7 @@ const MobileTerminalPage = () => {
   );
   const currentTabName = useMemo(() => {
     if (!currentTab) return '';
-    if (currentTab.name && !isAutoTabName(currentTab.name)) return currentTab.name;
+    if (currentTab.name) return currentTab.name;
     const rawTitle = tabMetadata?.title || currentTab.title;
     const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
     if (formatted) return formatted;

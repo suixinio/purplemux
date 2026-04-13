@@ -24,7 +24,7 @@ import {
 import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
-import { formatTabTitle, isAutoTabName } from '@/lib/tab-title';
+import { formatTabTitle } from '@/lib/tab-title';
 import { getProcessIcon } from '@/lib/process-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
@@ -72,7 +72,8 @@ const MobileNavigationSheet = ({
   const handleMobileTabChange = useCallback((v: string) => {
     useWorkspaceStore.getState().setSidebarTab(v as 'workspace' | 'sessions');
   }, []);
-  const { attentionCount } = useNotificationCount();
+  const { attentionCount, busyCount } = useNotificationCount();
+  const sessionsBadge = attentionCount + busyCount;
   const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
@@ -114,11 +115,10 @@ const MobileNavigationSheet = ({
   );
 
   const getTabDisplayName = (tab: ITab) => {
+    if (tab.name) return tab.name;
     const meta = metadata[tab.id];
     const rawTitle = meta?.title || tab.title;
     const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
-
-    if (tab.name && !isAutoTabName(tab.name)) return tab.name;
     if (formatted) return formatted;
     return `Tab ${tab.order + 1}`;
   };
@@ -241,9 +241,9 @@ const MobileNavigationSheet = ({
               </TabsTrigger>
               <TabsTrigger value="sessions" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
                 SESSIONS
-                {attentionCount > 0 && (
+                {sessionsBadge > 0 && (
                   <span className="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded bg-foreground/10 px-0.5 text-[9px] font-medium leading-none text-foreground/60">
-                    {attentionCount}
+                    {sessionsBadge}
                   </span>
                 )}
               </TabsTrigger>

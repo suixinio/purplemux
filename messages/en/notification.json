@@ -1,6 +1,6 @@
 {
   "title": "Notifications",
-  "empty": "No tasks in progress",
+  "empty": "No sessions..",
   "busySection": "In Progress ({count})",
   "needsInputSection": "Needs Input ({count})",
   "reviewSection": "Review ({count})",

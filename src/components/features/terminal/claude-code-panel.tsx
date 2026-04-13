@@ -166,6 +166,18 @@ const ClaudeCodePanel = ({
     ? 'inactive' as const
     : storeCliState;
 
+  useEffect(() => {
+    if (storeCliState !== 'unknown') return;
+    const controller = new AbortController();
+    fetch('/api/tmux/recover-unknown', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId }),
+      signal: controller.signal,
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [tabId, storeCliState]);
+
   const startingPromptOptions = useStartingPrompt(claudeStatus === 'starting', sessionName);
 
   const handleSelectSession = useCallback(

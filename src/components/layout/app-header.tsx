@@ -35,7 +35,8 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
   const tc = useTranslations('common');
   const router = useRouter();
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
-  const { attentionCount } = useNotificationCount();
+  const { attentionCount, busyCount } = useNotificationCount();
+  const sessionsBadge = attentionCount + busyCount;
   const blockedCount = useAgentStore(selectBlockedCount);
   const unreadCount = useAgentStore(selectUnreadCount);
   const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
@@ -51,9 +52,9 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
             aria-label={t('openMenu')}
           >
             <Menu className="h-5 w-5" />
-            {attentionCount > 0 && (
+            {sessionsBadge > 0 && (
               <span className="absolute -right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded bg-foreground/10 px-0.5 text-[9px] font-medium leading-none text-foreground/60">
-                {attentionCount}
+                {sessionsBadge}
               </span>
             )}
           </button>

@@ -48,6 +48,3 @@ export const formatTabTitle = (raw: string): string => {
 
   return fallbackCmd || '';
 };
-
-export const isAutoTabName = (name: string): boolean =>
-  /^Terminal \d+$/.test(name);

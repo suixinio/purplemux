@@ -519,16 +519,9 @@ Bell 아이콘 클릭 시 Sheet로 표시. 진행중(`busy`), 입력 대기(`nee
 
 완료 섹션은 `dismissTab`으로 확인된 탭(`dismissedAt` 값 존재 + `cliState`가 `idle`/`inactive`) 중 현재 활성 탭을 제외하여 최신순으로 표시한다. 해당 탭에서 새 작업이 시작되면 `dismissedAt`이 초기화되어 목록에서 제거된다.
 
-### 활성 탭 제외 로직
+### 카운트 집계 범위
 
-현재 보고 있는 탭은 이미 사용자가 인지하고 있으므로 알림 카운트에서 제외:
-
-| 페이지 | 제외 대상 |
-| --- | --- |
-| 터미널 (`/`) | 현재 활성 pane의 `activeTabId` |
-| 그 외 | 없음 (전체 포함) |
-
-`useNotificationCount` 훅이 이 로직을 캡슐화하며 사이드바·앱 헤더·알림 시트가 동일 카운트를 공유한다.
+`useNotificationCount` 훅은 모든 탭을 순회하며 `busy`/`needs-input`/`ready-for-review` 상태를 집계한다. 현재 활성 탭도 포함되므로 사이드바·앱 헤더·알림 시트가 동일 카운트를 공유하고, 해당 탭을 열어도 숫자가 줄지 않는다.
 
 ### `unknown` 상태 처리
 

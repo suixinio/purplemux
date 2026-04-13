@@ -67,7 +67,8 @@ const Sidebar = () => {
     }
     return false;
   });
-  const { attentionCount } = useNotificationCount();
+  const { attentionCount, busyCount } = useNotificationCount();
+  const sessionsBadge = attentionCount + busyCount;
   const blockedCount = useAgentStore(selectBlockedCount);
   const unreadCount = useAgentStore(selectUnreadCount);
   const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
@@ -380,9 +381,9 @@ const Sidebar = () => {
               </TabsTrigger>
               <TabsTrigger value="sessions" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
                 SESSIONS
-                {attentionCount > 0 && (
+                {sessionsBadge > 0 && (
                   <span className="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded bg-foreground/10 px-0.5 text-[9px] font-medium leading-none text-foreground/60">
-                    {attentionCount}
+                    {sessionsBadge}
                   </span>
                 )}
               </TabsTrigger>

@@ -5,7 +5,6 @@ import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import { cn } from '@/lib/utils';
 import type { ITab } from '@/types/terminal';
-import { isAutoTabName } from '@/lib/tab-title';
 import { getProcessIcon } from '@/lib/process-icon';
 import TabStatusIndicator from '@/components/features/terminal/tab-status-indicator';
 
@@ -61,18 +60,12 @@ const PaneTabItem = ({
   const confirmRename = () => {
     const trimmed = editName.trim();
     setIsEditing(false);
-    if (!trimmed) {
-      onRename('');
-      return;
-    }
     if (trimmed !== tab.name) {
       onRename(trimmed);
     }
   };
 
-  const displayName = isAutoTabName(tab.name)
-    ? (displayTitle || tab.name)
-    : tab.name;
+  const displayName = tab.name || displayTitle || '';
 
   return (
     <div

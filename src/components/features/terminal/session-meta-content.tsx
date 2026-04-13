@@ -70,6 +70,14 @@ export const MetaCompact = ({
           </TooltipContent>
         )}
       </Tooltip>
+      {totalCost !== null && (
+        <>
+          <Separator />
+          <span className="shrink-0 font-mono text-muted-foreground">
+            {formatCost(totalCost)}
+          </span>
+        </>
+      )}
       {branch && (
         <>
           <Separator />
@@ -77,14 +85,6 @@ export const MetaCompact = ({
             <GitBranch size={12} className="shrink-0" />
             <span className="truncate font-mono">{branch}</span>
           </div>
-        </>
-      )}
-      {totalCost !== null && (
-        <>
-          <Separator />
-          <span className="shrink-0 font-mono text-muted-foreground">
-            {formatCost(totalCost)}
-          </span>
         </>
       )}
     </div>

@@ -117,15 +117,6 @@ const PaneTabBar = ({
   };
 
   const handleRenameTab = (tabId: string, name: string) => {
-    if (!name) {
-      const maxNum = tabs
-        .map((t) => t.name)
-        .filter((n) => /^Terminal \d+$/.test(n))
-        .map((n) => parseInt(n.replace('Terminal ', ''), 10))
-        .reduce((max, n) => Math.max(max, n), 0);
-      onRenameTab(tabId, `Terminal ${maxNum + 1}`);
-      return;
-    }
     onRenameTab(tabId, name);
   };
 

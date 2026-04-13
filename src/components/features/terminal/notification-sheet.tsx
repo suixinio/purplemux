@@ -71,17 +71,15 @@ const useActiveTab = (): { id: string | null; claudeSessionId: string | null } =
 
 export const useNotificationCount = (): { busyCount: number; attentionCount: number } => {
   const tabs = useTabStore((s) => s.tabs);
-  const { id: activeTabId } = useActiveTab();
   return useMemo(() => {
     let busyCount = 0;
     let attentionCount = 0;
-    for (const [tabId, tab] of Object.entries(tabs)) {
-      if (tabId === activeTabId) continue;
+    for (const tab of Object.values(tabs)) {
       if (tab.cliState === 'busy') busyCount++;
       else if (tab.cliState === 'ready-for-review' || tab.cliState === 'needs-input') attentionCount++;
     }
     return { busyCount, attentionCount };
-  }, [tabs, activeTabId]);
+  }, [tabs]);
 };
 
 interface INotificationItem {

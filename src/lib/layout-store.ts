@@ -176,7 +176,7 @@ export const crossCheckLayout = async (
         firstPane.tabs.push({
           id: generateTabId(),
           sessionName,
-          name: `Terminal ${maxOrder + 1}`,
+          name: '',
           order: maxOrder,
         });
       }
@@ -274,8 +274,8 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     }
 
     const nextOrder = pane.tabs.length > 0 ? Math.max(...pane.tabs.map((t) => t.order)) + 1 : 0;
-    const defaultName = isWebBrowser ? 'Web Browser' : undefined;
-    const tabName = name?.trim() || defaultName || nextTabName(pane.tabs);
+    const defaultName = isWebBrowser ? 'Web Browser' : '';
+    const tabName = name?.trim() || defaultName;
     const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}), ...(panelType ? { panelType: panelType as ITab['panelType'] } : {}) };
 
     pane.tabs.push(tab);
@@ -487,15 +487,6 @@ export const updateTabCliStatus = async (
     layout.updatedAt = new Date().toISOString();
     await writeLayoutFile(layout, filePath);
   });
-};
-
-const nextTabName = (tabs: ITab[]): string => {
-  const existing = tabs
-    .map((t) => t.name)
-    .filter((n) => /^Terminal \d+$/.test(n))
-    .map((n) => parseInt(n.replace('Terminal ', ''), 10));
-  const max = existing.length > 0 ? Math.max(...existing) : 0;
-  return `Terminal ${max + 1}`;
 };
 
 const mutate = async (

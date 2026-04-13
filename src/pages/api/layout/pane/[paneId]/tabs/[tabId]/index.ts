@@ -45,8 +45,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (name !== undefined || panelType !== undefined || title !== undefined || cwd !== undefined || lastCommand !== undefined || webUrl !== undefined) {
       const patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand' | 'webUrl'>> = {};
       if (name !== undefined) {
-        if (typeof name !== 'string' || !name.trim()) {
-          return res.status(400).json({ error: 'name cannot be empty' });
+        if (typeof name !== 'string') {
+          return res.status(400).json({ error: 'name must be a string' });
         }
         patch.name = name.trim();
       }
