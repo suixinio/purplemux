@@ -8,6 +8,8 @@ Todas as sessões em uma tela só. Sem quebras, até no celular.
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Instalação
 
 ```bash

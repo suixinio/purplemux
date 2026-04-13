@@ -8,6 +8,8 @@ Tüm oturumlarınız tek bir ekranda. Telefonda bile kopuksuz.
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Kurulum
 
 ```bash

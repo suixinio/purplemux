@@ -8,6 +8,8 @@ Toutes vos sessions sur un seul écran. Sans coupure, même depuis le téléphon
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Installation
 
 ```bash

@@ -8,6 +8,8 @@ Alle Sessions auf einem Bildschirm. Unterbrechungsfrei, auch auf dem Handy.
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Installation
 
 ```bash

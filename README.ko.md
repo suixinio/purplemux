@@ -8,6 +8,8 @@
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## 설치
 
 ```bash

@@ -8,6 +8,8 @@ English | <a href="README.ja.md">日本語</a> | <a href="README.zh-CN.md">简�
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Install
 
 ```bash

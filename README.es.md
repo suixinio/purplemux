@@ -8,6 +8,8 @@ Todas tus sesiones en una sola pantalla. Sin interrupciones, incluso desde el m√
 
 ![purplemux](docs/images/screenshot.png)
 
+![purplemux mobile](docs/images/screenshot-mobile.png)
+
 ## Instalaci√≥n
 
 ```bash
