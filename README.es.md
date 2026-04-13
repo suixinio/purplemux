@@ -18,7 +18,7 @@ npx purplemux
 
 Abre [http://localhost:8022](http://localhost:8022) en tu navegador. Listo.
 
-> Requiere Node.js 18+ y tmux. macOS o Linux.
+> Requiere Node.js 20+ y tmux. macOS o Linux.
 
 ## Por qué purplemux
 
@@ -88,7 +88,7 @@ Crea agentes de IA independientes, asígnales roles y personalidades (souls) y e
 ### Requisitos
 
 - macOS 13+ o Linux
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
 ### npx (el más rápido)

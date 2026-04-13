@@ -18,7 +18,7 @@ npx purplemux
 
 ブラウザで [http://localhost:8022](http://localhost:8022) を開いてください。以上。
 
-> Node.js 18+ と tmux が必要です。macOS または Linux。
+> Node.js 20+ と tmux が必要です。macOS または Linux。
 
 ## purplemux を選ぶ理由
 
@@ -88,7 +88,7 @@ npx purplemux
 ### 必須要件
 
 - macOS 13+ または Linux
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
 ### npx (最速)

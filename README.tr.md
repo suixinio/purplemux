@@ -18,7 +18,7 @@ npx purplemux
 
 Tarayıcınızda [http://localhost:8022](http://localhost:8022) adresini açın. Hepsi bu.
 
-> Node.js 18+ ve tmux gerekir. macOS veya Linux.
+> Node.js 20+ ve tmux gerekir. macOS veya Linux.
 
 ## Neden purplemux
 
@@ -88,7 +88,7 @@ Bağımsız AI ajanları oluşturun, onlara roller ve kişilikler (soul) atayın
 ### Gereksinimler
 
 - macOS 13+ veya Linux
-- [Node.js](https://nodejs.org/) 18+
+- [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
 ### npx (en hızlısı)
