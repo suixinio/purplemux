@@ -58,7 +58,7 @@ const createDefaultTab = (wsId: string, paneId: string, order = 0, cwd?: string)
   const tab: ITab = {
     id: tabId,
     sessionName: workspaceSessionName(wsId, paneId, tabId),
-    name: 'Terminal 1',
+    name: '',
     order,
   };
   if (cwd) tab.cwd = cwd;
@@ -237,7 +237,7 @@ export const createPane = async (wsId: string, cwd?: string): Promise<{ paneId: 
 
   await createSession(sessionName, 80, 24, cwd);
 
-  const tab: ITab = { id: tabId, sessionName, name: 'Terminal 1', order: 0, ...(cwd ? { cwd } : {}) };
+  const tab: ITab = { id: tabId, sessionName, name: '', order: 0, ...(cwd ? { cwd } : {}) };
   return { paneId, tab };
 };
 
@@ -557,7 +557,7 @@ export const splitPaneInLayout = async (
     await createSession(sessionName, 80, 24, cwd);
   }
 
-  const defaultName = isWebBrowser ? 'Web Browser' : 'Terminal 1';
+  const defaultName = isWebBrowser ? 'Web Browser' : '';
   const tab: ITab = { id: tabId, sessionName, name: defaultName, order: 0, ...(cwd ? { cwd } : {}) };
   if (panelType) tab.panelType = panelType as ITab['panelType'];
 
