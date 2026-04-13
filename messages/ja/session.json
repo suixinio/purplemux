@@ -1,5 +1,6 @@
 {
   "noMessage": "(メッセージなし)",
+  "newSessionTitle": "(新しいセッション)",
   "sessionLabel": "セッション: {message}",
   "turnCount": "{count}ターン",
   "justNow": "たった今",

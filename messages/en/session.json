@@ -1,5 +1,6 @@
 {
   "noMessage": "(no message)",
+  "newSessionTitle": "(new session)",
   "sessionLabel": "Session: {message}",
   "turnCount": "{count} turns",
   "justNow": "just now",

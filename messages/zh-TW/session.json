@@ -1,5 +1,6 @@
 {
   "noMessage": "（無訊息）",
+  "newSessionTitle": "（新工作階段）",
   "sessionLabel": "工作階段：{message}",
   "turnCount": "{count} 輪對話",
   "justNow": "剛剛",

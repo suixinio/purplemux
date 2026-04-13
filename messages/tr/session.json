@@ -1,5 +1,6 @@
 {
   "noMessage": "(mesaj yok)",
+  "newSessionTitle": "(yeni oturum)",
   "sessionLabel": "Oturum: {message}",
   "turnCount": "{count} tur",
   "justNow": "az önce",

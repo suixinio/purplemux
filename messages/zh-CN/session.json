@@ -1,5 +1,6 @@
 {
   "noMessage": "（无消息）",
+  "newSessionTitle": "（新会话）",
   "sessionLabel": "会话：{message}",
   "turnCount": "{count}轮对话",
   "justNow": "刚刚",

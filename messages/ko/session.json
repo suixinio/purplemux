@@ -1,5 +1,6 @@
 {
   "noMessage": "(메시지 없음)",
+  "newSessionTitle": "(새 세션)",
   "sessionLabel": "세션: {message}",
   "turnCount": "{count}턴",
   "justNow": "방금 전",

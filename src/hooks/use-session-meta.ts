@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
 import type { ITimelineEntry, IInitMeta } from '@/types/timeline';
 import { calculateCost } from '@/lib/claude-tokens';
 
@@ -36,8 +37,8 @@ interface IUseSessionMetaReturn {
   collapse: () => void;
 }
 
-const EMPTY_META: ISessionMetaData = {
-  title: '(새 세션)',
+const createEmptyMeta = (newSessionTitle: string): ISessionMetaData => ({
+  title: newSessionTitle,
   createdAt: null,
   updatedAt: null,
   fileSize: 0,
@@ -51,7 +52,7 @@ const EMPTY_META: ISessionMetaData = {
   contextWindowTokens: 0,
   totalCost: null,
   tokensByModel: [],
-};
+});
 
 interface IAccumulator {
   inputTokens: number;
@@ -135,8 +136,8 @@ const sumCost = (models: IModelTokens[]): number | null =>
     return (sum ?? 0) + m.cost;
   }, null);
 
-const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => {
-  if (entries.length === 0) return EMPTY_META;
+const computeMetaFromEntries = (entries: ITimelineEntry[], newSessionTitle: string): ISessionMetaData => {
+  if (entries.length === 0) return createEmptyMeta(newSessionTitle);
 
   const { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap, firstUserMessage } = accumulateUsage(entries);
   const tokensByModel = buildTokensByModel(modelMap);
@@ -147,7 +148,7 @@ const computeMetaFromEntries = (entries: ITimelineEntry[]): ISessionMetaData => 
   }
 
   return {
-    title: firstUserMessage ?? '(새 세션)',
+    title: firstUserMessage ?? newSessionTitle,
     createdAt,
     updatedAt,
     fileSize: 0,
@@ -185,8 +186,8 @@ const mergeTokensByModel = (base: IModelTokens[], delta: IModelTokens[]): IModel
   return Array.from(map.values()).sort((a, b) => b.totalTokens - a.totalTokens);
 };
 
-const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta): ISessionMetaData => {
-  let title = initMeta.customTitle ?? '(새 세션)';
+const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta, newSessionTitle: string): ISessionMetaData => {
+  let title = initMeta.customTitle ?? newSessionTitle;
   if (!initMeta.customTitle) {
     for (const entry of entries) {
       if (entry.type === 'user-message') {
@@ -227,17 +228,19 @@ const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta): ISes
 };
 
 const useSessionMeta = (entries: ITimelineEntry[], sessionSummary?: string, initMeta?: IInitMeta): IUseSessionMetaReturn => {
+  const t = useTranslations('session');
+  const newSessionTitle = t('newSessionTitle');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const meta = useMemo(() => {
     const computed = initMeta
-      ? mergeWithInitMeta(entries, initMeta)
-      : computeMetaFromEntries(entries);
+      ? mergeWithInitMeta(entries, initMeta, newSessionTitle)
+      : computeMetaFromEntries(entries, newSessionTitle);
     if (sessionSummary) {
       return { ...computed, title: sessionSummary };
     }
     return computed;
-  }, [entries, sessionSummary, initMeta]);
+  }, [entries, sessionSummary, initMeta, newSessionTitle]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);

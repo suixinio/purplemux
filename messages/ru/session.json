@@ -1,5 +1,6 @@
 {
   "noMessage": "(нет сообщений)",
+  "newSessionTitle": "(новая сессия)",
   "sessionLabel": "Сессия: {message}",
   "turnCount": "{count} обменов",
   "justNow": "только что",
