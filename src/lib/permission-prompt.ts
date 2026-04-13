@@ -18,6 +18,19 @@ const stripPrefix = (o: string) => o.replace(NUMBER_PREFIX_RE, '');
 const hasOption = (options: string[], prefix: string) =>
   options.some((o) => stripPrefix(o).startsWith(prefix));
 
+// tmux pane capture가 손상된 경우 원본 옵션 텍스트를 복원한다.
+// - "Yescurrent status for this tab"처럼 다른 UI 영역이 뒤에 붙은 경우 "Yes"만 남김
+// - "Yes, and don't ask: <cmd>"처럼 "again for" 구간이 유실된 경우 canonical 형태로 복원
+const DONT_ASK_RE = /^Yes,\s*and\s+don[\u2019']?t\s+ask(?:\s+again(?:\s+for)?)?:\s*(.+)$/;
+
+const normalizeOption = (text: string): string => {
+  const dontAsk = text.match(DONT_ASK_RE);
+  if (dontAsk) return `Yes, and don't ask again for: ${dontAsk[1].trim()}`;
+  if (/^Yes(?![,\s]|$)/.test(text)) return 'Yes';
+  if (/^No(?![,\s]|$)/.test(text)) return 'No';
+  return text;
+};
+
 const isKnownPromptPattern = (options: string[]): boolean => {
   if (options.length < 2) return false;
   return (hasOption(options, 'Yes') && hasOption(options, 'No'))
@@ -35,10 +48,8 @@ const parseNumberedOptions = (lines: string[]): { options: string[]; focusedInde
   let started = false;
 
   for (const line of lines) {
-    if (!line.trim()) {
-      if (started) break;
-      continue;
-    }
+    // 손상된 pane capture에서 옵션 사이에 빈 줄이 끼어 있을 수 있으므로 break하지 않고 계속 탐색
+    if (!line.trim()) continue;
 
     const match = line.match(NUMBERED_LINE_RE);
     if (match) {
@@ -47,7 +58,7 @@ const parseNumberedOptions = (lines: string[]): { options: string[]; focusedInde
       const rest = match[3].trim();
       if (num === expected && rest.length > 0) {
         if (marker) focusedIndex = options.length;
-        options.push(`${num}. ${rest}`);
+        options.push(`${num}. ${normalizeOption(rest)}`);
         expected += 1;
         started = true;
         continue;

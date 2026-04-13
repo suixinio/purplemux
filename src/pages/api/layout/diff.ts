@@ -12,7 +12,7 @@ const CMD_TIMEOUT = 10000;
 const computeDiffHash = async (cwd: string) => {
   const [{ stdout: headOut }, { stdout: statusOut }, { stdout: shortstatOut }] = await Promise.all([
     execFile('git', ['rev-parse', 'HEAD'], { cwd, timeout: CMD_TIMEOUT }),
-    execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT }),
+    execFile('git', ['status', '--porcelain', '-uall'], { cwd, timeout: CMD_TIMEOUT }),
     execFile('git', ['diff', 'HEAD', '--shortstat'], { cwd, timeout: CMD_TIMEOUT }),
   ]);
   return createHash('sha1')
@@ -58,7 +58,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     const [{ stdout: diff }, { stdout: statusOut }, hash] = await Promise.all([
       execFile('git', ['diff', 'HEAD'], { cwd, timeout: CMD_TIMEOUT, maxBuffer: 5 * 1024 * 1024 }),
-      execFile('git', ['status', '--porcelain'], { cwd, timeout: CMD_TIMEOUT }),
+      execFile('git', ['status', '--porcelain', '-uall'], { cwd, timeout: CMD_TIMEOUT }),
       computeDiffHash(cwd),
     ]);
 
