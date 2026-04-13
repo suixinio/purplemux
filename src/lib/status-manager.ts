@@ -21,6 +21,7 @@ import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
 
 const log = createLogger('status');
+const hookLog = createLogger('hooks');
 
 export const deriveStateFromEvent = (event: ILastEvent | null, fallback: TCliState): TCliState => {
   if (!event) return fallback;
@@ -762,11 +763,18 @@ class StatusManager {
 
   updateTabFromHook(tmuxSession: string, event: string): void {
     const tabId = this.findTabIdBySession(tmuxSession);
-    if (!tabId) return;
+    if (!tabId) {
+      hookLog.debug({ tmuxSession, event }, 'no tabId for session');
+      return;
+    }
     const entry = this.tabs.get(tabId);
-    if (!entry) return;
+    if (!entry) {
+      hookLog.debug({ tabId, event }, 'no entry for tab');
+      return;
+    }
 
     if (event !== 'session-start' && event !== 'prompt-submit' && event !== 'notification' && event !== 'stop') {
+      hookLog.debug({ tabId, event }, 'unknown event, ignoring');
       return;
     }
     const eventName = event as TEventName;
@@ -781,6 +789,8 @@ class StatusManager {
     const newState = prevState === 'cancelled'
       ? prevState
       : deriveStateFromEvent(entry.lastEvent, prevState);
+
+    hookLog.debug({ tabId, event: eventName, seq, prevState, newState, transition: prevState !== newState }, 'processed');
 
     if (prevState !== newState) {
       this.applyCliState(tabId, entry, newState);

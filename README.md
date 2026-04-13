@@ -115,6 +115,26 @@ pnpm start
 pnpm dev
 ```
 
+#### 로그 레벨 설정
+
+전체 레벨은 `LOG_LEVEL`(기본 `info`)로 조절합니다.
+
+```bash
+LOG_LEVEL=debug pnpm dev
+```
+
+특정 모듈만 따로 켜고 싶으면 `LOG_LEVELS`에 `모듈=레벨` 쌍을 콤마로 나열합니다. 사용 가능한 레벨: `trace` / `debug` / `info` / `warn` / `error` / `fatal`.
+
+```bash
+# Claude Code hook 동작만 debug로 추적
+LOG_LEVELS=hooks=debug pnpm dev
+
+# 여러 모듈 동시
+LOG_LEVELS=hooks=debug,status=warn pnpm dev
+```
+
+`LOG_LEVELS`에 명시되지 않은 모듈은 `LOG_LEVEL` 값을 사용합니다.
+
 ## 외부 접속 (Tailscale Serve)
 
 ```bash

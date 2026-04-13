@@ -21,8 +21,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const { event, session } = req.body ?? {};
   if (typeof event === 'string' && event !== 'poll' && typeof session === 'string' && session) {
+    log.debug({ event, session }, 'received');
     getStatusManager().updateTabFromHook(session, event);
   } else {
+    log.debug({ body: req.body }, 'poll trigger');
     getStatusManager().poll().catch((err) => {
       log.error({ err }, 'Poll trigger failed');
     });
