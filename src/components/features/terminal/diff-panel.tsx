@@ -37,7 +37,11 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
       const data = await res.json();
       setIsGitRepo(data.isGitRepo);
       if (data.isGitRepo) {
-        setDiff(data.diff ?? '');
+        const nextDiff = data.diff ?? '';
+        if (!nextDiff && containerRef.current) {
+          containerRef.current.innerHTML = '';
+        }
+        setDiff(nextDiff);
         currentHashRef.current = data.hash ?? '';
       }
     } finally {
@@ -81,14 +85,17 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
   useEffect(() => {
     const el = containerRef.current;
-    if (!el || !diff) {
-      if (el) el.innerHTML = '';
+    if (!el) return;
+
+    if (!diff) {
+      el.innerHTML = '';
       return;
     }
 
     let cancelled = false;
     import('diff2html/lib/ui/js/diff2html-ui-slim').then(({ Diff2HtmlUI }) => {
       if (cancelled || !containerRef.current) return;
+      containerRef.current.innerHTML = '';
       const ui = new Diff2HtmlUI(containerRef.current, diff, {
         outputFormat: isMobile ? 'line-by-line' : outputFormat,
         drawFileList: true,
@@ -173,19 +180,18 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
       </div>
 
       <div className="min-h-0 flex-1 overflow-auto">
-        {!diff ? (
+        {!diff && (
           <div className="flex h-full items-center justify-center">
             <div className="flex flex-col items-center gap-3 text-muted-foreground">
               <GitBranch className="h-10 w-10 opacity-20" />
               <span className="text-sm">{t('noChanges')}</span>
             </div>
           </div>
-        ) : (
-          <div
-            ref={containerRef}
-            className="diff-panel-content text-xs"
-          />
         )}
+        <div
+          ref={containerRef}
+          className={cn('diff-panel-content text-xs', !diff && 'hidden')}
+        />
       </div>
     </div>
   );

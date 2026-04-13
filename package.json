@@ -48,7 +48,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "ralph": "node ralph-loop.js",
-    "prepublishOnly": "rm -rf .next dist && pnpm build",
+    "prepublishOnly": "rm -rf .next dist dist-electron && pnpm build",
     "postinstall": "chmod +x node_modules/.pnpm/node-pty@*/node_modules/node-pty/prebuilds/*/spawn-helper 2>/dev/null; exit 0"
   },
   "dependencies": {
