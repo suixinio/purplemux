@@ -4,6 +4,7 @@ import type {
   IInitMeta,
   ITaskItem,
   TClaudeStatus,
+  TCliState,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
 import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
@@ -25,7 +26,10 @@ interface IUseTimelineOptions {
   enabled: boolean;
   resumeCallbacks?: IResumeCallbacks;
   onSync?: (state: ITimelineSyncState) => void;
+  getCliState?: () => TCliState | undefined;
 }
+
+const PENDING_AUTOHIDE_DELAY_MS = 1000;
 
 interface IUseTimelineReturn {
   entries: ITimelineEntry[];
@@ -50,6 +54,7 @@ const useTimeline = ({
   enabled,
   resumeCallbacks,
   onSync,
+  getCliState,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
   const [claudeStatus, setClaudeSession] = useState<TClaudeStatus>('unknown');
@@ -68,6 +73,11 @@ const useTimeline = ({
   const jsonlPathRef = useRef<string | null>(null);
   const startByteOffsetRef = useRef(0);
   const isLoadingMoreRef = useRef(false);
+
+  const getCliStateRef = useRef(getCliState);
+  useEffect(() => {
+    getCliStateRef.current = getCliState;
+  }, [getCliState]);
 
   const [prevSessionName, setPrevSessionName] = useState(sessionName);
   if (sessionName !== prevSessionName) {
@@ -164,14 +174,24 @@ const useTimeline = ({
   const addPendingUserMessage = useCallback((text: string) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const id = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const pendingEntry: ITimelineEntry = {
-      id: `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      id,
       type: 'user-message',
       timestamp: Date.now(),
       text: trimmed,
       pending: true,
     };
     setEntries((prev) => [...prev, pendingEntry]);
+
+    setTimeout(() => {
+      if (getCliStateRef.current?.() !== 'busy') return;
+      setEntries((prev) =>
+        prev.filter(
+          (e) => !(e.id === id && e.type === 'user-message' && e.pending === true),
+        ),
+      );
+    }, PENDING_AUTOHIDE_DELAY_MS);
   }, []);
 
   const handleSessionChanged = useCallback((newSessionId: string, reason: string) => {

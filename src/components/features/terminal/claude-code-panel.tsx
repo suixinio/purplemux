@@ -109,6 +109,7 @@ const ClaudeCodePanel = ({
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     },
+    getCliState: () => useTabStore.getState().tabs[tabId]?.cliState,
   });
 
   const {

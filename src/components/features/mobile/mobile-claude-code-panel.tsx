@@ -127,6 +127,7 @@ const MobileClaudeCodePanel = ({
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     } : undefined,
+    getCliState: tabId ? () => useTabStore.getState().tabs[tabId]?.cliState : undefined,
   });
 
   const effectiveClaudeStatus = tabId
