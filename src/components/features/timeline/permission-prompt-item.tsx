@@ -5,6 +5,7 @@ import { ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
+import { ackNotificationInput } from '@/hooks/use-claude-status';
 
 interface IPermissionPromptItemProps {
   sessionName: string;
@@ -98,16 +99,23 @@ const PermissionPromptItem = ({ sessionName, tabId, silent = false }: IPermissio
     async (idx: number) => {
       if (localSelected !== null) return;
 
+      console.log('[permission-prompt] select', { sessionName, tabId, idx, lastEventSeq, cliState });
       setLocalSelected(idx);
       const ok = await sendSelection(sessionName, idx);
+      console.log('[permission-prompt] sendSelection result', { ok });
       if (!ok) {
         setLocalSelected(null);
         toast.error(t('selectionFailed'));
         return;
       }
+      if (tabId && lastEventSeq !== undefined) {
+        ackNotificationInput(tabId, lastEventSeq);
+      } else {
+        console.warn('[permission-prompt] ack skipped', { tabId, lastEventSeq });
+      }
       setDismissed(true);
     },
-    [sessionName, localSelected, t],
+    [sessionName, localSelected, t, tabId, lastEventSeq, cliState],
   );
 
   const renderContent = () => {

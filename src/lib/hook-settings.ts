@@ -55,6 +55,8 @@ const buildHookSettings = () => ({
     Notification: hookEntry('notification'),
     Stop: hookEntry('stop'),
     StopFailure: hookEntry('stop'),
+    PreCompact: hookEntry('pre-compact'),
+    PostCompact: hookEntry('post-compact'),
   },
   statusLine: {
     type: 'command' as const,

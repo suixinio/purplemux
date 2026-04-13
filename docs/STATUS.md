@@ -87,6 +87,22 @@ export const deriveStateFromEvent = (event: ILastEvent | null, fallback: TCliSta
 
 훅이나 JSONL watcher는 이 전환을 일으키지 않는다.
 
+### `needs-input` 해제 (사용자 선택 ack)
+
+권한 프롬프트에서 사용자가 옵션을 선택하면 Claude는 작업을 재개하지만 `prompt-submit` 훅을 발사하지 않는다. 따라서 `needs-input → busy` 전환을 훅만으로 감지할 수 없어, 클라이언트가 명시적으로 ack를 보낸다.
+
+**플로우**:
+
+1. `PermissionPromptItem.handleSelect` — `sendSelection` 성공 후 현재 `lastEvent.seq`와 함께 `status:ack-notification` WS 메시지 전송
+2. `StatusManager.ackNotificationInput(tabId, seq)`:
+   - `cliState === 'needs-input'` 아니면 무시
+   - `lastEvent.name === 'notification' && lastEvent.seq === seq` 아니면 무시 (이미 다음 훅이 도착한 경우)
+   - 조건 충족 시 `applyCliState(busy)` + `persistToLayout` + `broadcastUpdate`
+
+**seq 가드의 의미**: ack가 도착하기 전에 다른 훅(연속 `notification` 또는 `stop`)이 먼저 도착하면 `entry.lastEvent.seq`가 증가해 ack와 불일치 → 무시. 이미 서버가 더 최신 상태로 전이했으므로 뒤늦은 ack가 덮어쓰는 레이스를 방지한다.
+
+`eventSeq`는 증가시키지 않는다 — 이건 훅 이벤트가 아니라 클라이언트 액션이므로. 다음 실제 훅이 오면 기존 seq보다 큰 값을 받아 정상 처리된다.
+
 ### 탭 표시 상태 (`TTabDisplayStatus`)
 
 `selectTabDisplayStatus(tabs, tabId)`에서 `cliState`를 UI 표시용으로 매핑:

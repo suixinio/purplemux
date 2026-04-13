@@ -13,6 +13,7 @@ export interface ISessionHistoryEntry {
   dismissedAt: number | null;
   toolUsage: Record<string, number>;
   touchedFiles: string[];
+  cancelled?: boolean;
 }
 
 export interface ISessionHistoryData {

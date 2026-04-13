@@ -67,6 +67,7 @@ const MobileClaudeCodePanel = ({
 
   const claudeStatus = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeStatus ?? 'unknown' : 'unknown');
   const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive');
+  const compactingSince = useTabStore((s) => tabId ? s.tabs[tabId]?.compactingSince ?? null : null);
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
@@ -104,6 +105,7 @@ const MobileClaudeCodePanel = ({
     hasMore: timelineHasMore,
     retrySession,
     sendResume,
+    addPendingUserMessage,
   } = useTimeline({
     sessionName,
     claudeSessionId,
@@ -301,6 +303,7 @@ const MobileClaudeCodePanel = ({
           tabId={tabId}
           initMeta={initMeta}
           cliState={storeCliState}
+          compactingSince={compactingSince}
           claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
@@ -327,6 +330,7 @@ const MobileClaudeCodePanel = ({
           maxRows={3}
           onRestartSession={onRestartSession}
           onSend={handleScrollToBottom}
+          onOptimisticSend={addPendingUserMessage}
         />
         <QuickPromptBar
           prompts={quickPrompts}

@@ -27,6 +27,8 @@ const hookLog = createLogger('hooks');
 // idle_prompt(응답 후 60s idle 알람), computer_use_*, elicitation_*, auth_success 등은 상태 변경 없이 무시한다.
 const INPUT_REQUESTING_NOTIFICATION_TYPES = new Set(['permission_prompt', 'worker_permission_prompt']);
 
+const COMPACT_STALE_MS = 60_000;
+
 export const deriveStateFromEvent = (event: ILastEvent | null, fallback: TCliState): TCliState => {
   if (!event) return fallback;
   switch (event.name) {
@@ -351,6 +353,7 @@ class StatusManager {
   private rateLimitsWatcher: ReturnType<typeof createRateLimitsWatcher> | null = null;
   private lastRateLimits: IRateLimitsData | null = null;
   private jsonlWatchers = new Map<string, { watcher: FSWatcher; jsonlPath: string; debounceTimer: ReturnType<typeof setTimeout> | null }>();
+  private compactStaleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -758,6 +761,31 @@ class StatusManager {
     });
   }
 
+  ackNotificationInput(tabId: string, seq: number): void {
+    hookLog.debug({ tabId, seq }, 'ack received');
+    const entry = this.tabs.get(tabId);
+    if (!entry) {
+      hookLog.debug({ tabId, seq }, 'ack ignored: no entry');
+      return;
+    }
+    if (entry.cliState !== 'needs-input') {
+      hookLog.debug({ tabId, seq, cliState: entry.cliState }, 'ack ignored: not needs-input');
+      return;
+    }
+    if (entry.lastEvent?.name !== 'notification' || entry.lastEvent.seq !== seq) {
+      hookLog.debug(
+        { tabId, seq, lastEvent: entry.lastEvent },
+        'ack ignored: seq/name mismatch',
+      );
+      return;
+    }
+
+    hookLog.debug({ tabId, seq }, 'ack: needs-input→busy');
+    this.applyCliState(tabId, entry, 'busy');
+    this.persistToLayout(entry);
+    this.broadcastUpdate(tabId, entry);
+  }
+
   private findTabIdBySession(tmuxSession: string): string | undefined {
     for (const [tabId, entry] of this.tabs) {
       if (entry.tmuxSession === tmuxSession) return tabId;
@@ -774,6 +802,12 @@ class StatusManager {
     const entry = this.tabs.get(tabId);
     if (!entry) {
       hookLog.debug({ tabId, event, notificationType }, 'no entry for tab');
+      return;
+    }
+
+    if (event === 'pre-compact' || event === 'post-compact') {
+      hookLog.debug({ tabId, event }, 'compact hook');
+      this.setCompacting(tabId, entry, event === 'pre-compact' ? Date.now() : null);
       return;
     }
 
@@ -842,8 +876,37 @@ class StatusManager {
     }
   }
 
+  private setCompacting(tabId: string, entry: ITabStatusEntry, since: number | null): void {
+    const existingTimer = this.compactStaleTimers.get(tabId);
+    if (existingTimer) {
+      clearTimeout(existingTimer);
+      this.compactStaleTimers.delete(tabId);
+    }
+
+    if ((entry.compactingSince ?? null) === since) return;
+    entry.compactingSince = since;
+    this.broadcastUpdate(tabId, entry);
+
+    if (since !== null) {
+      const timer = setTimeout(() => {
+        this.compactStaleTimers.delete(tabId);
+        const e = this.tabs.get(tabId);
+        if (!e || e.compactingSince !== since) return;
+        e.compactingSince = null;
+        hookLog.debug({ tabId }, 'compact stale, auto-cleared');
+        this.broadcastUpdate(tabId, e);
+      }, COMPACT_STALE_MS);
+      this.compactStaleTimers.set(tabId, timer);
+    }
+  }
+
   removeTab(tabId: string): void {
     this.stopJsonlWatch(tabId);
+    const compactTimer = this.compactStaleTimers.get(tabId);
+    if (compactTimer) {
+      clearTimeout(compactTimer);
+      this.compactStaleTimers.delete(tabId);
+    }
     this.tabs.delete(tabId);
     this.broadcastRemove(tabId);
   }
@@ -888,6 +951,7 @@ class StatusManager {
       busySince: entry.busySince,
       dismissedAt: entry.dismissedAt,
       claudeSessionId: entry.claudeSessionId,
+      compactingSince: entry.compactingSince,
     };
     this.broadcast(msg, exclude);
   }

@@ -29,6 +29,7 @@ interface IWebInputBarProps {
   maxRows?: number;
   onRestartSession?: () => void;
   onSend?: () => void;
+  onOptimisticSend?: (text: string) => void;
 }
 
 const WebInputBar = ({
@@ -45,15 +46,23 @@ const WebInputBar = ({
   maxRows = DEFAULT_MAX_ROWS,
   onRestartSession,
   onSend,
+  onOptimisticSend,
 }: IWebInputBarProps) => {
   const t = useTranslations('terminal');
   const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
     useMessageHistory({ wsId });
+  const handleMessageSent = useCallback(
+    (message: string) => {
+      addHistory(message);
+      onOptimisticSend?.(message);
+    },
+    [addHistory, onOptimisticSend],
+  );
   const { value, setValue, mode, canSend, send, interrupt, textareaRef, focusInput } = useWebInput(
     cliState,
     sendStdin,
     terminalWsConnected,
-    { tabId, onRestartSession, onMessageSent: addHistory },
+    { tabId, onRestartSession, onMessageSent: handleMessageSent },
   );
   const isMobileDevice = useIsMobileDevice();
 

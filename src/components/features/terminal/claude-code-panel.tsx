@@ -22,6 +22,7 @@ interface IClaudeCodePanelProps {
   onClose?: () => void;
   onNewSession?: () => void;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
+  addPendingMessageRef?: React.MutableRefObject<((text: string) => void) | undefined>;
 }
 
 const ClaudeCodePanel = ({
@@ -33,6 +34,7 @@ const ClaudeCodePanel = ({
   onClose,
   onNewSession,
   scrollToBottomRef,
+  addPendingMessageRef,
 }: IClaudeCodePanelProps) => {
   const t = useTranslations('terminal');
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
@@ -42,6 +44,7 @@ const ClaudeCodePanel = ({
   const isResuming = useTabStore((s) => s.tabs[tabId]?.isResuming ?? false);
   const storeTimelineLoading = useTabStore((s) => s.tabs[tabId]?.isTimelineLoading ?? true);
   const storeCliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
+  const compactingSince = useTabStore((s) => s.tabs[tabId]?.compactingSince ?? null);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
 
   const handleResumeStarted = useCallback(
@@ -83,6 +86,7 @@ const ClaudeCodePanel = ({
     hasMore: timelineHasMore,
     retrySession,
     sendResume,
+    addPendingUserMessage,
   } = useTimeline({
     sessionName,
     claudeSessionId,
@@ -120,6 +124,14 @@ const ClaudeCodePanel = ({
     enabled: !!sessionName && claudeStatus !== 'running' && claudeStatus !== 'starting',
     cwd,
   });
+
+  useEffect(() => {
+    if (!addPendingMessageRef) return;
+    addPendingMessageRef.current = addPendingUserMessage;
+    return () => {
+      addPendingMessageRef.current = undefined;
+    };
+  }, [addPendingMessageRef, addPendingUserMessage]);
 
   const prevClaudeStatusRef = useRef(claudeStatus);
   useEffect(() => {
@@ -246,6 +258,7 @@ const ClaudeCodePanel = ({
           tabId={tabId}
           initMeta={initMeta}
           cliState={effectiveCliState}
+          compactingSince={compactingSince}
           claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}

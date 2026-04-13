@@ -42,6 +42,7 @@ export interface ITimelineUserMessage {
   type: 'user-message';
   timestamp: number;
   text: string;
+  pending?: boolean;
 }
 
 export interface ITimelineAssistantMessage {

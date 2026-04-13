@@ -35,6 +35,7 @@ export interface ITabStatusEntry {
   busySince?: number | null;
   dismissedAt?: number | null;
   claudeSessionId?: string | null;
+  compactingSince?: number | null;
   processRetries?: number;
   jsonlPath?: string | null;
   lastEvent?: ILastEvent | null;
@@ -69,6 +70,7 @@ export interface IStatusUpdateMessage {
   busySince?: number | null;
   dismissedAt?: number | null;
   claudeSessionId?: string | null;
+  compactingSince?: number | null;
 }
 
 export interface IRateLimitWindow {
@@ -127,4 +129,13 @@ export interface IStatusRequestSyncMessage {
   type: 'status:request-sync';
 }
 
-export type TStatusClientMessage = IStatusTabDismissedMessage | IStatusRequestSyncMessage;
+export interface IStatusAckNotificationMessage {
+  type: 'status:ack-notification';
+  tabId: string;
+  seq: number;
+}
+
+export type TStatusClientMessage =
+  | IStatusTabDismissedMessage
+  | IStatusRequestSyncMessage
+  | IStatusAckNotificationMessage;

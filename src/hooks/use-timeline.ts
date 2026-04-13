@@ -41,6 +41,7 @@ interface IUseTimelineReturn {
   hasMore: boolean;
   retrySession: () => void;
   sendResume: (sessionId: string, tmuxSession: string) => void;
+  addPendingUserMessage: (text: string) => void;
 }
 
 const useTimeline = ({
@@ -108,6 +109,17 @@ const useTimeline = ({
     setEntries((prev) => {
       const updated = [...prev];
       for (const entry of newEntries) {
+        if (entry.type === 'user-message') {
+          const target = entry.text.trim();
+          const pendingIdx = updated.findIndex(
+            (e) => e.type === 'user-message' && e.pending && e.text.trim() === target,
+          );
+          if (pendingIdx !== -1) {
+            const pending = updated[pendingIdx] as ITimelineEntry & { type: 'user-message' };
+            updated[pendingIdx] = { ...entry, id: pending.id };
+            continue;
+          }
+        }
         if (entry.type === 'tool-result') {
           const status = entry.isError ? 'error' as const : 'success' as const;
           const tcIdx = updated.findIndex(
@@ -130,6 +142,19 @@ const useTimeline = ({
       }
       return updated;
     });
+  }, []);
+
+  const addPendingUserMessage = useCallback((text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const pendingEntry: ITimelineEntry = {
+      id: `pending-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      type: 'user-message',
+      timestamp: Date.now(),
+      text: trimmed,
+      pending: true,
+    };
+    setEntries((prev) => [...prev, pendingEntry]);
   }, []);
 
   const handleSessionChanged = useCallback((newSessionId: string, reason: string) => {
@@ -287,6 +312,7 @@ const useTimeline = ({
     hasMore,
     retrySession,
     sendResume,
+    addPendingUserMessage,
   };
 };
 

@@ -199,6 +199,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const wasDragRef = useRef(false);
 
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
+  const addPendingMessageRef = useRef<((text: string) => void) | undefined>(undefined);
   const pendingRestartRef = useRef(false);
   const lastTitleRef = useRef('');
 
@@ -256,6 +257,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const handleScrollToBottom = useCallback(() => {
     scrollToBottomRef.current?.();
+  }, []);
+
+  const handleOptimisticSend = useCallback((text: string) => {
+    addPendingMessageRef.current?.(text);
   }, []);
 
   const handleSelectQuickPrompt = useCallback((prompt: string) => {
@@ -788,6 +793,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onClose={() => handleSwitchPanelType('terminal')}
                   onNewSession={handleNewClaudeSession}
                   scrollToBottomRef={scrollToBottomRef}
+                  addPendingMessageRef={addPendingMessageRef}
                 />
               )}
               {isClaudeCode && !showInitialLoading && claudeInputVisible && (
@@ -805,6 +811,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   setInputValueRef={setInputValueRef}
                   onRestartSession={handleRestartClaudeSession}
                   onSend={handleScrollToBottom}
+                  onOptimisticSend={handleOptimisticSend}
                 />
               )}
               {isClaudeCode && !showInitialLoading && claudeInputVisible && activeTabId && (

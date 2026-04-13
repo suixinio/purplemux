@@ -34,6 +34,7 @@ interface ITimelineViewProps {
   tabId?: string;
   initMeta?: IInitMeta;
   cliState: TCliState;
+  compactingSince?: number | null;
   claudeStatus: TClaudeStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
@@ -246,6 +247,7 @@ const TimelineView = ({
   tabId,
   initMeta,
   cliState,
+  compactingSince,
   claudeStatus,
   wsStatus,
   isLoading,
@@ -257,6 +259,7 @@ const TimelineView = ({
 }: ITimelineViewProps) => {
   const t = useTranslations('timeline');
   const needsInput = cliState === 'needs-input';
+  const isCompacting = compactingSince != null && Date.now() - compactingSince < 60_000;
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -437,6 +440,12 @@ const TimelineView = ({
             <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <Spinner size={10} className="text-claude-active" />
               <ElapsedTime since={entries[entries.length - 1].timestamp} />
+            </div>
+          )}
+          {isCompacting && (
+            <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
+              <Spinner size={10} className="text-claude-active" />
+              <span>컨텍스트 압축 중…</span>
             </div>
           )}
         </div>
