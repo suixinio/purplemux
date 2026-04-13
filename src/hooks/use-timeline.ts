@@ -88,7 +88,24 @@ const useTimeline = ({
 
   const handleInit = useCallback((newEntries: ITimelineEntry[], _totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMoreInit?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean) => {
     setWsInitReceived(true);
-    setEntries(newEntries);
+    setEntries((prev) => {
+      const pendings = prev.filter(
+        (e): e is ITimelineEntry & { type: 'user-message'; pending: true } =>
+          e.type === 'user-message' && e.pending === true,
+      );
+      if (pendings.length === 0) return newEntries;
+
+      const merged = newEntries.map((entry) => {
+        if (entry.type !== 'user-message') return entry;
+        const target = entry.text.trim();
+        const matchIdx = pendings.findIndex((p) => p.text.trim() === target);
+        if (matchIdx === -1) return entry;
+        const matched = pendings[matchIdx];
+        pendings.splice(matchIdx, 1);
+        return { ...entry, id: matched.id };
+      });
+      return [...merged, ...pendings];
+    });
     startByteOffsetRef.current = startByteOffset ?? 0;
     setHasMore(hasMoreInit ?? false);
     setSessionSummary(summary);

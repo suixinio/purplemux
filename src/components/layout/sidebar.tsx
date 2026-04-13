@@ -77,7 +77,10 @@ const Sidebar = () => {
   const activeWebviewId = useWebviewStore((s) => s.activeId);
 
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const sidebarTab = useWorkspaceStore((s) => s.sidebarTab);
+  const storedSidebarTab = useWorkspaceStore((s) => s.sidebarTab);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const sidebarTab = mounted ? storedSidebarTab : 'workspace';
 
   const handleSidebarTabChange = useCallback((v: string) => {
     useWorkspaceStore.getState().setSidebarTab(v as 'workspace' | 'sessions');
