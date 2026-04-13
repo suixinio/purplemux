@@ -34,10 +34,6 @@ export const handleStatusConnection = (ws: WebSocket) => {
           manager.dismissTab(msg.tabId, ws);
           break;
 
-        case 'status:cli-state':
-          manager.updateTab(msg.tabId, msg.cliState, ws);
-          break;
-
         case 'status:request-sync': {
           const sync: IStatusSyncMessage = {
             type: 'status:sync',

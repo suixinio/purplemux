@@ -4,6 +4,14 @@ import type { ISessionHistoryEntry } from '@/types/session-history';
 
 export type TTerminalStatus = 'idle' | 'running' | 'server';
 
+export type TEventName = 'session-start' | 'prompt-submit' | 'notification' | 'stop';
+
+export interface ILastEvent {
+  name: TEventName;
+  at: number;
+  seq: number;
+}
+
 export interface ICurrentAction {
   toolName: TToolName | null;
   summary: string;
@@ -29,14 +37,13 @@ export interface ITabStatusEntry {
   claudeSessionId?: string | null;
   processRetries?: number;
   jsonlPath?: string | null;
-  lastActivityAt?: number | null;
-  lastCaptureHash?: number | null;
-  permissionPromptVersion?: number;
+  lastEvent?: ILastEvent | null;
+  eventSeq?: number;
 }
 
-export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle';
+export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle' | 'unknown';
 
-export type IClientTabStatusEntry = Omit<ITabStatusEntry, 'tmuxSession' | 'jsonlPath' | 'processRetries' | 'lastActivityAt' | 'lastCaptureHash'>;
+export type IClientTabStatusEntry = Omit<ITabStatusEntry, 'tmuxSession' | 'jsonlPath' | 'processRetries'>;
 
 export interface IStatusSyncMessage {
   type: 'status:sync';
@@ -62,7 +69,6 @@ export interface IStatusUpdateMessage {
   busySince?: number | null;
   dismissedAt?: number | null;
   claudeSessionId?: string | null;
-  permissionPromptVersion?: number;
 }
 
 export interface IRateLimitWindow {
@@ -104,21 +110,21 @@ export interface ISessionHistoryUpdateMessage {
   entry: ISessionHistoryEntry;
 }
 
-export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage | IRateLimitsUpdateMessage | ISessionHistorySyncMessage | ISessionHistoryUpdateMessage;
+export interface IStatusHookEventMessage {
+  type: 'status:hook-event';
+  tabId: string;
+  event: ILastEvent;
+}
+
+export type TStatusServerMessage = IStatusSyncMessage | IStatusUpdateMessage | IRateLimitsUpdateMessage | ISessionHistorySyncMessage | ISessionHistoryUpdateMessage | IStatusHookEventMessage;
 
 export interface IStatusTabDismissedMessage {
   type: 'status:tab-dismissed';
   tabId: string;
 }
 
-export interface IStatusCliStateMessage {
-  type: 'status:cli-state';
-  tabId: string;
-  cliState: TCliState;
-}
-
 export interface IStatusRequestSyncMessage {
   type: 'status:request-sync';
 }
 
-export type TStatusClientMessage = IStatusTabDismissedMessage | IStatusCliStateMessage | IStatusRequestSyncMessage;
+export type TStatusClientMessage = IStatusTabDismissedMessage | IStatusRequestSyncMessage;

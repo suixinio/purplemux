@@ -39,6 +39,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
               workspaceId: workspace.id,
               tabName: tab.name,
               tmuxSession: tab.sessionName,
+              lastEvent: null,
+              eventSeq: 0,
             });
             setTimeout(async () => {
               try {

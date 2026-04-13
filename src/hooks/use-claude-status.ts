@@ -5,7 +5,6 @@ import useRateLimitsStore from '@/hooks/use-rate-limits-store';
 import useSessionHistoryStore from '@/hooks/use-session-history-store';
 import { formatTabTitle } from '@/lib/tab-title';
 import type { TStatusServerMessage } from '@/types/status';
-import type { TCliState } from '@/types/timeline';
 
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
@@ -16,12 +15,6 @@ export const dismissTab = (tabId: string) => {
   useTabStore.getState().dismissTab(tabId);
   if (sharedWs?.readyState === WebSocket.OPEN) {
     sharedWs.send(JSON.stringify({ type: 'status:tab-dismissed', tabId }));
-  }
-};
-
-export const notifyCliState = (tabId: string, cliState: TCliState) => {
-  if (sharedWs?.readyState === WebSocket.OPEN) {
-    sharedWs.send(JSON.stringify({ type: 'status:cli-state', tabId, cliState }));
   }
 };
 
@@ -85,11 +78,14 @@ const useClaudeStatus = () => {
                 busySince: msg.busySince,
                 dismissedAt: msg.dismissedAt,
                 claudeSessionId: msg.claudeSessionId,
-                permissionPromptVersion: msg.permissionPromptVersion,
               });
               if (msg.paneTitle) {
                 useTabMetadataStore.getState().setTitle(msg.tabId, formatTabTitle(msg.paneTitle));
               }
+              break;
+
+            case 'status:hook-event':
+              useTabStore.getState().applyHookEvent(msg.tabId, msg.event);
               break;
 
             case 'rate-limits:update':

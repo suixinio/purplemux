@@ -38,6 +38,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         workspaceId: wsId,
         tabName: tab.name,
         tmuxSession: tab.sessionName,
+        lastEvent: null,
+        eventSeq: 0,
       });
     }
 

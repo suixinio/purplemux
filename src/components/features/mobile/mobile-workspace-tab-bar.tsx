@@ -112,6 +112,8 @@ const MobileWorkspaceTabBar = ({
                 <span className="h-2 w-2 rounded-full bg-claude-active animate-pulse" />
               ) : isClaude && status === 'needs-input' ? (
                 <span className="h-2 w-2 rounded-full bg-ui-amber animate-pulse" />
+              ) : isClaude && status === 'unknown' ? (
+                <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
               ) : isClaude ? (
                 <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
               ) : item.panelType === 'web-browser' ? (

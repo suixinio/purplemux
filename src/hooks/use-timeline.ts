@@ -5,43 +5,8 @@ import type {
   ITaskItem,
   TClaudeStatus,
   TTimelineConnectionStatus,
-  TCliState,
 } from '@/types/timeline';
 import useTimelineWebSocket from '@/hooks/use-timeline-websocket';
-
-const STALE_BUSY_MS = 90_000;
-
-const deriveCliState = (
-  claudeStatus: TClaudeStatus,
-  entries: ITimelineEntry[],
-): TCliState => {
-  if (claudeStatus !== 'running') {
-    return 'inactive';
-  }
-
-  if (entries.length === 0) {
-    return 'idle';
-  }
-
-  const lastEntry = entries[entries.length - 1];
-  if (lastEntry.type === 'turn-end' || lastEntry.type === 'interrupt' || lastEntry.type === 'session-exit') {
-    return 'idle';
-  }
-
-  if (lastEntry.type === 'assistant-message' && lastEntry.stopReason && lastEntry.stopReason !== 'tool_use') {
-    return 'idle';
-  }
-
-  if (lastEntry.type === 'ask-user-question' && lastEntry.status === 'pending') {
-    return 'idle';
-  }
-
-  if (Date.now() - lastEntry.timestamp > STALE_BUSY_MS) {
-    return 'idle';
-  }
-
-  return 'busy';
-};
 
 interface IResumeCallbacks {
   onResumeStarted?: (payload: { sessionId: string; jsonlPath: string | null }) => void;
@@ -51,7 +16,6 @@ interface IResumeCallbacks {
 
 export interface ITimelineSyncState {
   claudeStatus: TClaudeStatus;
-  cliState: TCliState;
   isLoading: boolean;
 }
 
@@ -66,7 +30,6 @@ interface IUseTimelineOptions {
 interface IUseTimelineReturn {
   entries: ITimelineEntry[];
   tasks: ITaskItem[];
-  cliState: TCliState;
   sessionId: string | null;
   sessionSummary: string | undefined;
   initMeta: IInitMeta | undefined;
@@ -277,17 +240,12 @@ const useTimeline = ({
     reconnect();
   }, [reconnect]);
 
-  const cliState = useMemo(
-    () => deriveCliState(claudeStatus, entries),
-    [claudeStatus, entries],
-  );
-
   const onSyncRef = useRef(onSync);
   useEffect(() => { onSyncRef.current = onSync; }, [onSync]);
 
   useEffect(() => {
-    onSyncRef.current?.({ claudeStatus, cliState, isLoading });
-  }, [claudeStatus, cliState, isLoading]);
+    onSyncRef.current?.({ claudeStatus, isLoading });
+  }, [claudeStatus, isLoading]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];
@@ -318,7 +276,6 @@ const useTimeline = ({
   return {
     entries,
     tasks,
-    cliState,
     sessionId,
     sessionSummary,
     initMeta,

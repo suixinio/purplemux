@@ -25,7 +25,6 @@ import TaskChecklist from '@/components/features/timeline/task-checklist';
 import TaskProgressItem from '@/components/features/timeline/task-progress-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 import PermissionPromptItem from '@/components/features/timeline/permission-prompt-item';
-import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 
 interface ITimelineViewProps {
   entries: ITimelineEntry[];
@@ -257,8 +256,7 @@ const TimelineView = ({
   scrollToBottomRef,
 }: ITimelineViewProps) => {
   const t = useTranslations('timeline');
-  const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState : undefined);
-  const storeNeedsInput = storeCliState === 'needs-input';
+  const needsInput = cliState === 'needs-input';
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -426,16 +424,16 @@ const TimelineView = ({
               )}
             </div>
           ))}
-          {(shouldProbeResumeDialog || storeNeedsInput) && sessionName && (
+          {(shouldProbeResumeDialog || needsInput) && sessionName && (
             <div className="px-4 py-1.5">
               <PermissionPromptItem
                 sessionName={sessionName}
                 tabId={tabId}
-                silent={shouldProbeResumeDialog && !storeNeedsInput}
+                silent={shouldProbeResumeDialog && !needsInput}
               />
             </div>
           )}
-          {cliState === 'busy' && !storeNeedsInput && (
+          {cliState === 'busy' && !needsInput && (
             <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <Spinner size={10} className="text-claude-active" />
               <ElapsedTime since={entries[entries.length - 1].timestamp} />

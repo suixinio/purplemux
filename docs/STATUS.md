@@ -46,19 +46,30 @@ tmux pane에서 Claude CLI 프로세스가 실행 중인지 판별하는 상태.
 
 ### CLI 작업 상태 (`TCliState`)
 
-Claude가 실행 중일 때의 작업 진행 상태.
+Claude가 실행 중일 때의 작업 진행 상태. **Claude Code Hook이 유일한 진실의 출처**이며, hook 이벤트의 결정적 파생식(`deriveStateFromEvent`)으로 결정된다.
 
 | 상태 | 의미 |
 | --- | --- |
-| `busy` | 사용자가 Claude에 작업을 요청했고 응답을 기다리는 중 |
+| `busy` | 사용자가 Claude에 작업을 요청했고 응답을 기다리는 중 (`prompt-submit` 훅) |
 | `idle` | Claude가 응답을 완료하고 다음 입력을 기다리는 중 (사용자 확인됨) |
-| `ready-for-review` | Claude가 응답을 완료했으나 사용자가 아직 확인하지 않음 |
-| `needs-input` | Claude가 작업 중 사용자 입력을 기다리는 상태 (권한 프롬프트, Notification hook) |
+| `ready-for-review` | Claude가 응답을 완료했으나 사용자가 아직 확인하지 않음 (`stop` 훅) |
+| `needs-input` | Claude가 작업 중 사용자 입력을 기다리는 상태 (`notification` 훅, 권한 프롬프트 포함) |
+| `unknown` | 서버 재시작 전 `busy`였던 탭 — 훅 유실 가능성으로 상태 확정 불가. 다음 훅 수신 또는 background probe로 승격 |
 | `inactive` | Claude 프로세스가 실행되지 않는 상태 |
+| `cancelled` | 클라이언트 측 로컬 상태, 사용자가 작업을 취소함 |
 
-`ready-for-review`은 `busy → idle` 전환 시 자동 승격되며, 사용자가 해당 탭을 포커스하면 `idle`로 전환된다.
+전이 규칙은 순수함수 `deriveStateFromEvent(lastEvent, fallback)`로 표현된다:
 
-`needs-input`은 두 경로로 진입한다: (1) 서버 폴링에서 터미널 화면에 권한 프롬프트가 감지된 경우, (2) Notification hook 수신 — `inactive`를 제외한 모든 상태에서 전환된다.
+```ts
+session-start → idle
+prompt-submit → busy
+notification  → needs-input
+stop          → ready-for-review
+```
+
+예외: `prevState`가 `inactive`/`cancelled`이면 훅이 와도 그대로 유지.
+
+`ready-for-review` → `idle` 전환은 **오직 `dismissTab` 액션**으로만 발생 (사용자가 탭을 포커스하거나 dismiss 버튼 클릭 시).
 
 ### 탭 표시 상태 (`TTabDisplayStatus`)
 
@@ -69,6 +80,7 @@ Claude가 실행 중일 때의 작업 진행 상태.
 | `busy` | `busy` | 스피너 |
 | `ready-for-review` | `ready-for-review` | 보라색 점 (펄스) |
 | `needs-input` | `needs-input` | 황색 점 (펄스) |
+| `unknown` | `unknown` | 회색 점 (정적) |
 | `idle` | `idle` | 표시 없음 |
 | `inactive` | `idle` | 표시 없음 |
 
@@ -109,9 +121,11 @@ Claude 패널에서 어떤 화면을 보여줄지 결정하는 파생 상태.
 
 | 경로 | setter | 특성 |
 | --- | --- | --- |
-| 로컬 (onSync) | `setCliState` | `busy→idle` 시 `ready-for-review` 승격, `ready-for-review→idle` 보호. `notifyCliState`로 서버에도 전파 |
-| 서버 (status WS) | `syncAllFromServer`, `updateFromServer` | 서버가 authority, 직접 patch (승격/보호 없음) |
-| 사용자 액션 | `dismissTab` | `ready-for-review → idle` 전환 |
+| 서버 (status WS) | `syncAllFromServer`, `updateFromServer`, `applyHookEvent` | 서버가 유일한 authority, 직접 patch |
+| 사용자 액션 | `dismissTab` | `ready-for-review → idle` 전환 (클라 측 optimistic, WS 메시지로 서버 반영) |
+| 사용자 액션 | `cancelTab` | 클라 측 `cancelled` 상태 (UI 전용) |
+
+클라이언트는 **`cliState`를 서버로 역전파하지 않는다**. `notifyCliState`/`status:cli-state` WS 메시지 경로는 Phase 4에서 제거됨.
 
 ### `isCliIdle()` 헬퍼
 
@@ -128,81 +142,56 @@ export const isCliIdle = (cliState: TCliState): boolean =>
 
 ## 상태 판별 로직
 
-### 판별 흐름
+### 이벤트 기반 모델
 
-```
-detectTabCliState(tmuxSession, paneInfo)
-│  반환값: { cliState, lastAssistantSnippet, currentAction, jsonlPath }
-│
-├─ paneInfo 없음 → inactive (jsonlPath: null)
-├─ isClaudeRunning(panePid) === false → inactive (jsonlPath: null)
-│
-└─ detectActiveSession(panePid)
-    ├─ status !== 'running' → idle (jsonlPath: null)
-    └─ status === 'running'
-        ├─ jsonlPath 없음 → idle (jsonlPath: null)
-        └─ jsonlPath 있음 → checkJsonlIdle()
-            ├─ idle → idle (jsonlPath 저장 → ITabStatusEntry)
-            └─ busy → busy (jsonlPath 저장 → JSONL watch 시작)
-```
+`cliState`는 **Hook 이벤트의 파생값**이다. 다른 휴리스틱(JSONL idle 판정, pane capture, 터미널 활동 시각 등)은 더 이상 `cliState` 결정에 쓰이지 않는다.
 
-### JSONL 기반 busy/idle 판별 (통일 기준)
+서버의 `StatusManager.updateTabFromHook`이 훅 수신 시:
 
-서버(`checkJsonlIdle`)와 클라이언트(`deriveCliState`)가 동일한 규칙을 따른다.
-noise 엔트리(`file-history-snapshot`, `progress`, `last-prompt`)는 스킵하고 마지막 의미 있는 엔트리로 판별:
+1. `entry.eventSeq` 증가, `entry.lastEvent = { name, at, seq }` 저장
+2. `status:hook-event` WS 메시지로 broadcast (seq + name + at)
+3. `deriveStateFromEvent(entry.lastEvent, prevState)`로 새 cliState 결정
+4. `prevState !== newState`면 `applyCliState` 호출 (idempotent 가드 내장)
 
-| 마지막 엔트리 | 판정 | 이유 |
-| --- | --- | --- |
-| `system` + `subtype: 'stop_hook_summary'` | idle | 턴 종료 |
-| `system` + `subtype: 'turn_duration'` | idle | 턴 종료 |
-| `assistant` + `stop_reason: 'end_turn'` | idle | 응답 완료 |
-| `assistant` + `stop_reason: 'max_tokens'` | idle | 토큰 제한 도달 |
-| `assistant` + `stop_reason: 'tool_use'` | busy | 도구 실행 중 |
-| `assistant` + `stop_reason: null` | busy | 응답 스트리밍 중 |
-| `user` + `[Request interrupted by user]` | idle | 사용자 중단 |
-| `user` (텍스트 또는 tool_result) | busy | 요청/도구결과 전송, 응답 대기 |
-| 파일 비어있음 | idle | 아직 요청 전 |
+같은 상태로의 재진입(예: `needs-input → needs-input`, 연속 권한 프롬프트)도 `lastEvent.seq`가 증가하므로 클라이언트는 `status:hook-event`를 받아 반응한다. 예를 들어 `PermissionPromptItem`은 `lastEvent.seq`를 `useEffect` dep로 구독해 새 옵션을 재fetch한다.
 
-### ready-for-review 승격 로직
+### JSONL 기반 메타데이터 (cliState 아님)
 
-서버(`StatusManager.poll`, `StatusManager.updateTabFromHook`)와 클라이언트(`setCliState`)에서 동일하게 적용:
+JSONL 파일은 여전히 `currentAction`(도구 호출 요약)과 `lastAssistantMessage`(응답 미리보기)를 얻는 데 쓰인다. 하지만 이것들은 **cliState 결정에는 영향 없다**.
 
-- `busy → idle` 전환 시 `ready-for-review`으로 승격
-- `ready-for-review` 상태에서 `idle` 수신 시 무시 (보호)
-- `dismissTab` 호출 시 `ready-for-review → idle` 전환 + `dismissedAt` 기록
+`StatusManager.readTabMetadata`가 새 탭 최초 로드 시 1회 호출되고, `jsonlWatchers`가 `busy`/`needs-input` 탭의 JSONL 파일을 감시하여 메타데이터를 갱신한다. JSONL watcher는 `ready-for-review` 승격 경로를 **더 이상 사용하지 않는다** — 이제 `stop` 훅만이 `ready-for-review` 전이를 발사한다.
 
-#### ready-for-review / needs-input 보호 불변식
+### 서버 재시작 정책
 
-`ready-for-review`는 **`dismissTab`으로만 해제**된다. `needs-input`은 Hook이 설정한 상태이므로, Hook 또는 서버 폴링에 의해서만 변경된다. `cliState`를 쓰는 모든 경로에서 이 보호가 필요하다:
+서버 재시작 시 훅이 유실될 수 있는 유일한 상태는 `busy`다 (Claude가 서버 다운 중 stop/notification을 발사했을 수 있음). 다른 상태는 "공이 사용자 코트에" 있어 자동 전이가 발생하지 않으므로 persisted 값 그대로 유지.
 
-| 경로 | 보호 방법 |
+`scanAll`에서:
+
+| persisted cliState | 재시작 후 |
 | --- | --- |
-| `setCliState` (로컬) | `prev === 'ready-for-review' && new === 'idle'` → 무시, `prev === 'needs-input'` → 무시 |
-| `updateTab` (서버 StatusManager) | 동일 조건 → 무시 |
-| `poll` (서버 StatusManager) | `cliChanged` 조건에서 제외 |
-| `initTab` (탭 초기화/재연결) | `existing === 'ready-for-review'` → 유지 |
-| `updateTabFromHook` (Hook) | `notification`은 `prev === 'inactive'`만 제외하고 `needs-input`으로 전환 (연속 권한 프롬프트 지원 목적), `stop`은 `busy`/`needs-input`에서만 `ready-for-review`로 전환 |
-| `syncAllFromServer` / `updateFromServer` | 서버가 authority, 직접 patch (서버에서 이미 보호) |
+| `busy` | **`unknown`** → `resolveUnknown` 스케줄 |
+| 그 외 | 그대로 유지 |
 
-**새로운 `cliState` 쓰기 경로를 추가할 때는 반드시 이 보호를 포함해야 한다.** `initTab`에서 layout JSON의 stale 값이 store의 `ready-for-review`를 덮어쓰는 버그가 실제 발생한 사례가 있다 — layout 파일 persist는 비동기(fire-and-forget)이므로 WebSocket을 통해 전파된 store 값과 layout 파일 값이 불일치할 수 있다.
+### `resolveUnknown` — unknown 탭의 백그라운드 복구
 
-#### Staleness fallback (서버만 적용)
+`busy → unknown`으로 변환된 탭에 대해 다음 확실한 신호만 사용하여 정상 상태로 승격을 시도:
 
-위 규칙에서 `busy`로 판정되더라도, JSONL 파일의 mtime이 **90초 이상** 경과했으면 `idle`로 전환한다.
-Claude CLI가 최종 엔트리(`assistant(end_turn)`, `system(turn_duration)`)를 기록하지 않고 턴이 종료된 경우를 보완한다.
+1. **Claude 프로세스 검사** — `isClaudeRunning(panePid)` 실패 → `idle` 확정 (silent, 푸시 없음)
+2. **JSONL tail 검사** — `checkJsonlIdle`이 `idle && !stale && lastAssistantSnippet`을 반환 → `ready-for-review` 확정 (silent)
+3. **그 외** → `unknown` 유지, 다음 훅 대기
 
-#### 클라이언트 구현 (`deriveCliState` in `use-timeline.ts`)
+**pane capture는 사용하지 않는다.** 스크롤백에 남아 있는 이전 권한 프롬프트를 현재 프롬프트로 오판할 위험이 있기 때문.
 
-`session-parser.ts`가 파싱한 `ITimelineEntry[]`의 마지막 엔트리 타입으로 판별:
+### Busy 교착 안전망
 
-| 타임라인 엔트리 타입 | 판정 | raw JSONL 대응 |
-| --- | --- | --- |
-| `turn-end` | idle | `system(stop_hook_summary\|turn_duration)` |
-| `interrupt` | idle | `user([Request interrupted by user])` |
-| `session-exit` | idle | `user(/exit)` |
-| `assistant-message` + `stopReason ≠ 'tool_use'` | idle | `assistant(end_turn\|max_tokens)` |
-| `ask-user-question` + `status === 'pending'` | idle | 사용자 질문 대기 |
-| 그 외 | busy | — |
+운영 중 `busy` 상태가 `BUSY_STUCK_MS`(**10분**) 이상 지속되고 Claude 프로세스가 사라져 있으면 `idle`로 silent 복구. 메타데이터 poll 루프 내에서 수행한다. 훅 유실(SIGKILL 등) 대비용.
+
+### ready-for-review / needs-input 보호 불변식
+
+- `ready-for-review` → `idle`은 **오직 `dismissTab`**으로만 발생
+- Hook 이벤트는 `prevState`에 관계없이 파생식을 따르지만, `inactive`/`cancelled`는 전이 대상 아님
+
+`applyCliState`는 함수 상단에 `if (prevState === newState) return` idempotent 가드가 있어, 중복 호출이나 실수로 인한 부수효과(푸시 중복 등)를 방어한다.
 
 ---
 
@@ -254,48 +243,37 @@ localhost 연결만 허용 (보안). `event`와 `session`을 수신하여 `Statu
 
 ### Hook 상태 전환 (`updateTabFromHook`)
 
-| 이벤트 | 전환 규칙 | 설명 |
-| --- | --- | --- |
-| `session-start` | → `idle` | 세션 시작, 입력 대기 |
-| `prompt-submit` | → `busy` | 사용자 입력 제출 |
-| `notification` | `inactive` → 유지, 그 외 → `needs-input` | 아래 참고 |
-| `stop` | `busy`/`needs-input` → `ready-for-review`, 그 외 → `idle` | 작업 완료 |
+`deriveStateFromEvent`가 순수 함수로 전이 규칙을 표현한다:
 
-#### Notification 처리 원칙
+| 이벤트 | 새 cliState |
+| --- | --- |
+| `session-start` | `idle` |
+| `prompt-submit` | `busy` |
+| `notification` | `needs-input` |
+| `stop` | `ready-for-review` |
 
-Notification hook은 `prevState === 'inactive'`만 제외하고 언제나 `needs-input`으로 전환한다. `idle`, `ready-for-review`, `busy` 모두에서 덮어쓴다.
+예외: `prevState`가 `inactive`/`cancelled`이면 훅 무시.
 
-동일한 `needs-input` 상태에서 새 notification이 도착해도 무시하지 않고 **`permissionPromptVersion`을 증가**시켜 broadcast한다. 클라이언트(`PermissionPromptItem`)는 이 version 변경을 useEffect dep로 구독하여 pane capture를 재호출하고 새 옵션을 다시 읽어온다. 이 동작이 끊기면 연속으로 발생하는 권한 프롬프트의 두 번째 프롬프트가 UI에 반영되지 않는다.
+#### 이벤트 섀도잉 (`status:hook-event`)
 
-```
-정상 순서 (단일 권한 프롬프트):
-prompt-submit → busy
-notification  → needs-input
-stop          → ready-for-review
+훅 수신 시 서버는 `entry.lastEvent`를 갱신하고 **별도의 `status:hook-event` WS 메시지**로 원본 이벤트(`name`, `at`, `seq`)를 broadcast한다. `cliState`가 바뀌지 않아도(예: `needs-input → needs-input`) 이 메시지는 항상 발사된다.
 
-연속 권한 프롬프트 (version bump로 갱신):
-prompt-submit → busy
-notification  → needs-input (version=1)
-notification  → needs-input (version=2, UI가 pane capture 재호출)
-stop          → ready-for-review
-```
+클라이언트는 `applyHookEvent(tabId, event)` 액션으로 이 메시지를 처리하며, `event.seq <= prev.eventSeq`이면 역전 방지로 drop한다.
 
-**알려진 트레이드오프**: `stop` 직후 뒤늦게 도착한 notification이 `ready-for-review`를 `needs-input`으로 잠깐 덮어쓸 수 있다. 이 경우 타임라인에 로딩 배너가 잠깐 표시되었다가 다음 `stop`/`prompt-submit`이 도착하면 사라진다. 연속 권한 프롬프트 지원이 우선이므로 이 flicker는 허용된다.
-
-### Hook Grace Period
-
-Hook 이벤트 수신 후 **15초**(HOOK_GRACE_MS) 동안 해당 탭의 `cliState` 재감지(`detectTabCliState`)를 스킵한다.
-
-Hook이 즉시 상태를 전환한 뒤, 폴링이 아직 JSONL에 반영되지 않은 이전 상태를 읽어 덮어쓰는 경합을 방지한다. 15초 후에는 폴링이 다시 JSONL 기반으로 상태를 감지한다.
-
-단, Grace Period 중에도 `busy`/`needs-input` 탭은 저장된 `jsonlPath`로 `checkJsonlIdle`을 호출하여 `currentAction`과 `lastAssistantSnippet`을 갱신한다. cliState만 보호하고 대화 추출은 계속 수행한다.
+`PermissionPromptItem`은 `lastEvent.seq`를 `useEffect` dep로 구독하여 연속 notification 시 자동으로 새 옵션을 재fetch한다.
 
 ```
-Hook 수신 → hookUpdatedAt.set(tabId, Date.now())
-  │
-  ├─ 15초 이내 폴링 → cliState 유지, JSONL은 읽어서 currentAction 갱신
-  └─ 15초 경과 후 폴링 → detectTabCliState 재실행
+연속 권한 프롬프트:
+prompt-submit → lastEvent{name:'prompt-submit', seq:1} → busy
+notification  → lastEvent{name:'notification', seq:2}  → needs-input
+사용자 선택
+notification  → lastEvent{name:'notification', seq:3}  → needs-input (same, seq++)
+stop          → lastEvent{name:'stop', seq:4}          → ready-for-review
 ```
+
+#### `stop` 승격 단순화
+
+Phase 2부터 `stop`은 **언제나** `ready-for-review`로 승격한다(예외: `inactive`/`cancelled`). 이전의 "`busy`/`needs-input`에서만 승격" 조건문은 제거됨. Claude가 발사한 `stop`은 정의상 "방금 완료"를 의미하므로 항상 review 대상.
 
 ### 관련 파일
 
@@ -310,45 +288,48 @@ Hook 수신 → hookUpdatedAt.set(tabId, Date.now())
 ## 데이터 흐름
 
 ```
-[Claude Code Hook] hook-settings.ts → /api/status/hook
-  │  SessionStart, UserPromptSubmit, Notification, Stop, StopFailure
+[Claude Code Hook] ~/.purplemux/status-hook.sh → /api/status/hook
+  │  session-start / prompt-submit / notification / stop
   │
-  └─ updateTabFromHook(session, event)
-      ├─ 즉시 cliState 전환 + hookUpdatedAt 기록
-      └─ WebSocket 브로드캐스트
+  └─ StatusManager.updateTabFromHook(session, event)
+      ├─ lastEvent 기록 + eventSeq 증가
+      ├─ status:hook-event broadcast (name + at + seq)
+      ├─ deriveStateFromEvent → newState
+      └─ prevState !== newState면
+          ├─ applyCliState (idempotent)
+          ├─ persistToLayout
+          └─ status:update broadcast
           │
           ▼
-[서버 폴링] status-manager.ts
-  │  5~15초 간격 (탭 수에 따라 조절)
-  │  ※ hookUpdatedAt 15초 이내면 cliState 스킵 (JSONL은 읽음)
-  │
-  ├─ getAllPanesInfo()          tmux list-panes 1회 호출
-  ├─ isClaudeRunning()         자식 프로세스 args 확인
-  ├─ detectActiveSession()     ~/.claude/sessions/ PID 파일 매칭
-  ├─ checkJsonlIdle()          ~/.claude/projects/{project}/{sessionId}.jsonl 읽기
-  │
-  └─ 상태 변경 감지 시 WebSocket 브로드캐스트 (ready-for-review 승격 포함)
-      │
-      ▼
 [JSONL Watch] status-manager.ts
-  │  busy/needs-input 탭의 JSONL 파일에 fs.watch 설정
+  │  busy/needs-input 탭의 JSONL 파일에 fs.watch
   │  100ms 디바운스, 파일 변경 시 checkJsonlIdle 호출
   │
-  ├─ 시작: cliState → busy/needs-input 전환 시 (poll, hook, scanAll)
-  ├─ 해제: busy/needs-input 해제, 탭 삭제, shutdown
-  ├─ currentAction/lastAssistantSnippet 변경 시 즉시 브로드캐스트
-  └─ idle 감지 시 ready-for-review 전환 + watch 해제
+  ├─ 시작: busy/needs-input 전이 시
+  ├─ 해제: needs-input 해제 또는 탭 삭제, shutdown
+  └─ currentAction/lastAssistantSnippet 변경 시 status:update broadcast
+      (cliState는 건드리지 않음 — Phase 3에서 ready-for-review 승격 경로 제거)
+      │
+      ▼
+[메타데이터 Poll] status-manager.ts
+  │  30~60초 간격 (탭 수에 따라), cliState 판정 없음
+  │
+  ├─ 신규 탭 발견 → readTabMetadata 1회 + entry 생성
+  │    persisted cliState === 'busy' → 'unknown'으로 변환, resolveUnknown 스케줄
+  ├─ 기존 탭 → process/ports/title/summary 갱신만
+  ├─ busy 교착 검사 → 10분 경과 + Claude 프로세스 사망이면 silent idle
+  └─ 삭제된 탭 → cleanup + broadcastRemove
       │
       ▼
 [Status WebSocket] status-server.ts (/api/status)
-  │  서버 → 클라이언트: status:sync, status:update
-  │  클라이언트 → 서버: status:tab-dismissed
+  │  서버 → 클라이언트: status:sync, status:update, status:hook-event
+  │  클라이언트 → 서버: status:tab-dismissed, status:request-sync
   │
   ▼
 [Zustand 스토어] use-tab-store.ts
   │
-  │  서버 경로: syncAllFromServer / updateFromServer (직접 patch)
-  │  로컬 경로: setCliState (승격/보호 로직 포함)
+  │  syncAllFromServer / updateFromServer (메타데이터)
+  │  applyHookEvent (lastEvent/eventSeq, seq 역전 방지)
   │
   ├─ selectTabDisplayStatus(tabs, tabId)     → TTabDisplayStatus
   ├─ selectSessionView(tabs, tabId)          → TSessionView
@@ -356,14 +337,10 @@ Hook 수신 → hookUpdatedAt.set(tabId, Date.now())
   └─ selectGlobalStatus(tabs)                → { busyCount, attentionCount }
       │
       ▼
-[알림 카운트] useNotificationCount()
-  │  selectGlobalStatus에서 현재 활성 탭(activeTabId)을 제외한 카운트
-  │  터미널 페이지(/)에서만 제외, 다른 페이지에서는 전체 포함
-  │
-  ▼
 [UI 컴포넌트]
   ├─ TabStatusIndicator          탭 바 (각 탭 옆)
   ├─ WorkspaceStatusIndicator    사이드바 (워크스페이스 옆)
+  ├─ PermissionPromptItem        타임라인, lastEvent.seq로 options 재fetch
   ├─ NotificationSheet           알림 시트 (진행중/리뷰/완료 목록)
   ├─ Bell 아이콘                  사이드바 + 앱 헤더 (fill 상태, 배지)
   └─ useBrowserTitle             브라우저 탭 제목 (N) purplemux
@@ -401,11 +378,13 @@ tmux 타이틀 변경 → onTitleChange
 
 ## 폴링 주기
 
+Phase 3부터 **메타데이터 전용** 폴링이며, `cliState`에는 관여하지 않는다.
+
 | 탭 수 | 간격 |
 | --- | --- |
-| 1~10개 | 5초 |
-| 11~20개 | 8초 |
-| 21개+ | 15초 |
+| 1~10개 | 30초 |
+| 11~20개 | 45초 |
+| 21개+ | 60초 |
 
 ### 폴링 1회당 비용
 
@@ -413,9 +392,11 @@ tmux 타이틀 변경 → onTitleChange
 | --- | --- |
 | `tmux list-panes -a` | 1회 (전체 일괄) |
 | 파일시스템 읽기 (workspace/layout JSON) | 워크스페이스 수 + α |
-| `pgrep -P` | 탭 수 |
+| `pgrep -P` | busy 교착 검사에 걸린 탭 수만 |
 | `ps -p` | 매칭된 PID 수 |
-| JSONL 파일 tail 읽기 (8KB) | active 세션 수 |
+| JSONL 파일 tail 읽기 (8KB) | 신규 탭 발견 시 1회 (기존 탭은 watcher 경로) |
+
+`cliState` 판정과 `hasPermissionPrompt` 검사가 제거되어 폴링 비용이 Phase 2 대비 ~80% 감소.
 
 ---
 
@@ -432,8 +413,8 @@ tmux 타이틀 변경 → onTitleChange
 
 | 파일 | 설명 |
 | --- | --- |
-| `src/lib/status-manager.ts` | 폴링 엔진, `checkJsonlIdle`, `updateTabFromHook`, ready-for-review 승격, 상태 브로드캐스트, JSONL watch |
-| `src/lib/status-server.ts` | `/api/status` WebSocket 핸들러 (`tab-dismissed` 처리) |
+| `src/lib/status-manager.ts` | `deriveStateFromEvent`, `updateTabFromHook`, `applyCliState`, `resolveUnknown`, `readTabMetadata`, busy 교착 안전망, 메타데이터 poll, JSONL watch |
+| `src/lib/status-server.ts` | `/api/status` WebSocket 핸들러 (`tab-dismissed`, `request-sync`) |
 | `src/lib/hook-settings.ts` | Hook 설정 파일(`hooks.json`) 생성, 스크립트(`status-hook.sh`) 관리 |
 | `src/pages/api/status/hook.ts` | Hook API 엔드포인트 (localhost only, `updateTabFromHook` 호출) |
 | `src/lib/session-detection.ts` | `detectActiveSession`, `isClaudeRunning`, `watchSessionsDir` |
@@ -444,9 +425,9 @@ tmux 타이틀 변경 → onTitleChange
 
 | 파일 | 설명 |
 | --- | --- |
-| `src/hooks/use-tab-store.ts` | Zustand 탭 스토어, 파생 selectors, `isCliIdle` 헬퍼 |
-| `src/hooks/use-claude-status.ts` | Status WebSocket 연결, `dismissTab` |
-| `src/hooks/use-timeline.ts` | 타임라인 WS 데이터, `deriveCliState`, `onSync` 콜백 |
+| `src/hooks/use-tab-store.ts` | Zustand 탭 스토어, `applyHookEvent`, 파생 selectors, `isCliIdle` 헬퍼 |
+| `src/hooks/use-claude-status.ts` | Status WebSocket 연결, `status:hook-event` 처리, `dismissTab` |
+| `src/hooks/use-timeline.ts` | 타임라인 WS 데이터 (cliState 파생은 로컬 restart 감지용으로만 사용) |
 | `src/hooks/use-browser-title.ts` | 브라우저 타이틀에 attention 카운트 반영 |
 
 ### UI 컴포넌트

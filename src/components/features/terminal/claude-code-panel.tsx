@@ -7,7 +7,6 @@ import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
 import useStartingPrompt from '@/hooks/use-starting-prompt';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
-import { notifyCliState } from '@/hooks/use-claude-status';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import BypassPromptCard from '@/components/features/terminal/bypass-prompt-card';
@@ -42,6 +41,7 @@ const ClaudeCodePanel = ({
   const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
   const isResuming = useTabStore((s) => s.tabs[tabId]?.isResuming ?? false);
   const storeTimelineLoading = useTabStore((s) => s.tabs[tabId]?.isTimelineLoading ?? true);
+  const storeCliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
 
   const handleResumeStarted = useCallback(
@@ -72,7 +72,6 @@ const ClaudeCodePanel = ({
   const {
     entries,
     tasks,
-    cliState,
     sessionId,
     sessionSummary,
     initMeta,
@@ -101,14 +100,10 @@ const ClaudeCodePanel = ({
         return;
       }
       if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
-        // WebSocket 실시간 스트림이 API 폴링보다 권위 있으므로 항상 우선
         const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
         useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
       }
-      useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
-      const actualCliState = useTabStore.getState().tabs[tabId]?.cliState ?? state.cliState;
-      notifyCliState(tabId, actualCliState);
     },
   });
 
@@ -150,14 +145,14 @@ const ClaudeCodePanel = ({
       restartNeedsExitRef.current = false;
     }
 
-    if (isCliIdle(cliState) && !restartNeedsExitRef.current && claudeStatus === 'running' && !storeTimelineLoading) {
+    if (isCliIdle(storeCliState) && !restartNeedsExitRef.current && claudeStatus === 'running' && !storeTimelineLoading) {
       useTabStore.getState().setRestarting(tabId, false);
     }
-  }, [isRestarting, claudeStatus, cliState, storeTimelineLoading, tabId]);
+  }, [isRestarting, claudeStatus, storeCliState, storeTimelineLoading, tabId]);
 
-  const effectiveCliState = claudeStatus !== 'running' && claudeStatus !== 'starting' && cliState !== 'inactive'
+  const effectiveCliState = claudeStatus !== 'running' && claudeStatus !== 'starting' && storeCliState !== 'inactive'
     ? 'inactive' as const
-    : cliState;
+    : storeCliState;
 
   const startingPromptOptions = useStartingPrompt(claudeStatus === 'starting', sessionName);
 

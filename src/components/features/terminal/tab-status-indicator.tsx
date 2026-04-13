@@ -40,8 +40,13 @@ const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
           className="h-2 w-2 shrink-0 rounded-full bg-ui-amber animate-pulse"
           aria-hidden="true"
         />
+      ) : status === 'unknown' ? (
+        <span
+          className="h-2 w-2 shrink-0 rounded-full bg-muted-foreground/50"
+          aria-hidden="true"
+        />
       ) : null}
-      {visible && <span className="sr-only">{status === 'busy' ? t('statusBusy') : status === 'needs-input' ? t('statusNeedsInput') : t('statusNeedsReview')}</span>}
+      {visible && <span className="sr-only">{status === 'busy' ? t('statusBusy') : status === 'needs-input' ? t('statusNeedsInput') : status === 'unknown' ? '?' : t('statusNeedsReview')}</span>}
     </span>
   );
 };

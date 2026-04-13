@@ -47,11 +47,12 @@ const PermissionPromptItem = ({ sessionName, tabId, silent = false }: IPermissio
   const [options, setOptions] = useState<string[]>([]);
   const [phase, setPhase] = useState<TPhase>('loading');
   const cliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState : undefined);
-  const promptVersion = useTabStore((s) => tabId ? s.tabs[tabId]?.permissionPromptVersion : undefined);
+  const lastEventSeq = useTabStore((s) => tabId ? s.tabs[tabId]?.lastEvent?.seq : undefined);
 
   useEffect(() => {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | null = null;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- dep 변경 시 상태 리셋 후 재fetch가 이 이펙트의 목적
     setLocalSelected(null);
     setOptions([]);
     setPhase('loading');
@@ -79,7 +80,7 @@ const PermissionPromptItem = ({ sessionName, tabId, silent = false }: IPermissio
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [sessionName, cliState, promptVersion, silent]);
+  }, [sessionName, cliState, lastEventSeq, silent]);
 
   const isSelectable = localSelected === null;
 

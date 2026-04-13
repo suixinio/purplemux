@@ -1,18 +1,16 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName } from '@/lib/layout-store';
-import { getAllPanesInfo, capturePaneContent, getListeningPorts, SAFE_SHELLS, getLastCommand, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
+import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getLastCommand, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
 import { cwdToProjectPath } from '@/lib/session-list';
 import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
-import { hasPermissionPrompt } from '@/lib/permission-prompt';
-import { getLastTerminalOutput } from '@/lib/terminal-server';
 import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
 import { createRateLimitsWatcher } from '@/lib/rate-limits-watcher';
 import { createLogger } from '@/lib/logger';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { TCliState, TToolName } from '@/types/timeline';
-import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData } from '@/types/status';
+import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData, TEventName, ILastEvent } from '@/types/status';
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
 import webpush from 'web-push';
@@ -24,28 +22,28 @@ import { watch, type FSWatcher } from 'fs';
 
 const log = createLogger('status');
 
-const POLL_INTERVAL_SMALL = 5_000;
-const POLL_INTERVAL_MEDIUM = 8_000;
-const POLL_INTERVAL_LARGE = 15_000;
+export const deriveStateFromEvent = (event: ILastEvent | null, fallback: TCliState): TCliState => {
+  if (!event) return fallback;
+  switch (event.name) {
+    case 'session-start': return 'idle';
+    case 'prompt-submit': return 'busy';
+    case 'notification':  return 'needs-input';
+    case 'stop':          return 'ready-for-review';
+  }
+};
+
+const POLL_INTERVAL_SMALL = 30_000;
+const POLL_INTERVAL_MEDIUM = 45_000;
+const POLL_INTERVAL_LARGE = 60_000;
 const TAB_COUNT_MEDIUM = 11;
 const TAB_COUNT_LARGE = 21;
+const BUSY_STUCK_MS = 10 * 60 * 1000;
 const JSONL_TAIL_SIZE = 8192;
 const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
-const TERMINAL_OUTPUT_STALE_MS = 5_000;
-const WINDOW_ACTIVITY_STALE_MS = 10_000;
-const HOOK_GRACE_MS = 1_000;
 const PROCESS_RETRY_COUNT = 3;
 const JSONL_WATCH_DEBOUNCE_MS = 100;
-
-const simpleHash = (str: string): number => {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = ((h << 5) - h + str.charCodeAt(i)) | 0;
-  }
-  return h;
-};
 
 interface IJsonlIdleCache {
   mtimeMs: number;
@@ -341,7 +339,6 @@ const g = globalThis as unknown as { __ptStatusManager?: StatusManager };
 
 class StatusManager {
   private tabs = new Map<string, ITabStatusEntry>();
-  private hookUpdatedAt = new Map<string, number>();
   private pollingTimer: ReturnType<typeof setInterval> | null = null;
   private currentInterval = 0;
   private clients = new Set<WebSocket>();
@@ -387,10 +384,9 @@ class StatusManager {
       const tabs = collectAllTabs(layout.root);
       for (const tab of tabs) {
         const paneInfo = panesInfo.get(tab.sessionName);
-        const detected = await this.detectTabCliState(tab.sessionName, paneInfo);
-        const cliState = tab.cliState === 'ready-for-review' && detected.cliState === 'idle'
-          ? 'ready-for-review' as const
-          : detected.cliState;
+        const detected = await this.readTabMetadata(paneInfo);
+        const persisted: TCliState = (tab.cliState as TCliState | undefined) ?? 'idle';
+        const cliState: TCliState = persisted === 'busy' ? 'unknown' : persisted;
 
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
@@ -411,85 +407,64 @@ class StatusManager {
           lastAssistantMessage: detected.lastAssistantSnippet,
           currentAction: detected.currentAction,
           readyForReviewAt: cliState === 'ready-for-review' ? Date.now() : null,
-          busySince: cliState === 'busy' ? Date.now() : null,
-          dismissedAt: cliState === 'busy' ? null : (tab.dismissedAt ?? null),
+          busySince: null,
+          dismissedAt: tab.dismissedAt ?? null,
           claudeSessionId: tab.claudeSessionId ?? null,
           jsonlPath: detected.jsonlPath,
-          lastActivityAt: cliState === 'busy' ? Date.now() : null,
-          lastCaptureHash: null,
+          lastEvent: null,
+          eventSeq: 0,
         });
-        if ((cliState === 'busy' || cliState === 'needs-input') && detected.jsonlPath) {
+        if ((cliState === 'needs-input' || cliState === 'unknown') && detected.jsonlPath) {
           this.startJsonlWatch(tab.id, detected.jsonlPath);
+        }
+        if (cliState === 'unknown') {
+          this.resolveUnknown(tab.id).catch((err) => log.warn('resolveUnknown failed: %s', err));
         }
       }
     }
   }
 
-  private async detectTabCliState(tmuxSession: string, paneInfo?: IPaneInfo, entry?: ITabStatusEntry): Promise<{ cliState: TCliState; lastAssistantSnippet: string | null; currentAction: ICurrentAction | null; jsonlPath: string | null; reset: boolean }> {
-    const empty = { cliState: 'inactive' as const, lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
+  private async resolveUnknown(tabId: string): Promise<void> {
+    const entry = this.tabs.get(tabId);
+    if (!entry || entry.cliState !== 'unknown') return;
+
+    const paneInfo = (await getAllPanesInfo()).get(entry.tmuxSession);
+    const childPids = paneInfo?.pid ? await getChildPids(paneInfo.pid) : [];
+    const claudeRunning = paneInfo?.pid ? await isClaudeRunning(paneInfo.pid, childPids) : false;
+
+    if (!claudeRunning) {
+      this.applyCliState(tabId, entry, 'idle', { silent: true });
+      this.persistToLayout(entry);
+      this.broadcastUpdate(tabId, entry);
+      return;
+    }
+
+    if (entry.jsonlPath) {
+      const { idle, stale, lastAssistantSnippet } = await checkJsonlIdle(entry.jsonlPath);
+      if (idle && !stale && lastAssistantSnippet) {
+        this.applyCliState(tabId, entry, 'ready-for-review', { silent: true });
+        this.persistToLayout(entry);
+        this.broadcastUpdate(tabId, entry);
+        return;
+      }
+    }
+  }
+
+  private async readTabMetadata(paneInfo?: IPaneInfo): Promise<{ lastAssistantSnippet: string | null; currentAction: ICurrentAction | null; jsonlPath: string | null }> {
+    const empty = { lastAssistantSnippet: null, currentAction: null, jsonlPath: null };
     if (!paneInfo || !paneInfo.pid) return empty;
 
     const childPids = await getChildPids(paneInfo.pid);
-
     const claudeRunning = await isClaudeRunning(paneInfo.pid, childPids);
     if (!claudeRunning) return empty;
 
     const session = await detectActiveSession(paneInfo.pid, childPids);
-    if (session.status !== 'running') return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
-
-    if (!session.jsonlPath) return { cliState: 'idle', lastAssistantSnippet: null, currentAction: null, jsonlPath: null, reset: false };
-
-    const { idle: jsonlIdle, stale, lastAssistantSnippet, currentAction, reset, lastEntryTs, staleMs: entryStaleMs } = await checkJsonlIdle(session.jsonlPath);
-
-    let state: TCliState;
-    let capturedPaneContent: string | null = null;
-
-    if (!stale) {
-      state = jsonlIdle ? 'idle' : 'busy';
-    } else {
-      const entryExpired = lastEntryTs !== null
-        ? Date.now() - lastEntryTs > entryStaleMs
-        : jsonlIdle;
-
-      if (entry && lastEntryTs !== null && lastEntryTs > (entry.lastActivityAt ?? 0)) {
-        entry.lastActivityAt = lastEntryTs;
-      }
-
-      if (entryExpired) {
-        let activityDetected = false;
-        if (entry) {
-          capturedPaneContent = await capturePaneContent(tmuxSession);
-          if (capturedPaneContent !== null) {
-            const hash = simpleHash(capturedPaneContent);
-            if (entry.lastCaptureHash !== null && entry.lastCaptureHash !== undefined && hash !== entry.lastCaptureHash) {
-              entry.lastActivityAt = Date.now();
-              activityDetected = true;
-            }
-            entry.lastCaptureHash = hash;
-          }
-          if (!activityDetected && entry.lastActivityAt) {
-            activityDetected = Date.now() - entry.lastActivityAt < entryStaleMs;
-          }
-        }
-        state = activityDetected ? 'busy' : 'idle';
-      } else {
-        const lastOutput = getLastTerminalOutput(tmuxSession);
-        if (lastOutput !== undefined) {
-          state = Date.now() - lastOutput < TERMINAL_OUTPUT_STALE_MS ? 'busy' : 'idle';
-        } else if (paneInfo?.windowActivity) {
-          state = Date.now() - paneInfo.windowActivity * 1000 < WINDOW_ACTIVITY_STALE_MS ? 'busy' : 'idle';
-        } else {
-          state = 'busy';
-        }
-      }
+    if (session.status !== 'running' || !session.jsonlPath) {
+      return { lastAssistantSnippet: null, currentAction: null, jsonlPath: session.jsonlPath ?? null };
     }
 
-    if (state === 'busy' || capturedPaneContent) {
-      const paneContent = capturedPaneContent ?? await capturePaneContent(tmuxSession);
-      if (paneContent && hasPermissionPrompt(paneContent)) return { cliState: 'needs-input', lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath, reset };
-    }
-
-    return { cliState: state, lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath, reset };
+    const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(session.jsonlPath);
+    return { lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath };
   }
 
   private async detectTerminalStatus(
@@ -538,6 +513,7 @@ class StatusManager {
     const panesInfo = await getAllPanesInfo();
     const knownTabIds = new Set<string>();
     const tabsBeforePoll = new Set(this.tabs.keys());
+    const now = Date.now();
 
     for (const ws of workspaces) {
       const layout = await readLayoutFile(resolveLayoutFile(ws.id));
@@ -549,36 +525,18 @@ class StatusManager {
         const existing = this.tabs.get(tab.id);
         const paneInfo = panesInfo.get(tab.sessionName);
 
-        const prevCliState = existing?.cliState;
-        const hookTs = this.hookUpdatedAt.get(tab.id);
-        const hookRecent = hookTs !== undefined && Date.now() - hookTs < HOOK_GRACE_MS;
-        let detected;
-        const needsJsonlPath = hookRecent && existing && !existing.jsonlPath
-          && (existing.cliState === 'busy' || existing.cliState === 'needs-input');
-        if (hookRecent && existing && !needsJsonlPath) {
-          let actionSnippet = { lastAssistantSnippet: existing.lastAssistantMessage ?? null, currentAction: existing.currentAction ?? null, reset: false };
-          if (existing.jsonlPath && (existing.cliState === 'busy' || existing.cliState === 'needs-input')) {
-            const jsonlResult = await checkJsonlIdle(existing.jsonlPath);
-            actionSnippet = { lastAssistantSnippet: jsonlResult.lastAssistantSnippet, currentAction: jsonlResult.currentAction, reset: jsonlResult.reset };
-          }
-          detected = { cliState: existing.cliState, ...actionSnippet, jsonlPath: existing.jsonlPath ?? null };
-        } else {
-          detected = await this.detectTabCliState(tab.sessionName, paneInfo, existing);
-          if (hookRecent && existing) {
-            detected = { ...detected, cliState: existing.cliState };
-          }
-        }
-        const newCliState = detected.cliState;
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
-
         const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
         const newPaneTitle = paneInfo ? `${resolvedProcess ?? paneInfo.command}|${paneInfo.path}` : undefined;
 
         if (!existing) {
+          const persisted: TCliState = (tab.cliState as TCliState | undefined) ?? 'idle';
+          const initialState: TCliState = persisted === 'busy' ? 'unknown' : persisted;
+          const detected = await this.readTabMetadata(paneInfo);
           const entry: ITabStatusEntry = {
-            cliState: newCliState,
+            cliState: initialState,
             workspaceId: ws.id,
             tabName: tab.name,
             currentProcess: resolvedProcess,
@@ -593,21 +551,20 @@ class StatusManager {
             currentAction: detected.currentAction,
             claudeSessionId: tab.claudeSessionId ?? null,
             jsonlPath: detected.jsonlPath,
-            lastActivityAt: newCliState === 'busy' ? Date.now() : null,
-            lastCaptureHash: null,
+            lastEvent: null,
+            eventSeq: 0,
           };
           this.tabs.set(tab.id, entry);
           this.persistToLayout(entry);
           this.broadcastUpdate(tab.id, entry);
+          if (initialState === 'unknown') {
+            this.resolveUnknown(tab.id).catch((err) => log.warn('resolveUnknown failed: %s', err));
+          }
           continue;
         }
 
         const processChanged = existing.currentProcess !== resolvedProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
-        const assistantMessageChanged = (detected.reset && existing.lastAssistantMessage !== null)
-          || (detected.lastAssistantSnippet !== null && existing.lastAssistantMessage !== detected.lastAssistantSnippet);
-        const actionChanged = (detected.reset && existing.currentAction !== null)
-          || (detected.currentAction !== null && detected.currentAction.summary !== existing.currentAction?.summary);
         const panelTypeChanged = existing.panelType !== tab.panelType;
         existing.tabName = tab.name;
         existing.currentProcess = resolvedProcess;
@@ -616,18 +573,6 @@ class StatusManager {
         existing.panelType = tab.panelType;
         existing.claudeSessionId = tab.claudeSessionId ?? null;
         existing.lastUserMessage = tab.lastUserMessage;
-        if (assistantMessageChanged) {
-          existing.lastAssistantMessage = detected.reset ? null : detected.lastAssistantSnippet;
-        }
-        if (actionChanged) {
-          existing.currentAction = detected.reset ? null : detected.currentAction;
-        }
-        if (detected.jsonlPath && existing.jsonlPath !== detected.jsonlPath) {
-          existing.jsonlPath = detected.jsonlPath;
-          if ((existing.cliState === 'busy' || existing.cliState === 'needs-input') && !this.jsonlWatchers.has(tab.id)) {
-            this.startJsonlWatch(tab.id, detected.jsonlPath);
-          }
-        }
 
         if (processChanged) {
           existing.processRetries = PROCESS_RETRY_COUNT;
@@ -646,16 +591,8 @@ class StatusManager {
           existing.listeningPorts = listeningPorts;
         }
 
-        const cliModifiedDuringDetect = existing.cliState !== prevCliState;
-        const cliChanged = !cliModifiedDuringDetect
-          && prevCliState !== newCliState
-          && !(prevCliState === 'ready-for-review' && newCliState === 'idle');
-
-        const effectiveCliState = cliChanged
-          ? (prevCliState === 'busy' && newCliState === 'idle' ? 'ready-for-review' : newCliState)
-          : existing.cliState;
         let summaryChanged = false;
-        if (effectiveCliState === 'busy' || effectiveCliState === 'needs-input') {
+        if (existing.cliState === 'busy' || existing.cliState === 'needs-input') {
           const paneTitle = await getPaneTitle(tab.sessionName);
           const liveSummary = parseClaudePaneTitle(paneTitle);
           if (liveSummary && liveSummary !== existing.claudeSummary) {
@@ -670,13 +607,20 @@ class StatusManager {
           }
         }
 
-        if (cliChanged) {
-          const promoted = prevCliState === 'busy' && newCliState === 'idle';
-          this.applyCliState(tab.id, existing, promoted ? 'ready-for-review' : newCliState);
+        if (existing.cliState === 'busy' && existing.lastEvent
+            && now - existing.lastEvent.at > BUSY_STUCK_MS) {
+          const childPids = paneInfo?.pid ? await getChildPids(paneInfo.pid) : [];
+          const claudeRunning = paneInfo?.pid ? await isClaudeRunning(paneInfo.pid, childPids) : false;
+          if (!claudeRunning) {
+            log.info({ tabId: tab.id }, 'busy stuck — Claude process gone, forcing idle');
+            this.applyCliState(tab.id, existing, 'idle', { silent: true });
+            this.persistToLayout(existing);
+            this.broadcastUpdate(tab.id, existing);
+            continue;
+          }
         }
 
-        if (cliChanged || terminalChanged || processChanged || processRetryNeeded || messageChanged || assistantMessageChanged || actionChanged || panelTypeChanged || summaryChanged) {
-          if (cliChanged) this.persistToLayout(existing);
+        if (terminalChanged || processChanged || processRetryNeeded || messageChanged || panelTypeChanged || summaryChanged) {
           this.broadcastUpdate(tab.id, existing);
         }
       }
@@ -686,7 +630,6 @@ class StatusManager {
       if (!knownTabIds.has(tabId) && this.tabs.has(tabId)) {
         this.stopJsonlWatch(tabId);
         this.tabs.delete(tabId);
-        this.hookUpdatedAt.delete(tabId);
         this.broadcastRemove(tabId);
       }
     }
@@ -717,22 +660,21 @@ class StatusManager {
         busySince: entry.busySince,
         dismissedAt: entry.dismissedAt,
         claudeSessionId: entry.claudeSessionId,
-        permissionPromptVersion: entry.permissionPromptVersion,
+        lastEvent: entry.lastEvent,
+        eventSeq: entry.eventSeq,
       };
     }
     return result;
   }
 
-  private applyCliState(tabId: string, entry: ITabStatusEntry, newState: TCliState): void {
+  private applyCliState(tabId: string, entry: ITabStatusEntry, newState: TCliState, opts: { silent?: boolean } = {}): void {
     const prevState = entry.cliState;
+    if (prevState === newState) return;
     const prevBusySince = entry.busySince;
     entry.cliState = newState;
     entry.readyForReviewAt = newState === 'ready-for-review' ? Date.now() : null;
-    entry.busySince = newState === 'busy' && prevState !== 'busy'
-      ? Date.now()
-      : (newState !== 'busy' ? null : entry.busySince);
+    entry.busySince = newState === 'busy' ? Date.now() : null;
     if (newState === 'busy') entry.dismissedAt = null;
-    if (newState !== 'busy' && newState !== 'needs-input') entry.lastCaptureHash = null;
 
     if (newState === 'ready-for-review' && entry.jsonlPath) {
       const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -741,13 +683,13 @@ class StatusManager {
       });
     }
 
-    if (newState === 'ready-for-review' && prevState === 'busy') {
+    if (newState === 'ready-for-review' && !opts.silent) {
       this.sendWebPush(tabId, entry, 'review').catch((err) => {
         log.warn('Web push failed: %s', err);
       });
     }
 
-    if (newState === 'needs-input' && prevState === 'busy') {
+    if (newState === 'needs-input' && !opts.silent) {
       this.sendWebPush(tabId, entry, 'needs-input').catch((err) => {
         log.warn('Web push failed: %s', err);
       });
@@ -794,30 +736,13 @@ class StatusManager {
     this.broadcast({ type: 'session-history:update', entry: historyEntry });
   }
 
-  updateTab(tabId: string, cliState: TCliState, exclude?: WebSocket): void {
-    const entry = this.tabs.get(tabId);
-    if (!entry) return;
-
-    const prevState = entry.cliState;
-    if (prevState === cliState) return;
-    if (prevState === 'ready-for-review' && cliState === 'idle') return;
-
-    const promoted = prevState === 'busy' && cliState === 'idle';
-    this.applyCliState(tabId, entry, promoted ? 'ready-for-review' : cliState);
-
-    this.persistToLayout(entry);
-    this.broadcastUpdate(tabId, entry, exclude);
-  }
-
   dismissTab(tabId: string, exclude?: WebSocket): void {
     const entry = this.tabs.get(tabId);
     if (!entry || entry.cliState !== 'ready-for-review') return;
 
-    entry.cliState = 'idle';
-    entry.readyForReviewAt = null;
     const dismissedAt = Date.now();
+    this.applyCliState(tabId, entry, 'idle', { silent: true });
     entry.dismissedAt = dismissedAt;
-    this.stopJsonlWatch(tabId);
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry, exclude);
 
@@ -835,63 +760,39 @@ class StatusManager {
     return undefined;
   }
 
-  clearHookGraceBySession(tmuxSession: string): void {
-    const tabId = this.findTabIdBySession(tmuxSession);
-    if (tabId) this.hookUpdatedAt.delete(tabId);
-  }
-
   updateTabFromHook(tmuxSession: string, event: string): void {
     const tabId = this.findTabIdBySession(tmuxSession);
     if (!tabId) return;
     const entry = this.tabs.get(tabId);
     if (!entry) return;
 
-    const prevState = entry.cliState;
-    let newState: TCliState;
-
-    switch (event) {
-      case 'session-start':
-        newState = 'idle';
-        break;
-      case 'prompt-submit':
-        newState = 'busy';
-        break;
-      case 'notification':
-        newState = prevState === 'inactive' ? prevState : 'needs-input';
-        break;
-      case 'stop':
-        newState = prevState === 'busy' || prevState === 'needs-input' ? 'ready-for-review'
-          : prevState === 'ready-for-review' ? prevState
-          : 'idle';
-        break;
-      default:
-        return;
+    if (event !== 'session-start' && event !== 'prompt-submit' && event !== 'notification' && event !== 'stop') {
+      return;
     }
-
-    if (event === 'notification' && newState === 'needs-input') {
-      entry.permissionPromptVersion = (entry.permissionPromptVersion ?? 0) + 1;
-      if (prevState === newState) {
-        entry.lastActivityAt = Date.now();
-        this.broadcastUpdate(tabId, entry);
-        return;
-      }
-    }
-
-    if (prevState === newState) return;
+    const eventName = event as TEventName;
 
     const now = Date.now();
-    this.hookUpdatedAt.set(tabId, now);
-    entry.lastActivityAt = now;
-    this.applyCliState(tabId, entry, newState);
+    const seq = (entry.eventSeq ?? 0) + 1;
+    entry.eventSeq = seq;
+    entry.lastEvent = { name: eventName, at: now, seq };
+    this.broadcast({ type: 'status:hook-event', tabId, event: entry.lastEvent });
 
-    this.persistToLayout(entry);
-    this.broadcastUpdate(tabId, entry);
+    const prevState = entry.cliState;
+    const newState = prevState === 'cancelled'
+      ? prevState
+      : deriveStateFromEvent(entry.lastEvent, prevState);
+
+    if (prevState !== newState) {
+      this.applyCliState(tabId, entry, newState);
+      this.persistToLayout(entry);
+      this.broadcastUpdate(tabId, entry);
+    }
 
     if ((newState === 'busy' || newState === 'needs-input') && !entry.jsonlPath) {
       this.resolveAndWatchJsonl(tabId, tmuxSession).catch(() => {});
     }
 
-    if (event === 'stop' && entry.jsonlPath) {
+    if (eventName === 'stop' && entry.jsonlPath) {
       const refreshSnippet = () => {
         checkJsonlIdle(entry.jsonlPath!).then(({ currentAction, lastAssistantSnippet, reset }) => {
           let updated = false;
@@ -922,7 +823,6 @@ class StatusManager {
   removeTab(tabId: string): void {
     this.stopJsonlWatch(tabId);
     this.tabs.delete(tabId);
-    this.hookUpdatedAt.delete(tabId);
     this.broadcastRemove(tabId);
   }
 
@@ -966,7 +866,6 @@ class StatusManager {
       busySince: entry.busySince,
       dismissedAt: entry.dismissedAt,
       claudeSessionId: entry.claudeSessionId,
-      permissionPromptVersion: entry.permissionPromptVersion,
     };
     this.broadcast(msg, exclude);
   }
@@ -1078,26 +977,15 @@ class StatusManager {
       this.stopJsonlWatch(tabId);
       return;
     }
-    const isActive = entry.cliState === 'busy' || entry.cliState === 'needs-input';
+    const isActive = entry.cliState === 'busy' || entry.cliState === 'needs-input' || entry.cliState === 'unknown';
     if (!isActive && entry.cliState !== 'ready-for-review') {
       this.stopJsonlWatch(tabId);
       return;
     }
 
-    const { idle, stale, currentAction, lastAssistantSnippet, reset } = await checkJsonlIdle(jsonlPath);
-    log.debug('onJsonlFileChange tabId=%s idle=%s action=%s', tabId, idle, currentAction?.summary.slice(0, 40));
-    entry.lastActivityAt = Date.now();
+    const { currentAction, lastAssistantSnippet, reset } = await checkJsonlIdle(jsonlPath);
 
     let changed = false;
-
-    if (isActive && idle && !stale) {
-      this.applyCliState(tabId, entry, 'ready-for-review');
-      this.persistToLayout(entry);
-      this.stopJsonlWatch(tabId);
-      changed = true;
-    } else if (!isActive) {
-      this.stopJsonlWatch(tabId);
-    }
 
     if (reset) {
       if (entry.currentAction !== null) { entry.currentAction = null; changed = true; }

@@ -66,6 +66,7 @@ const MobileClaudeCodePanel = ({
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
   const claudeStatus = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeStatus ?? 'unknown' : 'unknown');
+  const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive');
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
@@ -92,7 +93,6 @@ const MobileClaudeCodePanel = ({
   const {
     entries,
     tasks,
-    cliState,
     sessionId,
     sessionSummary,
     initMeta,
@@ -123,7 +123,6 @@ const MobileClaudeCodePanel = ({
         const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
         useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
       }
-      useTabStore.getState().setCliState(tabId, state.cliState);
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     } : undefined,
   });
@@ -177,18 +176,18 @@ const MobileClaudeCodePanel = ({
       restartNeedsExitRef.current = false;
     }
 
-    if (isCliIdle(cliState) && !restartNeedsExitRef.current && (effectiveClaudeStatus === 'running' || effectiveClaudeStatus === 'starting') && !isTimelineLoading) {
+    if (isCliIdle(storeCliState) && !restartNeedsExitRef.current && (effectiveClaudeStatus === 'running' || effectiveClaudeStatus === 'starting') && !isTimelineLoading) {
       onRestartComplete?.();
     }
-  }, [isRestarting, effectiveClaudeStatus, cliState, isTimelineLoading, onRestartComplete]);
+  }, [isRestarting, effectiveClaudeStatus, storeCliState, isTimelineLoading, onRestartComplete]);
 
   const isInputVisible = view === 'timeline';
 
   const startingPromptOptions = useStartingPrompt(effectiveClaudeStatus === 'starting', sessionName);
 
   useEffect(() => {
-    onCliStateChange(cliState);
-  }, [cliState, onCliStateChange]);
+    onCliStateChange(storeCliState);
+  }, [storeCliState, onCliStateChange]);
 
   useEffect(() => {
     onInputVisibleChange(isInputVisible);
@@ -301,7 +300,7 @@ const MobileClaudeCodePanel = ({
           sessionName={sessionName}
           tabId={tabId}
           initMeta={initMeta}
-          cliState={cliState}
+          cliState={storeCliState}
           claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
@@ -318,7 +317,7 @@ const MobileClaudeCodePanel = ({
           tabId={tabId}
           wsId={wsId}
           claudeSessionId={claudeSessionId}
-          cliState={cliState}
+          cliState={storeCliState}
           sendStdin={sendStdin}
           terminalWsConnected={terminalWsConnected}
           visible={isInputVisible}

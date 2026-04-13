@@ -36,6 +36,8 @@ const DotByStatus = ({ status, panelType, terminalStatus, process }: { status: T
       inner = <span className="h-2 w-2 rounded-full bg-claude-active animate-pulse" aria-hidden="true" />;
     } else if (status === 'needs-input') {
       inner = <span className="h-2 w-2 rounded-full bg-ui-amber animate-pulse" aria-hidden="true" />;
+    } else if (status === 'unknown') {
+      inner = <span className="h-2 w-2 rounded-full bg-muted-foreground/50" aria-hidden="true" />;
     } else {
       inner = <span className="h-2 w-2 rounded-full border border-muted-foreground/40" aria-hidden="true" />;
     }
