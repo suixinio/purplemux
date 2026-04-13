@@ -717,6 +717,7 @@ class StatusManager {
         busySince: entry.busySince,
         dismissedAt: entry.dismissedAt,
         claudeSessionId: entry.claudeSessionId,
+        permissionPromptVersion: entry.permissionPromptVersion,
       };
     }
     return result;
@@ -856,7 +857,7 @@ class StatusManager {
         newState = 'busy';
         break;
       case 'notification':
-        newState = prevState === 'busy' ? 'needs-input' : prevState;
+        newState = prevState === 'inactive' ? prevState : 'needs-input';
         break;
       case 'stop':
         newState = prevState === 'busy' || prevState === 'needs-input' ? 'ready-for-review'
@@ -865,6 +866,15 @@ class StatusManager {
         break;
       default:
         return;
+    }
+
+    if (event === 'notification' && newState === 'needs-input') {
+      entry.permissionPromptVersion = (entry.permissionPromptVersion ?? 0) + 1;
+      if (prevState === newState) {
+        entry.lastActivityAt = Date.now();
+        this.broadcastUpdate(tabId, entry);
+        return;
+      }
     }
 
     if (prevState === newState) return;

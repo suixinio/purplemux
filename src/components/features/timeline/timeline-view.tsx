@@ -439,7 +439,6 @@ const TimelineView = ({
             <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <Spinner size={10} className="text-claude-active" />
               <ElapsedTime since={entries[entries.length - 1].timestamp} />
-              <span className="font-mono">[prop:{cliState} store:{storeCliState ?? 'none'}]</span>
             </div>
           )}
         </div>

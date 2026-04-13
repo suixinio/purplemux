@@ -31,6 +31,7 @@ export interface ITabStatusEntry {
   jsonlPath?: string | null;
   lastActivityAt?: number | null;
   lastCaptureHash?: number | null;
+  permissionPromptVersion?: number;
 }
 
 export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle';
@@ -61,6 +62,7 @@ export interface IStatusUpdateMessage {
   busySince?: number | null;
   dismissedAt?: number | null;
   claudeSessionId?: string | null;
+  permissionPromptVersion?: number;
 }
 
 export interface IRateLimitWindow {
