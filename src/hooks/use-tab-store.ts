@@ -61,6 +61,7 @@ interface ITabStore {
   setCliState: (tabId: string, state: TCliState) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
   setRestarting: (tabId: string, restarting: boolean) => void;
+  cancelTab: (tabId: string) => void;
   dismissTab: (tabId: string) => void;
   setResuming: (tabId: string, resuming: boolean) => void;
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
@@ -130,6 +131,7 @@ const useTabStore = create<ITabStore>((set) => ({
     set((state) => {
       const prev = state.tabs[tabId];
       if (!prev || prev.cliState === cliState) return state;
+      if (prev.cliState === 'cancelled') return state;
       if (prev.cliState === 'ready-for-review' && cliState === 'idle') return state;
       if (prev.cliState === 'needs-input') return state;
       const effective = (prev.cliState === 'busy' && cliState === 'idle') ? 'ready-for-review' as const : cliState;
@@ -148,6 +150,13 @@ const useTabStore = create<ITabStore>((set) => ({
       const prev = state.tabs[tabId];
       if (!prev || prev.isRestarting === restarting) return state;
       return { tabs: updateTab(state.tabs, tabId, { isRestarting: restarting }) };
+    }),
+
+  cancelTab: (tabId) =>
+    set((state) => {
+      const prev = state.tabs[tabId];
+      if (!prev || prev.cliState === 'cancelled') return state;
+      return { tabs: updateTab(state.tabs, tabId, { cliState: 'cancelled', localUpdatedAt: Date.now() }) };
     }),
 
   dismissTab: (tabId) =>
@@ -203,6 +212,10 @@ const useTabStore = create<ITabStore>((set) => ({
       const next: Record<string, ITabState> = {};
       for (const [tabId, entry] of Object.entries(serverTabs)) {
         const existing = state.tabs[tabId];
+        if (existing?.cliState === 'cancelled') {
+          next[tabId] = existing;
+          continue;
+        }
         const graceActive = existing?.localUpdatedAt && now - existing.localUpdatedAt < SYNC_GRACE_MS;
         if (graceActive) {
           next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId };
@@ -229,6 +242,7 @@ const useTabStore = create<ITabStore>((set) => ({
       }
       const existing = state.tabs[tabId];
       if (existing) {
+        if (existing.cliState === 'cancelled') return state;
         return { tabs: updateTab(state.tabs, tabId, { cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType ?? existing.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, lastAssistantMessage: update.lastAssistantMessage, currentAction: update.currentAction, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, dismissedAt: update.dismissedAt, claudeSessionId: update.claudeSessionId }) };
       }
       return {

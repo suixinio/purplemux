@@ -449,6 +449,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
 
   deleteTabInPane: async (paneId, tabId) => {
     clearInputDraft(tabId);
+    useTabStore.getState().cancelTab(tabId);
 
     applyPaneUpdate(set, get, paneId, (pane) => {
       const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
