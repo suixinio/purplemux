@@ -335,7 +335,7 @@ export const sendBracketedPaste = async (
     ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, 'Enter'],
     { timeout: CMD_TIMEOUT },
   );
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 600));
   await execFile(
     'tmux',
     ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, 'Enter'],
