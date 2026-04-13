@@ -1,6 +1,6 @@
 {
   "title": "通知",
-  "empty": "没有正在进行的任务",
+  "empty": "没有会话..",
   "busySection": "进行中 ({count})",
   "needsInputSection": "等待输入 ({count})",
   "reviewSection": "待审查 ({count})",

@@ -1,6 +1,6 @@
 {
   "title": "Notificaciones",
-  "empty": "No hay tareas en progreso",
+  "empty": "Sin sesiones..",
   "busySection": "En progreso ({count})",
   "needsInputSection": "Requiere entrada ({count})",
   "reviewSection": "Revisión ({count})",

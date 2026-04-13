@@ -1,6 +1,6 @@
 {
   "title": "Bildirimler",
-  "empty": "Devam eden görev yok",
+  "empty": "Oturum yok..",
   "busySection": "Devam Eden ({count})",
   "needsInputSection": "Giriş Bekliyor ({count})",
   "reviewSection": "İnceleme ({count})",

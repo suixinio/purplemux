@@ -1,6 +1,6 @@
 {
   "title": "Notifications",
-  "empty": "Aucune tâche en cours",
+  "empty": "Aucune session..",
   "busySection": "En cours ({count})",
   "needsInputSection": "En attente d'entrée ({count})",
   "reviewSection": "À vérifier ({count})",

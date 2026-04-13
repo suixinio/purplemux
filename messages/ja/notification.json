@@ -1,6 +1,6 @@
 {
   "title": "通知",
-  "empty": "進行中のタスクはありません",
+  "empty": "セッションがありません..",
   "busySection": "進行中 ({count})",
   "needsInputSection": "入力待ち ({count})",
   "reviewSection": "レビュー ({count})",

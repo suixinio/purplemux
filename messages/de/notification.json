@@ -1,6 +1,6 @@
 {
   "title": "Benachrichtigungen",
-  "empty": "Keine laufenden Aufgaben",
+  "empty": "Keine Sitzungen..",
   "busySection": "In Bearbeitung ({count})",
   "needsInputSection": "Eingabe erforderlich ({count})",
   "reviewSection": "Überprüfung ({count})",
