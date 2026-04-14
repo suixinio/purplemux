@@ -26,7 +26,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" />
-  <link rel="stylesheet" href="./style.css?v=58" />
+  <link rel="stylesheet" href="./style.css?v=64" />
 </head>
 <body>
 
@@ -470,46 +470,41 @@
         흩어진 숫자를 한 곳에 모아 작업의 리듬과 비용 구조를 한눈에 보여줍니다.
       </p>
 
-      <picture class="shot shot--stats">
-        <source srcset="./images/stat.webp" type="image/webp" />
-        <img src="./images/stat.png" alt="purplemux 사용량 통계 대시보드" width="2068" height="1682" loading="lazy" decoding="async" />
-      </picture>
+      <div class="stats-showcase">
+        <picture class="stats-screen">
+          <source srcset="./images/stat.webp" type="image/webp" />
+          <img src="./images/stat.png" alt="purplemux 사용량 통계 대시보드" width="2068" height="1682" loading="lazy" decoding="async" />
+        </picture>
 
-      <div class="feature-grid" style="margin-top:2rem">
-        <div class="feature-card">
-          <div class="feature-body">
-            <div class="feature-title">모델별 토큰 분해</div>
-            <div class="feature-desc">Opus / Sonnet / Haiku 각각의 입력 · 출력 · 캐시 R/W 토큰을 따로 볼 수 있습니다.</div>
+        <div class="stats-callout" style="--x:22%; --y:20%">
+          <span class="callout-num">01</span>
+          <div class="callout-label">
+            <strong>개요 카드 4종</strong>
+            <span>Sessions · Total · Today · Month</span>
           </div>
         </div>
-        <div class="feature-card teal">
-          <div class="feature-body">
-            <div class="feature-title">프로젝트별 Top 10</div>
-            <div class="feature-desc">어떤 프로젝트가 토큰·비용을 가장 많이 먹었는지 세션 수와 함께 랭킹으로.</div>
+
+        <div class="stats-callout stats-callout--left" style="--x:82%; --y:28%">
+          <span class="callout-num">02</span>
+          <div class="callout-label">
+            <strong>일일 활동 추이</strong>
+            <span>최근 30일 세션·메시지 그래프</span>
           </div>
         </div>
-        <div class="feature-card amber">
-          <div class="feature-body">
-            <div class="feature-title">활동 히트맵</div>
-            <div class="feature-desc">요일 × 시간 격자로 언제 가장 바쁜지 한눈에. 최근 30일 추이도 함께.</div>
+
+        <div class="stats-callout" style="--x:20%; --y:62%">
+          <span class="callout-num">03</span>
+          <div class="callout-label">
+            <strong>연속 작업 스트릭</strong>
+            <span>Longest · Current · Count · Avg</span>
           </div>
         </div>
-        <div class="feature-card green">
-          <div class="feature-body">
-            <div class="feature-title">업타임 스트릭 & 콤보</div>
-            <div class="feature-desc">연속 작업일, 최장 스트릭, 동시 세션 콤보 레벨. 작업 리듬을 수치로.</div>
-          </div>
-        </div>
-        <div class="feature-card blue">
-          <div class="feature-body">
-            <div class="feature-title">세션 아웃컴 분포</div>
-            <div class="feature-desc">목표 카테고리별 성공 / 부분 / 실패 비율. 어디서 헤매는지 보입니다.</div>
-          </div>
-        </div>
-        <div class="feature-card coral">
-          <div class="feature-body">
-            <div class="feature-title">기간별 필터</div>
-            <div class="feature-desc">오늘 · 7일 · 30일 · 전체를 한 번에 전환. 같은 지표를 다른 창으로 비교할 수 있습니다.</div>
+
+        <div class="stats-callout stats-callout--left" style="--x:80%; --y:87%">
+          <span class="callout-num">04</span>
+          <div class="callout-label">
+            <strong>주간 타임라인</strong>
+            <span>요일 × 시간대 스트릭 + 동시 세션</span>
           </div>
         </div>
       </div>
@@ -550,12 +545,6 @@
               <li>멀티 세션 대시보드에 실제 spinner/pulse 인디케이터 재현</li>
               <li>Git Diff · 워크스페이스 · Self-hosted 목업 CSS 세부 조정</li>
               <li>Tailscale 접근 다이어그램 애니메이션 추가</li>
-            </ul>
-
-            <div class="md-h3">카피 다듬기</div>
-            <ul class="md-ul">
-              <li>Why/Mobile/Stats 헤드라인을 선언형으로 교체</li>
-              <li>일화성 구어체 제거, muted 톤 유지</li>
             </ul>
           </div>
         </div>
@@ -724,6 +713,12 @@
               <div class="arch-comp-name">Status Manager</div>
               <div class="arch-comp-sub">process tree + JSONL tail</div>
             </div>
+            <div class="arch-highlights">
+              <span class="arch-hl">Binary PTY · 이진 stdin/out</span>
+              <span class="arch-hl">훅 + 5–15s 폴링</span>
+              <span class="arch-hl">권한 프롬프트 인터셉트</span>
+              <span class="arch-hl">1MB 백프레셔 · 10 큐</span>
+            </div>
           </div>
         </div>
 
@@ -744,6 +739,10 @@
                 <span class="arch-mini">session 2</span>
                 <span class="arch-mini">…</span>
               </div>
+              <div class="arch-highlights arch-highlights--inline">
+                <span class="arch-hl">격리된 purple 소켓</span>
+                <span class="arch-hl">재부팅 후 병렬 복구</span>
+              </div>
             </div>
             <div class="arch-group">
               <div class="arch-group-label">Claude Code</div>
@@ -752,45 +751,6 @@
                 <span class="arch-mini">~/.claude/projects/{id}.jsonl</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-body">
-            <div class="feature-title">Binary PTY 프로토콜</div>
-            <div class="feature-desc">stdin/stdout/리사이즈를 이진으로 주고받으며 백프레셔를 제어합니다.</div>
-          </div>
-        </div>
-        <div class="feature-card teal">
-          <div class="feature-body">
-            <div class="feature-title">훅 + 폴링 하이브리드</div>
-            <div class="feature-desc">Claude Code 이벤트 훅으로 즉시 반영, 5–15초 폴링이 프로세스 트리와 JSONL 꼬리를 검증합니다.</div>
-          </div>
-        </div>
-        <div class="feature-card amber">
-          <div class="feature-body">
-            <div class="feature-title">격리된 tmux</div>
-            <div class="feature-desc">전용 <code>purple</code> 소켓을 써서 기존 tmux 환경과 완전히 분리됩니다.</div>
-          </div>
-        </div>
-        <div class="feature-card coral">
-          <div class="feature-body">
-            <div class="feature-title">병렬 자동 복구</div>
-            <div class="feature-desc">시스템 재부팅 후, 워크스페이스 레이아웃을 스캔해 멈춘 Claude 세션을 병렬로 재구성하고 <code>claude --resume</code>으로 살려냅니다.</div>
-          </div>
-        </div>
-        <div class="feature-card green">
-          <div class="feature-body">
-            <div class="feature-title">권한 프롬프트 인터셉트</div>
-            <div class="feature-desc">Claude가 터미널에 띄우는 권한 대화를 tmux pane 파싱으로 감지해 대시보드와 모바일로 전달합니다. 자리를 비워도 승인 가능.</div>
-          </div>
-        </div>
-        <div class="feature-card blue">
-          <div class="feature-body">
-            <div class="feature-title">백프레셔 제어</div>
-            <div class="feature-desc">WebSocket 브로드캐스트에 1MB 백프레셔 · 10개 큐 한도. 50+ 동시 세션에서도 OOM 없이 안정.</div>
           </div>
         </div>
       </div>
@@ -843,6 +803,11 @@
             <td>사용량 분석</td>
             <td class="cross">—</td>
             <td class="check">토큰·비용·프로젝트별 · AI 일일 리포트</td>
+          </tr>
+          <tr class="tradeoff">
+            <td>강점</td>
+            <td>Anthropic 공식 · Claude 모바일 앱 통합 · 자동 업데이트</td>
+            <td>서드파티 OSS · 수동 설치·유지</td>
           </tr>
         </tbody>
       </table>
@@ -1063,13 +1028,27 @@
     (function () {
       var sentinel = document.querySelector('.hero-eyebrow');
       var navBrand = document.querySelector('.nav-brand');
-      if (!sentinel || !navBrand || !('IntersectionObserver' in window)) {
-        if (navBrand) navBrand.classList.remove('is-hidden');
-        return;
+      if (sentinel && navBrand && 'IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries) {
+          navBrand.classList.toggle('is-hidden', entries[0].isIntersecting);
+        }, { rootMargin: '-52px 0px 0px 0px', threshold: 0 }).observe(sentinel);
+      } else if (navBrand) {
+        navBrand.classList.remove('is-hidden');
       }
-      new IntersectionObserver(function (entries) {
-        navBrand.classList.toggle('is-hidden', entries[0].isIntersecting);
-      }, { rootMargin: '-52px 0px 0px 0px', threshold: 0 }).observe(sentinel);
+
+      var showcase = document.querySelector('.stats-showcase');
+      if (showcase && 'IntersectionObserver' in window) {
+        new IntersectionObserver(function (entries, obs) {
+          entries.forEach(function (e) {
+            if (e.isIntersecting) {
+              showcase.classList.add('is-visible');
+              obs.unobserve(showcase);
+            }
+          });
+        }, { rootMargin: '0px 0px -15% 0px', threshold: 0.2 }).observe(showcase);
+      } else if (showcase) {
+        showcase.classList.add('is-visible');
+      }
     })();
   </script>
 
