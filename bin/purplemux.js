@@ -6,6 +6,12 @@ const CLI_COMMANDS = new Set([
   'workspaces', 'tab', 'message', 'msg', 'memory', 'mem', 'api-guide', 'help',
 ]);
 
+import('update-notifier')
+  .then(({ default: updateNotifier }) => {
+    updateNotifier({ pkg: require('../package.json') }).notify();
+  })
+  .catch(() => {});
+
 const cmd = process.argv[2];
 
 if (cmd && CLI_COMMANDS.has(cmd)) {
