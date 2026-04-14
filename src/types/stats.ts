@@ -171,6 +171,7 @@ export interface IDailyReportDay {
   brief: string;
   detail: string;
   generatedAt: string;
+  locale?: string;
 }
 
 export interface IDailyReportCacheResponse {

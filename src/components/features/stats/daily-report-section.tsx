@@ -7,6 +7,7 @@ import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import useConfigStore from '@/hooks/use-config-store';
 import type { IDailyReportDay, IDailyReportCacheResponse } from '@/types/stats';
 import { WEEKDAY_LABELS, formatCostWithComma } from '@/components/features/stats/stats-utils';
 
@@ -33,6 +34,7 @@ const markdownClass = 'prose prose-sm prose-invert max-w-none text-foreground/80
 
 const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchRunningChange }: IDailyReportSectionProps) => {
   const t = useTranslations('stats');
+  const locale = useConfigStore((s) => s.locale);
   const [generating, setGenerating] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [batchRunning, setBatchRunning] = useState(false);
@@ -42,14 +44,14 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
     const res = await fetch('/api/stats/daily-report/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, force }),
+      body: JSON.stringify({ date, force, locale }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'unknown error' }));
       throw new Error(err.message ?? `HTTP ${res.status}`);
     }
     return (await res.json()) as IDailyReportDay;
-  }, []);
+  }, [locale]);
 
   const handleGenerate = useCallback(async (date: string, force = false) => {
     setGenerating(date);
@@ -71,7 +73,8 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
     try {
       for (const day of days) {
         if (batchStopRef.current) break;
-        if (cache?.days[day.date]) continue;
+        const existing = cache?.days[day.date];
+        if (existing && existing.locale === locale) continue;
         setGenerating(day.date);
         try {
           const report = await generateOne(day.date);
@@ -89,7 +92,7 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
         toast.success(t('summaryBatchComplete', { count: generated }));
       }
     }
-  }, [days, cache, generateOne, onCacheUpdate, t]);
+  }, [days, cache, generateOne, onCacheUpdate, t, locale]);
 
   const handleBatchStop = useCallback(() => {
     batchStopRef.current = true;

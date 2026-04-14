@@ -161,7 +161,7 @@ const buildPromptData = (sessions: ISessionData[]): string => {
   return sessions
     .map((s) => {
       const time = new Date(Number(s.start)).toTimeString().slice(0, 5);
-      return `[${time}] [${s.project}] 메시지 ${s.msgCount}개, 도구 ${s.toolCount}회 | ${s.firstMessage}`;
+      return `[${time}] [${s.project}] msgs=${s.msgCount}, tools=${s.toolCount} | ${s.firstMessage}`;
     })
     .join('\n');
 };
@@ -186,33 +186,52 @@ const callClaudeCli = async (input: string, systemPrompt: string): Promise<strin
   });
 };
 
-const SUMMARY_PROMPT = (date: string) =>
-  `${date}의 Claude 세션 내역을 요약해주세요.
+const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
+  en: 'English',
+  ko: 'Korean (한국어)',
+  ja: 'Japanese (日本語)',
+  'zh-CN': 'Simplified Chinese (简体中文)',
+  'zh-TW': 'Traditional Chinese (繁體中文)',
+  de: 'German (Deutsch)',
+  es: 'Spanish (Español)',
+  fr: 'French (Français)',
+  'pt-BR': 'Brazilian Portuguese (Português do Brasil)',
+  ru: 'Russian (Русский)',
+  tr: 'Turkish (Türkçe)',
+};
 
-출력 형식 (반드시 이 형식만 사용):
+const resolveLanguageName = (locale: string): string =>
+  LOCALE_LANGUAGE_NAMES[locale] ?? LOCALE_LANGUAGE_NAMES.en;
+
+const SUMMARY_PROMPT = (date: string, locale: string) => {
+  const languageName = resolveLanguageName(locale);
+  return `Summarize the Claude session history for ${date}.
+
+Output format (use exactly this structure):
 
 [BRIEF]
-하루 전체를 2-3줄로 요약. 개조식 명사형 종결. 순수 텍스트만 작성. 마크다운 헤딩(#), 구분선(---) 사용 금지.
+A 2-3 line summary of the entire day. Use terse noun-form phrases. Plain text only. No markdown headings (#) or separators (---).
 
 [DETAIL]
-## 프로젝트명
-### 주요 기능/영역
-- 작업 항목 한줄 요약
-- 작업 항목 한줄 요약
-### 다른 기능/영역
-- 작업 항목 한줄 요약
+## Project Name
+### Major Feature / Area
+- One-line task summary
+- One-line task summary
+### Another Feature / Area
+- One-line task summary
 
-규칙:
-- [BRIEF]와 [DETAIL] 태그는 각각 정확히 한 번만, 줄 맨 앞에 작성
-- 태그 외의 메타 텍스트(구분선, 번호, 설명) 삽입 금지
-- 프로젝트가 1개여도 반드시 ## 프로젝트명 헤딩 포함
-- 각 항목은 한 줄 — 파일명, 코드 없이
-- 개조식 명사형 종결 (예: "로그인 로직 수정", "모바일 레이아웃 개선"). "-다", "-했다", "-시작" 등 서술형 금지
-- WHAT 중심 (HOW 아님)
-- 사소한 대화(인사, 1회성 질문, 커밋 명령)는 생략
-- 한글로 작성
+Rules:
+- The [BRIEF] and [DETAIL] tags must each appear exactly once, at the start of a line.
+- Do not insert meta text outside the tags (separators, numbering, explanations).
+- Always include the "## Project Name" heading, even when there is only one project.
+- Each item is a single line — no filenames, no code snippets.
+- Use terse noun-form phrases (e.g. "Fix login logic", "Improve mobile layout"). Avoid finished-sentence / past-tense forms.
+- Focus on WHAT, not HOW.
+- Skip trivial chatter (greetings, one-off questions, commit commands).
+- IMPORTANT: Write ALL brief and detail content in ${languageName}. Keep the [BRIEF] / [DETAIL] tags and markdown syntax (##, ###, -) as-is in English.
 
-데이터:`;
+Data:`;
+};
 
 const stripTrailingMarkdownNoise = (text: string): string =>
   text.replace(/[\s#\-]*$/, '').trim();
@@ -229,10 +248,14 @@ const parseSummaryResponse = (response: string): { brief: string; detail: string
 
 // --- Public API ---
 
-export const generateDailyReport = async (date: string, force = false): Promise<IDailyReportDay> => {
+export const generateDailyReport = async (
+  date: string,
+  force = false,
+  locale = 'en',
+): Promise<IDailyReportDay> => {
   if (!force) {
     const existing = await readCachedReport(date);
-    if (existing) return existing;
+    if (existing && existing.locale === locale) return existing;
   }
 
   const sessions = await extractSessionsForDate(date);
@@ -242,13 +265,14 @@ export const generateDailyReport = async (date: string, force = false): Promise<
       brief: 'No activity recorded.',
       detail: '',
       generatedAt: new Date().toISOString(),
+      locale,
     };
     await writeCachedReport(empty);
     return empty;
   }
 
   const promptData = buildPromptData(sessions);
-  const response = await callClaudeCli(promptData, SUMMARY_PROMPT(date));
+  const response = await callClaudeCli(promptData, SUMMARY_PROMPT(date, locale));
   const { brief, detail } = parseSummaryResponse(response);
 
   const report: IDailyReportDay = {
@@ -256,6 +280,7 @@ export const generateDailyReport = async (date: string, force = false): Promise<
     brief,
     detail,
     generatedAt: new Date().toISOString(),
+    locale,
   };
 
   await writeCachedReport(report);
