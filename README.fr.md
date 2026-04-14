@@ -20,6 +20,8 @@ Ouvrez [http://localhost:8022](http://localhost:8022) dans votre navigateur. C'e
 
 > Nécessite Node.js 20+ et tmux. macOS ou Linux.
 
+Vous préférez une app native ? Récupérez la build Electron macOS depuis la [dernière release](https://github.com/subicura/purplemux/releases/latest) (`.dmg` pour Apple Silicon et Intel).
+
 ## Pourquoi purplemux
 
 - **Tableau de bord multi-session** — Visualisez d'un coup d'œil l'état « en cours / en attente d'entrée » de toutes vos sessions Claude Code

@@ -20,6 +20,8 @@ npx purplemux
 
 > Node.js 20+, tmux 필요. macOS 또는 Linux.
 
+네이티브 앱을 선호한다면, [최신 릴리스](https://github.com/subicura/purplemux/releases/latest)에서 macOS Electron 빌드를 받을 수 있습니다 (Apple Silicon & Intel용 `.dmg`).
+
 ## 왜 purplemux인가
 
 - **멀티 세션 대시보드** — 모든 Claude Code 세션의 작업중/사용자 요청 상태를 한눈에 확인

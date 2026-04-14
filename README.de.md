@@ -20,6 +20,8 @@ npx purplemux
 
 > Erfordert Node.js 20+ und tmux. macOS oder Linux.
 
+Lieber eine native App? Hol dir den macOS-Electron-Build aus dem [neuesten Release](https://github.com/subicura/purplemux/releases/latest) (`.dmg` für Apple Silicon & Intel).
+
 ## Warum purplemux
 
 - **Multi-Session-Dashboard** — Behalte „arbeitet / wartet auf Eingabe"-Status aller Claude-Code-Sessions auf einen Blick im Überblick

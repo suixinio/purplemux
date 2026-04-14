@@ -20,6 +20,8 @@ Abre [http://localhost:8022](http://localhost:8022) en tu navegador. Listo.
 
 > Requiere Node.js 20+ y tmux. macOS o Linux.
 
+¿Prefieres una app nativa? Descarga la versión Electron para macOS desde la [última release](https://github.com/subicura/purplemux/releases/latest) (`.dmg` para Apple Silicon e Intel).
+
 ## Por qué purplemux
 
 - **Panel multisesión** — Consulta de un vistazo el estado «trabajando / requiere entrada» de todas tus sesiones de Claude Code

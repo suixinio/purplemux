@@ -20,6 +20,8 @@ npx purplemux
 
 > 需要 Node.js 20+ 與 tmux。macOS 或 Linux。
 
+想用原生應用程式?可從[最新發行版](https://github.com/subicura/purplemux/releases/latest)下載 macOS Electron 版(適用於 Apple Silicon 與 Intel 的 `.dmg`)。
+
 ## 為什麼選擇 purplemux
 
 - **多工作階段儀表板** — 一眼掌握所有 Claude Code 工作階段的「執行中 / 等待輸入」狀態

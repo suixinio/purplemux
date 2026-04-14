@@ -20,6 +20,8 @@ Open [http://localhost:8022](http://localhost:8022) in your browser. Done.
 
 > Requires Node.js 20+ and tmux. macOS or Linux.
 
+Prefer a native app? Grab the macOS Electron build from the [latest release](https://github.com/subicura/purplemux/releases/latest) (`.dmg` for Apple Silicon & Intel).
+
 ## Why purplemux
 
 - **Multi-session dashboard** — See working/needs-input status for every Claude Code session at a glance

@@ -20,6 +20,8 @@ Tarayıcınızda [http://localhost:8022](http://localhost:8022) adresini açın.
 
 > Node.js 20+ ve tmux gerekir. macOS veya Linux.
 
+Yerel bir uygulama mı tercih edersiniz? macOS Electron sürümünü [en son sürümden](https://github.com/subicura/purplemux/releases/latest) indirebilirsiniz (Apple Silicon ve Intel için `.dmg`).
+
 ## Neden purplemux
 
 - **Çoklu oturum panosu** — Tüm Claude Code oturumlarının «çalışıyor / giriş bekliyor» durumunu tek bakışta görün

@@ -20,6 +20,8 @@ npx purplemux
 
 > Node.js 20+ と tmux が必要です。macOS または Linux。
 
+ネイティブアプリがお好みなら、[最新リリース](https://github.com/subicura/purplemux/releases/latest) から macOS Electron ビルドを入手できます(Apple Silicon & Intel 向け `.dmg`)。
+
 ## purplemux を選ぶ理由
 
 - **マルチセッションダッシュボード** — すべての Claude Code セッションの「作業中 / 入力待ち」ステータスを一目で把握
