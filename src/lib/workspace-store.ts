@@ -10,10 +10,10 @@ import {
   writeLayoutFile,
   resolveLayoutDir,
   resolveLayoutFile,
+  removeLayoutFile,
   crossCheckLayout,
   collectAllTabs,
   createDefaultLayout,
-  clearLayoutCache,
 } from '@/lib/layout-store';
 import type { ICreateLayoutOptions } from '@/lib/layout-store';
 import type { IWorkspace, IWorkspacesData, ILayoutData } from '@/types/terminal';
@@ -313,9 +313,8 @@ export const deleteWorkspace = async (workspaceId: string): Promise<boolean> =>
     }
 
     try {
-      await fs.rm(resolveLayoutDir(workspaceId), { recursive: true, force: true });
+      await removeLayoutFile(workspaceId);
     } catch {}
-    clearLayoutCache(workspaceId);
 
     data.workspaces.splice(idx, 1);
     data.workspaces.forEach((w, i) => { w.order = i; });

@@ -109,13 +109,13 @@ const UptimeSection = ({ data }: IUptimeSectionProps) => {
         </CardHeader>
         <CardContent>
           <div className="space-y-1.5">
-            <div className="flex items-end">
+            <div className="flex">
               <div className="w-10 shrink-0" />
-              <div className="relative flex-1">
+              <div className="relative h-3 flex-1">
                 {HOUR_MARKS.map((h) => (
                   <span
                     key={h}
-                    className="absolute text-[9px] text-muted-foreground"
+                    className="absolute top-0 text-[9px] leading-none text-muted-foreground"
                     style={{ left: `${(h / 24) * 100}%` }}
                   >
                     {h}

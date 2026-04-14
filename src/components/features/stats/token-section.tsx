@@ -60,18 +60,29 @@ const getModelLabel = (model: string): string => {
 const TokenSection = ({ data }: ITokenSectionProps) => {
   const t = useTranslations('stats');
 
-  const barChartConfig: ChartConfig = {
+  const tokenChartConfig: ChartConfig = {
     input: { label: t('inputLabel'), color: 'var(--ui-blue)' },
     output: { label: t('outputLabel'), color: 'var(--ui-teal)' },
     cacheRead: { label: t('cacheReadLabel'), color: 'var(--ui-amber)' },
     cacheCreation: { label: t('cacheWriteLabel'), color: 'var(--ui-pink)' },
   };
 
-  const trendChartConfig: ChartConfig = {
-    input: { label: t('inputLabel'), color: 'var(--ui-blue)' },
-    output: { label: t('outputLabel'), color: 'var(--ui-teal)' },
-    cacheRead: { label: t('cacheReadLabel'), color: 'var(--ui-amber)' },
-    cacheCreation: { label: t('cacheWriteLabel'), color: 'var(--ui-pink)' },
+  const renderTokenTooltipItem = (value: unknown, name: unknown, color: string, total: number) => {
+    const label = tokenChartConfig[String(name)]?.label ?? String(name);
+    return (
+      <>
+        <div
+          className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
+          style={{ background: color }}
+        />
+        <div className="flex flex-1 items-center justify-between gap-2 leading-none">
+          <span className="text-muted-foreground">{label}</span>
+          <span className="font-mono font-medium text-foreground tabular-nums">
+            {formatNumberWithComma(Number(value))} ({pct(Number(value), total)})
+          </span>
+        </div>
+      </>
+    );
   };
 
   const modelBarData = useMemo(() => {
@@ -104,7 +115,7 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 lg:grid-cols-[1fr_auto]">
-              <ChartContainer config={barChartConfig} className="aspect-auto h-48 w-full">
+              <ChartContainer config={tokenChartConfig} className="aspect-auto h-48 w-full">
                 <BarChart
                   data={modelBarData}
                   layout="vertical"
@@ -115,9 +126,9 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                   <YAxis type="category" dataKey="model" tickLine={false} axisLine={false} tick={{ fontSize: 11 }} width={100} />
                   <ChartTooltip
                     content={<ChartTooltipContent />}
-                    formatter={(value, _name, item) => {
+                    formatter={(value, name, item) => {
                       const d = item.payload;
-                      return `${formatNumberWithComma(Number(value))} (${pct(Number(value), d.total)})`;
+                      return renderTokenTooltipItem(value, name, item.color ?? '', d.total);
                     }}
                   />
                   <Bar dataKey="input" stackId="stack" fill="var(--ui-blue)" radius={0} />
@@ -161,7 +172,7 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
             <CardTitle className="text-sm font-medium text-muted-foreground">{t('dailyTokenTrend')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <ChartContainer config={trendChartConfig} className="aspect-auto h-48 w-full">
+            <ChartContainer config={tokenChartConfig} className="aspect-auto h-48 w-full">
               <AreaChart data={data.dailyTokens} margin={{ top: 4, right: 4, bottom: 0, left: 8 }}>
                 <defs>
                   <linearGradient id="fillInput" x1="0" y1="0" x2="0" y2="1">
@@ -199,10 +210,10 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
                 <ChartTooltip
                   content={<ChartTooltipContent />}
                   labelFormatter={(v) => dayjs(v).format('YYYY-MM-DD')}
-                  formatter={(value, _name, item) => {
+                  formatter={(value, name, item) => {
                     const d = item.payload;
                     const total = d.input + d.output + d.cacheRead + d.cacheCreation;
-                    return `${formatNumberWithComma(Number(value))} (${pct(Number(value), total)})`;
+                    return renderTokenTooltipItem(value, name, item.color ?? '', total);
                   }}
                 />
                 <Area

@@ -22,12 +22,23 @@ const log = createLogger('layout');
 
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
 
+interface ILayoutReconciler {
+  reconcileWorkspaceTabs: (wsId: string, validTabIds: readonly string[]) => void;
+  removeWorkspaceTabs: (wsId: string) => void;
+}
+
 const g = globalThis as unknown as {
   __ptLayoutLock?: Promise<void>;
   __ptLayoutContentCache?: Map<string, string>;
+  __ptLayoutReconciler?: ILayoutReconciler | null;
 };
 if (!g.__ptLayoutLock) g.__ptLayoutLock = Promise.resolve();
 if (!g.__ptLayoutContentCache) g.__ptLayoutContentCache = new Map();
+if (g.__ptLayoutReconciler === undefined) g.__ptLayoutReconciler = null;
+
+export const setLayoutReconciler = (reconciler: ILayoutReconciler | null): void => {
+  g.__ptLayoutReconciler = reconciler;
+};
 
 const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
   let release: () => void;
@@ -117,7 +128,24 @@ export const writeLayoutFile = async (data: ILayoutData, filePath: string): Prom
   cache.set(filePath, contentKey);
 
   const wsId = extractWsIdFromPath(filePath);
-  if (wsId) broadcastSync({ type: 'layout', workspaceId: wsId });
+  if (wsId) {
+    const reconciler = g.__ptLayoutReconciler;
+    if (reconciler) {
+      const validTabIds = collectAllTabs(data.root).map((t) => t.id);
+      reconciler.reconcileWorkspaceTabs(wsId, validTabIds);
+    }
+    broadcastSync({ type: 'layout', workspaceId: wsId });
+  }
+};
+
+export const removeLayoutFile = async (wsId: string): Promise<void> => {
+  await fs.rm(resolveLayoutDir(wsId), { recursive: true, force: true });
+  clearLayoutCache(wsId);
+  const reconciler = g.__ptLayoutReconciler;
+  if (reconciler) {
+    reconciler.removeWorkspaceTabs(wsId);
+  }
+  broadcastSync({ type: 'layout', workspaceId: wsId });
 };
 
 export const clearLayoutCache = (wsId: string): void => {

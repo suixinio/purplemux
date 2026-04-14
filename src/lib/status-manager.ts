@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
-import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName } from '@/lib/layout-store';
+import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getLastCommand, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
 import { cwdToProjectPath } from '@/lib/session-list';
@@ -955,6 +955,23 @@ class StatusManager {
     this.broadcastRemove(tabId);
   }
 
+  reconcileWorkspaceTabs(wsId: string, validTabIds: readonly string[]): void {
+    const valid = new Set(validTabIds);
+    for (const [tabId, entry] of this.tabs) {
+      if (entry.workspaceId === wsId && !valid.has(tabId)) {
+        this.removeTab(tabId);
+      }
+    }
+  }
+
+  removeWorkspaceTabs(wsId: string): void {
+    for (const [tabId, entry] of this.tabs) {
+      if (entry.workspaceId === wsId) {
+        this.removeTab(tabId);
+      }
+    }
+  }
+
   registerTab(tabId: string, entry: ITabStatusEntry): void {
     this.tabs.set(tabId, entry);
     this.broadcastUpdate(tabId, entry);
@@ -1198,7 +1215,12 @@ class StatusManager {
 
 export const getStatusManager = (): StatusManager => {
   if (!g.__ptStatusManager) {
-    g.__ptStatusManager = new StatusManager();
+    const manager = new StatusManager();
+    g.__ptStatusManager = manager;
+    setLayoutReconciler({
+      reconcileWorkspaceTabs: (wsId, validTabIds) => manager.reconcileWorkspaceTabs(wsId, validTabIds),
+      removeWorkspaceTabs: (wsId) => manager.removeWorkspaceTabs(wsId),
+    });
   }
   return g.__ptStatusManager;
 };
