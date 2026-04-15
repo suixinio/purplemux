@@ -722,18 +722,17 @@ code {
   position: relative;
   margin: 0 auto;
   max-width: 1200px;
-  padding: 0 1rem;
+  padding: 0 2rem;
 }
 .preview-desktop {
   display: block;
 }
 .preview-mobile {
   position: absolute;
-  right: 6%;
+  right: 2%;
   bottom: -6%;
   width: clamp(180px, 20%, 280px);
   z-index: 2;
-  transform: rotate(3deg);
 }
 .preview-mobile img { border-radius: 26px; }
 
@@ -808,7 +807,11 @@ code {
   width: 100%;
   height: auto;
 }
-.shot--desktop img,
+.shot--desktop img {
+  border-radius: 12px;
+  outline: 1.5px solid #2a2a2a;
+  outline-offset: -1.5px;
+}
 .shot--stats img {
   border-radius: 12px;
   box-shadow:
@@ -2422,7 +2425,6 @@ footer .foot-links a:hover { color: var(--foreground); }
   .preview-desktop { display: none; }
   .preview-mobile {
     position: static;
-    transform: none;
     width: 100%;
     max-width: 360px;
     margin: 0 auto;

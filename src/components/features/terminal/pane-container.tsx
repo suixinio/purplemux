@@ -556,6 +556,18 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     [paneId, reconnect],
   );
 
+  const autoRestartedTabsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (status !== 'disconnected' || disconnectReason !== 'session-not-found') return;
+    if (!activeTabId || !activeTab) return;
+    if (activeTab.panelType !== 'terminal') return;
+    if (activeTab.lastCommand) return;
+    if (autoRestartedTabsRef.current.has(activeTabId)) return;
+    autoRestartedTabsRef.current.add(activeTabId);
+    handleRestartTab(activeTabId);
+  }, [status, disconnectReason, activeTabId, activeTab, handleRestartTab]);
+
   const handleRenameTab = useCallback(
     (tabId: string, name: string) => {
       renameTabInPane(paneId, tabId, name);

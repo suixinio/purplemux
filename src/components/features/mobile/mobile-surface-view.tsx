@@ -388,6 +388,23 @@ const MobileSurfaceView = ({
   const ready = isWebBrowser || isDiff || (isReady && status === 'connected' && !noTabs);
   const isFirstConnectionForTab =
     activeTabId !== null && attemptedTabId !== activeTabId;
+
+  const autoRestartedTabsRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (status !== 'disconnected' || disconnectReason !== 'session-not-found') return;
+    if (isFirstConnectionForTab) return;
+    if (!activeTabId || !activeTab) return;
+    if (activeTab.panelType !== 'terminal') return;
+    if (activeTab.lastCommand) return;
+    if (autoRestartedTabsRef.current.has(activeTabId)) return;
+    autoRestartedTabsRef.current.add(activeTabId);
+    (async () => {
+      const ok = await useLayoutStore.getState().restartTabInPane(paneId, activeTabId);
+      if (ok) reconnect();
+    })();
+  }, [status, disconnectReason, activeTabId, activeTab, isFirstConnectionForTab, paneId, reconnect]);
+
   return (
     <div
       className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
