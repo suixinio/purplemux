@@ -1,46 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script>
-  (function(){try{
-    if(location.search.indexOf('nr')!==-1)return;
-    var S=['en','ko','ja','zh-CN','zh-TW','de','es','fr','pt-BR','ru','tr'];
-    function match(l){
-      if(!l)return null;
-      if(S.indexOf(l)!==-1)return l;
-      if(/^zh/i.test(l))return /Hant|TW|HK|MO/i.test(l)?'zh-TW':'zh-CN';
-      if(/^pt/i.test(l))return 'pt-BR';
-      var b=l.split('-')[0];
-      return S.indexOf(b)!==-1?b:null;
-    }
-    var target=null;
-    try{target=localStorage.getItem('pmx-locale');}catch(_){}
-    if(!target){
-      var langs=navigator.languages||[navigator.language||'en'];
-      for(var i=0;i<langs.length;i++){var m=match(langs[i]);if(m){target=m;break;}}
-    }
-    if(target&&target!=='en')location.replace('./'+target+'/');
-  }catch(_){}})();
-  </script>
-  <title>purplemux — A web-native terminal multiplexer for Claude Code</title>
-  <meta name="description" content="Run multiple Claude Code sessions in one dashboard. tmux-backed, web-native, mobile-ready. MIT open source." />
-  <meta property="og:title" content="purplemux — A web-native terminal multiplexer for Claude Code" />
-  <meta property="og:description" content="Run multiple Claude Code sessions in one dashboard. tmux-backed, web-native, mobile-ready. MIT open source." />
+  <script>try{localStorage.setItem('pmx-locale','ja');}catch(_){}</script>
+  <title>purplemux — Claude Code のための Web ネイティブなターミナル・マルチプレクサー</title>
+  <meta name="description" content="1 つのダッシュボードで複数の Claude Code セッションを実行。tmux ベース、Web ネイティブ、モバイル対応。MIT オープンソース。" />
+  <meta property="og:title" content="purplemux — Claude Code のための Web ネイティブなターミナル・マルチプレクサー" />
+  <meta property="og:description" content="1 つのダッシュボードで複数の Claude Code セッションを実行。tmux ベース、Web ネイティブ、モバイル対応。MIT オープンソース。" />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://subicura.com/purplemux/" />
-  <meta property="og:locale" content="en_US" />
-  <meta property="og:locale:alternate" content="ko_KR" />
+  <meta property="og:url" content="https://subicura.com/purplemux/ja/" />
+  <meta property="og:locale" content="ja_JP" />
+  <meta property="og:locale:alternate" content="en_US" />
   <meta property="og:image" content="https://subicura.com/purplemux/images/og-image.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
   <meta property="og:image:alt" content="purplemux" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="purplemux — A web-native terminal multiplexer for Claude Code" />
-  <meta name="twitter:description" content="Run multiple Claude Code sessions in one dashboard. tmux-backed, web-native, mobile-ready. MIT open source." />
+  <meta name="twitter:title" content="purplemux — Claude Code のための Web ネイティブなターミナル・マルチプレクサー" />
+  <meta name="twitter:description" content="1 つのダッシュボードで複数の Claude Code セッションを実行。tmux ベース、Web ネイティブ、モバイル対応。MIT オープンソース。" />
   <meta name="twitter:image" content="https://subicura.com/purplemux/images/og-image.png" />
-  <link rel="canonical" href="https://subicura.com/purplemux/" />
+  <link rel="canonical" href="https://subicura.com/purplemux/ja/" />
   <link rel="alternate" hreflang="en" href="https://subicura.com/purplemux/" />
   <link rel="alternate" hreflang="ko" href="https://subicura.com/purplemux/ko/" />
   <link rel="alternate" hreflang="ja" href="https://subicura.com/purplemux/ja/" />
@@ -53,17 +33,17 @@
   <link rel="alternate" hreflang="ru" href="https://subicura.com/purplemux/ru/" />
   <link rel="alternate" hreflang="tr" href="https://subicura.com/purplemux/tr/" />
   <link rel="alternate" hreflang="x-default" href="https://subicura.com/purplemux/" />
-  <link rel="icon" href="./images/favicon.ico" sizes="any" />
-  <link rel="icon" type="image/png" sizes="32x32" href="./images/favicon-32x32.png" />
-  <link rel="icon" type="image/png" sizes="16x16" href="./images/favicon-16x16.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="./images/apple-touch-icon.png" />
+  <link rel="icon" href="../images/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="../images/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="../images/favicon-16x16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="../images/apple-touch-icon.png" />
   <meta name="theme-color" content="#131313" />
   <link rel="preconnect" href="https://cdn.jsdelivr.net" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&display=swap" />
-  <link rel="stylesheet" href="./style.css?v=67" />
+  <link rel="stylesheet" href="../style.css?v=67" />
 </head>
 <body>
 
@@ -73,32 +53,32 @@
       <span class="wordmark"><strong>purple</strong>mux</span>
     </a>
     <div class="nav-links">
-      <a href="#mobile">Mobile</a>
-      <a href="#stats">Stats</a>
-      <a href="#features">Features</a>
-      <a href="#how">How</a>
-      <a href="#compare">Compare</a>
-      <a href="#install">Install</a>
+      <a href="#mobile">モバイル</a>
+      <a href="#stats">統計</a>
+      <a href="#features">機能</a>
+      <a href="#how">仕組み</a>
+      <a href="#compare">比較</a>
+      <a href="#install">インストール</a>
       <a href="#faq">FAQ</a>
     </div>
     <div class="nav-spacer"></div>
     <details class="nav-lang">
-      <summary aria-label="Language">
-        <span class="lang-current">EN</span>
+      <summary aria-label="言語を選択">
+        <span class="lang-current">JA</span>
         <svg class="lang-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2 4l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </summary>
       <div class="lang-menu" role="menu">
-        <a href="./" class="lang-opt is-active" lang="en" hreflang="en" aria-current="page">English</a>
-        <a href="./ko/" class="lang-opt" lang="ko" hreflang="ko">한국어</a>
-        <a href="./ja/" class="lang-opt" lang="ja" hreflang="ja">日本語</a>
-        <a href="./zh-CN/" class="lang-opt" lang="zh-CN" hreflang="zh-CN">简体中文</a>
-        <a href="./zh-TW/" class="lang-opt" lang="zh-TW" hreflang="zh-TW">繁體中文</a>
-        <a href="./de/" class="lang-opt" lang="de" hreflang="de">Deutsch</a>
-        <a href="./es/" class="lang-opt" lang="es" hreflang="es">Español</a>
-        <a href="./fr/" class="lang-opt" lang="fr" hreflang="fr">Français</a>
-        <a href="./pt-BR/" class="lang-opt" lang="pt-BR" hreflang="pt-BR">Português</a>
-        <a href="./ru/" class="lang-opt" lang="ru" hreflang="ru">Русский</a>
-        <a href="./tr/" class="lang-opt" lang="tr" hreflang="tr">Türkçe</a>
+        <a href="../" class="lang-opt" lang="en" hreflang="en">English</a>
+        <a href="../ko/" class="lang-opt" lang="ko" hreflang="ko">한국어</a>
+        <a href="./" class="lang-opt is-active" lang="ja" hreflang="ja" aria-current="page">日本語</a>
+        <a href="../zh-CN/" class="lang-opt" lang="zh-CN" hreflang="zh-CN">简体中文</a>
+        <a href="../zh-TW/" class="lang-opt" lang="zh-TW" hreflang="zh-TW">繁體中文</a>
+        <a href="../de/" class="lang-opt" lang="de" hreflang="de">Deutsch</a>
+        <a href="../es/" class="lang-opt" lang="es" hreflang="es">Español</a>
+        <a href="../fr/" class="lang-opt" lang="fr" hreflang="fr">Français</a>
+        <a href="../pt-BR/" class="lang-opt" lang="pt-BR" hreflang="pt-BR">Português</a>
+        <a href="../ru/" class="lang-opt" lang="ru" hreflang="ru">Русский</a>
+        <a href="../tr/" class="lang-opt" lang="tr" hreflang="tr">Türkçe</a>
       </div>
     </details>
     <a href="https://github.com/subicura/purplemux" class="nav-github" target="_blank" rel="noopener" aria-label="GitHub">
@@ -106,7 +86,7 @@
         <path d="M12 .5C5.65.5.5 5.65.5 12c0 5.08 3.29 9.39 7.86 10.91.58.1.79-.25.79-.56 0-.28-.01-1.02-.02-2-3.2.69-3.88-1.54-3.88-1.54-.52-1.33-1.28-1.69-1.28-1.69-1.05-.72.08-.7.08-.7 1.16.08 1.77 1.19 1.77 1.19 1.03 1.77 2.7 1.26 3.36.96.1-.75.4-1.26.73-1.55-2.55-.29-5.24-1.28-5.24-5.69 0-1.26.45-2.29 1.18-3.09-.12-.29-.51-1.46.11-3.04 0 0 .97-.31 3.18 1.18a11.1 11.1 0 0 1 5.79 0c2.2-1.49 3.17-1.18 3.17-1.18.62 1.58.23 2.75.11 3.04.74.8 1.18 1.83 1.18 3.09 0 4.42-2.69 5.4-5.26 5.68.41.35.78 1.05.78 2.12 0 1.53-.01 2.77-.01 3.15 0 .31.21.67.8.56A11.5 11.5 0 0 0 23.5 12C23.5 5.65 18.35.5 12 .5Z"/>
       </svg>
     </a>
-    <a href="#install" class="nav-cta">Get started</a>
+    <a href="#install" class="nav-cta">今すぐ始める</a>
   </nav>
 
   <main id="top">
@@ -123,34 +103,34 @@
           </div>
 
           <h1 class="hero-title">
-            <span class="line">Claude Code<span class="punct">,</span></span>
-            <span class="line">many sessions<span class="punct">,</span></span>
-            <span class="line line--brand">all at once<span class="punct">.</span></span>
-            <span class="line line--brand">Faster<span class="punct">.</span></span>
+            <span class="line">Claude Code<span class="punct">、</span></span>
+            <span class="line">複数の作業を</span>
+            <span class="line line--brand">同時に<span class="punct">。</span></span>
+            <span class="line line--brand">もっと速く<span class="punct">。</span></span>
           </h1>
 
           <p class="hero-sub">
-            A multi-session dashboard on tmux.<br class="br-desktop" />
-            Browser, mobile, terminal — one seamless workflow.
+            tmux ベースのマルチセッション・ダッシュボード。<br class="br-desktop" />
+            ブラウザ・モバイル・ターミナル、途切れないワンワークフロー。
           </p>
 
           <div class="install-block">
             <div class="install-cmd">
               <span class="prompt">$</span>
               <span>npx purplemux</span>
-              <button class="copy-btn" type="button" aria-label="Copy" onclick="(function(b){navigator.clipboard.writeText('npx purplemux');b.classList.add('copied');b.textContent='✓';clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('copied');b.textContent='⧉';},1800);})(this)">⧉</button>
+              <button class="copy-btn" type="button" aria-label="コピー" onclick="(function(b){navigator.clipboard.writeText('npx purplemux');b.classList.add('copied');b.textContent='✓';clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('copied');b.textContent='⧉';},1800);})(this)">⧉</button>
             </div>
             <a href="https://github.com/subicura/purplemux/releases/latest" class="btn-primary" target="_blank" rel="noopener">
               <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
                 <path d="M17.05 20.28c-.98.95-2.05.88-3.08.41-1.09-.47-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.41C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
               </svg>
-              Download for macOS
+              macOS アプリをダウンロード
             </a>
           </div>
 
           <div class="hero-meta">
             <span><span class="ok">●</span> Node.js 20+</span>
-            <span><span class="ok">●</span> tmux required</span>
+            <span><span class="ok">●</span> tmux が必要</span>
             <span><span class="ok">●</span> macOS / Linux</span>
           </div>
         </div>
@@ -167,7 +147,7 @@
                 <div class="card-row"><span class="k">read</span><span class="p">src/lib/auth.ts</span></div>
                 <div class="card-row"><span class="k">edit</span><span class="p">src/lib/auth.ts</span></div>
                 <div class="card-row"><span class="k">bash</span><span class="p">pnpm tsc --noEmit</span></div>
-                <div class="card-row running"><span class="k">→</span><span class="p">Refactoring middleware</span></div>
+                <div class="card-row running"><span class="k">→</span><span class="p">ミドルウェアをリファクタ中</span></div>
               </div>
             </div>
           </article>
@@ -200,9 +180,9 @@
                 <span class="card-badge brand">review</span>
               </header>
               <div class="card-body">
-                <div class="card-row done"><span class="k">✓</span><span class="p">Hero redesign</span></div>
-                <div class="card-row done"><span class="k">✓</span><span class="p">Footer tagline</span></div>
-                <div class="card-row done"><span class="k">✓</span><span class="p">Copy tone pass</span></div>
+                <div class="card-row done"><span class="k">✓</span><span class="p">Hero 再設計</span></div>
+                <div class="card-row done"><span class="k">✓</span><span class="p">Footer タグライン</span></div>
+                <div class="card-row done"><span class="k">✓</span><span class="p">コピートーン整理</span></div>
                 <div class="card-row waiting"><span class="k">❯</span><span class="p"><span class="caret"></span></span></div>
               </div>
             </div>
@@ -215,37 +195,37 @@
     <section class="preview">
       <div class="preview-stack">
         <picture class="shot shot--desktop preview-desktop">
-          <source srcset="./images/screenshot-desktop.webp" type="image/webp" />
-          <img src="./images/screenshot-desktop.png" alt="purplemux desktop dashboard" width="2390" height="1415" loading="lazy" decoding="async" />
+          <source srcset="../images/screenshot-desktop.webp" type="image/webp" />
+          <img src="../images/screenshot-desktop.png" alt="purplemux デスクトップ・ダッシュボード" width="2390" height="1415" loading="lazy" decoding="async" />
         </picture>
         <picture class="shot shot--mobile preview-mobile">
-          <source srcset="./images/screenshot-mobile.webp" type="image/webp" />
-          <img src="./images/screenshot-mobile.png" alt="purplemux on mobile" width="1206" height="2622" loading="lazy" decoding="async" />
+          <source srcset="../images/screenshot-mobile.webp" type="image/webp" />
+          <img src="../images/screenshot-mobile.png" alt="purplemux のモバイル画面" width="1206" height="2622" loading="lazy" decoding="async" />
         </picture>
       </div>
     </section>
 
     <!-- ── Why ── -->
     <section id="why">
-      <div class="eyebrow">Why purplemux</div>
-      <h2>Every session, in one dashboard.</h2>
+      <div class="eyebrow">なぜ purplemux か</div>
+      <h2>すべてのセッションを、ひとつのダッシュボードに。</h2>
       <p class="lead">
-        As sessions multiply, tracking state gets harder.<br />
-        purplemux gathers every session onto one screen so you can see <strong>what's running and where your input is needed</strong> at a glance.
+        セッションが増えるほど、状態の追跡は難しくなります。<br />
+        purplemux はすべてのセッションを 1 画面にまとめ、<strong>今何が動いていて、どこで入力が必要か</strong>を一目で示します。
       </p>
 
       <div class="pain-highlight">
         <div class="pain-highlight-visual">
           <div class="limit-widget">
             <div class="limit-widget-header">
-              <span class="limit-widget-title">Rate limit</span>
-              <span class="limit-widget-sub">sidebar</span>
+              <span class="limit-widget-title">レート制限</span>
+              <span class="limit-widget-sub">サイドバー</span>
             </div>
             <div class="limit-bar-group">
               <div class="limit-bar">
                 <div class="limit-bar-row">
                   <span class="limit-bar-label">5h</span>
-                  <span class="limit-bar-meta">2h 14m left <span class="pct red">(85%)</span></span>
+                  <span class="limit-bar-meta">残り 2h 14m <span class="pct red">(85%)</span></span>
                 </div>
                 <div class="limit-bar-track">
                   <div class="limit-bar-fill red" style="width:85%"></div>
@@ -254,7 +234,7 @@
               <div class="limit-bar">
                 <div class="limit-bar-row">
                   <span class="limit-bar-label">7d</span>
-                  <span class="limit-bar-meta">4d 9h left <span class="pct amber">(60%)</span></span>
+                  <span class="limit-bar-meta">残り 4d 9h <span class="pct amber">(60%)</span></span>
                 </div>
                 <div class="limit-bar-track">
                   <div class="limit-bar-fill amber" style="width:60%"></div>
@@ -264,14 +244,14 @@
           </div>
         </div>
         <div class="pain-highlight-text">
-          <h3>Your quota, in real time.</h3>
+          <h3>あなたの枠を、リアルタイムで。</h3>
           <p>
-            Hitting a limit mid-focus <strong>breaks your flow.</strong>
-            Work stalls while you wait for the next reset.
+            集中している最中に<strong>リミットに当たると流れが途切れます。</strong>
+            次のリセットを待つあいだ、作業は止まったままです。
           </p>
           <p>
-            purplemux keeps 5-hour and 7-day quotas pinned to the sidebar.
-            Colors shift at <span class="hl amber">50%</span> and <span class="hl red">80%</span>, so you can pace yourself before you hit the wall.
+            purplemux は 5 時間・7 日の残量をサイドバーに常時表示します。
+            <span class="hl amber">50%</span>・<span class="hl red">80%</span> で色が変わり、壁に当たる前にペースを調整できます。
           </p>
         </div>
       </div>
@@ -299,8 +279,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">Multi-session dashboard</div>
-            <div class="feature-desc">See every Claude Code session's <strong>running / needs-input</strong> state at a glance.</div>
+            <div class="feature-title">マルチセッション・ダッシュボード</div>
+            <div class="feature-desc">すべての Claude Code セッションの<strong>進行中 / 入力待ち</strong>状態を一目で。</div>
           </div>
         </div>
         <div class="feature-card green">
@@ -316,8 +296,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">Live session view</div>
-            <div class="feature-desc">Progress laid out as a timeline — no more scrolling CLI logs.</div>
+            <div class="feature-title">ライブ・セッションビュー</div>
+            <div class="feature-desc">CLI ログをスクロールする必要なし。タイムラインに整理された進行状況。</div>
           </div>
         </div>
         <div class="feature-card blue">
@@ -338,8 +318,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">Status-grouped sessions</div>
-            <div class="feature-desc">Every session gets sorted into <strong>Review · In Progress · Done</strong> automatically.</div>
+            <div class="feature-title">状態別セッション・グループ</div>
+            <div class="feature-desc">すべてのセッションが<strong>Review · In Progress · Done</strong> に自動で分類されます。</div>
           </div>
         </div>
         <div class="feature-card coral">
@@ -361,8 +341,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">Save & restore workspaces</div>
-            <div class="feature-desc">Running on tmux, sessions survive closing the browser. Panel layout, tabs, and working paths restore tomorrow with a single click.</div>
+            <div class="feature-title">ワークスペース保存 / 復元</div>
+            <div class="feature-desc">tmux 上で動くのでブラウザを閉じてもセッションは維持。パネルレイアウト・タブ・作業パスまでまとめて、翌日ワンクリックで復元します。</div>
           </div>
         </div>
         <div class="feature-card teal">
@@ -386,8 +366,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">Git diff viewer</div>
-            <div class="feature-desc">Check diffs in a panel next to the terminal. Side-by-side or inline, with syntax highlighting.</div>
+            <div class="feature-title">Git diff ビューア</div>
+            <div class="feature-desc">ターミナルの横のパネルで diff をその場で確認。サイドバイサイド / 行別切替に構文ハイライト付き。</div>
           </div>
         </div>
         <div class="feature-card amber">
@@ -400,8 +380,8 @@
             </div>
           </div>
           <div class="feature-body">
-            <div class="feature-title">A real terminal</div>
-            <div class="feature-desc">Not Claude-only. A full xterm.js + node-pty terminal for <strong>vim, docker, ssh, REPLs</strong> — whatever you need.</div>
+            <div class="feature-title">本物のターミナル</div>
+            <div class="feature-desc">Claude Code 専用ではありません。xterm.js + node-pty のフルターミナルで <strong>vim · docker · ssh · REPL</strong> 何でも。</div>
           </div>
         </div>
       </div>
@@ -409,69 +389,69 @@
 
     <!-- ── Mobile & Push ── -->
     <section id="mobile">
-      <div class="eyebrow teal">Mobile & push</div>
-      <h2>Away from your desk, unchanged.</h2>
+      <div class="eyebrow teal">モバイル & プッシュ</div>
+      <h2>机を離れても、そのまま。</h2>
       <p class="lead">
-        You don't need to stay at your desk just to watch a long task run.
-        Open a mobile browser, add to home screen, and it behaves like a native app. Close the tab and task-completion / needs-input notifications still arrive via Web Push.
+        長時間の作業を見守るために席にいる必要はありません。
+        モバイルブラウザで開いてホーム画面に追加すれば、ネイティブアプリのように動作します。タブを閉じても、作業完了・入力待ちの通知が Web Push で届きます。
       </p>
 
       <div class="mobile-layout">
         <div class="mobile-showcase">
           <picture class="shot shot--mobile">
-            <source srcset="./images/mobile-push.webp" type="image/webp" />
-            <img src="./images/mobile-push.png" alt="purplemux mobile push notification" width="1206" height="2622" loading="lazy" decoding="async" />
+            <source srcset="../images/mobile-push.webp" type="image/webp" />
+            <img src="../images/mobile-push.png" alt="purplemux のモバイル・プッシュ通知画面" width="1206" height="2622" loading="lazy" decoding="async" />
           </picture>
         </div>
 
         <div class="mobile-guide">
           <div class="guide-block">
-            <h3>Add to home screen (PWA)</h3>
+            <h3>ホーム画面に追加 (PWA)</h3>
             <p class="muted" style="font-size:var(--text-sm); margin-bottom:1rem">
-              Open in a browser and add to the home screen to get a full-screen app icon.
+              ブラウザで開いてホーム画面に追加すると、フルスクリーンのアプリアイコンが作成されます。
             </p>
 
             <div class="tabs">
               <div class="tab-label">iOS (Safari)</div>
               <ol class="guide-steps">
-                <li>Open <code>http://&lt;host&gt;:8022</code> in Safari</li>
-                <li>Tap the <strong>Share</strong> button at the bottom</li>
-                <li>Choose <strong>Add to Home Screen</strong></li>
-                <li>Tap <strong>Add</strong> in the top right</li>
+                <li>Safari で <code>http://&lt;ホスト&gt;:8022</code> を開く</li>
+                <li>下部の<strong>共有ボタン</strong>をタップ</li>
+                <li>リストから<strong>ホーム画面に追加</strong>を選択</li>
+                <li>右上の<strong>追加</strong>をタップ</li>
               </ol>
             </div>
 
             <div class="tabs">
               <div class="tab-label">Android (Chrome)</div>
               <ol class="guide-steps">
-                <li>Open the URL in Chrome</li>
-                <li>Open the <strong>⋮</strong> menu in the top right</li>
-                <li>Choose <strong>Install app</strong> or <strong>Add to Home Screen</strong></li>
+                <li>Chrome で URL を開く</li>
+                <li>右上の <strong>⋮</strong> メニューを開く</li>
+                <li><strong>アプリをインストール</strong>または<strong>ホーム画面に追加</strong>を選択</li>
               </ol>
             </div>
           </div>
 
           <div class="guide-block">
-            <h3>Turn on push notifications</h3>
+            <h3>プッシュ通知を有効にする</h3>
             <ol class="guide-steps">
-              <li>Enable <strong>Settings → Notification → On</strong> and grant browser notification permission</li>
-              <li>Delivered via Web Push, even in the background</li>
-              <li>Alerts for <strong>task completion</strong> and <strong>input needed</strong></li>
-              <li>Tap a notification to jump straight to the session</li>
+              <li><strong>Settings → Notification → On</strong> で有効化し、ブラウザ通知を許可</li>
+              <li>バックグラウンドでも Web Push で配信</li>
+              <li><strong>作業完了 · 入力待ち</strong>時に通知</li>
+              <li>通知をタップすると該当セッションへジャンプ</li>
             </ol>
           </div>
 
           <div class="guide-block">
-            <h3>External access via Tailscale</h3>
+            <h3>外部アクセスは Tailscale で</h3>
             <p class="muted" style="font-size:var(--text-sm)">
-              For access outside your network, Tailscale Serve is the cleanest route.
-              WireGuard encryption and HTTPS certificates come for free.
+              外部ネットワークからアクセスするなら Tailscale Serve が最もクリーンです。
+              WireGuard 暗号化と HTTPS 証明書が自動で付属します。
             </p>
 
             <div class="ts-diagram" aria-hidden="true">
               <div class="ts-node">
                 <svg class="ts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="5" width="19" height="12" rx="1.5"/><path d="M1 19h22"/></svg>
-                <div class="ts-label">My PC</div>
+                <div class="ts-label">自分の PC</div>
                 <div class="ts-sub">:8022</div>
               </div>
               <div class="ts-link">
@@ -485,8 +465,8 @@
               </div>
               <div class="ts-node ts-central">
                 <picture class="ts-logo">
-                  <source srcset="./images/tailscale.webp" type="image/webp" />
-                  <img src="./images/tailscale.jpg" alt="Tailscale" width="400" height="400" loading="lazy" decoding="async" />
+                  <source srcset="../images/tailscale.webp" type="image/webp" />
+                  <img src="../images/tailscale.jpg" alt="Tailscale" width="400" height="400" loading="lazy" decoding="async" />
                 </picture>
                 <div class="ts-label">Tailscale</div>
                 <div class="ts-sub">tailnet</div>
@@ -502,15 +482,15 @@
               </div>
               <div class="ts-node">
                 <svg class="ts-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18h2"/></svg>
-                <div class="ts-label">Mobile</div>
+                <div class="ts-label">モバイル</div>
                 <div class="ts-sub">Safari</div>
               </div>
             </div>
 
 <pre class="code"><span class="c">$</span> tailscale serve --bg 8022</pre>
             <p class="muted" style="font-size:var(--text-sm); margin-top:0.5rem">
-              Then reach <code>https://&lt;machine&gt;.&lt;tailnet&gt;.ts.net</code> from anywhere.
-              iOS Safari requires HTTPS for PWA and Web Push to work.
+              その後 <code>https://&lt;machine&gt;.&lt;tailnet&gt;.ts.net</code> でどこからでもアクセス可。
+              iOS Safari は HTTPS でなければ PWA と Web Push が正常動作しません。
             </p>
           </div>
         </div>
@@ -519,23 +499,23 @@
 
     <!-- ── Stats & analytics ── -->
     <section id="stats">
-      <div class="eyebrow">Stats & analytics</div>
-      <h2>Every usage metric, on one screen.</h2>
+      <div class="eyebrow">統計 & 分析</div>
+      <h2>すべての使用量を、ひとつの画面に。</h2>
       <p class="lead">
-        Today's tokens, this month's cost, usage by project, breakdown by model —
-        scattered numbers gathered in one place to show the rhythm and cost structure of your work.
+        今日のトークン、今月のコスト、プロジェクト別の使用量、モデル別の内訳 —
+        散らばった数字をひとつにまとめ、作業のリズムとコスト構造を一目で示します。
       </p>
 
       <div class="stats-showcase">
         <picture class="stats-screen">
-          <source srcset="./images/stat.webp" type="image/webp" />
-          <img src="./images/stat.png" alt="purplemux usage stats dashboard" width="2068" height="1682" loading="lazy" decoding="async" />
+          <source srcset="../images/stat.webp" type="image/webp" />
+          <img src="../images/stat.png" alt="purplemux 使用量ダッシュボード" width="2068" height="1682" loading="lazy" decoding="async" />
         </picture>
 
         <div class="stats-callout" style="--x:22%; --y:20%">
           <span class="callout-num">01</span>
           <div class="callout-label">
-            <strong>Four overview cards</strong>
+            <strong>概要カード 4 種</strong>
             <span>Sessions · Total · Today · Month</span>
           </div>
         </div>
@@ -543,15 +523,15 @@
         <div class="stats-callout stats-callout--left" style="--x:82%; --y:28%">
           <span class="callout-num">02</span>
           <div class="callout-label">
-            <strong>Daily activity trend</strong>
-            <span>Sessions · messages, last 30 days</span>
+            <strong>日次アクティビティ推移</strong>
+            <span>直近 30 日のセッション・メッセージ推移</span>
           </div>
         </div>
 
         <div class="stats-callout" style="--x:20%; --y:62%">
           <span class="callout-num">03</span>
           <div class="callout-label">
-            <strong>Work streaks</strong>
+            <strong>連続作業ストリーク</strong>
             <span>Longest · Current · Count · Avg</span>
           </div>
         </div>
@@ -559,8 +539,8 @@
         <div class="stats-callout stats-callout--left" style="--x:80%; --y:87%">
           <span class="callout-num">04</span>
           <div class="callout-label">
-            <strong>Weekly timeline</strong>
-            <span>Day × hour streak + concurrent sessions</span>
+            <strong>週次タイムライン</strong>
+            <span>曜日 × 時間帯ストリーク + 同時セッション</span>
           </div>
         </div>
       </div>
@@ -568,11 +548,11 @@
 
     <!-- ── Notes (AI daily report) ── -->
     <section id="notes">
-      <div class="eyebrow teal">AI daily report</div>
-      <h2>Your day, auto-summarized.</h2>
+      <div class="eyebrow teal">AI デイリーレポート</div>
+      <h2>今日の作業を、自動サマリーで。</h2>
       <p class="lead">
-        When the day is done, session logs are gathered and an LLM writes a one-line brief and a detailed summary.
-        Saved as Markdown — drop it straight into retros, reports, or 1:1s.
+        1 日が終わるとセッションログを集めて、LLM が 1 行サマリーと詳細サマリーを生成します。
+        Markdown で保存されるので、振り返り・レポート・1:1 にそのまま転用できます。
       </p>
 
       <div class="notes-layout">
@@ -583,48 +563,48 @@
           </div>
           <div class="notes-mockup-body">
             <div class="md-brief">
-              Drafted the purplemux landing page. Wired up the mobile / PWA section and stats dashboard. Unified copy with an Apple tone and replaced all feature card mockups.
+              purplemux ランディングページの初稿作成、モバイル・PWA セクションと統計ダッシュボードを接続。コピーを Apple 調で統一し、feature カードのモックアップを全面差し替え。
             </div>
             <div class="md-collapse">∧ Collapse</div>
 
             <div class="md-project">purplemux</div>
 
-            <div class="md-h3">Landing page draft</div>
+            <div class="md-h3">ランディングページ初稿</div>
             <ul class="md-ul">
-              <li>Designed the eight-section structure with Hero / Why / Mobile / Stats layouts</li>
-              <li>Made the purple brand color an OKLCH variable</li>
-              <li>Applied desktop / mobile screenshot mockup frames</li>
+              <li>8 セクション構造と Hero / Why / Mobile / Stats レイアウトの設計</li>
+              <li>purple ブランドカラーの OKLCH 変数化</li>
+              <li>デスクトップ・モバイルのスクリーンショット・モックアップフレームを適用</li>
             </ul>
 
-            <div class="md-h3">Feature card mockups</div>
+            <div class="md-h3">Feature カード・モックアップ</div>
             <ul class="md-ul">
-              <li>Reproduced real spinner / pulse indicators on the multi-session dashboard</li>
-              <li>Tightened Git Diff, workspace, and self-hosted mockup CSS</li>
-              <li>Added the Tailscale access diagram animation</li>
+              <li>マルチセッション・ダッシュボードに実際の spinner / pulse インジケーターを再現</li>
+              <li>Git Diff・ワークスペース・セルフホスト・モックアップ CSS を細部調整</li>
+              <li>Tailscale アクセス・ダイアグラムにアニメーションを追加</li>
             </ul>
           </div>
         </div>
 
         <div class="notes-points">
           <div class="guide-block">
-            <h3>Brief + detailed, together</h3>
+            <h3>brief + detailed のダブルサマリー</h3>
             <p class="muted" style="font-size:var(--text-sm)">
-              The one-line brief lives on the dashboard; expand to the detailed view with one click.
-              It's Markdown — paste it straight into a retro or a report.
+              1 行の brief はダッシュボードで、detailed はワンクリックで展開。
+              Markdown なのでレトロやレポートにそのまま貼り付けできます。
             </p>
           </div>
           <div class="guide-block">
-            <h3>Batch & regenerate</h3>
+            <h3>一括生成と再生成</h3>
             <p class="muted" style="font-size:var(--text-sm)">
-              Fill missing days in a single batch, or regenerate any single day on its own.
-              The LLM processes session by session so context never gets lost.
+              抜けた日はまとめて埋める。特定の日だけ再生成したいときはその日だけ再実行。
+              LLM がコンテキストを失わないよう、セッション単位でまとめて処理します。
             </p>
           </div>
           <div class="guide-block">
-            <h3>Anywhere, fast</h3>
+            <h3>どこでもすばやく</h3>
             <p class="muted" style="font-size:var(--text-sm)">
-              Lives in the sidebar as <strong>Notes</strong>, and opens with <code>Cmd ⇧ E</code> (macOS) / <code>Ctrl ⇧ E</code> (Linux).
-              Stored locally — nothing leaves your machine.
+              サイドバーに <strong>ノート</strong> として常駐し、ショートカット <code>Cmd ⇧ E</code> (macOS) / <code>Ctrl ⇧ E</code> (Linux) で直接開けます。
+              ローカルにのみ保存されるので、外部送信の心配なし。
             </p>
           </div>
         </div>
@@ -633,86 +613,86 @@
 
     <!-- ── Features (categories) ── -->
     <section id="features">
-      <div class="eyebrow amber">Features</div>
-      <h2>Every feature you need, nothing you don't.</h2>
+      <div class="eyebrow amber">機能</div>
+      <h2>必要な機能を、ちょうど必要なだけ。</h2>
 
       <div class="category">
         <div class="category-head">
-          <span class="category-name">Terminal</span>
+          <span class="category-name">ターミナル</span>
           <span class="category-count">7</span>
         </div>
         <ul class="category-list">
-          <li><strong>Split panes</strong><span class="sub">Horizontal · vertical splits, drag to resize</span></li>
-          <li><strong>Tab management</strong><span class="sub">Multiple tabs, reorder, auto title from process name</span></li>
-          <li><strong>Shortcuts</strong><span class="sub">Split · switch tab · move focus</span></li>
-          <li><strong>Themes</strong><span class="sub">Dark / light · multiple color sets</span></li>
-          <li><strong>Workspaces</strong><span class="sub">Save & restore panes · tabs · working paths</span></li>
-          <li><strong>Git diff viewer</strong><span class="sub">Side-by-side · syntax highlighting</span></li>
-          <li><strong>Web browser panel</strong><span class="sub">Built-in Electron preview</span></li>
+          <li><strong>分割ペイン</strong><span class="sub">横・縦分割、ドラッグでリサイズ</span></li>
+          <li><strong>タブ管理</strong><span class="sub">複数タブ、順序変更、プロセス名から自動タイトル</span></li>
+          <li><strong>ショートカット</strong><span class="sub">分割 · タブ切替 · フォーカス移動</span></li>
+          <li><strong>テーマ</strong><span class="sub">ダーク / ライト · 複数カラーセット</span></li>
+          <li><strong>ワークスペース</strong><span class="sub">ペイン・タブ・作業パスを保存 / 復元</span></li>
+          <li><strong>Git diff ビューア</strong><span class="sub">サイドバイサイド · 構文ハイライト</span></li>
+          <li><strong>Web ブラウザ・パネル</strong><span class="sub">Electron 内蔵プレビュー</span></li>
         </ul>
       </div>
 
       <div class="category">
         <div class="category-head">
-          <span class="category-name">Claude Code integration</span>
+          <span class="category-name">Claude Code 統合</span>
           <span class="category-count">10</span>
         </div>
         <ul class="category-list">
-          <li><strong>Real-time status</strong><span class="sub">In progress / needs input, instant transitions</span></li>
-          <li><strong>Sidebar session mode</strong><span class="sub">Workspace ↔ Sessions toggle, status-grouped views</span></li>
-          <li><strong>Live session view</strong><span class="sub">Messages · tool calls · tasks · permission prompts</span></li>
-          <li><strong>One-click resume</strong><span class="sub">Pick up interrupted sessions right from the browser</span></li>
-          <li><strong>Auto restore</strong><span class="sub">Recovers previous sessions on server restart</span></li>
-          <li><strong>Quick prompts</strong><span class="sub">Register favorites, run with one click</span></li>
-          <li><strong>Message history</strong><span class="sub">Reuse previous messages</span></li>
-          <li><strong>Usage analytics</strong><span class="sub">Tokens · cost · per project · daily reports</span></li>
-          <li><strong>Rate limit countdown</strong><span class="sub">5h / 7d remaining · time to reset</span></li>
-          <li><strong>Limit usage warnings</strong><span class="sub">Sidebar bar shifts to amber / red at 50% / 80%</span></li>
+          <li><strong>リアルタイム・ステータス</strong><span class="sub">進行中 / 入力待ち、即時切替</span></li>
+          <li><strong>サイドバー・セッションモード</strong><span class="sub">Workspace ↔ Sessions 切替、状態別の集合ビュー</span></li>
+          <li><strong>ライブ・セッションビュー</strong><span class="sub">メッセージ · ツール呼び出し · タスク · 権限プロンプト</span></li>
+          <li><strong>ワンクリック再開</strong><span class="sub">中断したセッションをブラウザからすぐ続行</span></li>
+          <li><strong>自動復元</strong><span class="sub">サーバー再起動時に以前のセッションを復旧</span></li>
+          <li><strong>クイックプロンプト</strong><span class="sub">よく使うプロンプトを登録してワンクリック</span></li>
+          <li><strong>メッセージ履歴</strong><span class="sub">以前のメッセージを再利用</span></li>
+          <li><strong>使用量分析</strong><span class="sub">トークン · コスト · プロジェクト別 · 日次レポート</span></li>
+          <li><strong>レート制限カウントダウン</strong><span class="sub">5 時間 / 7 日残量 · リセットまでの時間</span></li>
+          <li><strong>リミット使用量警告</strong><span class="sub">サイドバーのバーが 50% · 80% で amber · red に変化</span></li>
         </ul>
       </div>
 
       <div class="category">
         <div class="category-head">
-          <span class="category-name">Mobile & accessibility</span>
+          <span class="category-name">モバイル & アクセシビリティ</span>
           <span class="category-count">7</span>
         </div>
         <ul class="category-list">
-          <li><strong>Responsive UI</strong><span class="sub">Terminal · timeline on phones and tablets</span></li>
-          <li><strong>PWA</strong><span class="sub">Add to home screen · native-app feel</span></li>
-          <li><strong>Web Push</strong><span class="sub">Notifications even after closing the tab</span></li>
-          <li><strong>Multi-device sync</strong><span class="sub">Workspace changes reflected in real time</span></li>
-          <li><strong>Tailscale</strong><span class="sub">HTTPS-safe external access</span></li>
-          <li><strong>Password auth</strong><span class="sub">scrypt hashing</span></li>
-          <li><strong>i18n</strong><span class="sub">한국어 · English · 日本語 · 中文 · 11 languages total</span></li>
+          <li><strong>レスポンシブ UI</strong><span class="sub">スマホ・タブレットでターミナル・タイムライン</span></li>
+          <li><strong>PWA</strong><span class="sub">ホーム画面追加 · ネイティブアプリ感</span></li>
+          <li><strong>Web Push</strong><span class="sub">タブを閉じても通知受信</span></li>
+          <li><strong>マルチデバイス同期</strong><span class="sub">ワークスペースの変更をリアルタイム反映</span></li>
+          <li><strong>Tailscale</strong><span class="sub">外部から HTTPS で安全にアクセス</span></li>
+          <li><strong>パスワード認証</strong><span class="sub">scrypt ハッシュ</span></li>
+          <li><strong>多言語対応</strong><span class="sub">한국어 · English · 日本語 · 中文 · 計 11 言語</span></li>
         </ul>
       </div>
 
       <div class="category">
         <div class="category-head">
-          <span class="category-name">Customize</span>
+          <span class="category-name">カスタマイズ</span>
           <span class="category-count">9</span>
         </div>
         <ul class="category-list">
-          <li><strong>Themes</strong><span class="sub">Light / Dark / System auto</span></li>
-          <li><strong>Font size</strong><span class="sub">Normal · Large · X-Large</span></li>
-          <li><strong>Custom CSS</strong><span class="sub">Full override via CSS variables</span></li>
-          <li><strong>Terminal themes</strong><span class="sub">Separate color sets for light / dark</span></li>
-          <li><strong>Sidebar reorder</strong><span class="sub">Show/hide items · drag to reorder</span></li>
-          <li><strong>Quick prompts library</strong><span class="sub">Add custom prompts · drag to sort</span></li>
-          <li><strong>Editor integration</strong><span class="sub">External editor via code-server URL</span></li>
-          <li><strong>Notification control</strong><span class="sub">System notifications on/off</span></li>
-          <li><strong>Claude options</strong><span class="sub">Toggle CLI options like skip permissions</span></li>
+          <li><strong>テーマ</strong><span class="sub">Light / Dark / System 自動</span></li>
+          <li><strong>フォントサイズ</strong><span class="sub">Normal · Large · X-Large</span></li>
+          <li><strong>Custom CSS</strong><span class="sub">CSS 変数の上書きで完全カスタム</span></li>
+          <li><strong>ターミナル・テーマ</strong><span class="sub">ライト / ダーク 各々にカラーセット指定</span></li>
+          <li><strong>サイドバー並び替え</strong><span class="sub">項目の表示 / 非表示 · ドラッグで並び替え</span></li>
+          <li><strong>Quick Prompts ライブラリ</strong><span class="sub">カスタムプロンプト追加 · ドラッグでソート</span></li>
+          <li><strong>エディター連携</strong><span class="sub">code-server URL で外部エディター</span></li>
+          <li><strong>通知制御</strong><span class="sub">システム通知の on / off</span></li>
+          <li><strong>Claude オプション</strong><span class="sub">権限スキップなど CLI オプションのトグル</span></li>
         </ul>
       </div>
     </section>
 
     <!-- ── How it works ── -->
     <section id="how">
-      <div class="eyebrow coral">How it works</div>
-      <h2>Browser ↔ Node.js ↔ tmux · Claude Code.</h2>
+      <div class="eyebrow coral">仕組み</div>
+      <h2>ブラウザ ↔ Node.js ↔ tmux · Claude Code。</h2>
       <p class="lead">
-        xterm.js connects to node-pty over WebSocket, and node-pty attaches to a tmux session on the dedicated <code>purple</code> socket.
-        State is tracked by Claude Code hooks and a JSONL log watcher together.
+        xterm.js は WebSocket で node-pty に接続し、node-pty は専用の <code>purple</code> ソケットの tmux セッションにアタッチします。
+        状態は Claude Code フックと JSONL ログウォッチャーが同時に追跡します。
       </p>
 
       <div class="arch-diagram">
@@ -770,10 +750,10 @@
               <div class="arch-comp-sub">process tree + JSONL tail</div>
             </div>
             <div class="arch-highlights">
-              <span class="arch-hl">Binary PTY · binary stdin/out</span>
-              <span class="arch-hl">Hooks + 5–15s polling</span>
-              <span class="arch-hl">Permission prompt intercept</span>
-              <span class="arch-hl">1MB backpressure · 10 queue</span>
+              <span class="arch-hl">Binary PTY · バイナリ stdin/out</span>
+              <span class="arch-hl">フック + 5–15s ポーリング</span>
+              <span class="arch-hl">権限プロンプト横取り</span>
+              <span class="arch-hl">1MB バックプレッシャー · 10 キュー</span>
             </div>
           </div>
         </div>
@@ -796,8 +776,8 @@
                 <span class="arch-mini">…</span>
               </div>
               <div class="arch-highlights arch-highlights--inline">
-                <span class="arch-hl">Isolated purple socket</span>
-                <span class="arch-hl">Parallel recovery after reboot</span>
+                <span class="arch-hl">隔離された purple ソケット</span>
+                <span class="arch-hl">再起動後の並列復旧</span>
               </div>
             </div>
             <div class="arch-group">
@@ -814,56 +794,56 @@
 
     <!-- ── vs official Remote Control ── -->
     <section id="compare">
-      <div class="eyebrow teal">vs. official Remote Control</div>
-      <h2>Beyond remote control — a unified workspace.</h2>
+      <div class="eyebrow teal">公式 Remote Control との違い</div>
+      <h2>リモート制御を超えて、統合ワークスペースへ。</h2>
       <p class="lead">
-        Official Remote Control is a remote-access tool for <em>continuing Claude Code sessions from another device</em>.
-        purplemux adds a <em>multi-session dashboard, terminal extensions, and usage analytics</em> on top — a self-hosted operating environment.
+        公式 Remote Control は <em>Claude Code セッションを他のデバイスで続行する</em>リモートアクセスツールです。
+        purplemux はその上に <em>マルチセッション・ダッシュボード、ターミナル拡張、使用量分析</em>を重ねた、セルフホスト運用環境です。
       </p>
 
       <table class="compare">
         <thead>
           <tr>
-            <th>Feature</th>
-            <th>Official Remote Control</th>
+            <th>項目</th>
+            <th>公式 Remote Control</th>
             <th>purplemux</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Concurrent session view</td>
-            <td class="cross">Open one at a time from a list</td>
-            <td class="check">All sessions, all states, on one dashboard</td>
+            <td>同時セッションビュー</td>
+            <td class="cross">リストから 1 つずつ閲覧</td>
+            <td class="check">全セッションの全状態をダッシュボードに同時表示</td>
           </tr>
           <tr>
-            <td>Status indicators</td>
-            <td class="cross">Online / offline</td>
-            <td class="check">Busy · Review · Needs-input · Idle in real time</td>
+            <td>ステータス・インジケーター</td>
+            <td class="cross">オンライン / オフライン</td>
+            <td class="check">Busy · Review · Needs-input · Idle をリアルタイム</td>
           </tr>
           <tr>
-            <td>Push notifications</td>
-            <td class="cross">Requires Claude mobile app</td>
-            <td class="check">Web Push · any browser, no install</td>
+            <td>プッシュ通知</td>
+            <td class="cross">Claude モバイルアプリが必要</td>
+            <td class="check">Web Push · 任意のブラウザでインストール不要</td>
           </tr>
           <tr>
-            <td>Terminal persistence</td>
-            <td class="cross">Only while the claude process is running</td>
-            <td class="check">tmux-backed · auto recovery after restart</td>
+            <td>ターミナル永続性</td>
+            <td class="cross">claude プロセス実行中のみ</td>
+            <td class="check">tmux ベース · 再起動後に自動復旧</td>
           </tr>
           <tr>
-            <td>Bundled tools</td>
-            <td class="cross">Claude Code session only</td>
-            <td class="check">Split terminal · Git diff · workspace save</td>
+            <td>付属ツール</td>
+            <td class="cross">Claude Code セッションのみ</td>
+            <td class="check">分割ターミナル · Git Diff · ワークスペース保存</td>
           </tr>
           <tr>
-            <td>Usage analytics</td>
+            <td>使用量分析</td>
             <td class="cross">—</td>
-            <td class="check">Tokens · cost · per project · AI daily report</td>
+            <td class="check">トークン · コスト · プロジェクト別 · AI 日次レポート</td>
           </tr>
           <tr class="tradeoff">
-            <td>Strengths</td>
-            <td>Official from Anthropic · Claude mobile app integration · auto-update</td>
-            <td>Third-party OSS · manual install & maintenance</td>
+            <td>強み</td>
+            <td>Anthropic 公式 · Claude モバイルアプリ統合 · 自動アップデート</td>
+            <td>サードパーティ OSS · 手動インストール・メンテナンス</td>
           </tr>
         </tbody>
       </table>
@@ -871,18 +851,18 @@
 
     <!-- ── Install ── -->
     <section id="install">
-      <div class="eyebrow">Install</div>
-      <h2>30 seconds, start to finish.</h2>
+      <div class="eyebrow">インストール</div>
+      <h2>30 秒で完了。</h2>
       <p class="lead">
-        All you need is Node.js 20+ and tmux. One line to install, then open your browser.
+        Node.js 20+ と tmux さえあれば OK。1 行でインストールして、ブラウザを開くだけ。
       </p>
 
       <div class="steps">
         <div class="step">
           <div class="step-num">1</div>
           <div class="step-body">
-            <h3>Run</h3>
-            <p>Start right away with npx. A global install also works.</p>
+            <h3>実行</h3>
+            <p>npx ですぐに始められます。グローバルインストールも可能です。</p>
 <pre class="code"><span class="c">$</span> npx purplemux</pre>
           </div>
         </div>
@@ -890,8 +870,8 @@
         <div class="step">
           <div class="step-num">2</div>
           <div class="step-body">
-            <h3>Open the browser</h3>
-            <p>Default port is 8022. Override with the <code>PORT</code> env var.</p>
+            <h3>ブラウザを開く</h3>
+            <p>デフォルトポートは 8022 です。<code>PORT</code> 環境変数で変更できます。</p>
 <pre class="code"><span class="c">→</span> http://localhost:8022</pre>
           </div>
         </div>
@@ -899,8 +879,8 @@
         <div class="step">
           <div class="step-num">3</div>
           <div class="step-body">
-            <h3>Remote access (optional)</h3>
-            <p>For external access we recommend Tailscale Serve. WireGuard encryption and automatic certificates are included.</p>
+            <h3>リモートアクセス (任意)</h3>
+            <p>外部からアクセスするなら Tailscale Serve を推奨。WireGuard 暗号化と自動証明書が付属します。</p>
 <pre class="code"><span class="c">$</span> tailscale serve --bg 8022</pre>
           </div>
         </div>
@@ -908,10 +888,10 @@
         <div class="step">
           <div class="step-num">4</div>
           <div class="step-body">
-            <h3>Native app (optional)</h3>
-            <p>On macOS you can also use the Electron build. Apple Silicon and Intel both supported.</p>
+            <h3>ネイティブアプリ (任意)</h3>
+            <p>macOS なら Electron ビルドが使えます。Apple Silicon / Intel どちらも対応。</p>
             <a href="https://github.com/subicura/purplemux/releases/latest" class="btn-primary" target="_blank" rel="noopener" style="margin-top:0.5rem">
-              Download the latest release →
+              最新リリースをダウンロード →
             </a>
           </div>
         </div>
@@ -920,67 +900,67 @@
 
     <!-- ── FAQ ── -->
     <section id="faq">
-      <div class="eyebrow">FAQ</div>
-      <h2>Things you might be wondering.</h2>
+      <div class="eyebrow">よくある質問</div>
+      <h2>気になるポイント。</h2>
 
       <div class="faq">
         <details>
-          <summary>Does it save me money?</summary>
-          <p><strong>It makes your usage transparent.</strong>
-            Today's, this month's, and per-project cost; per-model token breakdowns; 5h / 7d rate-limit remaining — all on one screen, so you can tune spending yourself.</p>
+          <summary>コストは下がりますか?</summary>
+          <p><strong>使用パターンを透明にします。</strong>
+            今日 · 今月 · プロジェクト別のコスト、モデル別のトークン内訳、5 時間 · 7 日のレート制限残量まで 1 画面で確認でき、支出構造を自分で調整できます。</p>
         </details>
 
         <details>
-          <summary>Can I approve permission prompts from my phone?</summary>
-          <p>Yes. purplemux intercepts Claude Code permission dialogs from the terminal and forwards them to the dashboard and mobile notifications.
-            Approve from anywhere — no more stalled tasks.</p>
+          <summary>権限プロンプトをモバイルから承認できますか?</summary>
+          <p>可能です。Claude Code がターミナルに表示する権限ダイアログを purplemux が検出し、ダッシュボードとモバイル通知に転送します。
+            どこからでも即座に承認できるので、作業が放置されることはありません。</p>
         </details>
 
         <details>
-          <summary>If my system crashes, do I lose my sessions?</summary>
-          <p>Closing the browser or losing the network is fine — tmux keeps the sessions alive.
-            Even after a full reboot, purplemux scans the workspace layout and <strong>recovers previous Claude sessions in parallel</strong>.
-            No manual restore required.</p>
+          <summary>システムがクラッシュしたらセッションは失われますか?</summary>
+          <p>ブラウザを閉じたりネットワークが切れても tmux がセッションを保持します。
+            システム全体を再起動した場合も purplemux がワークスペース・レイアウトをスキャンし、
+            以前の Claude セッションを<strong>並列で復旧</strong>します。手動復元は不要です。</p>
         </details>
 
         <details>
-          <summary>Where is my data stored?</summary>
-          <p>All settings and session data are stored locally under <code>~/.purplemux/</code>.
-            Nothing is sent to external servers. Authentication is kept as a scrypt hash in <code>config.json</code>.</p>
+          <summary>データはどこに保存されますか?</summary>
+          <p>すべての設定とセッションデータはローカルの <code>~/.purplemux/</code> ディレクトリに保存されます。
+            外部サーバーに送信される情報はありません。認証情報は <code>config.json</code> に scrypt ハッシュで保管されます。</p>
         </details>
 
         <details>
-          <summary>Does it work on Windows?</summary>
-          <p>Not officially. Due to tmux and node-pty platform constraints, only macOS and Linux are supported.
-            It may work under WSL2, but that's outside our test coverage.</p>
+          <summary>Windows でも使えますか?</summary>
+          <p>公式にはサポートしていません。tmux と node-pty のプラットフォーム制約により、macOS と Linux のみ対応です。
+            WSL2 環境では動作する可能性がありますが、テスト範囲外です。</p>
         </details>
 
         <details>
-          <summary>Does it conflict with my existing tmux sessions?</summary>
-          <p>purplemux runs an isolated tmux instance on a dedicated <code>purple</code> socket.
-            It is fully independent from your existing tmux sessions and <code>~/.tmux.conf</code>.</p>
+          <summary>既存の tmux セッションと競合しませんか?</summary>
+          <p>purplemux は専用の <code>purple</code> ソケットに分離された tmux インスタンスを起動します。
+            既存の tmux セッションや <code>~/.tmux.conf</code> とは完全に独立して動作します。</p>
         </details>
 
         <details>
-          <summary>How do I access it from outside my network?</summary>
-          <p>Tailscale Serve is recommended — you get WireGuard-based encryption and automatic HTTPS certificates.
-            If you prefer your own reverse proxy, make sure to forward the <code>Upgrade</code> and <code>Connection</code> headers in Nginx / Caddy.</p>
+          <summary>外部からアクセスするにはどうすれば?</summary>
+          <p>Tailscale Serve を推奨します。WireGuard ベースの暗号化と自動 HTTPS 証明書を提供します。
+            独自のリバースプロキシを使う場合は、Nginx / Caddy で <code>Upgrade</code>、<code>Connection</code> ヘッダーを必ず転送してください。</p>
         </details>
 
         <details>
-          <summary>Is there any cost?</summary>
-          <p>purplemux itself is MIT-licensed open source and free. Claude Code usage is billed separately.</p>
+          <summary>料金はかかりますか?</summary>
+          <p>purplemux 自体は MIT ライセンスのオープンソースで無料です。Claude Code の利用料金は別途かかります。</p>
         </details>
 
         <details>
-          <summary>Is it actually usable on mobile?</summary>
-          <p>Yes. Responsive UI, PWA, and Web Push are built in. Add it to the home screen for a native-app feel;
-            close the tab and you'll still receive task-completion and input-needed notifications.</p>
+          <summary>モバイルでも本当に使えますか?</summary>
+          <p>はい。レスポンシブ UI、PWA、Web Push を標準提供します。ホーム画面に追加するとネイティブアプリのように動作し、
+            タブを閉じても作業完了・入力待ち通知を受け取れます。</p>
         </details>
 
         <details>
-          <summary>Is it localized?</summary>
-          <p>11 languages supported: 한국어 · English · 日本語 · 简体中文 · 繁體中文 · Deutsch · Español · Français · Русский · Português (Brasil) · Türkçe.</p>
+          <summary>多言語対応していますか?</summary>
+          <p>11 言語をサポート: 한국어 · English · 日本語 · 简体中文 · 繁體中文 · Deutsch · Español · Français · Русский · Português (Brasil) · Türkçe。</p>
         </details>
       </div>
     </section>
@@ -989,21 +969,21 @@
     <section id="cta" class="cta-section">
       <div class="cta-card">
         <div class="cta-body">
-          <div class="eyebrow">Get started</div>
-          <h2>One line is all it takes.</h2>
-          <p class="lead">With Node.js 20+ and tmux ready, you can be running in 30 seconds.</p>
+          <div class="eyebrow">今すぐ始める</div>
+          <h2>1 行で十分です。</h2>
+          <p class="lead">Node.js 20+ と tmux が準備できていれば、30 秒以内に起動できます。</p>
         </div>
         <div class="install-block cta-install">
           <div class="install-cmd">
             <span class="prompt">$</span>
             <span>npx purplemux</span>
-            <button class="copy-btn" type="button" aria-label="Copy" onclick="(function(b){navigator.clipboard.writeText('npx purplemux');b.classList.add('copied');b.textContent='✓';clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('copied');b.textContent='⧉';},1800);})(this)">⧉</button>
+            <button class="copy-btn" type="button" aria-label="コピー" onclick="(function(b){navigator.clipboard.writeText('npx purplemux');b.classList.add('copied');b.textContent='✓';clearTimeout(b._t);b._t=setTimeout(function(){b.classList.remove('copied');b.textContent='⧉';},1800);})(this)">⧉</button>
           </div>
           <a href="https://github.com/subicura/purplemux/releases/latest" class="btn-primary" target="_blank" rel="noopener">
             <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
               <path d="M17.05 20.28c-.98.95-2.05.88-3.08.41-1.09-.47-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.41C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z"/>
             </svg>
-            Download for macOS
+            macOS アプリをダウンロード
           </a>
         </div>
       </div>
@@ -1013,17 +993,17 @@
     <section id="selfhost" class="selfhost">
       <div class="selfhost-grid">
         <div class="selfhost-text">
-          <div class="eyebrow amber">Self-hosted · open source</div>
-          <h2>On your machine, yours to own.</h2>
+          <div class="eyebrow amber">セルフホスト · オープンソース</div>
+          <h2>あなたのマシンに、あなたが所有。</h2>
           <p class="lead">
-            purplemux is a self-hosted tool that runs locally.
-            Session data, settings, and history live only in <code>~/.purplemux/</code> and never leave your machine.
-            The full source is MIT-licensed — read it, change it, contribute.
+            purplemux はローカルで動作するセルフホスト・ツールです。
+            セッションデータ・設定・履歴はすべて <code>~/.purplemux/</code> にのみ保存され、外部サーバーには送信されません。
+            全ソースは MIT で公開されており、いつでも読み、変更し、貢献できます。
           </p>
           <div class="selfhost-badges">
             <span class="selfhost-badge"><strong>MIT</strong> License</span>
-            <span class="selfhost-badge"><strong>100%</strong> local</span>
-            <span class="selfhost-badge"><strong>0</strong> telemetry</span>
+            <span class="selfhost-badge"><strong>100%</strong> ローカル</span>
+            <span class="selfhost-badge"><strong>0</strong> テレメトリー</span>
           </div>
         </div>
         <div class="selfhost-visual">

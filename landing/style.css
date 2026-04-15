@@ -62,6 +62,29 @@ body {
   overflow-x: clip;
 }
 
+/* Language-optimized font stacks for CJK.
+   Latin / Korean / Cyrillic are already well covered by Pretendard Variable. */
+:lang(ja) body {
+  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', YuGothic, 'Meiryo', 'Noto Sans JP', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+:lang(ja) .hero-title {
+  font-family: 'Bricolage Grotesque', 'Hiragino Sans', 'Yu Gothic', 'Noto Sans JP', -apple-system, sans-serif;
+}
+
+:lang(zh-CN) body {
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+:lang(zh-CN) .hero-title {
+  font-family: 'Bricolage Grotesque', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', -apple-system, sans-serif;
+}
+
+:lang(zh-TW) body {
+  font-family: 'PingFang TC', 'Heiti TC', 'Microsoft JhengHei', 'Noto Sans TC', 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+:lang(zh-TW) .hero-title {
+  font-family: 'Bricolage Grotesque', 'PingFang TC', 'Microsoft JhengHei', 'Noto Sans TC', -apple-system, sans-serif;
+}
+
 a { color: inherit; text-decoration: none; }
 
 /* ── Nav ── */
@@ -164,6 +187,76 @@ a { color: inherit; text-decoration: none; }
   background: var(--secondary);
 }
 .nav-github svg { display: block; }
+
+.nav-lang {
+  position: relative;
+  margin-right: 0.15rem;
+  font-family: 'SF Mono', Monaco, Menlo, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.nav-lang > summary {
+  list-style: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0.55rem;
+  color: var(--muted-foreground);
+  font-weight: 600;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+}
+.nav-lang > summary::-webkit-details-marker { display: none; }
+.nav-lang > summary:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.nav-lang[open] > summary {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.nav-lang .lang-chevron {
+  transition: transform 0.15s;
+  opacity: 0.7;
+}
+.nav-lang[open] .lang-chevron { transform: rotate(180deg); }
+.nav-lang .lang-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  padding: 0.4rem;
+  background: var(--card);
+  border: 0.5px solid var(--border-strong);
+  border-radius: 8px;
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 0.1),
+    0 20px 40px -15px rgb(0 0 0 / 0.6);
+  z-index: 50;
+}
+.nav-lang .lang-opt {
+  font-family: -apple-system, 'Pretendard Variable', Pretendard, sans-serif;
+  font-size: var(--text-sm);
+  letter-spacing: -0.005em;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0.75rem;
+  border-radius: 5px;
+  font-weight: 500;
+  transition: color 0.12s, background 0.12s;
+  white-space: nowrap;
+}
+.nav-lang .lang-opt:hover {
+  color: var(--foreground);
+  background: var(--secondary);
+}
+.nav-lang .lang-opt.is-active {
+  color: var(--foreground);
+  background: var(--secondary);
+  font-weight: 600;
+}
 
 /* ── Main ── */
 main {
