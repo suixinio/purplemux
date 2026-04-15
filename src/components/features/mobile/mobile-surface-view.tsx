@@ -395,7 +395,8 @@ const MobileSurfaceView = ({
     if (status !== 'disconnected' || disconnectReason !== 'session-not-found') return;
     if (isFirstConnectionForTab) return;
     if (!activeTabId || !activeTab) return;
-    if (activeTab.panelType !== 'terminal') return;
+    const effectivePanelType = activeTab.panelType ?? 'terminal';
+    if (effectivePanelType !== 'terminal') return;
     if (activeTab.lastCommand) return;
     if (autoRestartedTabsRef.current.has(activeTabId)) return;
     autoRestartedTabsRef.current.add(activeTabId);
