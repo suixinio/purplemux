@@ -156,13 +156,17 @@ export const detectActiveSession = async (panePid: number, preloadedChildPids?: 
     return { status, sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
-  const childPids = preloadedChildPids ?? await getChildPids(panePid);
+  const directChildPids = preloadedChildPids ?? await getChildPids(panePid);
 
-  if (childPids.length === 0) {
+  if (directChildPids.length === 0) {
     return { status: 'not-running', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
   }
 
-  const childPidSet = new Set(childPids);
+  // Claude CLI may spawn a child process (e.g. for --resume), so the session
+  // PID file can belong to a grandchild of the pane. Include one extra level.
+  const grandchildPids = (await Promise.all(directChildPids.map(getChildPids))).flat();
+  const allPids = [...directChildPids, ...grandchildPids];
+  const childPidSet = new Set(allPids);
 
   try {
     const pidFiles = await fs.readdir(SESSIONS_DIR);
@@ -217,7 +221,7 @@ export const detectActiveSession = async (panePid: number, preloadedChildPids?: 
     // sessions dir doesn't exist yet
   }
 
-  const fromArgs = await getClaudeSessionFromArgs(childPids);
+  const fromArgs = await getClaudeSessionFromArgs(allPids);
   if (fromArgs) {
     const cwd = fromArgs.cwd;
     if (cwd) {
