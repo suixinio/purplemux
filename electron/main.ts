@@ -279,6 +279,7 @@ const setupAutoUpdater = () => {
         detail: m.updateAvailableDetail,
       });
       if (result.response === 0) {
+        mainWindow?.setProgressBar(0.05);
         autoUpdater.downloadUpdate().catch((err) => {
           console.error('[updater] downloadUpdate failed:', err);
         });
