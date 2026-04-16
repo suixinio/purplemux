@@ -32,7 +32,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const info = await detectActiveSession(panePid, childPids);
-  return res.status(200).json({ running: true, checkedAt, sessionId: info.sessionId });
+  return res.status(200).json({ running: true, checkedAt, sessionId: info.sessionId, resumable: !!info.jsonlPath });
 };
 
 export default handler;

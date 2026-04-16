@@ -672,7 +672,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         try {
           const res = await fetch(`/api/check-claude?session=${tab.sessionName}`);
           const data = await res.json();
-          resumeSessionId = typeof data.sessionId === 'string' ? data.sessionId : null;
+          resumeSessionId = typeof data.sessionId === 'string' && data.resumable ? data.sessionId : null;
         } catch {
           // fall through with null
         }
@@ -681,8 +681,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
     pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
     useTabStore.getState().setRestarting(activeTabId, true);
-    sendStdin('\x1b');
-    setTimeout(() => sendStdin('/exit\r'), 100);
+    sendStdin('\x03');
+    setTimeout(() => sendStdin('\x03'), 300);
   }, [activeTabId, status, sendStdin, claudeSessionId, buildClaudeCommand, handleSwitchPanelType]);
 
   useEffect(() => {
