@@ -29,7 +29,7 @@ import ObserveBanner from '@/components/features/agent/observe-banner';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/terminal/pane-tab-bar';
-import { formatTabTitle, parseCurrentCommand } from '@/lib/tab-title';
+import { formatTabTitle, parseCurrentCommand, isShellProcess } from '@/lib/tab-title';
 import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
@@ -305,6 +305,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const process = parseCurrentCommand(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       useTabStore.getState().setCurrentProcess(tabId, process);
+      if (isShellProcess(title) && pendingRestartRef.current) {
+        const cmd = pendingRestartRef.current;
+        pendingRestartRef.current = null;
+        wsActionsRef.current.sendStdin(`${cmd}\r`);
+      }
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;
@@ -682,11 +687,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   useEffect(() => {
     if (!pendingRestartRef.current || claudeStatus === 'running') return;
+    if (status !== 'connected') return;
+    if (!isShellProcess(lastTitleRef.current)) return;
     const cmd = pendingRestartRef.current;
     pendingRestartRef.current = null;
-    if (status !== 'connected') return;
-    const timer = setTimeout(() => sendStdin(`${cmd}\r`), 300);
-    return () => clearTimeout(timer);
+    sendStdin(`${cmd}\r`);
   }, [claudeStatus, status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
