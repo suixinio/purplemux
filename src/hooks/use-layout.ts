@@ -710,10 +710,19 @@ export const navigateToTabOrCreate = async (
   if (!layoutRes.ok) return;
   const layout: ILayoutData = await layoutRes.json();
 
-  const tabExists = collectAllTabs(layout.root).some((t) => t.id === tabId);
-  if (tabExists) {
-    navigateToTab(targetWsId, tabId);
-    return;
+  if (claudeSessionId) {
+    const matchingTab = collectAllTabs(layout.root).find((t) => t.claudeSessionId === claudeSessionId);
+    if (matchingTab) {
+      useTabStore.getState().setSessionView(matchingTab.id, 'timeline');
+      navigateToTab(targetWsId, matchingTab.id);
+      return;
+    }
+  } else {
+    const existingTab = collectAllTabs(layout.root).find((t) => t.id === tabId);
+    if (existingTab) {
+      navigateToTab(targetWsId, tabId);
+      return;
+    }
   }
 
   const paneId = layout.activePaneId ?? getFirstPaneId(layout.root);
