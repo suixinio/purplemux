@@ -1,6 +1,5 @@
 import { create } from 'zustand';
 import { collectPanes, useLayoutStore } from '@/hooks/use-layout';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
 
 interface ITabMetadata {
   title?: string;
@@ -20,9 +19,11 @@ interface ITabMetadataState {
 }
 
 const SYNC_DEBOUNCE_MS = 100;
+const LOCAL_UPDATE_WINDOW_MS = 1000;
 
 let _syncTimer: ReturnType<typeof setTimeout> | null = null;
-let _prevCwdsKey = '';
+const _lastLocalTitleUpdate = new Map<string, number>();
+const _lastLocalCwdUpdate = new Map<string, number>();
 
 const scheduleSyncToLayout = () => {
   if (_syncTimer) clearTimeout(_syncTimer);
@@ -53,20 +54,6 @@ const scheduleSyncToLayout = () => {
         }
       }
     }
-
-    const cwds = [...new Set(
-      Object.values(metadata)
-        .map((m) => m.cwd)
-        .filter((c): c is string => !!c),
-    )];
-    const key = cwds.join('\0');
-    if (key !== _prevCwdsKey) {
-      _prevCwdsKey = key;
-      const { activeWorkspaceId, updateDirectories } = useWorkspaceStore.getState();
-      if (activeWorkspaceId && cwds.length > 0) {
-        updateDirectories(activeWorkspaceId, cwds);
-      }
-    }
   }, SYNC_DEBOUNCE_MS);
 };
 
@@ -77,6 +64,7 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
     set((state) => {
       const prev = state.metadata[tabId];
       if (prev?.title === title) return state;
+      _lastLocalTitleUpdate.set(tabId, Date.now());
       return { metadata: { ...state.metadata, [tabId]: { ...prev, title } } };
     });
     scheduleSyncToLayout();
@@ -86,6 +74,7 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
     set((state) => {
       const prev = state.metadata[tabId];
       if (prev?.cwd === cwd) return state;
+      _lastLocalCwdUpdate.set(tabId, Date.now());
       return { metadata: { ...state.metadata, [tabId]: { ...prev, cwd } } };
     });
     scheduleSyncToLayout();
@@ -111,21 +100,19 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
   hydrate: (data) => {
     set((state) => {
       const merged: Record<string, ITabMetadata> = {};
+      const now = Date.now();
       for (const [id, incoming] of Object.entries(data)) {
         const existing = state.metadata[id];
-        if (existing) {
-          merged[id] = {
-            ...incoming,
-            ...(existing.title ? { title: existing.title } : {}),
-            ...(existing.cwd ? { cwd: existing.cwd } : {}),
-          };
-        } else {
-          merged[id] = incoming;
-        }
+        const titleRecent = (now - (_lastLocalTitleUpdate.get(id) ?? 0)) < LOCAL_UPDATE_WINDOW_MS;
+        const cwdRecent = (now - (_lastLocalCwdUpdate.get(id) ?? 0)) < LOCAL_UPDATE_WINDOW_MS;
+        merged[id] = {
+          ...incoming,
+          ...(titleRecent && existing?.title !== undefined ? { title: existing.title } : {}),
+          ...(cwdRecent && existing?.cwd !== undefined ? { cwd: existing.cwd } : {}),
+        };
       }
       return { metadata: merged };
     });
-    _prevCwdsKey = '';
   },
 
   retainOnly: (tabIds) => {
@@ -141,7 +128,8 @@ const useTabMetadataStore = create<ITabMetadataState>((set) => ({
   reset: () => {
     if (_syncTimer) clearTimeout(_syncTimer);
     _syncTimer = null;
-    _prevCwdsKey = '';
+    _lastLocalTitleUpdate.clear();
+    _lastLocalCwdUpdate.clear();
     set({ metadata: {} });
   },
 }));

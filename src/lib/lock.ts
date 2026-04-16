@@ -82,7 +82,7 @@ export const acquireLock = async (port: number): Promise<void> => {
 
   try {
     await writeLockData(data);
-    log.info(`Lock acquired (pid=${process.pid})`);
+    log.debug(`Lock acquired (pid=${process.pid})`);
     return;
   } catch (err: unknown) {
     const code = (err as NodeJS.ErrnoException).code;
@@ -102,7 +102,7 @@ export const acquireLock = async (port: number): Promise<void> => {
   if (!existing) {
     await removeStaleLock();
     await writeLockData(data);
-    log.info(`Lock acquired after removing empty lock (pid=${process.pid})`);
+    log.debug(`Lock acquired after removing empty lock (pid=${process.pid})`);
     return;
   }
 
@@ -115,7 +115,7 @@ export const acquireLock = async (port: number): Promise<void> => {
     log.warn(`Stale lock found (pid=${existing.pid} is dead), reclaiming`);
     await removeStaleLock();
     await writeLockData(data);
-    log.info(`Lock acquired (pid=${process.pid})`);
+    log.debug(`Lock acquired (pid=${process.pid})`);
     return;
   }
 
@@ -128,7 +128,7 @@ export const acquireLock = async (port: number): Promise<void> => {
   log.warn(`PID ${existing.pid} is alive but not purplemux, reclaiming lock`);
   await removeStaleLock();
   await writeLockData(data);
-  log.info(`Lock acquired (pid=${process.pid})`);
+  log.debug(`Lock acquired (pid=${process.pid})`);
 };
 
 export const releaseLock = (): void => {

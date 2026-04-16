@@ -2,6 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 import {
   ChevronDown,
   ChevronRight,
+  GitCompareArrows,
+  Globe,
   Plus,
   Settings,
   X,
@@ -140,7 +142,6 @@ const MobileNavigationSheet = ({
     const isCurrentWs = workspaceId === activeWorkspaceId;
     const isTabActive = isCurrentWs && pane.id === activePaneId && tab.id === activeTabId;
     const panelType = tab.panelType ?? 'terminal';
-    const isClaudeCode = panelType === 'claude-code';
 
     return (
       <div key={tab.id} className="relative flex items-center">
@@ -168,19 +169,25 @@ const MobileNavigationSheet = ({
             tabId={tab.id}
             panelType={panelType}
           />
-          {isClaudeCode ? (
-            <ClaudeCodeIcon size={16} className="mt-0.5" />
-          ) : isTabCodex(tab) ? (
-            <OpenAIIcon size={14} className={cn('mt-0.5 shrink-0', getTabNerdColor(tab))} />
-          ) : (
-            <span
-              className={cn('mt-0.5 shrink-0 text-sm leading-none', getTabNerdColor(tab))}
-              style={{ fontFamily: 'MesloLGLDZ, monospace' }}
-              aria-hidden="true"
-            >
-              {getTabProcessIcon(tab)}
-            </span>
-          )}
+          <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center">
+            {panelType === 'claude-code' ? (
+              <ClaudeCodeIcon size={16} />
+            ) : panelType === 'web-browser' ? (
+              <Globe size={14} className="text-muted-foreground" />
+            ) : panelType === 'diff' ? (
+              <GitCompareArrows size={14} className="text-muted-foreground" />
+            ) : isTabCodex(tab) ? (
+              <OpenAIIcon size={14} className={getTabNerdColor(tab)} />
+            ) : (
+              <span
+                className={cn('text-sm leading-none', getTabNerdColor(tab))}
+                style={{ fontFamily: 'MesloLGLDZ, monospace' }}
+                aria-hidden="true"
+              >
+                {getTabProcessIcon(tab)}
+              </span>
+            )}
+          </span>
           <div className="min-w-0 flex-1">
             <span className="block truncate">{getTabDisplayName(tab)}</span>
             {panelType === 'claude-code' && tab.claudeSummary && (

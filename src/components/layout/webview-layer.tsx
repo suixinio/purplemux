@@ -28,7 +28,7 @@ const WebviewLayer = () => {
       {instances.map((instance) => (
         <div
           key={instance.id}
-          className="absolute inset-0 z-10 flex flex-col pt-titlebar"
+          className="flex min-h-0 flex-1 flex-col"
           style={{ display: activeId === instance.id ? 'flex' : 'none' }}
         >
           <WebBrowserPanel initialUrl={instance.url} />

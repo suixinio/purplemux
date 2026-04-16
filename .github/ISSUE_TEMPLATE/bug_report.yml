@@ -1,0 +1,54 @@
+name: Bug report
+description: Report a problem with purplemux
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: purplemux version (see the app footer or `package.json`)
+      placeholder: "0.1.15"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: OS
+      options:
+        - macOS
+        - Linux
+        - Windows
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: How are you running it?
+      options:
+        - Desktop app (Electron)
+        - Browser (Chrome)
+        - Browser (Safari)
+        - Browser (Firefox)
+        - Browser (other)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? Include steps to reproduce, what you expected, and what actually occurred. Screenshots and logs welcome.
+      placeholder: |
+        Steps to reproduce:
+        1.
+        2.
+
+        Expected:
+
+        Actual:
+    validations:
+      required: true

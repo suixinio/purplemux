@@ -6,12 +6,25 @@ import Sidebar from '@/components/layout/sidebar';
 import useSync from '@/hooks/use-sync';
 import useAgentStatus from '@/hooks/use-agent-status';
 import useGlobalShortcuts from '@/hooks/use-global-shortcuts';
+import useWebviewStore from '@/hooks/use-webview-store';
 
 const WebviewLayer = dynamic(() => import('@/components/layout/webview-layer'), { ssr: false });
 
 interface IPageShellProps {
   children: ReactNode;
 }
+
+const PageContent = ({ children }: { children: ReactNode }) => {
+  const webviewActive = useWebviewStore((s) => s.activeId !== null);
+  return (
+    <div
+      className="flex min-h-0 flex-1 flex-col"
+      style={{ display: webviewActive ? 'none' : undefined }}
+    >
+      {children}
+    </div>
+  );
+};
 
 const PageShell = ({ children }: IPageShellProps) => {
   useSync();
@@ -34,7 +47,7 @@ const PageShell = ({ children }: IPageShellProps) => {
     <div className="flex h-dvh w-full overflow-hidden bg-background max-md:hidden">
       <Sidebar />
       <div className="relative flex min-w-0 flex-1 flex-col">
-        {children}
+        <PageContent>{children}</PageContent>
         <WebviewLayer />
       </div>
     </div>

@@ -226,68 +226,76 @@ const WebBrowserPanel = ({ initialUrl, onUrlChange }: IWebBrowserPanelProps) => 
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border px-2">
-        {showNavButtons && (
-          <>
+      <div
+        className="relative z-[60] flex h-12 shrink-0 items-center gap-1 border-b border-border px-2"
+        {...(isElectron ? { style: { WebkitAppRegion: 'drag' } as React.CSSProperties } : {})}
+      >
+        <div
+          className="flex flex-1 items-center gap-1"
+          {...(isElectron ? { style: { WebkitAppRegion: 'no-drag' } as React.CSSProperties } : {})}
+        >
+          {showNavButtons && (
+            <>
+              <button
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
+                  isElectron && !canGoBack ? 'text-muted-foreground/50' : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={handleGoBack}
+                disabled={isElectron && !canGoBack}
+                aria-label={t('back')}
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+              </button>
+              <button
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
+                  isElectron && !canGoForward ? 'text-muted-foreground/50' : 'text-muted-foreground hover:text-foreground',
+                )}
+                onClick={handleGoForward}
+                disabled={isElectron && !canGoForward}
+                aria-label={t('forward')}
+              >
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+              <button
+                className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                onClick={handleRefresh}
+                aria-label={t('reload')}
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+              </button>
+            </>
+          )}
+
+          {isElectron && (
             <button
               className={cn(
                 'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
-                isElectron && !canGoBack ? 'text-muted-foreground/50' : 'text-muted-foreground hover:text-foreground',
+                mobileUA ? 'text-accent-color' : 'text-muted-foreground hover:text-foreground',
               )}
-              onClick={handleGoBack}
-              disabled={isElectron && !canGoBack}
-              aria-label={t('back')}
+              onClick={handleToggleMobileUA}
+              aria-label={mobileUA ? t('switchToDesktop') : t('switchToMobile')}
+              title={mobileUA ? t('mobileModeTip') : t('desktopModeTip')}
             >
-              <ArrowLeft className="h-3.5 w-3.5" />
+              {mobileUA ? <Smartphone className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
             </button>
-            <button
+          )}
+
+          <div className="ml-1 flex flex-1 items-center gap-2 rounded-md border border-border bg-secondary px-2.5 py-1">
+            <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <input
               className={cn(
-                'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
-                isElectron && !canGoForward ? 'text-muted-foreground/50' : 'text-muted-foreground hover:text-foreground',
+                'min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50',
+                canNavigate ? 'text-foreground' : 'text-muted-foreground',
               )}
-              onClick={handleGoForward}
-              disabled={isElectron && !canGoForward}
-              aria-label={t('forward')}
-            >
-              <ArrowRight className="h-3.5 w-3.5" />
-            </button>
-            <button
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
-              onClick={handleRefresh}
-              aria-label={t('reload')}
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-            </button>
-          </>
-        )}
-
-        {isElectron && (
-          <button
-            className={cn(
-              'flex h-7 w-7 items-center justify-center rounded hover:bg-accent',
-              mobileUA ? 'text-accent-color' : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={handleToggleMobileUA}
-            aria-label={mobileUA ? t('switchToDesktop') : t('switchToMobile')}
-            title={mobileUA ? t('mobileModeTip') : t('desktopModeTip')}
-          >
-            {mobileUA ? <Smartphone className="h-3.5 w-3.5" /> : <Monitor className="h-3.5 w-3.5" />}
-          </button>
-        )}
-
-        <div className="ml-1 flex flex-1 items-center gap-2 rounded-md border border-border bg-secondary px-2.5 py-1">
-          <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-          <input
-            className={cn(
-              'min-w-0 flex-1 bg-transparent text-xs outline-none placeholder:text-muted-foreground/50',
-              canNavigate ? 'text-foreground' : 'text-muted-foreground',
-            )}
-            placeholder={t('urlPlaceholder')}
-            value={addressValue}
-            onChange={(e) => setAddressValue(e.target.value)}
-            onKeyDown={handleKeyDown}
-            spellCheck={false}
-          />
+              placeholder={t('urlPlaceholder')}
+              value={addressValue}
+              onChange={(e) => setAddressValue(e.target.value)}
+              onKeyDown={handleKeyDown}
+              spellCheck={false}
+            />
+          </div>
         </div>
       </div>
 

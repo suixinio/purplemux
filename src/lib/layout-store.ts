@@ -708,17 +708,46 @@ export const patchTab = async (
   paneId: string,
   tabId: string,
   patch: Partial<Pick<ITab, 'name' | 'panelType' | 'title' | 'cwd' | 'lastCommand' | 'webUrl'>>,
-): Promise<ILayoutData | null> =>
-  mutate(wsId, (layout) => {
+): Promise<ILayoutData | null> => {
+  let authoritativeCwd: string | null | undefined;
+  let authoritativeTitle: string | null | undefined;
+  if (patch.cwd !== undefined || patch.title !== undefined) {
+    const sessionName = await (async () => {
+      const filePath = resolveLayoutFile(wsId);
+      const layout = await readLayoutFile(filePath);
+      if (!layout) return null;
+      return findPane(layout.root, paneId)?.tabs.find((t) => t.id === tabId)?.sessionName ?? null;
+    })();
+    if (sessionName) {
+      const { getSessionCwd, getPaneCurrentCommand } = await import('@/lib/tmux');
+      const { formatTabTitle } = await import('@/lib/tab-title');
+      if (patch.cwd !== undefined) {
+        authoritativeCwd = await getSessionCwd(sessionName);
+      }
+      if (patch.title !== undefined) {
+        const [cmd, cwd] = await Promise.all([
+          getPaneCurrentCommand(sessionName),
+          authoritativeCwd !== undefined ? Promise.resolve(authoritativeCwd) : getSessionCwd(sessionName),
+        ]);
+        if (cmd && cwd) {
+          authoritativeTitle = formatTabTitle(`${cmd}|${cwd}`);
+        }
+      }
+    }
+  }
+
+  return mutate(wsId, (layout) => {
     const pane = findPane(layout.root, paneId);
     if (!pane) return null;
     const tab = pane.tabs.find((t) => t.id === tabId);
     if (!tab) return null;
+    const resolvedTitle = patch.title !== undefined ? (authoritativeTitle ?? patch.title) : undefined;
     if (patch.name !== undefined) tab.name = patch.name;
     if (patch.panelType !== undefined) tab.panelType = patch.panelType;
-    if (patch.title !== undefined) tab.title = patch.title;
-    if (patch.cwd !== undefined) tab.cwd = patch.cwd;
+    if (resolvedTitle !== undefined) tab.title = resolvedTitle;
+    if (patch.cwd !== undefined) tab.cwd = authoritativeCwd ?? patch.cwd;
     if (patch.lastCommand !== undefined) tab.lastCommand = patch.lastCommand;
     if (patch.webUrl !== undefined) tab.webUrl = patch.webUrl;
     return layout;
   });
+};

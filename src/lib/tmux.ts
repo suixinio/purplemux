@@ -14,12 +14,18 @@ const TMUX_SOCKET = 'purple';
 const TMUX_CONFIG_PATH = path.join(process.env.__PMUX_APP_DIR_UNPACKED || process.env.__PMUX_APP_DIR || process.cwd(), 'src', 'config', 'tmux.conf');
 const CMD_TIMEOUT = 5000;
 
-const SENSITIVE_KEYS = new Set(['AUTH_PASSWORD', 'NEXTAUTH_SECRET']);
+// Snapshot taken at module load — before Next.js standalone bootstrap and our own
+// PORT/HOSTNAME writes pollute process.env. Subsequent child processes (tmux, preflight
+// shells) are spawned from this pristine snapshot so the host app's runtime env does
+// not leak into user shells.
+const ENV_SNAPSHOT: NodeJS.ProcessEnv = { ...process.env };
+
+const BLOCKED_ENV_KEYS = new Set(['AUTH_PASSWORD', 'NEXTAUTH_SECRET', 'PORT']);
 
 export const sanitizedEnv = (): NodeJS.ProcessEnv =>
   Object.fromEntries(
-    Object.entries(process.env).filter(
-      ([key]) => !key.startsWith('npm_') && !key.startsWith('NODE_') && !SENSITIVE_KEYS.has(key),
+    Object.entries(ENV_SNAPSHOT).filter(
+      ([key]) => !key.startsWith('npm_') && !key.startsWith('NODE_') && !BLOCKED_ENV_KEYS.has(key),
     ),
   ) as NodeJS.ProcessEnv;
 
@@ -164,7 +170,29 @@ export const scanSessions = async (): Promise<void> => {
   }
 };
 
+const readShellCwd = async (pid: number): Promise<string | null> => {
+  if (isLinux) {
+    try {
+      return await fs.readlink(`/proc/${pid}/cwd`);
+    } catch {
+      return null;
+    }
+  }
+  try {
+    const { stdout } = await execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn'], { timeout: CMD_TIMEOUT });
+    const line = stdout.split('\n').find((l) => l.startsWith('n/'));
+    return line ? line.slice(1) : null;
+  } catch {
+    return null;
+  }
+};
+
 export const getSessionCwd = async (sessionName: string): Promise<string | null> => {
+  const shellPid = await getSessionPanePid(sessionName);
+  if (shellPid) {
+    const cwd = await readShellCwd(shellPid);
+    if (cwd) return cwd;
+  }
   try {
     const { stdout } = await execFile(
       'tmux',

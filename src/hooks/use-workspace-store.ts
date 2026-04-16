@@ -34,7 +34,6 @@ interface IWorkspaceState {
   switchWorkspace: (workspaceId: string) => void;
   renameWorkspace: (workspaceId: string, name: string) => Promise<boolean>;
   reorderWorkspaces: (fromIndex: number, toIndex: number) => void;
-  updateDirectories: (workspaceId: string, directories: string[]) => void;
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
@@ -251,14 +250,6 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       toast.error(t('workspace', 'reorderFailed'));
       get().fetchWorkspaces();
     });
-  },
-
-  updateDirectories: (workspaceId, directories) => {
-    set((state) => ({
-      workspaces: state.workspaces.map((w) =>
-        w.id === workspaceId ? { ...w, directories } : w,
-      ),
-    }));
   },
 
   toggleSidebar: () => {
