@@ -204,9 +204,9 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const lastTitleRef = useRef('');
 
   const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
-  const claudeStatus = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeStatus ?? 'unknown' : 'unknown');
+  const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? null : null);
   const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeSessionId ?? null : null);
-  const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'inactive');
+  const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'session-list');
   const claudeInputVisible = sessionView === 'timeline';
 
   const deferredFocusInput = useCallback((fn: () => void) => {
@@ -312,25 +312,25 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       }
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
-        const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;
+        const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeProcessCheckedAt ?? 0;
         fetch(`/api/check-claude?session=${tab.sessionName}`)
           .then((res) => res.json())
           .then(({ running, checkedAt }) => {
             const current = useTabStore.getState().tabs[tabId];
-            if (current && current.claudeStatusCheckedAt !== prevCheckedAt) {
-              if (current.claudeStatus !== (running ? 'starting' : 'not-running')) {
+            if (current && current.claudeProcessCheckedAt !== prevCheckedAt) {
+              if (current.claudeProcess !== running) {
                 setTimeout(() => {
                   fetch(`/api/check-claude?session=${tab.sessionName}`)
                     .then((r) => r.json())
                     .then(({ running, checkedAt }) => {
-                      useTabStore.getState().setClaudeStatus(tabId, running ? 'starting' : 'not-running', checkedAt);
+                      useTabStore.getState().setClaudeProcess(tabId, running, checkedAt);
                     })
                     .catch(() => {});
                 }, 500);
               }
               return;
             }
-            useTabStore.getState().setClaudeStatus(tabId, running ? 'starting' : 'not-running', checkedAt);
+            useTabStore.getState().setClaudeProcess(tabId, running, checkedAt);
           })
           .catch(() => {});
       }
@@ -522,7 +522,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     if (newTab) {
       useTabStore.getState().initTab(newTab.id, { panelType, workspaceId: layoutWsId ?? '' });
       if (options?.command) {
-        useTabStore.getState().setRestarting(newTab.id, true);
+        useTabStore.getState().setSessionView(newTab.id, 'check');
       }
       const currentTabId = activeTabIdRef.current;
       const currentTitle = currentTabId
@@ -615,7 +615,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [activeTabId, paneId, layoutWsId]);
 
   useEffect(() => {
-    if (!activeTabId || (claudeStatus !== 'running' && claudeStatus !== 'starting') || activePanelType !== 'terminal') {
+    if (!activeTabId || claudeProcess !== true || activePanelType !== 'terminal') {
       setShowClaudeModePrompt(false);
       return;
     }
@@ -623,7 +623,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
     claudeModeShownTabsRef.current.add(activeTabId);
     setShowClaudeModePrompt(true);
-  }, [activeTabId, claudeStatus, activePanelType]);
+  }, [activeTabId, claudeProcess, activePanelType]);
 
   const {
     showPathInput,
@@ -648,14 +648,14 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
-    useTabStore.getState().setRestarting(activeTabId, true);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${buildClaudeCommand(null)}\r`);
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = buildClaudeCommand(null);
-    useTabStore.getState().setRestarting(activeTabId, true);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
@@ -680,19 +680,19 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     }
 
     pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
-    useTabStore.getState().setRestarting(activeTabId, true);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('\x03');
     setTimeout(() => sendStdin('\x03'), 300);
   }, [activeTabId, status, sendStdin, claudeSessionId, buildClaudeCommand, handleSwitchPanelType]);
 
   useEffect(() => {
-    if (!pendingRestartRef.current || claudeStatus === 'running') return;
+    if (!pendingRestartRef.current || claudeProcess === true) return;
     if (status !== 'connected') return;
     if (!isShellProcess(lastTitleRef.current)) return;
     const cmd = pendingRestartRef.current;
     pendingRestartRef.current = null;
     sendStdin(`${cmd}\r`);
-  }, [claudeStatus, status, sendStdin]);
+  }, [claudeProcess, status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);

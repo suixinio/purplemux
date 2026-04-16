@@ -1,23 +1,18 @@
 import { create } from 'zustand';
-import type { TCliState, TClaudeStatus } from '@/types/timeline';
+import type { TCliState } from '@/types/timeline';
 import type { ICurrentAction, ILastEvent, TTabDisplayStatus, TTerminalStatus } from '@/types/status';
 import type { TPanelType } from '@/types/terminal';
 
-export type TSessionView =
-  | 'loading'
-  | 'restarting'
-  | 'not-installed'
-  | 'timeline'
-  | 'inactive';
+export type TSessionView = 'session-list' | 'check' | 'timeline';
 
 export interface ITabState {
   terminalConnected: boolean;
-  claudeStatus: TClaudeStatus;
-  claudeStatusCheckedAt: number;
+  claudeProcess: boolean | null;
+  claudeProcessCheckedAt: number;
+  claudeInstalled: boolean;
+  sessionView: TSessionView;
   cliState: TCliState;
   isTimelineLoading: boolean;
-  isRestarting: boolean;
-  isResuming: boolean;
   workspaceId: string;
   tabName?: string;
   panelType?: TPanelType;
@@ -42,12 +37,12 @@ const SYNC_GRACE_MS = 30_000;
 
 const DEFAULT_TAB_STATE: ITabState = {
   terminalConnected: false,
-  claudeStatus: 'unknown',
-  claudeStatusCheckedAt: 0,
+  claudeProcess: null,
+  claudeProcessCheckedAt: 0,
+  claudeInstalled: true,
+  sessionView: 'session-list',
   cliState: 'inactive',
   isTimelineLoading: true,
-  isRestarting: false,
-  isResuming: false,
   workspaceId: '',
 };
 
@@ -60,12 +55,12 @@ interface ITabStore {
   removeTab: (tabId: string) => void;
 
   setTerminalConnected: (tabId: string, connected: boolean) => void;
-  setClaudeStatus: (tabId: string, status: TClaudeStatus, checkedAt: number) => void;
+  setClaudeProcess: (tabId: string, process: boolean | null, checkedAt: number) => void;
+  setClaudeInstalled: (tabId: string, installed: boolean) => void;
+  setSessionView: (tabId: string, view: TSessionView) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
-  setRestarting: (tabId: string, restarting: boolean) => void;
   cancelTab: (tabId: string) => void;
   dismissTab: (tabId: string) => void;
-  setResuming: (tabId: string, resuming: boolean) => void;
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setPanelType: (tabId: string, panelType: TPanelType) => void;
   setCurrentProcess: (tabId: string, process: string | null) => void;
@@ -115,18 +110,33 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { terminalConnected: connected }) };
     }),
 
-  setClaudeStatus: (tabId, status, checkedAt) =>
+  setClaudeProcess: (tabId, process, checkedAt) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.claudeStatusCheckedAt > checkedAt) return state;
-      if (prev.claudeStatus === status) return state;
-      // running에서 starting 전환 차단 (running이 상위 상태)
-      if (prev.claudeStatus === 'running' && status === 'starting') return state;
-      const patch: Partial<ITabState> = { claudeStatus: status, claudeStatusCheckedAt: checkedAt };
-      if ((prev.claudeStatus === 'running' || prev.claudeStatus === 'starting') && status !== 'running' && status !== 'starting' && prev.isResuming) {
-        patch.isResuming = false;
+      if (!prev || prev.claudeProcessCheckedAt > checkedAt) return state;
+      if (prev.claudeProcess === process) return state;
+      const patch: Partial<ITabState> = { claudeProcess: process, claudeProcessCheckedAt: checkedAt };
+      if (process === true && (prev.sessionView === 'check' || prev.sessionView === 'session-list')) {
+        patch.sessionView = 'timeline';
+      }
+      if (process === false && prev.sessionView === 'timeline') {
+        patch.sessionView = 'session-list';
       }
       return { tabs: updateTab(state.tabs, tabId, patch) };
+    }),
+
+  setClaudeInstalled: (tabId, installed) =>
+    set((state) => {
+      const prev = state.tabs[tabId];
+      if (!prev || prev.claudeInstalled === installed) return state;
+      return { tabs: updateTab(state.tabs, tabId, { claudeInstalled: installed }) };
+    }),
+
+  setSessionView: (tabId, view) =>
+    set((state) => {
+      const prev = state.tabs[tabId];
+      if (!prev || prev.sessionView === view) return state;
+      return { tabs: updateTab(state.tabs, tabId, { sessionView: view }) };
     }),
 
   setTimelineLoading: (tabId, loading) =>
@@ -134,13 +144,6 @@ const useTabStore = create<ITabStore>((set) => ({
       const prev = state.tabs[tabId];
       if (!prev || prev.isTimelineLoading === loading) return state;
       return { tabs: updateTab(state.tabs, tabId, { isTimelineLoading: loading }) };
-    }),
-
-  setRestarting: (tabId, restarting) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.isRestarting === restarting) return state;
-      return { tabs: updateTab(state.tabs, tabId, { isRestarting: restarting }) };
     }),
 
   cancelTab: (tabId) =>
@@ -155,13 +158,6 @@ const useTabStore = create<ITabStore>((set) => ({
       const prev = state.tabs[tabId];
       if (!prev || prev.cliState !== 'ready-for-review') return state;
       return { tabs: updateTab(state.tabs, tabId, { cliState: 'idle', dismissedAt: Date.now() }) };
-    }),
-
-  setResuming: (tabId, resuming) =>
-    set((state) => {
-      const prev = state.tabs[tabId];
-      if (!prev || prev.isResuming === resuming) return state;
-      return { tabs: updateTab(state.tabs, tabId, { isResuming: resuming }) };
     }),
 
   setWorkspaceId: (tabId, workspaceId) =>
@@ -213,7 +209,7 @@ const useTabStore = create<ITabStore>((set) => ({
         } else if (existing) {
           next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId, compactingSince: entry.compactingSince, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId, compactingSince: entry.compactingSince, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, claudeSummary: entry.claudeSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, claudeSessionId: entry.claudeSessionId, compactingSince: entry.compactingSince, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq, ...(entry.claudeSessionId ? { sessionView: 'timeline' as const } : {}) };
         }
       }
       // 서버에 아직 반영되지 않은 로컬 탭 보존 (split 직후 레이스 컨디션 방지)
@@ -252,7 +248,7 @@ const useTabStore = create<ITabStore>((set) => ({
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, lastAssistantMessage: update.lastAssistantMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, dismissedAt: update.dismissedAt, claudeSessionId: update.claudeSessionId, compactingSince: update.compactingSince, lastEvent: update.lastEvent, eventSeq: update.eventSeq },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, claudeSummary: update.claudeSummary, lastUserMessage: update.lastUserMessage, lastAssistantMessage: update.lastAssistantMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, dismissedAt: update.dismissedAt, claudeSessionId: update.claudeSessionId, compactingSince: update.compactingSince, lastEvent: update.lastEvent, eventSeq: update.eventSeq, ...(update.claudeSessionId ? { sessionView: 'timeline' as const } : {}) },
         },
       };
     }),
@@ -276,20 +272,8 @@ export const isCliIdle = (cliState: TCliState): boolean =>
 
 export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string): TSessionView => {
   const tab = tabs[tabId];
-  if (!tab) return 'loading';
-
-  if (tab.isRestarting) return 'restarting';
-  if (tab.claudeStatus === 'not-installed') return 'not-installed';
-
-  if (tab.claudeStatus === 'unknown' || tab.claudeStatus === 'starting') return 'loading';
-
-  if (tab.claudeStatus === 'running') {
-    return tab.isTimelineLoading ? 'loading' : 'timeline';
-  }
-
-  if (tab.isResuming || tab.isTimelineLoading) return 'loading';
-
-  return 'inactive';
+  if (!tab) return 'session-list';
+  return tab.sessionView;
 };
 
 export const selectTabDisplayStatus = (tabs: Record<string, ITabState>, tabId: string): TTabDisplayStatus => {

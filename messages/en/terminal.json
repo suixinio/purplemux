@@ -6,7 +6,7 @@
   "splitHorizontal": "Split horizontal",
   "splitHorizontalShortcut": "Split horizontal ({shortcut})",
   "equalSplit": "Equalize split",
-  "creatingConversation": "Creating new conversation...",
+  "creatingConversation": "Creating new session...",
   "resumingSession": "Resuming session...",
   "checkTerminal": "Check the terminal",
   "resumeBlocked": "Another process is running in the terminal",

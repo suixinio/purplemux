@@ -6,7 +6,7 @@ import { useTranslations } from 'next-intl';
 import useTimeline from '@/hooks/use-timeline';
 import useStartingPrompt from '@/hooks/use-starting-prompt';
 import useSessionList from '@/hooks/use-session-list';
-import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
+import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
@@ -37,8 +37,6 @@ interface IMobileClaudeCodePanelProps {
   onInputVisibleChange: (visible: boolean) => void;
   onRestartSession?: () => void;
   onNewSession?: () => void;
-  isRestarting?: boolean;
-  onRestartComplete?: () => void;
 }
 
 const MobileClaudeCodePanel = ({
@@ -56,8 +54,6 @@ const MobileClaudeCodePanel = ({
   onInputVisibleChange,
   onRestartSession,
   onNewSession,
-  isRestarting,
-  onRestartComplete,
 }: IMobileClaudeCodePanelProps) => {
   const t = useTranslations('terminal');
   const { prompts: quickPrompts } = useQuickPrompts();
@@ -65,14 +61,14 @@ const MobileClaudeCodePanel = ({
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
-  const claudeStatus = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeStatus ?? 'unknown' : 'unknown');
+  const claudeProcess = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeProcess ?? null : null);
+  const claudeInstalled = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeInstalled ?? true : true);
   const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive');
   const compactingSince = useTabStore((s) => tabId ? s.tabs[tabId]?.compactingSince ?? null : null);
 
   const handleResumeStarted = useCallback(() => {
     setResumingSessionId(null);
-    if (tabId) useTabStore.getState().setResuming(tabId, true);
-  }, [tabId]);
+  }, []);
 
   const handleResumeBlocked = useCallback(
     (payload: { reason: string; processName?: string }) => {
@@ -97,7 +93,7 @@ const MobileClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeStatus: claudeStatusFromTimeline,
+    claudeProcess: claudeProcessFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -116,23 +112,19 @@ const MobileClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: tabId ? (state) => {
-      const current = useTabStore.getState().tabs[tabId];
-      if (state.isLoading && current && current.claudeStatus !== 'unknown') {
-        useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
-        return;
+      const checkedAt = Date.now();
+      if (state.claudeProcess !== null) {
+        useTabStore.getState().setClaudeProcess(tabId, state.claudeProcess, checkedAt);
       }
-      if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
-        const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
-        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
+      if (!state.claudeInstalled) {
+        useTabStore.getState().setClaudeInstalled(tabId, false);
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     } : undefined,
     getCliState: tabId ? () => useTabStore.getState().tabs[tabId]?.cliState : undefined,
   });
 
-  const effectiveClaudeStatus = tabId
-    ? claudeStatus
-    : claudeStatusFromTimeline;
+  const effectiveClaudeProcess = tabId ? claudeProcess : claudeProcessFromTimeline;
 
   const {
     sessions,
@@ -144,49 +136,29 @@ const MobileClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && effectiveClaudeStatus !== 'running' && effectiveClaudeStatus !== 'starting',
+    enabled: !!sessionName && effectiveClaudeProcess !== true,
     cwd,
   });
 
-  const prevClaudeStatusRef = useRef(claudeStatus);
+  const prevClaudeProcessRef = useRef(claudeProcess);
   useEffect(() => {
-    const prev = prevClaudeStatusRef.current;
-    prevClaudeStatusRef.current = claudeStatus;
-    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running' && !isRestarting) {
+    const prev = prevClaudeProcessRef.current;
+    prevClaudeProcessRef.current = claudeProcess;
+    if (prev !== true && claudeProcess === true && claudeProcessFromTimeline !== true) {
       retrySession();
     }
-  }, [claudeStatus, claudeStatusFromTimeline, retrySession, isRestarting]);
+  }, [claudeProcess, claudeProcessFromTimeline, retrySession]);
 
-  const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'empty' as const);
+  const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'session-list' as const);
 
   const { meta } = useSessionMeta(entries, sessionSummary, initMeta);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, metaSheetOpen);
   const tmuxInfo = useTmuxInfo(sessionName, metaSheetOpen);
 
-  const restartNeedsExitRef = useRef(false);
-  const prevIsRestartingRef = useRef(!!isRestarting);
-
-  useEffect(() => {
-    if (isRestarting && !prevIsRestartingRef.current) {
-      restartNeedsExitRef.current = effectiveClaudeStatus === 'running' || effectiveClaudeStatus === 'starting';
-    }
-    prevIsRestartingRef.current = !!isRestarting;
-
-    if (!isRestarting) return;
-
-    if (restartNeedsExitRef.current && effectiveClaudeStatus !== 'running' && effectiveClaudeStatus !== 'starting') {
-      restartNeedsExitRef.current = false;
-    }
-
-    if (isCliIdle(storeCliState) && !restartNeedsExitRef.current && (effectiveClaudeStatus === 'running' || effectiveClaudeStatus === 'starting') && !isTimelineLoading) {
-      onRestartComplete?.();
-    }
-  }, [isRestarting, effectiveClaudeStatus, storeCliState, isTimelineLoading, onRestartComplete]);
-
   const isInputVisible = view === 'timeline';
 
-  const startingPromptOptions = useStartingPrompt(effectiveClaudeStatus === 'starting', sessionName);
+  const startingPromptOptions = useStartingPrompt(view === 'check', sessionName);
 
   useEffect(() => {
     onCliStateChange(storeCliState);
@@ -214,19 +186,28 @@ const MobileClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (view === 'restarting') {
+  if (!claudeInstalled) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
-        <Spinner className="h-4 w-4 text-muted-foreground" />
-        <span className="mt-2 text-sm text-muted-foreground">{t('creatingConversation')}</span>
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-muted text-muted-foreground">
+        <span className="text-sm font-medium">{t('installClaude')}</span>
+        <span className="text-xs">{t('installClaudeHint')}</span>
       </div>
     );
   }
 
-  if (view === 'loading' || (view === 'inactive' && sessions.length === 0 && isSessionListLoading)) {
+  if (claudeProcess === null && view !== 'check') {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
         <Spinner className="h-4 w-4 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (view === 'check') {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
+        <Spinner className="h-4 w-4 text-muted-foreground" />
+        <span className="mt-2 text-sm text-muted-foreground">{claudeSessionId ? t('resumingSession') : t('creatingConversation')}</span>
         {startingPromptOptions && (
           startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
             <BypassPromptCard
@@ -244,7 +225,14 @@ const MobileClaudeCodePanel = ({
     );
   }
 
-  if (view === 'inactive') {
+  if (view === 'session-list') {
+    if (isSessionListLoading && sessions.length === 0) {
+      return (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
+          <Spinner className="h-4 w-4 text-muted-foreground" />
+        </div>
+      );
+    }
     if (sessions.length === 0 && !sessionListError) {
       return (
         <div className="flex min-h-0 flex-1 flex-col bg-muted">
@@ -305,7 +293,6 @@ const MobileClaudeCodePanel = ({
           initMeta={initMeta}
           cliState={storeCliState}
           compactingSince={compactingSince}
-          claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}

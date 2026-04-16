@@ -6,7 +6,7 @@
   "splitHorizontal": "Разделить горизонтально",
   "splitHorizontalShortcut": "Разделить горизонтально ({shortcut})",
   "equalSplit": "Выровнять разделение",
-  "creatingConversation": "Создание новой беседы...",
+  "creatingConversation": "Создание нового сеанса...",
   "resumingSession": "Возобновление сеанса...",
   "checkTerminal": "Проверьте терминал",
   "resumeBlocked": "В терминале запущен другой процесс",

@@ -128,8 +128,7 @@ const MobileSurfaceView = ({
 
   const pendingRestartRef = useRef(false);
   const lastTitleRef = useRef('');
-  const claudeStatus = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeStatus ?? 'unknown' : 'unknown');
-  const isRestarting = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.isRestarting ?? false : false);
+  const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : null);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
@@ -177,25 +176,25 @@ const MobileSurfaceView = ({
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
-        const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeStatusCheckedAt ?? 0;
+        const prevCheckedAt = useTabStore.getState().tabs[tabId]?.claudeProcessCheckedAt ?? 0;
         fetch(`/api/check-claude?session=${tab.sessionName}`)
           .then((res) => res.json())
           .then(({ running, checkedAt }) => {
             const current = useTabStore.getState().tabs[tabId];
-            if (current && current.claudeStatusCheckedAt !== prevCheckedAt) {
-              if (current.claudeStatus !== (running ? 'starting' : 'not-running')) {
+            if (current && current.claudeProcessCheckedAt !== prevCheckedAt) {
+              if (current.claudeProcess !== running) {
                 setTimeout(() => {
                   fetch(`/api/check-claude?session=${tab.sessionName}`)
                     .then((r) => r.json())
                     .then(({ running, checkedAt }) => {
-                      useTabStore.getState().setClaudeStatus(tabId, running ? 'starting' : 'not-running', checkedAt);
+                      useTabStore.getState().setClaudeProcess(tabId, running, checkedAt);
                     })
                     .catch(() => {});
                 }, 500);
               }
               return;
             }
-            useTabStore.getState().setClaudeStatus(tabId, running ? 'starting' : 'not-running', checkedAt);
+            useTabStore.getState().setClaudeProcess(tabId, running, checkedAt);
           })
           .catch(() => {});
       }
@@ -351,7 +350,7 @@ const MobileSurfaceView = ({
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
-    useTabStore.getState().setRestarting(activeTabId, true);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
     const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
@@ -361,19 +360,19 @@ const MobileSurfaceView = ({
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = true;
-    useTabStore.getState().setRestarting(activeTabId, true);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId]);
 
   useEffect(() => {
-    if (!pendingRestartRef.current || claudeStatus === 'running' || claudeStatus === 'starting') return;
+    if (!pendingRestartRef.current || claudeProcess === true) return;
     pendingRestartRef.current = false;
     if (status !== 'connected') return;
     const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
     const settings = '--settings ~/.purplemux/hooks.json';
     const cmd = dangerous ? `claude ${settings} --dangerously-skip-permissions` : `claude ${settings}`;
     sendStdin(`${cmd}\r`);
-  }, [claudeStatus, status, sendStdin]);
+  }, [claudeProcess, status, sendStdin]);
 
   const handleWebUrlChange = useCallback((url: string) => {
     if (!activeTabId || !layoutWsId) return;
@@ -445,8 +444,6 @@ const MobileSurfaceView = ({
           onInputVisibleChange={handleInputVisibleChange}
           onRestartSession={handleRestartClaudeSession}
           onNewSession={handleNewClaudeSession}
-          isRestarting={isRestarting}
-          onRestartComplete={() => { if (activeTabId) useTabStore.getState().setRestarting(activeTabId, false); }}
         />
       )}
 
@@ -520,7 +517,7 @@ const MobileSurfaceView = ({
         </div>
       )}
 
-      {!noTabs && !isWebBrowser && !isDiff && !(isClaudeCode && (sessionView === 'loading' || sessionView === 'restarting')) && (
+      {!noTabs && !isWebBrowser && !isDiff && !(isClaudeCode && sessionView === 'check') && (
         <ConnectionStatus
           status={status}
           retryCount={retryCount}

@@ -1,11 +1,11 @@
-export type TClaudeStatus = 'unknown' | 'starting' | 'running' | 'not-running' | 'not-initialized' | 'not-installed';
+export type TSessionDetectionStatus = 'unknown' | 'starting' | 'running' | 'not-running' | 'not-initialized' | 'not-installed';
 
 export type TCliState = 'idle' | 'busy' | 'inactive' | 'ready-for-review' | 'needs-input' | 'cancelled' | 'unknown';
 
 export type TTimelineConnectionStatus = 'connecting' | 'connected' | 'reconnecting' | 'disconnected';
 
 export interface ISessionInfo {
-  status: TClaudeStatus;
+  status: TSessionDetectionStatus;
   sessionId: string | null;
   jsonlPath: string | null;
   pid: number | null;

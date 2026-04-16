@@ -11,7 +11,6 @@ import type {
   ITaskItem,
   IInitMeta,
   TCliState,
-  TClaudeStatus,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
 import UserMessageItem from '@/components/features/timeline/user-message-item';
@@ -35,7 +34,6 @@ interface ITimelineViewProps {
   initMeta?: IInitMeta;
   cliState: TCliState;
   compactingSince?: number | null;
-  claudeStatus: TClaudeStatus;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -147,7 +145,7 @@ const TimelineEntryRenderer = ({ entry, sessionName }: { entry: ITimelineEntry; 
 };
 
 const SkeletonLoader = () => (
-  <div className="flex flex-col gap-4 p-4">
+  <div className="animate-delayed-fade-in flex flex-col gap-4 p-4">
     {[48, 36, 40].map((w, i) => (
       <div key={i} className="flex flex-col gap-2">
         <div className="h-4 animate-pulse rounded bg-claude-active/20" style={{ width: `${w}%` }} />
@@ -202,39 +200,13 @@ const DisconnectedBanner = ({ onRetry }: { onRetry: () => void }) => {
   );
 };
 
-const EmptyState = ({ claudeStatus }: { claudeStatus: TClaudeStatus }) => {
+const EmptyState = () => {
   const t = useTranslations('timeline');
-
-  if (claudeStatus === 'not-installed') {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-        <Terminal size={32} className="opacity-40" />
-        <div className="text-center">
-          <p className="text-sm font-medium">{t('installClaude')}</p>
-          <p className="mt-1 text-xs">{t('installClaudeHint')}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (claudeStatus === 'running') {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-        <MessageSquareMore size={32} className="opacity-40" />
-        <p className="text-xs">{t('emptyRunning')}</p>
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
-      <Terminal size={32} className="opacity-40" />
-      <div className="text-center">
-        <p className="text-sm font-medium">{t('notRunningTitle')}</p>
-        <p className="mt-1 text-xs">
-          {t('notRunningHint')}<br />{t('notRunningHint2')}
-        </p>
-      </div>
+      <MessageSquareMore size={32} className="opacity-40" />
+      <p className="text-xs">{t('emptyRunning')}</p>
     </div>
   );
 };
@@ -248,7 +220,6 @@ const TimelineView = ({
   initMeta,
   cliState,
   compactingSince,
-  claudeStatus,
   wsStatus,
   isLoading,
   error,
@@ -376,7 +347,7 @@ const TimelineView = ({
   }
 
   if (!hasDisplayItems) {
-    return <EmptyState claudeStatus={claudeStatus} />;
+    return <EmptyState />;
   }
 
   const isReconnecting = wsStatus === 'reconnecting';

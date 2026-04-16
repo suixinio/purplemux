@@ -8,41 +8,28 @@ System that detects the in-progress state of the Claude CLI on the server, broad
 
 ## State Definitions
 
-### Claude Process State (`TClaudeStatus`)
+### Claude Process State (`claudeProcess: boolean | null`)
 
-State that determines whether the Claude CLI process is running inside a tmux pane. Managed independently from `cliState` and detected from two paths (terminal WS and timeline WS).
+Determines whether the Claude CLI process is running inside a tmux pane. Managed independently from `cliState` and detected from two paths (terminal WS and timeline WS).
 
-| State | Meaning |
+| Value | Meaning |
 | --- | --- |
-| `unknown` | Not yet detected (initial value, terminal WS not connected) |
-| `starting` | Claude process detected, session not ready (PID file/JSONL not present) |
-| `running` | Claude process running + session confirmed |
-| `not-running` | No Claude process |
-| `not-initialized` | Claude CLI installed but `~/.claude` not created |
-| `not-installed` | Claude CLI not installed |
+| `null` | Not yet detected (initial value) |
+| `true` | Claude process is running |
+| `false` | No Claude process |
+
+A separate `claudeInstalled: boolean` field (default `true`) gates the entire UI; if `false`, a "Claude not installed" screen is shown.
 
 Two detection paths:
 
 | Path | Trigger | Server check | Sets value |
 | --- | --- | --- | --- |
-| Terminal WS `onTitleChange` | tmux title change | `/api/check-claude` → `isClaudeRunning()` | `starting` / `not-running` |
-| Timeline WS | Session file change | `detectActiveSession()` | `running` / `not-running` |
+| Terminal WS `onTitleChange` | tmux title change | `/api/check-claude` → `isClaudeRunning()` | `true` / `false` |
+| Timeline WS | Session file change | `detectActiveSession()` | `true` / `false` |
 
-Both paths write to the same `claudeStatus` field; the `claudeStatusCheckedAt` server timestamp prevents stale updates.
+Both paths write to the same `claudeProcess` field; the `claudeProcessCheckedAt` server timestamp prevents stale updates.
 
-#### State Transition Guards
-
-`setClaudeStatus` blocks the following transitions:
-
-| Blocked transition | Reason |
-| --- | --- |
-| `running` → `starting` | `running` is the higher state (session confirmed); prevents downgrade |
-
-Additionally, `claude-code-panel` / `mobile-claude-code-panel` block the following inside the `onSync` callback:
-
-| Blocked transition | Reason |
-| --- | --- |
-| `starting` → `not-running` (via timeline) | The process was detected but the session is not yet ready. `not-running` via check-claude is still allowed |
+The server-side `detectActiveSession` still uses its own `TSessionDetectionStatus` type internally; the client-facing mapping is: `running`/`starting` → `true`, `not-running` → `false`, `not-installed` → `claudeInstalled = false`.
 
 ### CLI Work State (`TCliState`)
 
@@ -122,15 +109,19 @@ When the user selects an option on a permission prompt, Claude resumes work but 
 
 ### Session View (`TSessionView`)
 
-Derived state that decides which screen the Claude panel shows.
+Stored directly in the tab state (not derived). Decides which screen the Claude panel shows.
 
-| State | Condition |
-| --- | --- |
-| `loading` | `claudeStatus === 'starting'`, or `claudeStatus === 'running' && isTimelineLoading`, or `isResuming` |
-| `restarting` | `isRestarting === true` |
-| `not-installed` | `claudeStatus === 'not-installed'` |
-| `timeline` | `claudeStatus === 'running' && !isTimelineLoading` |
-| `inactive` | None of the above |
+| State | Meaning | Enter condition | Exit condition |
+| --- | --- | --- | --- |
+| `session-list` | Browsing past sessions | Default. Also entered when `claudeProcess` transitions `true → false` while in `timeline` | User clicks new/resume → `check` |
+| `check` | Terminal preparation + Claude start | User action (new conversation, resume, mode switch) | `claudeProcess` becomes `true` → auto-transition to `timeline` |
+| `timeline` | Active conversation | Auto from `check` when `claudeProcess = true`. Also set directly on initial load if `claudeProcess = true` | `claudeProcess` transitions `true → false` → auto-transition to `session-list` |
+
+The auto-transitions are handled inside `setClaudeProcess`: when `claudeProcess` becomes `true` and `sessionView` is `'check'` or `'session-list'`, it flips to `'timeline'`; when `claudeProcess` becomes `false` and `sessionView === 'timeline'`, it flips to `'session-list'`.
+
+Gates (checked before the view switch):
+- `claudeInstalled === false` → not-installed screen
+- `claudeProcess === null && view !== 'check'` → loading spinner
 
 ---
 
@@ -143,14 +134,14 @@ A Zustand store that manages all tab state as `Record<tabId, ITabState>`.
 | Field | Type | Source | Purpose |
 | --- | --- | --- | --- |
 | `terminalConnected` | `boolean` | Terminal WS | Whether input is allowed |
-| `claudeStatus` | `TClaudeStatus` | Terminal/Timeline WS | Decides the session view |
-| `claudeStatusCheckedAt` | `number` | Server timestamp | Prevent stale updates |
+| `claudeProcess` | `boolean \| null` | Terminal/Timeline WS | Process presence (`null` = not yet detected) |
+| `claudeProcessCheckedAt` | `number` | Server timestamp | Prevent stale updates |
+| `claudeInstalled` | `boolean` | Timeline WS | Gate for "not installed" screen |
+| `sessionView` | `TSessionView` | User action / auto-transition | Which screen to show |
 | `cliState` | `TCliState` | Server WS (`status:update` / hook derivation) | Work state, tab indicator |
 | `lastEvent` | `ILastEvent \| null` | Server WS (`status:hook-event`) | Track event order, trigger PermissionPrompt re-fetch |
 | `eventSeq` | `number` | Server WS | Monotonic counter to prevent reordering |
-| `isTimelineLoading` | `boolean` | Whether the timeline WS init has been received | Branch into the `loading` session view |
-| `isRestarting` | `boolean` | User "new conversation" action | Branch into the `restarting` session view |
-| `isResuming` | `boolean` | Session resume action | Branch into the `loading` session view |
+| `isTimelineLoading` | `boolean` | Timeline WS init received | Whether timeline data is still loading |
 | `compactingSince` | `number \| null` | `pre-compact`/`post-compact` hooks | Drives the timeline compacting indicator |
 
 ### Write Paths
@@ -430,18 +421,20 @@ tmux title change → onTitleChange
   ├─ formatTabTitle → updates tab display name
   └─ fetch /api/check-claude
       └─ isClaudeRunning(panePid)
-          └─ setClaudeStatus(tabId, 'starting' | 'not-running')
+          └─ setClaudeProcess(tabId, true | false)
+              (auto-transitions: check→timeline on true, timeline→session-list on false)
 ```
 
 ### Timeline WS Path (Sessions + Entries)
 
 ```
 Timeline WS connects → server runs detectActiveSession
-  ├─ session-changed → reflected in claudeStatus
+  ├─ session-changed → reflected in claudeProcess
   ├─ timeline:init → entries received, isTimelineLoading = false
   └─ timeline:append → entries appended
       └─ useTimeline.onSync callback
-          ├─ setClaudeStatus(tabId, status, checkedAt)
+          ├─ setClaudeProcess(tabId, true | false)
+          ├─ setClaudeInstalled(tabId, false) (if not-installed)
           └─ setTimelineLoading(tabId, loading)
 ```
 
@@ -496,7 +489,7 @@ With `hooks=debug` you see, for example:
 | File | Description |
 | --- | --- |
 | `src/types/status.ts` | `ITabStatusEntry`, `ILastEvent`, `TEventName`, `TTabDisplayStatus`, WebSocket messages |
-| `src/types/timeline.ts` | `TCliState`, `TClaudeStatus` |
+| `src/types/timeline.ts` | `TCliState`, `TSessionDetectionStatus` (server-only) |
 
 ### Server
 

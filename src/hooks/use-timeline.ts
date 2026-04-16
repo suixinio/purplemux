@@ -3,7 +3,6 @@ import type {
   ITimelineEntry,
   IInitMeta,
   ITaskItem,
-  TClaudeStatus,
   TCliState,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
@@ -16,7 +15,8 @@ interface IResumeCallbacks {
 }
 
 export interface ITimelineSyncState {
-  claudeStatus: TClaudeStatus;
+  claudeProcess: boolean | null;
+  claudeInstalled: boolean;
   isLoading: boolean;
 }
 
@@ -37,7 +37,8 @@ interface IUseTimelineReturn {
   sessionId: string | null;
   sessionSummary: string | undefined;
   initMeta: IInitMeta | undefined;
-  claudeStatus: TClaudeStatus;
+  claudeProcess: boolean | null;
+  claudeInstalled: boolean;
   wsStatus: TTimelineConnectionStatus;
   isLoading: boolean;
   error: string | null;
@@ -57,7 +58,8 @@ const useTimeline = ({
   getCliState,
 }: IUseTimelineOptions): IUseTimelineReturn => {
   const [entries, setEntries] = useState<ITimelineEntry[]>([]);
-  const [claudeStatus, setClaudeSession] = useState<TClaudeStatus>('unknown');
+  const [claudeProcess, setClaudeProcess] = useState<boolean | null>(null);
+  const [claudeInstalled, setClaudeInstalled] = useState(true);
   const [wsInitReceived, setWsInitReceived] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -83,7 +85,8 @@ const useTimeline = ({
   if (sessionName !== prevSessionName) {
     setPrevSessionName(sessionName);
     setWsInitReceived(false);
-    setClaudeSession('unknown');
+    setClaudeProcess(null);
+    setClaudeInstalled(true);
     setEntries([]);
     setError(null);
     setHasMore(false);
@@ -98,6 +101,7 @@ const useTimeline = ({
 
   const handleInit = useCallback((newEntries: ITimelineEntry[], _totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMoreInit?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean) => {
     setWsInitReceived(true);
+    setClaudeInstalled(true);
     setEntries((prev) => {
       const pendings = prev.filter(
         (e): e is ITimelineEntry & { type: 'user-message'; pending: true } =>
@@ -125,9 +129,9 @@ const useTimeline = ({
     }
     if (initSessionId) {
       setSessionId(initSessionId);
-      setClaudeSession('running');
+      setClaudeProcess(true);
     } else if (!isClaudeStarting) {
-      setClaudeSession('not-running');
+      setClaudeProcess(false);
     }
     setError(null);
   }, []);
@@ -196,7 +200,7 @@ const useTimeline = ({
 
   const handleSessionChanged = useCallback((newSessionId: string, reason: string) => {
     if (reason === 'session-ended') {
-      setClaudeSession('not-running');
+      setClaudeProcess(false);
       setWsInitReceived(true);
       setEntries([]);
       setSessionSummary(undefined);
@@ -206,15 +210,15 @@ const useTimeline = ({
     }
     if (reason === 'session-waiting') {
       if (newSessionId) {
-        setClaudeSession('running');
+        setClaudeProcess(true);
         setSessionId(newSessionId);
       } else {
-        setClaudeSession('starting');
+        setClaudeProcess(true);
       }
       return;
     }
     setSessionId(newSessionId || null);
-    setClaudeSession('running');
+    setClaudeProcess(true);
     setEntries([]);
     setSessionSummary(undefined);
     setInitMeta(undefined);
@@ -245,7 +249,7 @@ const useTimeline = ({
 
   const handleError = useCallback((err: { code: string; message: string }) => {
     if (err.code === 'not-installed') {
-      setClaudeSession('not-installed');
+      setClaudeInstalled(false);
       return;
     }
     console.warn(`[timeline] WebSocket error: ${err.code} — ${err.message}`);
@@ -262,7 +266,7 @@ const useTimeline = ({
         jsonlPathRef.current = payload.jsonlPath;
       }
       setSessionId(payload.sessionId);
-      setClaudeSession('running');
+      setClaudeProcess(true);
       setEntries([]);
       setWsInitReceived(false);
       resumeCallbacksRef.current?.onResumeStarted?.(payload);
@@ -306,8 +310,8 @@ const useTimeline = ({
   useEffect(() => { onSyncRef.current = onSync; }, [onSync]);
 
   useEffect(() => {
-    onSyncRef.current?.({ claudeStatus, isLoading });
-  }, [claudeStatus, isLoading]);
+    onSyncRef.current?.({ claudeProcess, claudeInstalled, isLoading });
+  }, [claudeProcess, claudeInstalled, isLoading]);
 
   const tasks = useMemo((): ITaskItem[] => {
     const items: ITaskItem[] = [];
@@ -341,7 +345,8 @@ const useTimeline = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeStatus,
+    claudeProcess,
+    claudeInstalled,
     wsStatus,
     isLoading,
     error,

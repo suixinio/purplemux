@@ -192,7 +192,7 @@ const MobileTerminalPage = () => {
     if (newTab) {
       useTabStore.getState().initTab(newTab.id, { panelType, workspaceId: activeWorkspaceId ?? '' });
       if (options?.command === 'claude-new') {
-        useTabStore.getState().setRestarting(newTab.id, true);
+        useTabStore.getState().setSessionView(newTab.id, 'check');
       }
     }
   }, [currentPane, layout, activeWorkspaceId]);

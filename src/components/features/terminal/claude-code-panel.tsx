@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import useTimeline from '@/hooks/use-timeline';
 import useSessionList from '@/hooks/use-session-list';
 import useStartingPrompt from '@/hooks/use-starting-prompt';
-import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
+import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import SessionListView from '@/components/features/terminal/session-list-view';
 import SessionEmptyView from '@/components/features/terminal/session-empty-view';
 import BypassPromptCard from '@/components/features/terminal/bypass-prompt-card';
@@ -39,10 +39,8 @@ const ClaudeCodePanel = ({
   const t = useTranslations('terminal');
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
 
-  const claudeStatus = useTabStore((s) => s.tabs[tabId]?.claudeStatus ?? 'unknown');
-  const isRestarting = useTabStore((s) => s.tabs[tabId]?.isRestarting ?? false);
-  const isResuming = useTabStore((s) => s.tabs[tabId]?.isResuming ?? false);
-  const storeTimelineLoading = useTabStore((s) => s.tabs[tabId]?.isTimelineLoading ?? true);
+  const claudeProcess = useTabStore((s) => s.tabs[tabId]?.claudeProcess ?? null);
+  const claudeInstalled = useTabStore((s) => s.tabs[tabId]?.claudeInstalled ?? true);
   const storeCliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
   const compactingSince = useTabStore((s) => s.tabs[tabId]?.compactingSince ?? null);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
@@ -50,9 +48,8 @@ const ClaudeCodePanel = ({
   const handleResumeStarted = useCallback(
     () => {
       setResumingSessionId(null);
-      useTabStore.getState().setResuming(tabId, true);
     },
-    [tabId],
+    [],
   );
 
   const handleResumeBlocked = useCallback(
@@ -78,7 +75,7 @@ const ClaudeCodePanel = ({
     sessionId,
     sessionSummary,
     initMeta,
-    claudeStatus: claudeStatusFromTimeline,
+    claudeProcess: claudeProcessFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -97,15 +94,12 @@ const ClaudeCodePanel = ({
       onResumeError: handleResumeError,
     },
     onSync: (state) => {
-      const current = useTabStore.getState().tabs[tabId];
-      // 타임라인 로딩 중에는 스토어의 기존 상태를 보존 (탭 전환 시 깜빡임 방지)
-      if (state.isLoading && current && current.claudeStatus !== 'unknown') {
-        useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
-        return;
+      const checkedAt = Date.now();
+      if (state.claudeProcess !== null) {
+        useTabStore.getState().setClaudeProcess(tabId, state.claudeProcess, checkedAt);
       }
-      if (!(current?.claudeStatus === 'starting' && state.claudeStatus === 'not-running')) {
-        const checkedAt = Math.max(Date.now(), (current?.claudeStatusCheckedAt ?? 0) + 1);
-        useTabStore.getState().setClaudeStatus(tabId, state.claudeStatus, checkedAt);
+      if (!state.claudeInstalled) {
+        useTabStore.getState().setClaudeInstalled(tabId, false);
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     },
@@ -122,7 +116,7 @@ const ClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && claudeStatus !== 'running' && claudeStatus !== 'starting',
+    enabled: !!sessionName && claudeProcess !== true,
     cwd,
   });
 
@@ -134,38 +128,14 @@ const ClaudeCodePanel = ({
     };
   }, [addPendingMessageRef, addPendingUserMessage]);
 
-  const prevClaudeStatusRef = useRef(claudeStatus);
+  const prevClaudeProcessRef = useRef(claudeProcess);
   useEffect(() => {
-    const prev = prevClaudeStatusRef.current;
-    prevClaudeStatusRef.current = claudeStatus;
-    if (prev !== 'running' && claudeStatus === 'running' && claudeStatusFromTimeline !== 'running' && !isRestarting) {
+    const prev = prevClaudeProcessRef.current;
+    prevClaudeProcessRef.current = claudeProcess;
+    if (prev !== true && claudeProcess === true && claudeProcessFromTimeline !== true) {
       retrySession();
     }
-  }, [claudeStatus, claudeStatusFromTimeline, retrySession, isRestarting]);
-
-  const restartNeedsExitRef = useRef(false);
-  const prevIsRestartingRef = useRef(isRestarting);
-
-  useEffect(() => {
-    if (isRestarting && !prevIsRestartingRef.current) {
-      restartNeedsExitRef.current = claudeStatus === 'running' || claudeStatus === 'starting';
-    }
-    prevIsRestartingRef.current = isRestarting;
-
-    if (!isRestarting) return;
-
-    if (restartNeedsExitRef.current && claudeStatus !== 'running' && claudeStatus !== 'starting') {
-      restartNeedsExitRef.current = false;
-    }
-
-    if (isCliIdle(storeCliState) && !restartNeedsExitRef.current && claudeStatus === 'running' && !storeTimelineLoading) {
-      useTabStore.getState().setRestarting(tabId, false);
-    }
-  }, [isRestarting, claudeStatus, storeCliState, storeTimelineLoading, tabId]);
-
-  const effectiveCliState = claudeStatus !== 'running' && claudeStatus !== 'starting' && storeCliState !== 'inactive'
-    ? 'inactive' as const
-    : storeCliState;
+  }, [claudeProcess, claudeProcessFromTimeline, retrySession]);
 
   useEffect(() => {
     if (storeCliState !== 'unknown') return;
@@ -179,7 +149,7 @@ const ClaudeCodePanel = ({
     return () => controller.abort();
   }, [tabId, storeCliState]);
 
-  const startingPromptOptions = useStartingPrompt(claudeStatus === 'starting', sessionName);
+  const startingPromptOptions = useStartingPrompt(view === 'check', sessionName);
 
   const handleSelectSession = useCallback(
     (sid: string) => {
@@ -190,23 +160,29 @@ const ClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (view === 'restarting') {
+  if (!claudeInstalled) {
     return (
-      <div className={cn('flex h-full w-full flex-col items-center justify-center', className)}>
-        <Spinner className="h-4 w-4 text-muted-foreground" />
-        <span className="mt-2 text-sm text-muted-foreground">{t('creatingConversation')}</span>
+      <div className={cn('flex h-full w-full flex-col items-center justify-center gap-3 text-muted-foreground', className)}>
+        <span className="text-sm font-medium">{t('installClaude')}</span>
+        <span className="text-xs">{t('installClaudeHint')}</span>
       </div>
     );
   }
 
-  if (view === 'loading' || (view === 'inactive' && sessions.length === 0 && isSessionListLoading)) {
+  if (claudeProcess === null && view !== 'check') {
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
         <Spinner className="h-4 w-4 text-muted-foreground" />
-        {isResuming && (
-          <span className="mt-2 text-sm text-muted-foreground">{t('resumingSession')}</span>
-        )}
-        {!isResuming && startingPromptOptions && (
+      </div>
+    );
+  }
+
+  if (view === 'check') {
+    return (
+      <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
+        <Spinner className="h-4 w-4 text-muted-foreground" />
+        <span className="mt-2 text-sm text-muted-foreground">{claudeSessionId ? t('resumingSession') : t('creatingConversation')}</span>
+        {startingPromptOptions && (
           startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
             <BypassPromptCard
               sessionName={sessionName}
@@ -233,7 +209,14 @@ const ClaudeCodePanel = ({
     );
   }
 
-  if (view === 'inactive') {
+  if (view === 'session-list') {
+    if (isSessionListLoading && sessions.length === 0) {
+      return (
+        <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
+          <Spinner className="h-4 w-4 text-muted-foreground" />
+        </div>
+      );
+    }
     if (sessions.length === 0 && !sessionListError) {
       return (
         <div className={cn('h-full w-full', className)}>
@@ -270,9 +253,8 @@ const ClaudeCodePanel = ({
           sessionName={sessionName}
           tabId={tabId}
           initMeta={initMeta}
-          cliState={effectiveCliState}
+          cliState={storeCliState}
           compactingSince={compactingSince}
-          claudeStatus={claudeStatusFromTimeline}
           wsStatus={wsStatus}
           isLoading={isTimelineLoading}
           error={timelineError}

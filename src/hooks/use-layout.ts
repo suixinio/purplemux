@@ -430,7 +430,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       const newTab: ITab = await res.json();
 
       if (command) {
-        useTabStore.getState().initTab(newTab.id, { panelType, isRestarting: true });
+        useTabStore.getState().initTab(newTab.id, { panelType, sessionView: 'check' });
       }
 
       applyPaneUpdate(set, get, paneId, (pane) => ({
@@ -699,7 +699,7 @@ export const navigateToTabOrCreate = async (
     if (!firstTab) return;
 
     if (claudeSessionId) {
-      useTabStore.getState().initTab(firstTab.id, { panelType: 'claude-code', isResuming: true });
+      useTabStore.getState().initTab(firstTab.id, { panelType: 'claude-code', sessionView: 'check' });
     }
 
     navigateToTab(targetWsId, firstTab.id);
@@ -730,7 +730,7 @@ export const navigateToTabOrCreate = async (
   const newTab: ITab = await tabRes.json();
 
   if (claudeSessionId) {
-    useTabStore.getState().initTab(newTab.id, { panelType: 'claude-code', isResuming: true });
+    useTabStore.getState().initTab(newTab.id, { panelType: 'claude-code', sessionView: 'check' });
   }
 
   if (targetWsId === useLayoutStore.getState().workspaceId) {
