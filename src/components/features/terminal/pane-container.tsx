@@ -685,7 +685,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     const cmd = pendingRestartRef.current;
     pendingRestartRef.current = null;
     if (status !== 'connected') return;
-    sendStdin(`${cmd}\r`);
+    const timer = setTimeout(() => sendStdin(`${cmd}\r`), 300);
+    return () => clearTimeout(timer);
   }, [claudeStatus, status, sendStdin]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
