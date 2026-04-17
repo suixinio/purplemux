@@ -9,7 +9,9 @@ const isInitMode = () => !!process.env.INIT_PASSWORD;
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const setup = await needsSetup();
-    return res.status(200).json({ needsSetup: setup, requiresAuth: setup && isInitMode() });
+    const requiresAuth =
+      setup && isInitMode() && !(await verifyRequestSession(req.headers.cookie));
+    return res.status(200).json({ needsSetup: setup, requiresAuth });
   }
 
   if (req.method === 'POST') {
