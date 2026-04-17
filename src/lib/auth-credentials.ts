@@ -1,39 +1,49 @@
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import {
+  readConfig,
+  updateConfig,
+  hashPassword,
+  generateSecret,
+  isHashedPassword,
+  MIN_PASSWORD_LENGTH,
+} from '@/lib/config-store';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('auth-credentials');
 
 interface IAuthCredentials {
   password: string;
   secret: string;
+  init: boolean;
 }
 
-const BASE_DIR = path.join(os.homedir(), '.purplemux');
-const CONFIG_FILE = path.join(BASE_DIR, 'config.json');
-
-const readConfigAuth = (): { password: string; secret: string } | null => {
-  try {
-    const data = JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf-8'));
-    if (data.authPassword && data.authSecret) {
-      return { password: data.authPassword, secret: data.authSecret };
-    }
-  } catch {
-    // ignore
+const consumeInitPasswordEnv = (): string | null => {
+  const value = process.env.INIT_PASSWORD;
+  if (!value) return null;
+  if (value.length < MIN_PASSWORD_LENGTH) {
+    log.warn(`INIT_PASSWORD ignored: must be at least ${MIN_PASSWORD_LENGTH} characters`);
+    delete process.env.INIT_PASSWORD;
+    return null;
   }
-  return null;
+  return value;
 };
 
-export const initAuthCredentials = (): (IAuthCredentials & { fixed: boolean }) | null => {
-  // 1. Environment variables take priority
-  if (process.env.AUTH_PASSWORD && process.env.NEXTAUTH_SECRET) {
-    return { password: process.env.AUTH_PASSWORD, secret: process.env.NEXTAUTH_SECRET, fixed: true };
+export const initAuthCredentials = async (): Promise<IAuthCredentials | null> => {
+  const config = await readConfig();
+
+  if (isHashedPassword(config?.authPassword) && config?.authSecret) {
+    delete process.env.INIT_PASSWORD;
+    return { password: config.authPassword!, secret: config.authSecret, init: false };
   }
 
-  // 2. Stored credentials from config.json
-  const stored = readConfigAuth();
-  if (stored) {
-    return { ...stored, fixed: true };
+  const initPassword = consumeInitPasswordEnv();
+  if (!initPassword) return null;
+
+  const hashed = await hashPassword(initPassword);
+  const secret = config?.authSecret ?? generateSecret();
+
+  if (!config?.authSecret) {
+    await updateConfig({ authSecret: secret });
   }
 
-  // 3. Password not set — will be configured during onboarding
-  return null;
+  return { password: hashed, secret, init: true };
 };

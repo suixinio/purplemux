@@ -80,6 +80,12 @@ export const writeConfig = async (data: IConfigData): Promise<void> => {
 
 const SCRYPT_KEYLEN = 64;
 const SCRYPT_SALT_LEN = 16;
+const SCRYPT_PREFIX = 'scrypt:';
+
+export const MIN_PASSWORD_LENGTH = 4;
+
+export const isHashedPassword = (value: string | undefined | null): boolean =>
+  typeof value === 'string' && value.startsWith(SCRYPT_PREFIX);
 
 export const hashPassword = async (plain: string): Promise<string> => {
   const salt = crypto.randomBytes(SCRYPT_SALT_LEN);
@@ -89,11 +95,11 @@ export const hashPassword = async (plain: string): Promise<string> => {
       else resolve(key);
     });
   });
-  return `scrypt:${salt.toString('hex')}:${derived.toString('hex')}`;
+  return `${SCRYPT_PREFIX}${salt.toString('hex')}:${derived.toString('hex')}`;
 };
 
 export const verifyPassword = async (plain: string, stored: string): Promise<boolean> => {
-  if (!stored.startsWith('scrypt:')) return false;
+  if (!isHashedPassword(stored)) return false;
   const [, saltHex, hashHex] = stored.split(':');
   const salt = Buffer.from(saltHex, 'hex');
   const expected = Buffer.from(hashHex, 'hex');
@@ -120,7 +126,7 @@ export const updateConfig = async (updates: Partial<Omit<IConfigData, 'updatedAt
 
 export const needsSetup = async (): Promise<boolean> => {
   const data = await readConfig();
-  return !data?.authPassword || !data.authPassword.startsWith('scrypt:');
+  return !isHashedPassword(data?.authPassword);
 };
 
 export const initConfigStore = async (): Promise<void> => {

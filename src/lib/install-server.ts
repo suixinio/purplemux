@@ -3,7 +3,7 @@ import { IncomingMessage } from 'http';
 import * as pty from 'node-pty';
 import os from 'os';
 import { needsSetup } from '@/lib/config-store';
-import { verifySessionToken, SESSION_COOKIE, extractCookie } from '@/lib/auth';
+import { verifyRequestSession } from '@/lib/auth';
 import { sanitizedEnv } from '@/lib/tmux';
 import { MSG_STDIN, MSG_RESIZE, encodeStdout, textDecoder } from '@/lib/terminal-protocol';
 import { createLogger } from '@/lib/logger';
@@ -75,8 +75,7 @@ export const handleInstallConnection = async (ws: WebSocket, request: IncomingMe
       ws.close(1008, 'Command only available during onboarding');
       return;
     }
-    const token = extractCookie(request.headers.cookie ?? '', SESSION_COOKIE);
-    if (!token || !(await verifySessionToken(token))) {
+    if (!(await verifyRequestSession(request.headers.cookie))) {
       ws.close(1008, 'Unauthorized');
       return;
     }

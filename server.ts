@@ -325,7 +325,7 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
 
   await Promise.all([initConfigStore(), initShellPath()]);
 
-  const credentials = initAuthCredentials();
+  const credentials = await initAuthCredentials();
   if (credentials) {
     process.env.AUTH_PASSWORD = credentials.password;
     process.env.NEXTAUTH_SECRET = credentials.secret;
@@ -351,7 +351,12 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   console.log(`  \x1b[1m\x1b[35m⚡ purplemux\x1b[0m  \x1b[2mv${pkg.version}\x1b[0m`);
   console.log(`  \x1b[2m➜\x1b[0m  Local:  \x1b[36mhttp://localhost:${result.port}\x1b[0m`);
   console.log(`  \x1b[2m➜\x1b[0m  Mode:   \x1b[33m${mode}\x1b[0m`);
-  console.log(`  \x1b[2m➜\x1b[0m  Auth:   ${credentials ? '\x1b[32mconfigured\x1b[0m' : `\x1b[33mwaiting for onboarding\x1b[0m \x1b[2m(http://localhost:${result.port}/login)\x1b[0m`}`);
+  const authStatus = !credentials
+    ? `\x1b[33mwaiting for onboarding\x1b[0m \x1b[2m(http://localhost:${result.port}/login)\x1b[0m`
+    : credentials.init
+      ? `\x1b[33minit password\x1b[0m \x1b[2m(onboarding required)\x1b[0m`
+      : `\x1b[32mconfigured\x1b[0m`;
+  console.log(`  \x1b[2m➜\x1b[0m  Auth:   ${authStatus}`);
   console.log('');
 
   return result;

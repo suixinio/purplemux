@@ -1,12 +1,15 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { needsSetup, updateConfig, generateSecret, hashPassword } from '@/lib/config-store';
+import { verifyRequestSession } from '@/lib/auth';
 
 let setupLock: Promise<void> = Promise.resolve();
+
+const isInitMode = () => !!process.env.INIT_PASSWORD;
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const setup = await needsSetup();
-    return res.status(200).json({ needsSetup: setup });
+    return res.status(200).json({ needsSetup: setup, requiresAuth: setup && isInitMode() });
   }
 
   if (req.method === 'POST') {
@@ -27,6 +30,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         return res.status(400).json({ error: 'Setup already completed.' });
       }
 
+      if (isInitMode() && !(await verifyRequestSession(req.headers.cookie))) {
+        return res.status(401).json({ error: 'Authentication required.' });
+      }
+
       const hashedPassword = await hashPassword(authPassword);
       const authSecret = generateSecret();
 
@@ -41,6 +48,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
       process.env.AUTH_PASSWORD = hashedPassword;
       process.env.NEXTAUTH_SECRET = authSecret;
+      delete process.env.INIT_PASSWORD;
 
       return res.status(200).json({ ok: true });
     } finally {

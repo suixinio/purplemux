@@ -52,3 +52,9 @@ export const extractCookie = (header: string, name: string): string | undefined 
   }
   return undefined;
 };
+
+export const verifyRequestSession = async (cookieHeader: string | undefined): Promise<boolean> => {
+  const token = extractCookie(cookieHeader ?? '', SESSION_COOKIE);
+  if (!token) return false;
+  return !!(await verifySessionToken(token));
+};

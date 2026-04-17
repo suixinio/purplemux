@@ -9,7 +9,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useState } from 'react';
 import isElectron from '@/hooks/use-is-electron';
 
-export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) => {
+interface ILoginFormProps extends React.ComponentProps<'div'> {
+  onSuccess?: () => void;
+}
+
+export const LoginForm = ({ className, onSuccess, ...props }: ILoginFormProps) => {
   const t = useTranslations('login');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -32,6 +36,8 @@ export const LoginForm = ({ className, ...props }: React.ComponentProps<'div'>) 
       const data = await res.json().catch(() => null);
       setError(data?.error ?? t('invalidPassword'));
       setIsLoading(false);
+    } else if (onSuccess) {
+      onSuccess();
     } else {
       window.location.href = '/';
     }
