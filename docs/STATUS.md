@@ -241,7 +241,7 @@ Normal tabs go through the shell script above, but **agent tabs / brain sessions
 
 ### Hook API Endpoint
 
-`/api/status/hook` — localhost only. Receives `event` and `session` and calls `StatusManager.updateTabFromHook()`. If `event` is `poll` or `session` is missing, it triggers a full poll.
+`/api/status/hook` — requires `x-pmux-token` header (same CLI token as `/api/cli/*`). Receives `event` and `session` and calls `StatusManager.updateTabFromHook()`. If `event` is `poll` or `session` is missing, it triggers a full poll.
 
 ### Processing Flow (`updateTabFromHook`)
 
@@ -368,7 +368,7 @@ Removing the `cliState` decision and the `hasPermissionPrompt` check has reduced
   └─ curl POST /api/status/hook
      │
      ▼
-[/api/status/hook] (localhost only)
+[/api/status/hook] (x-pmux-token required)
   └─ StatusManager.updateTabFromHook(session, event)
      │
      ├─ entry.eventSeq++
@@ -498,7 +498,7 @@ With `hooks=debug` you see, for example:
 | `src/lib/status-manager.ts` | `deriveStateFromEvent`, `updateTabFromHook`, `applyCliState`, `resolveUnknown`, `readTabMetadata`, busy stuck safety net, metadata poll, JSONL watcher |
 | `src/lib/status-server.ts` | `/api/status` WebSocket handler |
 | `src/lib/hook-settings.ts` | Hook settings file generation, script management |
-| `src/pages/api/status/hook.ts` | Hook API endpoint (localhost only) |
+| `src/pages/api/status/hook.ts` | Hook API endpoint (x-pmux-token required) |
 | `src/lib/session-detection.ts` | `detectActiveSession`, `isClaudeRunning` |
 | `src/pages/api/check-claude.ts` | Claude process detection API |
 | `src/lib/layout-store.ts` | `updateTabCliStatus`, etc. (layout JSON writes) |

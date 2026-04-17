@@ -16,8 +16,11 @@ export const HOOK_SETTINGS_PATH = HOOKS_FILE;
 const HOOK_SCRIPT_CONTENT = `#!/bin/sh
 EVENT="\${1:-poll}"
 PORT_FILE="$HOME/.purplemux/port"
+TOKEN_FILE="$HOME/.purplemux/cli-token"
 [ -f "$PORT_FILE" ] || exit 0
+[ -f "$TOKEN_FILE" ] || exit 0
 PORT=$(cat "$PORT_FILE")
+TOKEN=$(cat "$TOKEN_FILE")
 SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null) || SESSION=""
 
 NOTIFICATION_TYPE=""
@@ -31,7 +34,7 @@ if [ -n "$NOTIFICATION_TYPE" ]; then
 fi
 PAYLOAD="\${PAYLOAD}}"
 
-curl -s -X POST -o /dev/null -H 'Content-Type: application/json' -d "$PAYLOAD" "http://localhost:\${PORT}/api/status/hook" 2>/dev/null
+curl -s -X POST -o /dev/null -H 'Content-Type: application/json' -H "x-pmux-token: \${TOKEN}" -d "$PAYLOAD" "http://localhost:\${PORT}/api/status/hook" 2>/dev/null
 exit 0
 `;
 

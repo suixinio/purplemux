@@ -1,13 +1,9 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
+import { verifyCliToken } from '@/lib/cli-token';
 import { getStatusManager } from '@/lib/status-manager';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('hooks');
-
-const isLocalRequest = (req: NextApiRequest): boolean => {
-  const ip = req.socket.remoteAddress;
-  return ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
-};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'POST') {
@@ -15,7 +11,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  if (!isLocalRequest(req)) {
+  if (!verifyCliToken(req)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
 
