@@ -7,7 +7,7 @@ type TMessages = Record<string, Record<string, unknown>>;
 const NAMESPACES = [
   'common', 'sidebar', 'header', 'terminal', 'connection',
   'workspace', 'login', 'onboarding', 'settings', 'stats',
-  'reset', 'reports', 'agents', 'agent', 'timeline',
+  'reset', 'reports', 'timeline',
   'notification', 'session', 'messageHistory', 'webBrowser',
   'mobile', 'toolsRequired', 'diff',
 ] as const;
