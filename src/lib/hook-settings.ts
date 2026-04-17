@@ -64,35 +64,6 @@ const buildHookSettings = () => ({
   },
 });
 
-export const buildAgentTabHookSettings = (port: number, agentId: string, tabId: string) => ({
-  hooks: {
-    Stop: [
-      {
-        matcher: '',
-        hooks: [
-          {
-            type: 'http',
-            url: `http://localhost:${port}/api/agent-rpc/${agentId}/tab/${tabId}/hook`,
-            timeout: 3,
-          },
-        ],
-      },
-    ],
-    StopFailure: [
-      {
-        matcher: '',
-        hooks: [
-          {
-            type: 'http',
-            url: `http://localhost:${port}/api/agent-rpc/${agentId}/tab/${tabId}/hook`,
-            timeout: 3,
-          },
-        ],
-      },
-    ],
-  },
-});
-
 export const ensureHookSettings = async (port: number): Promise<void> => {
   await fs.mkdir(BASE_DIR, { recursive: true });
 

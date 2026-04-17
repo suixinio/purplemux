@@ -1,12 +1,11 @@
 #!/usr/bin/env node
-// purplemux CLI — agent-facing HTTP API wrapper
-// Reads PMUX_PORT, PMUX_TOKEN, PMUX_AGENT_ID from environment.
+// purplemux CLI — workspace-scoped HTTP API wrapper
+// Reads PMUX_PORT, PMUX_TOKEN from environment.
 
 'use strict';
 
 const PORT = process.env.PMUX_PORT;
 const TOKEN = process.env.PMUX_TOKEN;
-const AGENT_ID = process.env.PMUX_AGENT_ID;
 const BASE = `http://localhost:${PORT}`;
 
 const die = (msg) => {
@@ -19,15 +18,7 @@ const requireEnv = () => {
   if (!TOKEN) die('PMUX_TOKEN is not set');
 };
 
-const requireAgentId = () => {
-  if (!AGENT_ID) die('PMUX_AGENT_ID is not set');
-};
-
-const json = (res, body) => {
-  if (!res.ok) {
-    const msg = body?.error || `HTTP ${res.status}`;
-    die(msg);
-  }
+const out = (body) => {
   process.stdout.write(JSON.stringify(body, null, 2) + '\n');
 };
 
@@ -35,7 +26,7 @@ const api = async (method, path, data) => {
   const url = `${BASE}${path}`;
   const opts = {
     method,
-    headers: { 'X-Agent-Token': TOKEN, 'Content-Type': 'application/json' },
+    headers: { 'X-Pmux-Token': TOKEN, 'Content-Type': 'application/json' },
   };
   if (data !== undefined) opts.body = JSON.stringify(data);
   const resp = await fetch(url, opts);
@@ -49,117 +40,103 @@ const api = async (method, path, data) => {
   return { resp, body };
 };
 
-// --- Commands ---
-
 const cmdWorkspaces = async () => {
   requireEnv();
-  const { body } = await api('GET', '/api/agent-rpc/workspaces');
-  json({ ok: true }, body);
+  const { body } = await api('GET', '/api/cli/workspaces');
+  out(body);
 };
 
-const cmdTabList = async () => {
+const cmdTabList = async (args) => {
   requireEnv();
-  requireAgentId();
-  const { body } = await api('GET', `/api/agent-rpc/${AGENT_ID}/tab`);
-  json({ ok: true }, body);
+  const wsId = flagValue(args, '--workspace') || flagValue(args, '-w');
+  const qs = wsId ? `?workspaceId=${encodeURIComponent(wsId)}` : '';
+  const { body } = await api('GET', `/api/cli/tabs${qs}`);
+  out(body);
 };
 
 const cmdTabCreate = async (args) => {
   requireEnv();
-  requireAgentId();
-  const workspaceId = flagValue(args, '--workspace') || flagValue(args, '-w');
-  const taskTitle = flagValue(args, '--title') || flagValue(args, '-t');
-  if (!workspaceId) die('--workspace is required');
-  const { body } = await api('POST', `/api/agent-rpc/${AGENT_ID}/tab`, {
-    workspaceId,
-    ...(taskTitle ? { taskTitle } : {}),
+  const wsId = flagValue(args, '--workspace') || flagValue(args, '-w');
+  const name = flagValue(args, '--name') || flagValue(args, '-n');
+  const panelType = flagValue(args, '--type') || flagValue(args, '-t');
+  if (!wsId) die('--workspace is required');
+  const { body } = await api('POST', '/api/cli/tabs', {
+    workspaceId: wsId,
+    ...(name ? { name } : {}),
+    ...(panelType ? { panelType } : {}),
   });
-  json({ ok: true }, body);
+  out(body);
+};
+
+const resolveWsForTab = (args) => {
+  const wsId = flagValue(args, '--workspace') || flagValue(args, '-w');
+  if (!wsId) die('--workspace is required');
+  return wsId;
 };
 
 const cmdTabSend = async (args) => {
   requireEnv();
-  requireAgentId();
-  const tabId = args[0];
-  const content = args.slice(1).join(' ');
+  const rest = stripFlags(args, ['--workspace', '-w']);
+  const tabId = rest[0];
+  const content = rest.slice(1).join(' ');
   if (!tabId) die('tab ID is required');
   if (!content) die('content is required');
-  const { body } = await api('POST', `/api/agent-rpc/${AGENT_ID}/tab/${tabId}/send`, { content });
-  json({ ok: true }, body);
+  const wsId = resolveWsForTab(args);
+  const { body } = await api(
+    'POST',
+    `/api/cli/tabs/${tabId}/send?workspaceId=${encodeURIComponent(wsId)}`,
+    { content },
+  );
+  out(body);
 };
 
 const cmdTabStatus = async (args) => {
   requireEnv();
-  requireAgentId();
-  const tabId = args[0];
+  const rest = stripFlags(args, ['--workspace', '-w']);
+  const tabId = rest[0];
   if (!tabId) die('tab ID is required');
-  const { body } = await api('GET', `/api/agent-rpc/${AGENT_ID}/tab/${tabId}/status`);
-  json({ ok: true }, body);
+  const wsId = resolveWsForTab(args);
+  const { body } = await api(
+    'GET',
+    `/api/cli/tabs/${tabId}/status?workspaceId=${encodeURIComponent(wsId)}`,
+  );
+  out(body);
 };
 
 const cmdTabResult = async (args) => {
   requireEnv();
-  requireAgentId();
-  const tabId = args[0];
+  const rest = stripFlags(args, ['--workspace', '-w']);
+  const tabId = rest[0];
   if (!tabId) die('tab ID is required');
-  const { body } = await api('GET', `/api/agent-rpc/${AGENT_ID}/tab/${tabId}/result`);
-  json({ ok: true }, body);
+  const wsId = resolveWsForTab(args);
+  const { body } = await api(
+    'GET',
+    `/api/cli/tabs/${tabId}/result?workspaceId=${encodeURIComponent(wsId)}`,
+  );
+  out(body);
 };
 
 const cmdTabClose = async (args) => {
   requireEnv();
-  requireAgentId();
-  const tabId = args[0];
+  const rest = stripFlags(args, ['--workspace', '-w']);
+  const tabId = rest[0];
   if (!tabId) die('tab ID is required');
-  const { resp } = await api('DELETE', `/api/agent-rpc/${AGENT_ID}/tab/${tabId}`);
+  const wsId = resolveWsForTab(args);
+  const { resp } = await api(
+    'DELETE',
+    `/api/cli/tabs/${tabId}?workspaceId=${encodeURIComponent(wsId)}`,
+  );
   if (resp.ok) process.stdout.write('ok\n');
-};
-
-const cmdMemorySave = async (args) => {
-  requireEnv();
-  requireAgentId();
-  const tagsRaw = flagValue(args, '--tags');
-  const tags = tagsRaw ? tagsRaw.split(',').map((t) => t.trim()) : [];
-  const content = stripFlags(args, ['--tags']).join(' ');
-  if (!content) die('content is required');
-  const { body } = await api('POST', `/api/agent-rpc/${AGENT_ID}/memory`, { content, tags });
-  json({ ok: true }, body);
-};
-
-const cmdMemorySearch = async (args) => {
-  requireEnv();
-  requireAgentId();
-  const q = flagValue(args, '--q') || flagValue(args, '-q') || '';
-  const tag = flagValue(args, '--tag') || '';
-  const params = new URLSearchParams();
-  if (q) params.set('q', q);
-  if (tag) params.set('tag', tag);
-  const qs = params.toString();
-  const { body } = await api('GET', `/api/agent-rpc/${AGENT_ID}/memory${qs ? '?' + qs : ''}`);
-  json({ ok: true }, body);
-};
-
-const cmdMemoryDelete = async (args) => {
-  requireEnv();
-  requireAgentId();
-  const memoryId = args[0];
-  if (!memoryId) die('memory ID is required');
-  const { body } = await api('DELETE', `/api/agent-rpc/${AGENT_ID}/memory/${memoryId}`);
-  json({ ok: true }, body);
 };
 
 const cmdApiGuide = async () => {
   requireEnv();
-  const url = `${BASE}/api/agent-rpc/api-guide`;
-  const resp = await fetch(url, {
-    headers: { 'X-Agent-Token': TOKEN, Accept: 'text/plain' },
+  const resp = await fetch(`${BASE}/api/cli/api-guide`, {
+    headers: { 'X-Pmux-Token': TOKEN },
   });
   if (!resp.ok) die(`HTTP ${resp.status}`);
-  const text = await resp.text();
-  process.stdout.write(text + '\n');
+  process.stdout.write((await resp.text()) + '\n');
 };
-
-// --- Flag parsing helpers ---
 
 const flagValue = (args, name) => {
   const idx = args.indexOf(name);
@@ -172,7 +149,7 @@ const stripFlags = (args, names) => {
   let i = 0;
   while (i < args.length) {
     if (names.includes(args[i])) {
-      i += 2; // skip flag and value
+      i += 2;
     } else {
       result.push(args[i]);
       i++;
@@ -181,34 +158,27 @@ const stripFlags = (args, names) => {
   return result;
 };
 
-// --- Usage ---
-
 const usage = () => {
-  process.stdout.write(`purplemux — agent CLI
+  process.stdout.write(`purplemux CLI
 
 Usage: purplemux <command> [args...]
 
 Commands:
-  workspaces                          List workspaces
-  tab list                            List tabs
-  tab create -w WORKSPACE [-t TITLE]  Create a tab
-  tab send TAB_ID CONTENT...          Send instructions to a tab
-  tab status TAB_ID                   Check tab status
-  tab result TAB_ID                   Read tab result
-  tab close TAB_ID                    Close a tab
-  memory save [--tags a,b] CONTENT... Save a memory
-  memory search [--q Q] [--tag TAG]   Search memories
-  memory delete MEMORY_ID             Delete a memory
-  api-guide                           Print full API reference
+  workspaces                               List workspaces
+  tab list [-w WS]                         List tabs (optionally scoped to workspace)
+  tab create -w WS [-n NAME] [-t TYPE]     Create a tab in workspace (type: terminal | claude-code | web-browser | diff)
+  tab send -w WS TAB_ID CONTENT...         Send input to a tab
+  tab status -w WS TAB_ID                  Tab status
+  tab result -w WS TAB_ID                  Capture tab pane content
+  tab close -w WS TAB_ID                   Close a tab
+  api-guide                                Print full HTTP API reference
+  help                                     Show this usage
 
 Environment:
   PMUX_PORT       Server port (required)
-  PMUX_TOKEN      Agent token (required)
-  PMUX_AGENT_ID   Agent ID (required for most commands)
+  PMUX_TOKEN      CLI token (required)
 `);
 };
-
-// --- Main ---
 
 const main = async () => {
   const args = process.argv.slice(2);
@@ -221,22 +191,13 @@ const main = async () => {
       return cmdWorkspaces();
     case 'tab':
       switch (sub) {
-        case 'list': return cmdTabList();
+        case 'list': return cmdTabList(rest);
         case 'create': return cmdTabCreate(rest);
         case 'send': return cmdTabSend(rest);
         case 'status': return cmdTabStatus(rest);
         case 'result': return cmdTabResult(rest);
         case 'close': return cmdTabClose(rest);
         default: die(`unknown tab command: ${sub || '(none)'}. Run 'purplemux help' for usage.`);
-      }
-      break;
-    case 'memory':
-    case 'mem':
-      switch (sub) {
-        case 'save': return cmdMemorySave(rest);
-        case 'search': case 'list': return cmdMemorySearch(rest);
-        case 'delete': case 'rm': return cmdMemoryDelete(rest);
-        default: die(`unknown memory command: ${sub || '(none)'}. Run 'purplemux help' for usage.`);
       }
       break;
     case 'api-guide':

@@ -4,7 +4,6 @@ import useIsMobile from '@/hooks/use-is-mobile';
 import MobileLayout from '@/components/features/mobile/mobile-layout';
 import Sidebar from '@/components/layout/sidebar';
 import useSync from '@/hooks/use-sync';
-import useAgentStatus from '@/hooks/use-agent-status';
 import useGlobalShortcuts from '@/hooks/use-global-shortcuts';
 import useWebviewStore from '@/hooks/use-webview-store';
 
@@ -28,7 +27,6 @@ const PageContent = ({ children }: { children: ReactNode }) => {
 
 const PageShell = ({ children }: IPageShellProps) => {
   useSync();
-  useAgentStatus();
   useGlobalShortcuts();
 
   const isMobile = useIsMobile();

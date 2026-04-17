@@ -161,9 +161,7 @@ export const listSessions = async (tmuxSession: string, cwdHint?: string): Promi
   let files: string[];
   try {
     const entries = await fs.readdir(projectDir);
-    files = entries.filter(
-      (f) => f.endsWith('.jsonl') && !f.startsWith('agent-'),
-    );
+    files = entries.filter((f) => f.endsWith('.jsonl'));
   } catch {
     return [];
   }

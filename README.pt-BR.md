@@ -73,10 +73,6 @@ E ainda
 - **Autenticação por senha** — Hashing com scrypt, seguro mesmo quando exposto externamente
 - **Multilíngue** — 11 idiomas, incluindo 한국어, English, 日本語, 中文
 
-### Agentes de IA (Beta)
-
-Crie agentes de IA independentes, atribua a eles papéis e personalidades (souls) e execute tarefas em paralelo com várias abas. Cada agente tem seu próprio chat, memória e workspace.
-
 ## Plataformas suportadas
 
 | Plataforma | Status | Observações |

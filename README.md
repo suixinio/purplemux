@@ -73,10 +73,6 @@ Plus
 - **Password authentication** — scrypt hashing, safe even when exposed externally
 - **Multilingual** — 11 languages including 한국어, English, 日本語, 中文
 
-### AI Agents (Beta)
-
-Create independent AI agents, assign them roles and personalities (souls), and run tasks in parallel across multiple tabs. Each agent has its own chat, memory, and workspace.
-
 ## Supported platforms
 
 | Platform | Status | Notes |

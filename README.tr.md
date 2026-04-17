@@ -73,10 +73,6 @@ Ayrıca
 - **Parola doğrulaması** — scrypt ile hash'leme, dışarı açıldığında bile güvenli
 - **Çok dilli** — 11 dil; aralarında 한국어, English, 日本語, 中文
 
-### AI Ajanları (Beta)
-
-Bağımsız AI ajanları oluşturun, onlara roller ve kişilikler (soul) atayın ve birden fazla sekme üzerinden paralel görevler çalıştırın. Her ajanın kendine ait sohbeti, belleği ve çalışma alanı vardır.
-
 ## Desteklenen platformlar
 
 | Platform | Durum | Notlar |

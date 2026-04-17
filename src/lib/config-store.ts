@@ -15,7 +15,6 @@ export interface IConfigData {
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
-  agentEnabled?: boolean;
   notificationsEnabled?: boolean;
   locale?: string;
   fontSize?: string;

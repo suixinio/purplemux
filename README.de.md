@@ -73,10 +73,6 @@ Außerdem
 - **Passwort-Authentifizierung** — scrypt-Hashing, sicher auch bei externer Exposition
 - **Mehrsprachig** — 11 Sprachen inklusive 한국어, English, 日本語, 中文
 
-### KI-Agenten (Beta)
-
-Lege eigenständige KI-Agenten an, weise ihnen Rollen und Persönlichkeiten (souls) zu und führe Aufgaben parallel über mehrere Tabs aus. Jeder Agent besitzt eigenen Chat, Speicher und Workspace.
-
 ## Unterstützte Plattformen
 
 | Plattform | Status | Hinweise |

@@ -6,7 +6,6 @@ import {
   Plus,
   Settings,
   LogOut,
-  Bot,
 } from 'lucide-react';
 import useTabStore from '@/hooks/use-tab-store';
 import { useNotificationCount, NotificationPanel } from '@/components/features/terminal/notification-sheet';
@@ -36,8 +35,6 @@ const SettingsDialog = dynamic(
   () => import('@/components/features/terminal/settings-dialog'),
   { ssr: false },
 );
-import useAgentStore, { selectBlockedCount, selectHasWorkingAgent, selectUnreadCount } from '@/hooks/use-agent-store';
-import useConfigStore from '@/hooks/use-config-store';
 import { useSelectWorkspace } from '@/hooks/use-sidebar-actions';
 import useSidebarItems from '@/hooks/use-sidebar-items';
 import useWebviewStore from '@/hooks/use-webview-store';
@@ -70,10 +67,6 @@ const Sidebar = () => {
   });
   const { attentionCount, busyCount } = useNotificationCount();
   const sessionsBadge = attentionCount + busyCount;
-  const blockedCount = useAgentStore(selectBlockedCount);
-  const unreadCount = useAgentStore(selectUnreadCount);
-  const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
-  const agentEnabled = useConfigStore((s) => s.agentEnabled);
   const selectWorkspace = useSelectWorkspace();
   const { items: sidebarItems } = useSidebarItems();
   const activeWebviewId = useWebviewStore((s) => s.activeId);
@@ -326,23 +319,6 @@ const Sidebar = () => {
             className="flex items-center gap-0.5"
             {...(isElectron ? { style: { WebkitAppRegion: 'no-drag' } as React.CSSProperties } : {})}
           >
-            {agentEnabled && (
-              <button
-                className={cn(
-                  'relative flex h-7 w-7 items-center justify-center rounded transition-colors hover:bg-sidebar-accent',
-                  isNavActive('/agents') && !activeWebviewId ? 'text-foreground' : hasWorkingAgent ? 'text-ui-teal' : 'text-muted-foreground',
-                )}
-                onClick={() => { useWebviewStore.getState().hide(); router.push('/agents'); }}
-                aria-label={tc('agent')}
-              >
-                <Bot className={cn('h-3.5 w-3.5', hasWorkingAgent && !isNavActive('/agents') && 'animate-pulse')} />
-                {(unreadCount > 0 || blockedCount > 0) && (
-                  <span className="absolute -right-0.5 -top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded px-0.5 text-[9px] font-medium leading-none text-foreground/60 bg-foreground/10">
-                    {unreadCount > 0 ? unreadCount : blockedCount}
-                  </span>
-                )}
-              </button>
-            )}
             <AlertDialog>
               <AlertDialogTrigger
                 render={

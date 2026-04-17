@@ -1,6 +1,5 @@
 import { useTranslations } from 'next-intl';
-import { useRouter } from 'next/router';
-import { Bot, LogOut, Menu } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
@@ -17,8 +16,6 @@ import {
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
 import { useNotificationCount } from '@/components/features/terminal/notification-sheet';
-import useAgentStore, { selectBlockedCount, selectHasWorkingAgent, selectUnreadCount } from '@/hooks/use-agent-store';
-import useConfigStore from '@/hooks/use-config-store';
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
@@ -33,14 +30,9 @@ const handleLogout = async () => {
 const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
   const t = useTranslations('header');
   const tc = useTranslations('common');
-  const router = useRouter();
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
   const { attentionCount, busyCount } = useNotificationCount();
   const sessionsBadge = attentionCount + busyCount;
-  const blockedCount = useAgentStore(selectBlockedCount);
-  const unreadCount = useAgentStore(selectUnreadCount);
-  const hasWorkingAgent = useAgentStore(selectHasWorkingAgent);
-  const agentEnabled = useConfigStore((s) => s.agentEnabled);
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-background px-3">
@@ -60,7 +52,7 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
           </button>
         )}
         <AppLogo shimmer={hasBusy} />
-        {workspaceName && !router.pathname.startsWith('/agents') && (
+        {workspaceName && (
           <>
             <span className="text-muted-foreground/40 text-sm">/</span>
             <span className="truncate text-sm font-medium text-muted-foreground">{workspaceName}</span>
@@ -70,29 +62,6 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
 
       <TooltipProvider>
         <div className="flex items-center gap-1">
-          {agentEnabled && (
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="relative h-7 w-7"
-                    onClick={() => router.push('/agents')}
-                  />
-                }
-              >
-                <Bot className={`h-4 w-4 ${hasWorkingAgent ? 'text-ui-teal animate-pulse' : 'text-muted-foreground'}`} />
-                {(unreadCount > 0 || blockedCount > 0) && (
-                  <span className="absolute -right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded bg-foreground/10 px-0.5 text-[9px] font-medium leading-none text-foreground/60">
-                    {unreadCount > 0 ? unreadCount : blockedCount}
-                  </span>
-                )}
-              </TooltipTrigger>
-              <TooltipContent>{tc('agent')}</TooltipContent>
-            </Tooltip>
-          )}
-
           <AlertDialog>
             <Tooltip>
               <TooltipTrigger
