@@ -65,9 +65,9 @@ interface IPaneContainerProps {
 }
 
 const TERMINAL_FONT_SIZES: Record<string, { normal: number; claudeCode: number }> = {
-  normal: { normal: 12, claudeCode: 11 },
-  large: { normal: 14, claudeCode: 13 },
-  'x-large': { normal: 16, claudeCode: 15 },
+  normal: { normal: 12, claudeCode: 10 },
+  large: { normal: 14, claudeCode: 12 },
+  'x-large': { normal: 16, claudeCode: 14 },
 };
 
 const EMPTY_TABS: ITab[] = [];
@@ -900,9 +900,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             <div className="flex h-full flex-col" onMouseDown={() => { clickedTerminalRef.current = true; }}>
               <TerminalContainer
                 ref={terminalRef}
+                minHeight={isClaudeCode ? 256 : undefined}
                 className={cn(
                   'min-h-0 flex-1',
                   ready ? 'opacity-100' : 'opacity-0',
+                  isClaudeCode && 'py-0 pl-2 pr-0.5',
                 )}
               />
             </div>
