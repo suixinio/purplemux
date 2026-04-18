@@ -11,12 +11,14 @@ type TMode = 'loading' | 'onboarding' | 'login' | 'initLogin';
 const LoginPage = () => {
   const t = useTranslations('login');
   const [mode, setMode] = useState<TMode>('loading');
+  const [hostEnvLocked, setHostEnvLocked] = useState(false);
 
   useEffect(() => {
     const checkSetup = async () => {
       try {
         const res = await fetch('/api/auth/setup');
-        const { needsSetup, requiresAuth } = await res.json();
+        const { needsSetup, requiresAuth, hostEnvLocked } = await res.json();
+        setHostEnvLocked(!!hostEnvLocked);
         if (needsSetup) {
           setMode(requiresAuth ? 'initLogin' : 'onboarding');
         } else {
@@ -44,7 +46,7 @@ const LoginPage = () => {
             </div>
           )}
           {mode === 'initLogin' && <LoginForm onSuccess={() => setMode('onboarding')} />}
-          {mode === 'onboarding' && <OnboardingWizard onComplete={() => setMode('login')} />}
+          {mode === 'onboarding' && <OnboardingWizard onComplete={() => setMode('login')} hostEnvLocked={hostEnvLocked} />}
           {mode === 'login' && <LoginForm />}
         </div>
       </div>

@@ -19,7 +19,7 @@ type TStep = 'preflight' | 'password' | 'language' | 'appearance' | 'theme' | 'c
 type TAppTheme = 'dark' | 'light' | 'system';
 type TNetworkAccess = 'localhost' | 'tailscale' | 'all';
 
-const STEPS: TStep[] = ['preflight', 'password', 'language', 'appearance', 'theme', 'claude', 'network', 'complete'];
+const ALL_STEPS: TStep[] = ['preflight', 'password', 'language', 'appearance', 'theme', 'claude', 'network', 'complete'];
 
 const NETWORK_ACCESS_OPTIONS: TNetworkAccess[] = ['localhost', 'tailscale', 'all'];
 
@@ -82,11 +82,11 @@ const ThemeGrid = ({
   </div>
 );
 
-const StepIndicator = ({ current }: { current: TStep }) => {
-  const currentIndex = STEPS.indexOf(current);
+const StepIndicator = ({ current, steps }: { current: TStep; steps: TStep[] }) => {
+  const currentIndex = steps.indexOf(current);
   return (
     <div className="flex items-center justify-center gap-1.5">
-      {STEPS.map((step, i) => (
+      {steps.map((step, i) => (
         <div
           key={step}
           className={cn(
@@ -112,9 +112,10 @@ const STEP_ICONS: Record<TStep, React.ReactNode> = {
 
 interface IOnboardingWizardProps {
   onComplete: () => void;
+  hostEnvLocked?: boolean;
 }
 
-const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
+const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWizardProps) => {
   const t = useTranslations('onboarding');
   const tc = useTranslations('common');
   const { theme: currentTheme, setTheme: setNextTheme } = useTheme();
@@ -154,15 +155,16 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
     { value: 'system', icon: <Monitor className="h-4 w-4" />, label: tc('system') },
   ];
 
-  const stepIndex = STEPS.indexOf(step);
+  const steps = hostEnvLocked ? ALL_STEPS.filter((s) => s !== 'network') : ALL_STEPS;
+  const stepIndex = steps.indexOf(step);
 
   const goNext = () => {
-    const next = STEPS[stepIndex + 1];
+    const next = steps[stepIndex + 1];
     if (next) { setDirection('forward'); setStep(next); }
   };
 
   const goBack = () => {
-    const prev = STEPS[stepIndex - 1];
+    const prev = steps[stepIndex - 1];
     if (prev) { setDirection('back'); setStep(prev); }
   };
 
@@ -211,7 +213,7 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
           appTheme,
           terminalTheme: { light: lightTheme, dark: darkTheme },
           dangerouslySkipPermissions: skipPermissions,
-          networkAccess,
+          ...(hostEnvLocked ? {} : { networkAccess }),
         }),
       });
 
@@ -247,7 +249,7 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
     <div className="flex flex-col gap-6">
       <AppLogo shimmer size="xl" className="justify-center" />
 
-      <StepIndicator current={step} />
+      <StepIndicator current={step} steps={steps} />
 
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         {STEP_ICONS[step]}
@@ -597,10 +599,12 @@ const OnboardingWizard = ({ onComplete }: IOnboardingWizardProps) => {
               <span className="text-muted-foreground">{t('summary.skipPermissions')}</span>
               <span>{skipPermissions ? t('summary.enabled') : t('summary.disabled')}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">{t('summary.networkAccess')}</span>
-              <span>{t(`networkOptions.${networkAccess}.label`)}</span>
-            </div>
+            {!hostEnvLocked && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('summary.networkAccess')}</span>
+                <span>{t(`networkOptions.${networkAccess}.label`)}</span>
+              </div>
+            )}
           </div>
           {error && <p className="text-destructive text-sm">{error}</p>}
           <div className="flex gap-2">

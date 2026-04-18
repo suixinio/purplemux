@@ -12,7 +12,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     const setup = await needsSetup();
     const requiresAuth =
       setup && isInitMode() && !(await verifyRequestSession(req.headers.cookie));
-    return res.status(200).json({ needsSetup: setup, requiresAuth });
+    const hostEnvLocked = typeof process.env.HOST === 'string' && process.env.HOST.trim().length > 0;
+    return res.status(200).json({ needsSetup: setup, requiresAuth, hostEnvLocked });
   }
 
   if (req.method === 'POST') {
