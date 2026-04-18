@@ -1,6 +1,7 @@
 import { createServer, request as httpRequest } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createConnection } from 'net';
+import os from 'os';
 import path from 'path';
 import next from 'next';
 import { WebSocketServer } from 'ws';
@@ -314,6 +315,19 @@ const startProd = async (port: number, appDir: string): Promise<IStartResult> =>
   return { port: actualPort, shutdown };
 };
 
+const getAvailableUrls = (port: number): string[] => {
+  const urls = [`http://127.0.0.1:${port}`];
+  for (const addrs of Object.values(os.networkInterfaces())) {
+    if (!addrs) continue;
+    for (const addr of addrs) {
+      if (addr.family === 'IPv4' && !addr.internal) {
+        urls.push(`http://${addr.address}:${port}`);
+      }
+    }
+  }
+  return urls;
+};
+
 export const DEFAULT_PORT = 8022;
 
 export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
@@ -347,12 +361,16 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   await writeAllClaudePromptFiles(workspaces);
 
   const mode = dev ? 'development' : process.env.NODE_ENV;
+  const urls = getAvailableUrls(result.port);
   console.log('');
   console.log(`  \x1b[1m\x1b[35m⚡ purplemux\x1b[0m  \x1b[2mv${pkg.version}\x1b[0m`);
-  console.log(`  \x1b[2m➜\x1b[0m  Local:  \x1b[36mhttp://localhost:${result.port}\x1b[0m`);
+  console.log(`  \x1b[2m➜\x1b[0m  Available on:`);
+  for (const url of urls) {
+    console.log(`       \x1b[36m${url}\x1b[0m`);
+  }
   console.log(`  \x1b[2m➜\x1b[0m  Mode:   \x1b[33m${mode}\x1b[0m`);
   const authStatus = !credentials
-    ? `\x1b[33mwaiting for onboarding\x1b[0m \x1b[2m(http://localhost:${result.port}/login)\x1b[0m`
+    ? `\x1b[33mwaiting for onboarding\x1b[0m \x1b[2m(${urls[0]}/login)\x1b[0m`
     : credentials.init
       ? `\x1b[33minit password\x1b[0m \x1b[2m(onboarding required)\x1b[0m`
       : `\x1b[32mconfigured\x1b[0m`;
