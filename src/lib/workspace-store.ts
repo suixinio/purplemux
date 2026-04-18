@@ -292,7 +292,7 @@ export const createWorkspace = async (directory: string, name?: string, layoutOp
     await writeWorkspacesFile(data);
     await writeClaudePromptFile(workspace);
 
-    log.info(`Created: ${wsId} (${wsName}, ${directory})`);
+    log.debug(`Created: ${wsId} (${wsName}, ${directory})`);
     return workspace;
   });
 
@@ -338,7 +338,7 @@ export const renameWorkspace = async (workspaceId: string, name: string): Promis
     await writeWorkspacesFile(data);
     await writeClaudePromptFile(ws);
 
-    log.info(`Renamed: ${workspaceId} → "${name}"`);
+    log.debug(`Renamed: ${workspaceId} → "${name}"`);
     return { ...ws };
   });
 
