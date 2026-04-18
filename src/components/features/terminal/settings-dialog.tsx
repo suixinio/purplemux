@@ -591,16 +591,18 @@ const SystemTab = () => {
   const networkAccess = useConfigStore((s) => s.networkAccess);
   const setNetworkAccess = useConfigStore((s) => s.setNetworkAccess);
   const hostEnvLocked = useConfigStore((s) => s.hostEnvLocked);
+  const bindHostIsLocal = useConfigStore((s) => s.bindHostIsLocal);
 
   const [pendingNetworkAccess, setPendingNetworkAccess] = useState(networkAccess);
   useEffect(() => {
     setPendingNetworkAccess(networkAccess);
   }, [networkAccess]);
   const hasNetworkAccessChange = pendingNetworkAccess !== networkAccess;
+  const needsRestart = bindHostIsLocal && pendingNetworkAccess !== 'localhost';
 
   const handleSaveNetworkAccess = () => {
     setNetworkAccess(pendingNetworkAccess);
-    toast.success(t('restartRequired'));
+    toast.success(needsRestart ? t('restartRequired') : tc('saved'));
   };
 
   const handleReset = () => {
@@ -642,7 +644,9 @@ const SystemTab = () => {
         </RadioGroup>
         {!hostEnvLocked && (
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-muted-foreground">{t('restartRequired')}</p>
+            <p className="text-xs text-muted-foreground">
+              {needsRestart ? t('restartRequired') : ''}
+            </p>
             <Button
               size="sm"
               onClick={handleSaveNetworkAccess}

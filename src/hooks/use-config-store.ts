@@ -15,6 +15,7 @@ export interface IConfigInitialData {
   systemResourcesEnabled?: boolean;
   networkAccess?: TNetworkAccess;
   hostEnvLocked?: boolean;
+  bindHostIsLocal?: boolean;
 }
 
 interface IConfigState {
@@ -28,6 +29,7 @@ interface IConfigState {
   systemResourcesEnabled: boolean;
   networkAccess: TNetworkAccess;
   hostEnvLocked: boolean;
+  bindHostIsLocal: boolean;
 
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
@@ -41,7 +43,7 @@ interface IConfigState {
   setNetworkAccess: (value: TNetworkAccess) => void;
 }
 
-const initialConfig = { notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal', systemResourcesEnabled: false, networkAccess: 'all' as TNetworkAccess, hostEnvLocked: false };
+const initialConfig = { notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal', systemResourcesEnabled: false, networkAccess: 'all' as TNetworkAccess, hostEnvLocked: false, bindHostIsLocal: false };
 
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
@@ -64,6 +66,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   systemResourcesEnabled: initialConfig.systemResourcesEnabled,
   networkAccess: initialConfig.networkAccess,
   hostEnvLocked: initialConfig.hostEnvLocked,
+  bindHostIsLocal: initialConfig.bindHostIsLocal,
 
   hydrate: (data) => {
     set({
@@ -77,6 +80,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
       systemResourcesEnabled: data.systemResourcesEnabled ?? false,
       networkAccess: data.networkAccess ?? 'all',
       hostEnvLocked: data.hostEnvLocked ?? false,
+      bindHostIsLocal: data.bindHostIsLocal ?? false,
     });
   },
 

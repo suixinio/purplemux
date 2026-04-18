@@ -77,7 +77,9 @@ export const getServerSideProps: GetServerSideProps<IIndexProps> = async (contex
 
     const { authPassword, authSecret: _, ...safeConfig } = configData;
     const hostEnvLocked = typeof process.env.HOST === 'string' && process.env.HOST.trim().length > 0;
-    return { props: { initialWorkspace: data, initialConfig: { ...safeConfig, hasAuthPassword: !!authPassword, hostEnvLocked }, initialQuickPrompts: quickPrompts, initialSidebarItems: sidebarItems, messages } };
+    const { isBoundToLocalhostOnly } = await import('@/lib/access-filter');
+    const bindHostIsLocal = isBoundToLocalhostOnly();
+    return { props: { initialWorkspace: data, initialConfig: { ...safeConfig, hasAuthPassword: !!authPassword, hostEnvLocked, bindHostIsLocal }, initialQuickPrompts: quickPrompts, initialSidebarItems: sidebarItems, messages } };
   });
 
 export default Index;

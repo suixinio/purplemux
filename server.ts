@@ -20,15 +20,8 @@ import { initWorkspaceStore, getWorkspaces } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
 import { initAuthCredentials } from './src/lib/auth-credentials';
 import { initConfigStore, getConfig } from './src/lib/config-store';
-import {
-  DEFAULT_NETWORK_ACCESS,
-  isAllowed,
-  listInterfaceIps,
-  networkAccessToSpec,
-  parseAccessSpec,
-  resolveBindPlan,
-} from './src/lib/network-access';
-import type { IAccessSpec } from './src/lib/network-access';
+import { listInterfaceIps, resolveBindPlan } from './src/lib/network-access';
+import { getCurrentSpec, initAccessFilter, isRequestAllowed, setBoundHost } from './src/lib/access-filter';
 import { initShellPath } from './src/lib/preflight';
 import { createLogger } from './src/lib/logger';
 import pkg from './package.json';
@@ -204,11 +197,6 @@ interface IStartResult {
   shutdown: () => Promise<void>;
 }
 
-const normalizeRemote = (addr: string | undefined | null): string | null => {
-  if (!addr) return null;
-  return addr.startsWith('::ffff:') ? addr.slice(7) : addr;
-};
-
 const rejectRequest = (res: ServerResponse) => {
   res.writeHead(403, { 'Content-Type': 'text/plain' });
   res.end('Forbidden');
@@ -219,7 +207,7 @@ const rejectSocket = (socket: import('stream').Duplex) => {
   socket.destroy();
 };
 
-const startDev = async (port: number, appDir: string, bindHost: string, spec: IAccessSpec, needsFilter: boolean): Promise<IStartResult> => {
+const startDev = async (port: number, appDir: string, bindHost: string): Promise<IStartResult> => {
   const app = next({ dev: true, dir: appDir });
   const handle = app.getRequestHandler();
 
@@ -227,7 +215,7 @@ const startDev = async (port: number, appDir: string, bindHost: string, spec: IA
 
   const upgrade = app.getUpgradeHandler();
   const server = createServer((req, res) => {
-    if (needsFilter && !isAllowed(spec, normalizeRemote(req.socket.remoteAddress))) {
+    if (!isRequestAllowed(req.socket.remoteAddress)) {
       rejectRequest(res);
       return;
     }
@@ -237,7 +225,7 @@ const startDev = async (port: number, appDir: string, bindHost: string, spec: IA
   const wsServers = createWsServers();
 
   server.on('upgrade', async (request, socket, head) => {
-    if (needsFilter && !isAllowed(spec, normalizeRemote(request.socket.remoteAddress))) {
+    if (!isRequestAllowed(request.socket.remoteAddress)) {
       rejectSocket(socket);
       return;
     }
@@ -285,7 +273,7 @@ const startDev = async (port: number, appDir: string, bindHost: string, spec: IA
   return { port: actualPort, shutdown };
 };
 
-const startProd = async (port: number, appDir: string, bindHost: string, spec: IAccessSpec, needsFilter: boolean): Promise<IStartResult> => {
+const startProd = async (port: number, appDir: string, bindHost: string): Promise<IStartResult> => {
   const internalPort = await getFreePort();
 
   const savedPort = process.env.PORT;
@@ -301,7 +289,7 @@ const startProd = async (port: number, appDir: string, bindHost: string, spec: I
   await waitForPort(internalPort);
 
   const server = createServer((req, res) => {
-    if (needsFilter && !isAllowed(spec, normalizeRemote(req.socket.remoteAddress))) {
+    if (!isRequestAllowed(req.socket.remoteAddress)) {
       rejectRequest(res);
       return;
     }
@@ -311,7 +299,7 @@ const startProd = async (port: number, appDir: string, bindHost: string, spec: I
   const wsServers = createWsServers();
 
   server.on('upgrade', async (request, socket, head) => {
-    if (needsFilter && !isAllowed(spec, normalizeRemote(request.socket.remoteAddress))) {
+    if (!isRequestAllowed(request.socket.remoteAddress)) {
       rejectSocket(socket);
       return;
     }
@@ -356,6 +344,8 @@ const startProd = async (port: number, appDir: string, bindHost: string, spec: I
 
 export const DEFAULT_PORT = 8022;
 
+
+
 export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   const port = opts?.port ?? parseInt(process.env.PORT || String(DEFAULT_PORT), 10);
   const appDir = process.env.__PMUX_APP_DIR || process.cwd();
@@ -379,15 +369,14 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
 
   const envHost = process.env.HOST?.trim();
   const configData = await getConfig();
-  const specSource = envHost && envHost.length > 0
-    ? envHost
-    : networkAccessToSpec(configData.networkAccess ?? DEFAULT_NETWORK_ACCESS);
-  const accessSpec = parseAccessSpec(specSource);
+  initAccessFilter(envHost, configData.networkAccess);
+  const accessSpec = getCurrentSpec();
   const bindPlan = resolveBindPlan(accessSpec);
+  setBoundHost(bindPlan.host);
 
   const result = dev
-    ? await startDev(port, appDir, bindPlan.host, accessSpec, bindPlan.needsFilter)
-    : await startProd(port, appDir, bindPlan.host, accessSpec, bindPlan.needsFilter);
+    ? await startDev(port, appDir, bindPlan.host)
+    : await startProd(port, appDir, bindPlan.host);
 
   process.env.PORT = String(result.port);
 

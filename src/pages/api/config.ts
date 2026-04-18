@@ -1,6 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getConfig, updateConfig, hashPassword, generateSecret } from '@/lib/config-store';
 import type { IConfigData } from '@/lib/config-store';
+import type { TNetworkAccess } from '@/lib/network-access';
+import { isBoundToLocalhostOnly, updateAccessFromConfig } from '@/lib/access-filter';
 
 const ALLOWED_FIELDS: (keyof Omit<IConfigData, 'updatedAt' | 'authSecret'>)[] = [
   'appTheme', 'terminalTheme', 'customCSS', 'dangerouslySkipPermissions', 'editorUrl', 'authPassword', 'notificationsEnabled', 'locale', 'fontSize', 'systemResourcesEnabled', 'networkAccess',
@@ -25,7 +27,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
     const { authPassword, authSecret: _, ...safe } = await getConfig();
     const hostEnvLocked = typeof process.env.HOST === 'string' && process.env.HOST.trim().length > 0;
-    return res.status(200).json({ ...safe, hasAuthPassword: !!authPassword, hostEnvLocked });
+    return res.status(200).json({
+      ...safe,
+      hasAuthPassword: !!authPassword,
+      hostEnvLocked,
+      bindHostIsLocal: isBoundToLocalhostOnly(),
+    });
   }
 
   if (req.method === 'PATCH') {
@@ -56,6 +63,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     } else {
       delete updates.authPassword;
       await updateConfig(updates as Partial<Omit<IConfigData, 'updatedAt'>>);
+    }
+
+    if ('networkAccess' in updates) {
+      updateAccessFromConfig(updates.networkAccess as TNetworkAccess);
     }
 
     return res.status(200).json({ ok: true });
