@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "Benutzerdefinierte URL"
+      "custom": "Benutzerdefinierte URL",
+      "off": "Deaktiviert"
     },
     "url": "Editor-URL",
     "urlDescription": "Gib die Web-URL deiner Code Server-Instanz ein.",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "Gib eine URL-Vorlage ein, die mit dem aktuellen Ordner geöffnet wird.",
     "customHelp": "Verwende <folder></folder> für den absoluten Pfad oder <folderEncoded></folderEncoded> für den URL-codierten Pfad.",
     "localIdeHint": "Öffnet die ausgewählte IDE lokal. Die IDE muss auf dem Gerät installiert sein, auf dem der Browser oder die Desktop-App läuft.",
+    "offHint": "Die Editor-Schaltfläche wird aus der Kopfzeile ausgeblendet.",
     "preview": "Vorschau (mit Beispielordner)",
     "errorHttpRequired": "URL muss mit http:// oder https:// beginnen",
     "errorCustomTemplate": "Vorlage muss {folder} oder {folderEncoded} enthalten"

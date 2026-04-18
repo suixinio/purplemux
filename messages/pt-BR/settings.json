@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "URL personalizada"
+      "custom": "URL personalizada",
+      "off": "Desativado"
     },
     "url": "URL do Editor",
     "urlDescription": "Insira a URL web da sua instancia do Code Server.",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "Insira um modelo de URL que sera aberto com a pasta atual.",
     "customHelp": "Use <folder></folder> para o caminho absoluto ou <folderEncoded></folderEncoded> para o caminho codificado em URL.",
     "localIdeHint": "Abre a IDE selecionada localmente. A IDE deve estar instalada no dispositivo que executa o navegador ou o aplicativo desktop.",
+    "offHint": "O botao do editor sera ocultado do cabecalho.",
     "preview": "Previa (com pasta de exemplo)",
     "errorHttpRequired": "A URL deve comecar com http:// ou https://",
     "errorCustomTemplate": "O modelo deve incluir {folder} ou {folderEncoded}"

@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "Custom URL"
+      "custom": "Custom URL",
+      "off": "Disabled"
     },
     "url": "Editor URL",
     "urlDescription": "Enter the web URL of your Code Server instance.",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "Enter a URL template that will be opened with the current folder.",
     "customHelp": "Use <folder></folder> for the absolute path, or <folderEncoded></folderEncoded> for the URL-encoded path.",
     "localIdeHint": "Opens the selected IDE locally. The IDE must be installed on the machine running the browser / desktop app.",
+    "offHint": "The editor button will be hidden from the header.",
     "preview": "Preview (with sample folder)",
     "errorHttpRequired": "URL must start with http:// or https://",
     "errorCustomTemplate": "Template must include {folder} or {folderEncoded}"

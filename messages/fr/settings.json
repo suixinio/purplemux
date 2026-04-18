@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "URL personnalisée"
+      "custom": "URL personnalisée",
+      "off": "Désactivé"
     },
     "url": "URL de l'éditeur",
     "urlDescription": "Saisissez l'URL web de votre instance Code Server.",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "Saisissez un modèle d'URL qui sera ouvert avec le dossier actuel.",
     "customHelp": "Utilisez <folder></folder> pour le chemin absolu ou <folderEncoded></folderEncoded> pour le chemin encodé en URL.",
     "localIdeHint": "Ouvre l'IDE sélectionné localement. L'IDE doit être installé sur la machine exécutant le navigateur ou l'application de bureau.",
+    "offHint": "Le bouton éditeur sera masqué de l'en-tête.",
     "preview": "Aperçu (avec dossier d'exemple)",
     "errorHttpRequired": "L'URL doit commencer par http:// ou https://",
     "errorCustomTemplate": "Le modèle doit contenir {folder} ou {folderEncoded}"

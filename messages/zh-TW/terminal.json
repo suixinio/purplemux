@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "尚未設定編輯器。請在設定 > 編輯器中進行設定。",
+  "editorRemoteNotSupported": "不支援遠端目錄",
   "openEditor": "開啟編輯器",
   "splitVertical": "垂直分割",
   "splitVerticalShortcut": "垂直分割（{shortcut}）",

@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "Пользовательский URL"
+      "custom": "Пользовательский URL",
+      "off": "Отключено"
     },
     "url": "URL редактора",
     "urlDescription": "Введите веб-URL вашего экземпляра Code Server.",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "Введите шаблон URL, который будет открыт с текущей папкой.",
     "customHelp": "Используйте <folder></folder> для абсолютного пути или <folderEncoded></folderEncoded> для URL-кодированного пути.",
     "localIdeHint": "Открывает выбранную IDE локально. IDE должна быть установлена на устройстве, на котором запущен браузер или настольное приложение.",
+    "offHint": "Кнопка редактора будет скрыта из заголовка.",
     "preview": "Предпросмотр (с примером папки)",
     "errorHttpRequired": "URL должен начинаться с http:// или https://",
     "errorCustomTemplate": "Шаблон должен содержать {folder} или {folderEncoded}"

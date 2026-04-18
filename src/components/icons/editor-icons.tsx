@@ -1,4 +1,5 @@
 import type { SVGProps } from 'react';
+import { Ban, FolderCode } from 'lucide-react';
 import type { TEditorPreset } from '@/lib/editor-url';
 
 type TIconProps = SVGProps<SVGSVGElement>;
@@ -108,23 +109,6 @@ const CodeServerIcon = ({ className, ...rest }: TIconProps) => (
   </svg>
 );
 
-const CustomIcon = ({ className, ...rest }: TIconProps) => (
-  <svg
-    viewBox="0 0 24 24"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="1.75"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-    {...rest}
-  >
-    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-  </svg>
-);
-
 export const EditorIcon = ({
   preset,
   className,
@@ -145,6 +129,8 @@ export const EditorIcon = ({
     case 'zed':
       return <ZedIcon className={className} />;
     case 'custom':
-      return <CustomIcon className={className} />;
+      return <FolderCode className={className} />;
+    case 'off':
+      return <Ban className={className} />;
   }
 };

@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "Editör yapılandırılmamış. Lütfen Ayarlar > Editör bölümünü açın.",
+  "editorRemoteNotSupported": "Uzak dizinler desteklenmiyor",
   "openEditor": "Editörü aç",
   "splitVertical": "Dikey böl",
   "splitVerticalShortcut": "Dikey böl ({shortcut})",

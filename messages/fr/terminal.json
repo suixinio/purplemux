@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "L'éditeur n'est pas configuré. Ouvrez Paramètres > Éditeur.",
+  "editorRemoteNotSupported": "Non pris en charge pour les répertoires distants",
   "openEditor": "Ouvrir l'éditeur",
   "splitVertical": "Diviser verticalement",
   "splitVerticalShortcut": "Diviser verticalement ({shortcut})",

@@ -5,7 +5,8 @@ export type TEditorPreset =
   | 'cursor'
   | 'windsurf'
   | 'zed'
-  | 'custom';
+  | 'custom'
+  | 'off';
 
 export const EDITOR_PRESETS: readonly TEditorPreset[] = [
   'code-server',
@@ -15,6 +16,7 @@ export const EDITOR_PRESETS: readonly TEditorPreset[] = [
   'windsurf',
   'zed',
   'custom',
+  'off',
 ] as const;
 
 export const isValidEditorPreset = (value: unknown): value is TEditorPreset =>
@@ -29,6 +31,7 @@ export const buildEditorUrl = (
   folder: string,
 ): string | null => {
   const path = ensureLeadingSlash(folder || '/');
+  const folderPath = path.endsWith('/') ? path : `${path}/`;
   const encoded = encodeURIComponent(path);
 
   switch (preset) {
@@ -39,13 +42,13 @@ export const buildEditorUrl = (
       return `${base}${separator}folder=${encoded}`;
     }
     case 'vscode':
-      return `vscode://file${path}`;
+      return `vscode://file${folderPath}`;
     case 'vscode-insiders':
-      return `vscode-insiders://file${path}`;
+      return `vscode-insiders://file${folderPath}`;
     case 'cursor':
-      return `cursor://file${path}`;
+      return `cursor://file${folderPath}`;
     case 'windsurf':
-      return `windsurf://file${path}`;
+      return `windsurf://file${folderPath}`;
     case 'zed':
       return `zed://file${path}`;
     case 'custom': {
@@ -55,6 +58,8 @@ export const buildEditorUrl = (
         .replace(/\{folderEncoded\}/g, encoded)
         .replace(/\{folder\}/g, path);
     }
+    case 'off':
+      return null;
     default:
       return null;
   }

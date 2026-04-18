@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "Editor is not configured. Please open Settings > Editor.",
+  "editorRemoteNotSupported": "Not supported for remote directories",
   "openEditor": "Open editor",
   "splitVertical": "Split vertical",
   "splitVerticalShortcut": "Split vertical ({shortcut})",

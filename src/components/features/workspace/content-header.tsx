@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { ExternalLink } from 'lucide-react';
+import { FolderCode } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,11 @@ import useIsMac from '@/hooks/use-is-mac';
 import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
 import { buildEditorUrl, isSafeEditorTarget, isWebEditorUrl } from '@/lib/editor-url';
+import { EditorIcon } from '@/components/icons/editor-icons';
+
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
+const isLocalAccess = typeof window !== 'undefined'
+  && LOCAL_HOSTNAMES.has(window.location.hostname);
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -73,6 +78,15 @@ const ContentHeader = ({
   const editorUrl = useConfigStore((state) => state.editorUrl);
   const editorPreset = useConfigStore((state) => state.editorPreset);
 
+  const editorTarget = useMemo(
+    () => buildEditorUrl(editorPreset, editorUrl, activeTabCwd || '/'),
+    [editorPreset, editorUrl, activeTabCwd],
+  );
+  const editorTargetIsSafe = !!editorTarget && isSafeEditorTarget(editorTarget);
+  const editorTargetIsWeb = !!editorTarget && isWebEditorUrl(editorTarget);
+  const remoteNotSupported = editorTargetIsSafe && !editorTargetIsWeb && !isLocalAccess;
+  const editorTooltipLabel = remoteNotSupported ? t('editorRemoteNotSupported') : t('openEditor');
+
   const handlePanelSwitch = (value: string) => {
     if (isToggling || !focusedPane || !activeTab) return;
     const next = value as TPanelType;
@@ -118,39 +132,52 @@ const ContentHeader = ({
               </button>
             ))}
           </div>
-          <button
-            className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/60 transition-colors hover:text-muted-foreground"
-            onClick={() => {
-              const folder = activeTabCwd || '/';
-              const target = buildEditorUrl(editorPreset, editorUrl, folder);
-              if (!target) {
-                toast.info(t('editorUrlNotSet'));
-                return;
-              }
-              if (!isSafeEditorTarget(target)) {
-                toast.error(t('editorUrlNotSet'));
-                return;
-              }
-              if (isWebEditorUrl(target)) {
-                window.open(target, '_blank', 'noopener,noreferrer');
-                return;
-              }
-              const api = (window as unknown as { electronAPI?: { openExternal: (url: string) => void } }).electronAPI;
-              if (api?.openExternal) {
-                api.openExternal(target);
-                return;
-              }
-              const iframe = document.createElement('iframe');
-              iframe.style.display = 'none';
-              iframe.src = target;
-              document.body.appendChild(iframe);
-              setTimeout(() => iframe.remove(), 1000);
-            }}
-            aria-label={t('openEditor')}
-          >
-            EDITOR
-            <ExternalLink className="h-2.5 w-2.5" />
-          </button>
+          {editorPreset !== 'off' && (
+          <Tooltip>
+            <TooltipTrigger
+              className={cn(
+                'flex h-7 w-7 items-center justify-center text-muted-foreground',
+                remoteNotSupported
+                  ? 'cursor-not-allowed opacity-30'
+                  : 'hover:text-foreground',
+              )}
+              aria-disabled={remoteNotSupported || undefined}
+              onClick={() => {
+                if (remoteNotSupported) return;
+                if (!editorTarget) {
+                  toast.info(t('editorUrlNotSet'));
+                  return;
+                }
+                if (!editorTargetIsSafe) {
+                  toast.error(t('editorUrlNotSet'));
+                  return;
+                }
+                if (editorTargetIsWeb) {
+                  window.open(editorTarget, '_blank', 'noopener,noreferrer');
+                  return;
+                }
+                const api = (window as unknown as { electronAPI?: { openExternal: (url: string) => void } }).electronAPI;
+                if (api?.openExternal) {
+                  api.openExternal(editorTarget);
+                  return;
+                }
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = editorTarget;
+                document.body.appendChild(iframe);
+                setTimeout(() => iframe.remove(), 1000);
+              }}
+              aria-label={t('openEditor')}
+            >
+              {editorTarget
+                ? <EditorIcon preset={editorPreset} className="h-3.5 w-3.5" />
+                : <FolderCode className="h-3.5 w-3.5" />}
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{editorTooltipLabel}</TooltipContent>
+          </Tooltip>
+          )}
+
+          {editorPreset !== 'off' && <div className="h-5 w-px bg-border" />}
 
           <Tooltip>
             <TooltipTrigger

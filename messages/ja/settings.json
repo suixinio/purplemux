@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "カスタム URL"
+      "custom": "カスタム URL",
+      "off": "使用しない"
     },
     "url": "エディタ URL",
     "urlDescription": "Code Server インスタンスの Web URL を入力します。",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "現在のフォルダで開く URL テンプレートを入力します。",
     "customHelp": "絶対パスは <folder></folder>、URL エンコードされたパスは <folderEncoded></folderEncoded> を使用します。",
     "localIdeHint": "選択した IDE をローカルで開きます。ブラウザまたはデスクトップアプリを実行している端末に IDE がインストールされている必要があります。",
+    "offHint": "ヘッダーからエディタボタンを非表示にします。",
     "preview": "プレビュー (サンプルフォルダ)",
     "errorHttpRequired": "URL は http:// または https:// で始まる必要があります。",
     "errorCustomTemplate": "テンプレートには {folder} または {folderEncoded} を含める必要があります。"

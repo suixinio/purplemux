@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import packageJson from '../../../../package.json';
 import isElectron from '@/hooks/use-is-electron';
-import { Bell, Check, ChevronDown, ChevronsUpDown, Code, Dices, Globe, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Wrench, X, Zap } from 'lucide-react';
+import { Bell, Check, ChevronDown, ChevronsUpDown, Dices, FolderCode, Globe, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Wrench, X, Zap } from 'lucide-react';
 import ClaudeLogo from '@/components/icons/claude-logo';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -52,7 +52,7 @@ const settingsItems: ISettingsItem[] = [
   { id: 'appearance', labelKey: 'appearance', icon: <Palette className="h-4 w-4" /> },
   { id: 'terminal', labelKey: 'terminal', icon: <Terminal className="h-4 w-4" /> },
   { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" /> },
-  { id: 'editor', labelKey: 'editor', icon: <Code className="h-4 w-4" /> },
+  { id: 'editor', labelKey: 'editor', icon: <FolderCode className="h-4 w-4" /> },
   { id: 'claude', labelKey: 'claude', icon: <ClaudeLogo className="h-4 w-4" /> },
   { id: 'auth', labelKey: 'auth', icon: <Lock className="h-4 w-4" /> },
   { id: 'tailscale', labelKey: 'tailscale', icon: <Globe className="h-4 w-4" /> },
@@ -506,9 +506,15 @@ const EditorTab = () => {
         </div>
       )}
 
-      {!needsUrlInput && (
+      {!needsUrlInput && localPreset !== 'off' && (
         <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
           {t('localIdeHint')}
+        </p>
+      )}
+
+      {localPreset === 'off' && (
+        <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          {t('offHint')}
         </p>
       )}
 

@@ -49,7 +49,8 @@
       "cursor": "Cursor",
       "windsurf": "Windsurf",
       "zed": "Zed",
-      "custom": "自定义 URL"
+      "custom": "自定义 URL",
+      "off": "禁用"
     },
     "url": "编辑器 URL",
     "urlDescription": "输入 Code Server 实例的 Web 地址。",
@@ -58,6 +59,7 @@
     "customTemplateDescription": "输入用于打开当前文件夹的 URL 模板。",
     "customHelp": "使用 <folder></folder> 表示绝对路径，使用 <folderEncoded></folderEncoded> 表示 URL 编码后的路径。",
     "localIdeHint": "在本地打开选定的 IDE。IDE 必须已安装在运行浏览器或桌面应用的设备上。",
+    "offHint": "将在标题栏中隐藏编辑器按钮。",
     "preview": "预览（示例文件夹）",
     "errorHttpRequired": "URL 必须以 http:// 或 https:// 开头。",
     "errorCustomTemplate": "模板必须包含 {folder} 或 {folderEncoded}。"

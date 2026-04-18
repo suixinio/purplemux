@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "Editor no configurado. Abre Configuración > Editor.",
+  "editorRemoteNotSupported": "No es compatible con directorios remotos",
   "openEditor": "Abrir editor",
   "splitVertical": "Dividir verticalmente",
   "splitVerticalShortcut": "Dividir verticalmente ({shortcut})",

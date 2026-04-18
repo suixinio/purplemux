@@ -1,5 +1,6 @@
 {
   "editorUrlNotSet": "Редактор не настроен. Откройте Настройки > Редактор.",
+  "editorRemoteNotSupported": "Удалённые каталоги не поддерживаются",
   "openEditor": "Открыть редактор",
   "splitVertical": "Разделить вертикально",
   "splitVerticalShortcut": "Разделить вертикально ({shortcut})",
