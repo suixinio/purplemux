@@ -27,7 +27,6 @@ import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
 import { formatTabTitle, parseCurrentCommand, isShellProcess } from '@/lib/tab-title';
-import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
@@ -169,15 +168,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const { cwd, lastCommand } = await res.json();
       if (cwd) useTabMetadataStore.getState().setCwd(tab.id, cwd);
       useTabMetadataStore.getState().setLastCommand(tab.id, lastCommand ?? null);
-
-      const current = useTabStore.getState().tabs[tab.id]?.currentProcess;
-      if (isInterpreter(current) && lastCommand) {
-        const name = lastCommand.split(/\s+/)[0];
-        if (name && hasProcessIcon(name)) {
-          useTabStore.getState().setCurrentProcess(tab.id, name);
-          useTabMetadataStore.getState().setTitle(tab.id, name);
-        }
-      }
     } catch {
       /* ignore */
     }

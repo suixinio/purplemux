@@ -21,16 +21,7 @@ export const KNOWN_PROCESSES: ReadonlySet<string> = new Set([
   'claude', 'codex',
 ]);
 
-const INTERPRETERS: ReadonlySet<string> = new Set([
-  'node', 'python', 'python3', 'ruby', 'perl', 'deno', 'bun',
-]);
-
 export const hasProcessIcon = (processName: string | null | undefined): boolean => {
   if (!processName) return false;
   return KNOWN_PROCESSES.has(processName);
-};
-
-export const isInterpreter = (processName: string | null | undefined): boolean => {
-  if (!processName) return false;
-  return INTERPRETERS.has(processName);
 };

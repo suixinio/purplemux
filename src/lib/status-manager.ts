@@ -1,10 +1,9 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
-import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getLastCommand, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
+import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { detectActiveSession, getChildPids, isClaudeRunning } from '@/lib/session-detection';
 import { cwdToProjectPath } from '@/lib/session-list';
-import { isInterpreter, hasProcessIcon } from '@/lib/process-icon';
 import { formatTabTitle } from '@/lib/tab-title';
 import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
 import { createRateLimitsWatcher } from '@/lib/rate-limits-watcher';
@@ -382,14 +381,6 @@ class StatusManager {
     this.rateLimitsWatcher.start();
   }
 
-  private async resolveCurrentProcess(sessionName: string, command: string | undefined): Promise<string | undefined> {
-    if (!command || !isInterpreter(command)) return command;
-    const last = await getLastCommand(sessionName);
-    if (!last) return command;
-    const name = last.split(/\s+/)[0];
-    return name && hasProcessIcon(name) ? name : command;
-  }
-
   private async scanAll(): Promise<void> {
     const { workspaces } = await getWorkspaces();
     const panesInfo = await getAllPanesInfo();
@@ -412,8 +403,8 @@ class StatusManager {
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
-        const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
-        const paneTitle = paneInfo ? `${resolvedProcess ?? paneInfo.command}|${paneInfo.path}` : undefined;
+        const currentProcess = paneInfo?.command;
+        const paneTitle = paneInfo ? `${paneInfo.command}|${paneInfo.path}` : undefined;
         // lastEvent는 메모리 전용이라 재시작 시 유실. persisted needs-input 복원 시
         // 클라 ack가 seq=0과 매칭할 baseline이 필요하므로 합성한다.
         const syntheticLastEvent: ILastEvent | null = cliState === 'needs-input'
@@ -423,7 +414,7 @@ class StatusManager {
           cliState,
           workspaceId: ws.id,
           tabName: tab.name || (paneTitle ? formatTabTitle(paneTitle) : ''),
-          currentProcess: resolvedProcess,
+          currentProcess,
           paneTitle,
           tmuxSession: tab.sessionName,
           panelType: tab.panelType,
@@ -555,8 +546,8 @@ class StatusManager {
         const { terminalStatus, listeningPorts } = tab.panelType === 'claude-code'
           ? { terminalStatus: 'idle' as const, listeningPorts: [] as number[] }
           : await this.detectTerminalStatus(paneInfo);
-        const resolvedProcess = await this.resolveCurrentProcess(tab.sessionName, paneInfo?.command);
-        const newPaneTitle = paneInfo ? `${resolvedProcess ?? paneInfo.command}|${paneInfo.path}` : undefined;
+        const currentProcess = paneInfo?.command;
+        const newPaneTitle = paneInfo ? `${paneInfo.command}|${paneInfo.path}` : undefined;
 
         if (!existing) {
           const persisted: TCliState = (tab.cliState as TCliState | undefined) ?? 'idle';
@@ -571,7 +562,7 @@ class StatusManager {
             cliState: initialState,
             workspaceId: ws.id,
             tabName: tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : ''),
-            currentProcess: resolvedProcess,
+            currentProcess,
             paneTitle: newPaneTitle,
             tmuxSession: tab.sessionName,
             panelType: tab.panelType,
@@ -595,12 +586,12 @@ class StatusManager {
           continue;
         }
 
-        const processChanged = existing.currentProcess !== resolvedProcess;
+        const processChanged = existing.currentProcess !== currentProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         const panelTypeChanged = existing.panelType !== tab.panelType;
         const refreshed = await this.readTabMetadata(paneInfo);
         existing.tabName = tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : '');
-        existing.currentProcess = resolvedProcess;
+        existing.currentProcess = currentProcess;
         existing.paneTitle = newPaneTitle;
         existing.workspaceId = ws.id;
         existing.panelType = tab.panelType;
