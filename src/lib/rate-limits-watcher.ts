@@ -1,5 +1,6 @@
 import fs from 'fs';
 import fsPromises from 'fs/promises';
+import path from 'path';
 import { createLogger } from '@/lib/logger';
 import { RATE_LIMITS_FILE } from '@/lib/statusline-script';
 import type { IRateLimitsData } from '@/types/status';
@@ -7,6 +8,8 @@ import type { IRateLimitsData } from '@/types/status';
 const log = createLogger('rate-limits');
 
 const DEBOUNCE_MS = 500;
+const WATCH_DIR = path.dirname(RATE_LIMITS_FILE);
+const WATCH_FILENAME = path.basename(RATE_LIMITS_FILE);
 
 export type TRateLimitsCallback = (data: IRateLimitsData) => void;
 
@@ -32,18 +35,19 @@ export const createRateLimitsWatcher = (onChange: TRateLimitsCallback) => {
     readAndNotify();
 
     try {
-      watcher = fs.watch(RATE_LIMITS_FILE, () => {
+      watcher = fs.watch(WATCH_DIR, (_eventType, filename) => {
+        if (filename !== WATCH_FILENAME) return;
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(readAndNotify, DEBOUNCE_MS);
       });
 
       watcher.on('error', () => {
-        log.debug('rate-limits.json watch error, retrying...');
+        log.debug(`${WATCH_DIR} watch error, retrying...`);
         stop();
         setTimeout(start, 5_000);
       });
     } catch {
-      log.debug('rate-limits.json not found yet, retrying...');
+      log.debug(`${WATCH_DIR} not available yet, retrying...`);
       setTimeout(start, 5_000);
     }
   };
