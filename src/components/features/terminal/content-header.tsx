@@ -12,6 +12,7 @@ import useConfigStore from '@/hooks/use-config-store';
 import useIsMac from '@/hooks/use-is-mac';
 import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
+import { buildEditorUrl, isSafeEditorTarget, isWebEditorUrl } from '@/lib/editor-url';
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -70,6 +71,7 @@ const ContentHeader = ({
   );
 
   const editorUrl = useConfigStore((state) => state.editorUrl);
+  const editorPreset = useConfigStore((state) => state.editorPreset);
 
   const handlePanelSwitch = (value: string) => {
     if (isToggling || !focusedPane || !activeTab) return;
@@ -119,14 +121,30 @@ const ContentHeader = ({
           <button
             className="flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground/60 transition-colors hover:text-muted-foreground"
             onClick={() => {
-              if (!editorUrl) {
+              const folder = activeTabCwd || '/';
+              const target = buildEditorUrl(editorPreset, editorUrl, folder);
+              if (!target) {
                 toast.info(t('editorUrlNotSet'));
                 return;
               }
-              const folder = activeTabCwd || '/';
-              const separator = editorUrl.includes('?') ? '&' : '?';
-              const url = `${editorUrl}${separator}folder=${encodeURIComponent(folder)}`;
-              window.open(url, '_blank', 'noopener,noreferrer');
+              if (!isSafeEditorTarget(target)) {
+                toast.error(t('editorUrlNotSet'));
+                return;
+              }
+              if (isWebEditorUrl(target)) {
+                window.open(target, '_blank', 'noopener,noreferrer');
+                return;
+              }
+              const api = (window as unknown as { electronAPI?: { openExternal: (url: string) => void } }).electronAPI;
+              if (api?.openExternal) {
+                api.openExternal(target);
+                return;
+              }
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.src = target;
+              document.body.appendChild(iframe);
+              setTimeout(() => iframe.remove(), 1000);
             }}
             aria-label={t('openEditor')}
           >

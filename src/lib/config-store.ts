@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { broadcastSync } from '@/lib/sync-server';
 import { createLogger } from '@/lib/logger';
 import type { TNetworkAccess } from '@/lib/network-access';
+import type { TEditorPreset } from '@/lib/editor-url';
 
 const log = createLogger('config');
 
@@ -16,6 +17,7 @@ export interface IConfigData {
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
+  editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
   locale?: string;
   fontSize?: string;

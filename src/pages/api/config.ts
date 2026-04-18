@@ -3,25 +3,18 @@ import { getConfig, updateConfig, hashPassword, generateSecret } from '@/lib/con
 import type { IConfigData } from '@/lib/config-store';
 import type { TNetworkAccess } from '@/lib/network-access';
 import { isBoundToLocalhostOnly, updateAccessFromConfig } from '@/lib/access-filter';
+import { isValidEditorPreset } from '@/lib/editor-url';
 
 const ALLOWED_FIELDS: (keyof Omit<IConfigData, 'updatedAt' | 'authSecret'>)[] = [
-  'appTheme', 'terminalTheme', 'customCSS', 'dangerouslySkipPermissions', 'editorUrl', 'authPassword', 'notificationsEnabled', 'locale', 'fontSize', 'systemResourcesEnabled', 'networkAccess',
+  'appTheme', 'terminalTheme', 'customCSS', 'dangerouslySkipPermissions', 'editorUrl', 'editorPreset', 'authPassword', 'notificationsEnabled', 'locale', 'fontSize', 'systemResourcesEnabled', 'networkAccess',
 ];
 
 const NETWORK_ACCESS_VALUES = ['localhost', 'tailscale', 'all'] as const;
 const isValidNetworkAccess = (value: unknown): boolean =>
   typeof value === 'string' && (NETWORK_ACCESS_VALUES as readonly string[]).includes(value);
 
-const isValidEditorUrl = (value: unknown): value is string => {
-  if (typeof value !== 'string') return false;
-  if (value === '') return true;
-  try {
-    const url = new URL(value);
-    return url.protocol === 'http:' || url.protocol === 'https:';
-  } catch {
-    return false;
-  }
-};
+const isValidEditorUrl = (value: unknown): value is string =>
+  typeof value === 'string';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'GET') {
@@ -43,7 +36,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     if ('editorUrl' in updates && !isValidEditorUrl(updates.editorUrl)) {
-      return res.status(400).json({ error: 'editorUrl must be an http(s) URL.' });
+      return res.status(400).json({ error: 'editorUrl must be a string.' });
+    }
+
+    if ('editorPreset' in updates && !isValidEditorPreset(updates.editorPreset)) {
+      return res.status(400).json({ error: 'editorPreset is invalid.' });
     }
 
     if ('networkAccess' in updates && !isValidNetworkAccess(updates.networkAccess)) {

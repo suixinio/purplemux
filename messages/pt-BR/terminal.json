@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "URL do editor nao configurada. Insira uma URL em Configuracoes > Editor.",
-  "openEditor": "Abrir code-server",
+  "editorUrlNotSet": "Editor nao configurado. Abra Configuracoes > Editor.",
+  "openEditor": "Abrir editor",
   "splitVertical": "Dividir verticalmente",
   "splitVerticalShortcut": "Dividir verticalmente ({shortcut})",
   "splitHorizontal": "Dividir horizontalmente",

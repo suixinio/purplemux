@@ -40,9 +40,27 @@
     "themeDescription": "Select terminal color themes for each mode."
   },
   "editor": {
+    "preset": "Editor",
+    "presetDescription": "Choose which editor to open when clicking the EDITOR button in the header.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "Custom URL"
+    },
     "url": "Editor URL",
-    "urlDescription": "Enter the editor URL to open when clicking the EDITOR button in the header.",
-    "urlHelp": "Install and run <link>code-server</link> to use VS Code in the browser. The <code>?folder=</code> parameter is automatically appended to the URL."
+    "urlDescription": "Enter the web URL of your Code Server instance.",
+    "urlHelp": "Install and run <link>code-server</link> to use VS Code in the browser. The <code>?folder=</code> parameter is automatically appended to the URL.",
+    "customTemplate": "URL template",
+    "customTemplateDescription": "Enter a URL template that will be opened with the current folder.",
+    "customHelp": "Use <folder></folder> for the absolute path, or <folderEncoded></folderEncoded> for the URL-encoded path.",
+    "localIdeHint": "Opens the selected IDE locally. The IDE must be installed on the machine running the browser / desktop app.",
+    "preview": "Preview (with sample folder)",
+    "errorHttpRequired": "URL must start with http:// or https://",
+    "errorCustomTemplate": "Template must include {folder} or {folderEncoded}"
   },
   "claude": {
     "skipPermissions": "Skip Permission Checks",

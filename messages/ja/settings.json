@@ -40,9 +40,27 @@
     "themeDescription": "モードごとのターミナルカラーテーマを選択します。"
   },
   "editor": {
+    "preset": "エディタ",
+    "presetDescription": "ヘッダーのEDITORボタンをクリックしたときに開くエディタを選択します。",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "カスタム URL"
+    },
     "url": "エディタ URL",
-    "urlDescription": "ヘッダーのEDITORボタンクリック時に開くエディタのURLを入力します。",
-    "urlHelp": "<link>code-server</link>をインストールして実行すると、ブラウザでVS Codeを使用できます。URLに<code>?folder=</code>パラメータが自動的に追加されます。"
+    "urlDescription": "Code Server インスタンスの Web URL を入力します。",
+    "urlHelp": "<link>code-server</link>をインストールして実行すると、ブラウザでVS Codeを使用できます。URLに<code>?folder=</code>パラメータが自動的に追加されます。",
+    "customTemplate": "URL テンプレート",
+    "customTemplateDescription": "現在のフォルダで開く URL テンプレートを入力します。",
+    "customHelp": "絶対パスは <folder></folder>、URL エンコードされたパスは <folderEncoded></folderEncoded> を使用します。",
+    "localIdeHint": "選択した IDE をローカルで開きます。ブラウザまたはデスクトップアプリを実行している端末に IDE がインストールされている必要があります。",
+    "preview": "プレビュー (サンプルフォルダ)",
+    "errorHttpRequired": "URL は http:// または https:// で始まる必要があります。",
+    "errorCustomTemplate": "テンプレートには {folder} または {folderEncoded} を含める必要があります。"
   },
   "claude": {
     "skipPermissions": "権限チェックをスキップ",

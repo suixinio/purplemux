@@ -40,9 +40,27 @@
     "themeDescription": "Выберите цветовые темы терминала для каждого режима."
   },
   "editor": {
+    "preset": "Редактор",
+    "presetDescription": "Выберите, какой редактор открывать при нажатии кнопки EDITOR в заголовке.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "Пользовательский URL"
+    },
     "url": "URL редактора",
-    "urlDescription": "Введите URL редактора, который будет открываться по нажатию кнопки EDITOR в заголовке.",
-    "urlHelp": "Установите и запустите <link>code-server</link>, чтобы использовать VS Code в браузере. Параметр <code>?folder=</code> добавляется к URL автоматически."
+    "urlDescription": "Введите веб-URL вашего экземпляра Code Server.",
+    "urlHelp": "Установите и запустите <link>code-server</link>, чтобы использовать VS Code в браузере. Параметр <code>?folder=</code> добавляется к URL автоматически.",
+    "customTemplate": "Шаблон URL",
+    "customTemplateDescription": "Введите шаблон URL, который будет открыт с текущей папкой.",
+    "customHelp": "Используйте <folder></folder> для абсолютного пути или <folderEncoded></folderEncoded> для URL-кодированного пути.",
+    "localIdeHint": "Открывает выбранную IDE локально. IDE должна быть установлена на устройстве, на котором запущен браузер или настольное приложение.",
+    "preview": "Предпросмотр (с примером папки)",
+    "errorHttpRequired": "URL должен начинаться с http:// или https://",
+    "errorCustomTemplate": "Шаблон должен содержать {folder} или {folderEncoded}"
   },
   "claude": {
     "skipPermissions": "Пропустить проверку прав доступа",

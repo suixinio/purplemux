@@ -40,9 +40,27 @@
     "themeDescription": "Selecione temas de cores do terminal para cada modo."
   },
   "editor": {
+    "preset": "Editor",
+    "presetDescription": "Escolha qual editor abrir ao clicar no botao EDITOR no cabecalho.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "URL personalizada"
+    },
     "url": "URL do Editor",
-    "urlDescription": "Insira a URL do editor para abrir ao clicar no botao EDITOR no cabecalho.",
-    "urlHelp": "Instale e execute o <link>code-server</link> para usar o VS Code no navegador. O parametro <code>?folder=</code> e adicionado automaticamente a URL."
+    "urlDescription": "Insira a URL web da sua instancia do Code Server.",
+    "urlHelp": "Instale e execute o <link>code-server</link> para usar o VS Code no navegador. O parametro <code>?folder=</code> e adicionado automaticamente a URL.",
+    "customTemplate": "Modelo de URL",
+    "customTemplateDescription": "Insira um modelo de URL que sera aberto com a pasta atual.",
+    "customHelp": "Use <folder></folder> para o caminho absoluto ou <folderEncoded></folderEncoded> para o caminho codificado em URL.",
+    "localIdeHint": "Abre a IDE selecionada localmente. A IDE deve estar instalada no dispositivo que executa o navegador ou o aplicativo desktop.",
+    "preview": "Previa (com pasta de exemplo)",
+    "errorHttpRequired": "A URL deve comecar com http:// ou https://",
+    "errorCustomTemplate": "O modelo deve incluir {folder} ou {folderEncoded}"
   },
   "claude": {
     "skipPermissions": "Pular Verificacao de Permissoes",

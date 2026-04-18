@@ -40,9 +40,27 @@
     "themeDescription": "Wähle Terminal-Farbthemen für jeden Modus."
   },
   "editor": {
+    "preset": "Editor",
+    "presetDescription": "Wähle den Editor, der beim Klicken auf die EDITOR-Schaltfläche in der Kopfzeile geöffnet wird.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "Benutzerdefinierte URL"
+    },
     "url": "Editor-URL",
-    "urlDescription": "Gib die Editor-URL ein, die beim Klicken auf die EDITOR-Schaltfläche in der Kopfzeile geöffnet wird.",
-    "urlHelp": "Installiere und starte <link>code-server</link>, um VS Code im Browser zu nutzen. Der Parameter <code>?folder=</code> wird automatisch an die URL angehängt."
+    "urlDescription": "Gib die Web-URL deiner Code Server-Instanz ein.",
+    "urlHelp": "Installiere und starte <link>code-server</link>, um VS Code im Browser zu nutzen. Der Parameter <code>?folder=</code> wird automatisch an die URL angehängt.",
+    "customTemplate": "URL-Vorlage",
+    "customTemplateDescription": "Gib eine URL-Vorlage ein, die mit dem aktuellen Ordner geöffnet wird.",
+    "customHelp": "Verwende <folder></folder> für den absoluten Pfad oder <folderEncoded></folderEncoded> für den URL-codierten Pfad.",
+    "localIdeHint": "Öffnet die ausgewählte IDE lokal. Die IDE muss auf dem Gerät installiert sein, auf dem der Browser oder die Desktop-App läuft.",
+    "preview": "Vorschau (mit Beispielordner)",
+    "errorHttpRequired": "URL muss mit http:// oder https:// beginnen",
+    "errorCustomTemplate": "Vorlage muss {folder} oder {folderEncoded} enthalten"
   },
   "claude": {
     "skipPermissions": "Berechtigungsprüfungen überspringen",

@@ -40,9 +40,27 @@
     "themeDescription": "為各模式選擇終端機色彩主題。"
   },
   "editor": {
+    "preset": "編輯器",
+    "presetDescription": "選擇點擊標題列 EDITOR 按鈕時要開啟的編輯器。",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "自訂 URL"
+    },
     "url": "編輯器 URL",
-    "urlDescription": "輸入點擊標題列 EDITOR 按鈕時要開啟的編輯器 URL。",
-    "urlHelp": "安裝並執行 <link>code-server</link> 即可在瀏覽器中使用 VS Code。URL 會自動附加 <code>?folder=</code> 參數。"
+    "urlDescription": "輸入 Code Server 實例的 Web URL。",
+    "urlHelp": "安裝並執行 <link>code-server</link> 即可在瀏覽器中使用 VS Code。URL 會自動附加 <code>?folder=</code> 參數。",
+    "customTemplate": "URL 範本",
+    "customTemplateDescription": "輸入用於開啟目前資料夾的 URL 範本。",
+    "customHelp": "使用 <folder></folder> 表示絕對路徑，使用 <folderEncoded></folderEncoded> 表示 URL 編碼後的路徑。",
+    "localIdeHint": "在本機開啟所選 IDE。IDE 必須已安裝在執行瀏覽器或桌面應用程式的裝置上。",
+    "preview": "預覽（範例資料夾）",
+    "errorHttpRequired": "URL 必須以 http:// 或 https:// 開頭。",
+    "errorCustomTemplate": "範本必須包含 {folder} 或 {folderEncoded}。"
   },
   "claude": {
     "skipPermissions": "跳過權限檢查",

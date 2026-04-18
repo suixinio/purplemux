@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "URL редактора не задан. Укажите URL в разделе Настройки > Редактор.",
-  "openEditor": "Открыть code-server",
+  "editorUrlNotSet": "Редактор не настроен. Откройте Настройки > Редактор.",
+  "openEditor": "Открыть редактор",
   "splitVertical": "Разделить вертикально",
   "splitVerticalShortcut": "Разделить вертикально ({shortcut})",
   "splitHorizontal": "Разделить горизонтально",

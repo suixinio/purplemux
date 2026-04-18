@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "Editör URL'si ayarlanmamış. Lütfen Ayarlar > Editör bölümünden bir URL girin.",
-  "openEditor": "code-server aç",
+  "editorUrlNotSet": "Editör yapılandırılmamış. Lütfen Ayarlar > Editör bölümünü açın.",
+  "openEditor": "Editörü aç",
   "splitVertical": "Dikey böl",
   "splitVerticalShortcut": "Dikey böl ({shortcut})",
   "splitHorizontal": "Yatay böl",

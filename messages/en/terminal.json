@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "Editor URL is not set. Please enter a URL in Settings > Editor.",
-  "openEditor": "Open code-server",
+  "editorUrlNotSet": "Editor is not configured. Please open Settings > Editor.",
+  "openEditor": "Open editor",
   "splitVertical": "Split vertical",
   "splitVerticalShortcut": "Split vertical ({shortcut})",
   "splitHorizontal": "Split horizontal",

@@ -40,9 +40,27 @@
     "themeDescription": "Sélectionnez les thèmes de couleurs du terminal pour chaque mode."
   },
   "editor": {
+    "preset": "Éditeur",
+    "presetDescription": "Choisissez l'éditeur à ouvrir lorsque vous cliquez sur le bouton EDITOR dans l'en-tête.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "URL personnalisée"
+    },
     "url": "URL de l'éditeur",
-    "urlDescription": "Saisissez l'URL de l'éditeur à ouvrir lorsque vous cliquez sur le bouton EDITOR dans l'en-tête.",
-    "urlHelp": "Installez et lancez <link>code-server</link> pour utiliser VS Code dans le navigateur. Le paramètre <code>?folder=</code> est automatiquement ajouté à l'URL."
+    "urlDescription": "Saisissez l'URL web de votre instance Code Server.",
+    "urlHelp": "Installez et lancez <link>code-server</link> pour utiliser VS Code dans le navigateur. Le paramètre <code>?folder=</code> est automatiquement ajouté à l'URL.",
+    "customTemplate": "Modèle d'URL",
+    "customTemplateDescription": "Saisissez un modèle d'URL qui sera ouvert avec le dossier actuel.",
+    "customHelp": "Utilisez <folder></folder> pour le chemin absolu ou <folderEncoded></folderEncoded> pour le chemin encodé en URL.",
+    "localIdeHint": "Ouvre l'IDE sélectionné localement. L'IDE doit être installé sur la machine exécutant le navigateur ou l'application de bureau.",
+    "preview": "Aperçu (avec dossier d'exemple)",
+    "errorHttpRequired": "L'URL doit commencer par http:// ou https://",
+    "errorCustomTemplate": "Le modèle doit contenir {folder} ou {folderEncoded}"
   },
   "claude": {
     "skipPermissions": "Ignorer les vérifications de permissions",

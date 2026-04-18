@@ -40,9 +40,27 @@
     "themeDescription": "选择各模式的终端配色主题。"
   },
   "editor": {
+    "preset": "编辑器",
+    "presetDescription": "选择点击标题栏 EDITOR 按钮时打开的编辑器。",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "自定义 URL"
+    },
     "url": "编辑器 URL",
-    "urlDescription": "输入点击标题栏EDITOR按钮时打开的编辑器地址。",
-    "urlHelp": "安装并运行<link>code-server</link>即可在浏览器中使用VS Code。URL会自动添加<code>?folder=</code>参数。"
+    "urlDescription": "输入 Code Server 实例的 Web 地址。",
+    "urlHelp": "安装并运行<link>code-server</link>即可在浏览器中使用VS Code。URL会自动添加<code>?folder=</code>参数。",
+    "customTemplate": "URL 模板",
+    "customTemplateDescription": "输入用于打开当前文件夹的 URL 模板。",
+    "customHelp": "使用 <folder></folder> 表示绝对路径，使用 <folderEncoded></folderEncoded> 表示 URL 编码后的路径。",
+    "localIdeHint": "在本地打开选定的 IDE。IDE 必须已安装在运行浏览器或桌面应用的设备上。",
+    "preview": "预览（示例文件夹）",
+    "errorHttpRequired": "URL 必须以 http:// 或 https:// 开头。",
+    "errorCustomTemplate": "模板必须包含 {folder} 或 {folderEncoded}。"
   },
   "claude": {
     "skipPermissions": "跳过权限检查",

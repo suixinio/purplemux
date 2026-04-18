@@ -697,10 +697,13 @@ const bootstrap = async () => {
   startUpdateCheckTimer();
 };
 
+const VALID_URI_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
+const BLOCKED_SCHEME = /^(javascript|data|vbscript|blob|file|about|view-source):/i;
+
 ipcMain.handle('open-external', (_event, url: string) => {
-  if (typeof url === 'string' && /^https?:\/\//.test(url)) {
-    shell.openExternal(url);
-  }
+  if (typeof url !== 'string') return;
+  if (!VALID_URI_SCHEME.test(url) || BLOCKED_SCHEME.test(url)) return;
+  shell.openExternal(url);
 });
 
 ipcMain.handle('set-native-theme', (_event, theme: string) => {

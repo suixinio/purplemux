@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "编辑器URL未设置。请在设置 > 编辑器中输入URL。",
-  "openEditor": "打开code-server",
+  "editorUrlNotSet": "尚未配置编辑器。请在设置 > 编辑器中进行配置。",
+  "openEditor": "打开编辑器",
   "splitVertical": "垂直分割",
   "splitVerticalShortcut": "垂直分割 ({shortcut})",
   "splitHorizontal": "水平分割",

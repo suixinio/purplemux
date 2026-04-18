@@ -40,9 +40,27 @@
     "themeDescription": "Her mod için terminal renk temalarını seçin."
   },
   "editor": {
+    "preset": "Editör",
+    "presetDescription": "Başlıktaki EDİTÖR düğmesine tıklandığında açılacak editörü seçin.",
+    "presets": {
+      "code-server": "Code Server (Web)",
+      "vscode": "VS Code",
+      "vscode-insiders": "VS Code Insiders",
+      "cursor": "Cursor",
+      "windsurf": "Windsurf",
+      "zed": "Zed",
+      "custom": "Özel URL"
+    },
     "url": "Editör URL",
-    "urlDescription": "Başlıktaki EDİTÖR düğmesine tıklandığında açılacak editör URL'sini girin.",
-    "urlHelp": "Tarayıcıda VS Code kullanmak için <link>code-server</link> kurun ve çalıştırın. <code>?folder=</code> parametresi URL'ye otomatik olarak eklenir."
+    "urlDescription": "Code Server örneğinizin web URL'sini girin.",
+    "urlHelp": "Tarayıcıda VS Code kullanmak için <link>code-server</link> kurun ve çalıştırın. <code>?folder=</code> parametresi URL'ye otomatik olarak eklenir.",
+    "customTemplate": "URL şablonu",
+    "customTemplateDescription": "Geçerli klasörle açılacak bir URL şablonu girin.",
+    "customHelp": "Mutlak yol için <folder></folder>, URL kodlanmış yol için <folderEncoded></folderEncoded> kullanın.",
+    "localIdeHint": "Seçilen IDE'yi yerel olarak açar. IDE'nin tarayıcı veya masaüstü uygulamasını çalıştıran cihazda kurulu olması gerekir.",
+    "preview": "Önizleme (örnek klasörle)",
+    "errorHttpRequired": "URL http:// veya https:// ile başlamalıdır",
+    "errorCustomTemplate": "Şablon {folder} veya {folderEncoded} içermelidir"
   },
   "claude": {
     "skipPermissions": "İzin Kontrollerini Atla",

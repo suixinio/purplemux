@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { TEditorPreset } from '@/lib/editor-url';
 
 export type TNetworkAccess = 'localhost' | 'tailscale' | 'all';
 
@@ -8,6 +9,7 @@ export interface IConfigInitialData {
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   editorUrl?: string;
+  editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
   hasAuthPassword?: boolean;
   locale?: string;
@@ -21,6 +23,7 @@ export interface IConfigInitialData {
 interface IConfigState {
   dangerouslySkipPermissions: boolean;
   editorUrl: string;
+  editorPreset: TEditorPreset;
   notificationsEnabled: boolean;
   hasAuthPassword: boolean;
   locale: string;
@@ -34,6 +37,7 @@ interface IConfigState {
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
   setEditorUrl: (url: string) => void;
+  setEditorPreset: (preset: TEditorPreset) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   changePassword: (password: string) => void;
   setLocale: (locale: string) => void;
@@ -43,7 +47,7 @@ interface IConfigState {
   setNetworkAccess: (value: TNetworkAccess) => void;
 }
 
-const initialConfig = { notificationsEnabled: true, editorUrl: '', dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal', systemResourcesEnabled: false, networkAccess: 'all' as TNetworkAccess, hostEnvLocked: false, bindHostIsLocal: false };
+const initialConfig = { notificationsEnabled: true, editorUrl: '', editorPreset: 'code-server' as TEditorPreset, dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal', systemResourcesEnabled: false, networkAccess: 'all' as TNetworkAccess, hostEnvLocked: false, bindHostIsLocal: false };
 
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
@@ -58,6 +62,7 @@ const saveConfig = (updates: Record<string, unknown>) => {
 const useConfigStore = create<IConfigState>((set, get) => ({
   dangerouslySkipPermissions: initialConfig.dangerouslySkipPermissions,
   editorUrl: initialConfig.editorUrl,
+  editorPreset: initialConfig.editorPreset,
   notificationsEnabled: initialConfig.notificationsEnabled,
   hasAuthPassword: initialConfig.hasAuthPassword,
   locale: initialConfig.locale,
@@ -72,6 +77,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
     set({
       dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
       editorUrl: data.editorUrl ?? '',
+      editorPreset: data.editorPreset ?? 'code-server',
       notificationsEnabled: data.notificationsEnabled ?? true,
       hasAuthPassword: data.hasAuthPassword ?? false,
       locale: data.locale ?? 'en',
@@ -93,6 +99,12 @@ const useConfigStore = create<IConfigState>((set, get) => ({
     if (get().editorUrl === url) return;
     set({ editorUrl: url });
     saveConfig({ editorUrl: url });
+  },
+
+  setEditorPreset: (preset) => {
+    if (get().editorPreset === preset) return;
+    set({ editorPreset: preset });
+    saveConfig({ editorPreset: preset });
   },
 
   setNotificationsEnabled: (enabled) => {

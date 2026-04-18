@@ -31,6 +31,8 @@ import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
+import { EDITOR_PRESETS, buildEditorUrl, type TEditorPreset } from '@/lib/editor-url';
+import { EditorIcon } from '@/components/icons/editor-icons';
 import type { ITerminalThemeColors } from '@/lib/terminal-themes';
 import QuickPromptsSettings from '@/components/features/settings/quick-prompts-settings';
 import SidebarItemsSettings from '@/components/features/settings/sidebar-items-settings';
@@ -383,71 +385,141 @@ const EditorTab = () => {
   const t = useTranslations('settings.editor');
   const tc = useTranslations('common');
   const editorUrl = useConfigStore((state) => state.editorUrl);
+  const editorPreset = useConfigStore((state) => state.editorPreset);
   const setEditorUrl = useConfigStore((state) => state.setEditorUrl);
+  const setEditorPreset = useConfigStore((state) => state.setEditorPreset);
   const [localEditorUrl, setLocalEditorUrl] = useState(editorUrl);
+  const [localPreset, setLocalPreset] = useState<TEditorPreset>(editorPreset);
 
-  const isDirty = localEditorUrl.trim() !== editorUrl;
+  const needsUrlInput = localPreset === 'code-server' || localPreset === 'custom';
+  const isDirty = localPreset !== editorPreset || (needsUrlInput && localEditorUrl.trim() !== editorUrl);
+
+  const previewUrl = buildEditorUrl(localPreset, localEditorUrl, '/Users/me/project');
 
   const handleSave = () => {
-    const trimmed = localEditorUrl.trim();
-    if (trimmed) {
+    const trimmed = needsUrlInput ? localEditorUrl.trim() : '';
+
+    if (localPreset === 'code-server' && trimmed) {
       try {
         const url = new URL(trimmed);
         if (url.protocol !== 'http:' && url.protocol !== 'https:') {
-          toast.error('Editor URL must start with http:// or https://');
+          toast.error(t('errorHttpRequired'));
           return;
         }
       } catch {
-        toast.error('Editor URL must start with http:// or https://');
+        toast.error(t('errorHttpRequired'));
         return;
       }
     }
+
+    if (localPreset === 'custom' && trimmed && !trimmed.includes('{folder}') && !trimmed.includes('{folderEncoded}')) {
+      toast.error(t('errorCustomTemplate'));
+      return;
+    }
+
     setLocalEditorUrl(trimmed);
     setEditorUrl(trimmed);
+    setEditorPreset(localPreset);
     toast.success(tc('saved'));
   };
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
+    <div className="space-y-6">
+      <div className="space-y-3">
         <div>
-          <p className="text-sm font-medium">{t('url')}</p>
-          <p className="text-sm text-muted-foreground">
-            {t('urlDescription')}
-          </p>
+          <p className="text-sm font-medium">{t('preset')}</p>
+          <p className="text-sm text-muted-foreground">{t('presetDescription')}</p>
         </div>
-        <Input
-          placeholder="https://example.com:8080"
-          value={localEditorUrl}
-          onChange={(e) => setLocalEditorUrl(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') handleSave();
-          }}
-        />
-        <p className="text-sm text-muted-foreground">
-          {t.rich('urlHelp', {
-            link: (chunks) => (
-              <a
-                href="https://github.com/coder/code-server"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-foreground"
-              >
-                {chunks}
-              </a>
-            ),
-            code: () => <code className="rounded bg-muted px-1 py-0.5 text-xs">?folder=</code>,
-          })}
-        </p>
-        <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
-          <p className="text-muted-foreground/60"># Install on macOS</p>
-          <p>brew install code-server</p>
-          <p className="mt-2 text-muted-foreground/60"># Run</p>
-          <p>code-server --port 8080</p>
-          <p className="mt-2 text-muted-foreground/60"># External access via Tailscale (optional)</p>
-          <p>tailscale serve --bg --https=8443 http://localhost:8080</p>
-        </div>
+        <RadioGroup
+          value={localPreset}
+          onValueChange={(value) => setLocalPreset(value as TEditorPreset)}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {EDITOR_PRESETS.map((preset) => (
+            <Label
+              key={preset}
+              htmlFor={`editor-preset-${preset}`}
+              className={cn(
+                'flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-normal',
+                localPreset === preset && 'border-foreground/30 bg-accent',
+              )}
+            >
+              <RadioGroupItem id={`editor-preset-${preset}`} value={preset} />
+              <EditorIcon preset={preset} className="h-5 w-5 shrink-0" />
+              {t(`presets.${preset}`)}
+            </Label>
+          ))}
+        </RadioGroup>
       </div>
+
+      {needsUrlInput && (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">
+            {localPreset === 'custom' ? t('customTemplate') : t('url')}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {localPreset === 'custom' ? t('customTemplateDescription') : t('urlDescription')}
+          </p>
+          <Input
+            placeholder={localPreset === 'custom' ? 'myeditor://open?path={folderEncoded}' : 'https://example.com:8080'}
+            value={localEditorUrl}
+            onChange={(e) => setLocalEditorUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+            }}
+          />
+          {localPreset === 'code-server' && (
+            <>
+              <p className="text-sm text-muted-foreground">
+                {t.rich('urlHelp', {
+                  link: (chunks) => (
+                    <a
+                      href="https://github.com/coder/code-server"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline hover:text-foreground"
+                    >
+                      {chunks}
+                    </a>
+                  ),
+                  code: () => <code className="rounded bg-muted px-1 py-0.5 text-xs">?folder=</code>,
+                })}
+              </p>
+              <div className="rounded-md bg-muted p-3 font-mono text-xs leading-relaxed">
+                <p className="text-muted-foreground/60"># Install on macOS</p>
+                <p>brew install code-server</p>
+                <p className="mt-2 text-muted-foreground/60"># Run</p>
+                <p>code-server --port 8080</p>
+                <p className="mt-2 text-muted-foreground/60"># External access via Tailscale (optional)</p>
+                <p>tailscale serve --bg --https=8443 http://localhost:8080</p>
+              </div>
+            </>
+          )}
+          {localPreset === 'custom' && (
+            <p className="text-sm text-muted-foreground">
+              {t.rich('customHelp', {
+                folder: () => <code className="rounded bg-muted px-1 py-0.5 text-xs">{'{folder}'}</code>,
+                folderEncoded: () => <code className="rounded bg-muted px-1 py-0.5 text-xs">{'{folderEncoded}'}</code>,
+              })}
+            </p>
+          )}
+        </div>
+      )}
+
+      {!needsUrlInput && (
+        <p className="rounded-md border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+          {t('localIdeHint')}
+        </p>
+      )}
+
+      {previewUrl && (
+        <div className="space-y-1">
+          <p className="text-xs font-medium text-muted-foreground">{t('preview')}</p>
+          <code className="block break-all rounded-md bg-muted p-2 font-mono text-xs">
+            {previewUrl}
+          </code>
+        </div>
+      )}
 
       <div className="flex justify-end">
         <Button disabled={!isDirty} onClick={handleSave}>

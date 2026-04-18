@@ -1,6 +1,6 @@
 {
-  "editorUrlNotSet": "エディタURLが設定されていません。設定 > エディタでURLを入力してください。",
-  "openEditor": "code-serverを開く",
+  "editorUrlNotSet": "エディタが設定されていません。設定 > エディタで構成してください。",
+  "openEditor": "エディタを開く",
   "splitVertical": "縦分割",
   "splitVerticalShortcut": "縦分割 ({shortcut})",
   "splitHorizontal": "横分割",
