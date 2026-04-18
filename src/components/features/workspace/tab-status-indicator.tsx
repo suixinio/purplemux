@@ -15,9 +15,8 @@ const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
     (state) => selectTabDisplayStatus(state.tabs, tabId),
   );
 
-  if (panelType !== 'claude-code') return null;
-
-  const visible = status !== 'idle';
+  const isClaude = panelType === 'claude-code';
+  const visible = isClaude && status !== 'idle';
 
   return (
     <span
@@ -27,8 +26,9 @@ const TabStatusIndicator = ({ tabId, panelType }: ITabStatusIndicatorProps) => {
         marginRight: visible ? 0 : -6,
         opacity: visible ? 1 : 0,
       }}
+      aria-hidden={!visible || undefined}
     >
-      {status === 'busy' ? (
+      {!isClaude ? null : status === 'busy' ? (
         <Spinner className="h-2.5 w-2.5 text-muted-foreground" />
       ) : status === 'ready-for-review' ? (
         <span
