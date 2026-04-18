@@ -173,9 +173,14 @@ const GeneralTab = () => {
         </ButtonGroup>
       </div>
 
-      <p className="text-xs text-muted-foreground/50">
+      <a
+        href="https://github.com/subicura/purplemux/releases"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-muted-foreground/50 hover:text-muted-foreground hover:underline w-fit"
+      >
         {packageJson.version}({process.env.NEXT_PUBLIC_COMMIT_HASH})
-      </p>
+      </a>
     </div>
   );
 };

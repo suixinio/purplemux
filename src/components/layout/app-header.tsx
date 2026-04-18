@@ -45,7 +45,7 @@ const AppHeader = ({ onMenuOpen, workspaceName }: IAppHeaderProps) => {
           >
             <Menu className="h-5 w-5" />
             {sessionsBadge > 0 && (
-              <span className="absolute -right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded bg-foreground/10 px-0.5 text-[9px] font-medium leading-none text-foreground/60">
+              <span className="absolute -right-0.5 top-0.5 flex h-3.5 min-w-3.5 items-center justify-center rounded bg-[var(--ui-coral)] px-0.5 text-[9px] font-medium leading-none text-white">
                 {sessionsBadge}
               </span>
             )}
