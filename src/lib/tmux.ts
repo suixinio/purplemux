@@ -3,6 +3,8 @@ import fs from 'fs/promises';
 import { promisify } from 'util';
 import path from 'path';
 import { nanoid } from 'nanoid';
+import { PRISTINE_ENV } from '@/lib/pristine-env';
+import { buildShellLaunchCommand } from '@/lib/shell-env';
 import { createLogger } from '@/lib/logger';
 import { isLinux } from '@/lib/platform';
 
@@ -13,21 +15,6 @@ const execFile = promisify(execFileCb);
 const TMUX_SOCKET = 'purple';
 const TMUX_CONFIG_PATH = path.join(process.env.__PMUX_APP_DIR_UNPACKED || process.env.__PMUX_APP_DIR || process.cwd(), 'src', 'config', 'tmux.conf');
 const CMD_TIMEOUT = 5000;
-
-// Snapshot taken at module load — before Next.js standalone bootstrap and our own
-// PORT/HOSTNAME writes pollute process.env. Subsequent child processes (tmux, preflight
-// shells) are spawned from this pristine snapshot so the host app's runtime env does
-// not leak into user shells.
-const ENV_SNAPSHOT: NodeJS.ProcessEnv = { ...process.env };
-
-const BLOCKED_ENV_KEYS = new Set(['AUTH_PASSWORD', 'NEXTAUTH_SECRET', 'PORT']);
-
-export const sanitizedEnv = (): NodeJS.ProcessEnv =>
-  Object.fromEntries(
-    Object.entries(ENV_SNAPSHOT).filter(
-      ([key]) => !key.startsWith('npm_') && !key.startsWith('NODE_') && !BLOCKED_ENV_KEYS.has(key),
-    ),
-  ) as NodeJS.ProcessEnv;
 
 export const listSessions = async (): Promise<string[]> => {
   try {
@@ -52,7 +39,9 @@ export const createSession = async (
   rows: number,
   cwd?: string,
 ): Promise<void> => {
-  const shell = process.env.SHELL || '/bin/zsh';
+  // tmux 서버 global env cache를 우회하기 위해 `env -i $SHELL -l`을 명령으로 직접 넘긴다.
+  // execFile의 env 옵션은 tmux 서버가 이미 떠있는 경우 무시되므로 의존하지 않는다.
+  const shellCmd = buildShellLaunchCommand();
   await execFile(
     'tmux',
     [
@@ -63,16 +52,11 @@ export const createSession = async (
       '-s', name,
       '-x', String(cols),
       '-y', String(rows),
+      shellCmd,
     ],
     {
       timeout: CMD_TIMEOUT,
-      env: {
-        ...sanitizedEnv(),
-        SHELL: shell,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
-      },
-      cwd: cwd || process.env.HOME || '/',
+      cwd: cwd || PRISTINE_ENV.HOME || '/',
     },
   );
   await applyConfig();

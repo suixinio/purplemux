@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { collectPanes, findAdjacentPaneInDirection, useLayoutStore } from '@/hooks/use-layout';
 import type { TDirection } from '@/hooks/use-layout';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
 import {
   KEY_MAP,
   TAB_NUMBER_KEYS,
@@ -23,11 +24,6 @@ interface IUseKeyboardShortcutsOptions {
   layout: ILayoutActions;
 }
 
-const HOTKEY_OPTIONS = {
-  preventDefault: true,
-  enableOnFormTags: true as const,
-};
-
 const getFocusedPane = (layout: ILayoutData | null): IPaneNode | null => {
   if (!layout?.activePaneId) return null;
   const panes = collectPanes(layout.root);
@@ -38,6 +34,13 @@ const useKeyboardShortcuts = ({
   layout,
 }: IUseKeyboardShortcutsOptions) => {
   const layoutRef = useRef(layout);
+  const isSettingsDialogOpen = useWorkspaceStore((s) => s.isSettingsDialogOpen);
+
+  const HOTKEY_OPTIONS = {
+    preventDefault: true,
+    enableOnFormTags: true as const,
+    enabled: !isSettingsDialogOpen,
+  };
 
   useEffect(() => {
     layoutRef.current = layout;

@@ -17,7 +17,8 @@ interface IMobileLayoutProps {
 const MobileLayout = ({ children }: IMobileLayoutProps) => {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsOpen = useWorkspaceStore((s) => s.isSettingsDialogOpen);
+  const setSettingsOpen = useWorkspaceStore((s) => s.setSettingsDialogOpen);
 
   const workspaces = useWorkspaceStore((s) => s.workspaces);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);

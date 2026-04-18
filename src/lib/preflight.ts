@@ -4,7 +4,8 @@ import os from 'os';
 import path from 'path';
 import { promisify } from 'util';
 import type { IRuntimePreflightResult } from '@/types/preflight';
-import { sanitizedEnv } from '@/lib/tmux';
+import { buildShellEnv, defaultShell as resolveDefaultShell } from '@/lib/shell-env';
+import { PRISTINE_ENV } from '@/lib/pristine-env';
 
 const execFile = promisify(execFileCb);
 const CMD_TIMEOUT = 5000;
@@ -12,8 +13,7 @@ const CMD_TIMEOUT = 5000;
 let shellPathCache: string | null = null;
 let shellPathPromise: Promise<string> | null = null;
 
-const defaultShell = () =>
-  os.userInfo().shell || process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
+const defaultShell = () => os.userInfo().shell || resolveDefaultShell();
 
 const resolveShellPathAsync = async (): Promise<string> => {
   const shell = defaultShell();
@@ -21,17 +21,15 @@ const resolveShellPathAsync = async (): Promise<string> => {
     const { stdout } = await execFile(shell, ['-ilc', 'echo -n "$PATH"'], {
       timeout: CMD_TIMEOUT,
       env: {
-        ...sanitizedEnv(),
+        ...buildShellEnv(),
         SHELL: shell,
         DISABLE_AUTO_UPDATE: 'true',
         ZSH_TMUX_AUTOSTARTED: 'true',
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
       },
     });
     return stdout.toString().trim();
   } catch {
-    return process.env.PATH || '';
+    return PRISTINE_ENV.PATH || '';
   }
 };
 

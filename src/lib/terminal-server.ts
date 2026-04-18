@@ -7,8 +7,9 @@ import {
   killSession,
   defaultSessionName,
   exitCopyMode,
-  sanitizedEnv,
 } from './tmux';
+import { buildShellEnv } from '@/lib/shell-env';
+import { PRISTINE_ENV } from '@/lib/pristine-env';
 import { encodeStdout } from '@/lib/terminal-protocol';
 import { createLogger } from '@/lib/logger';
 
@@ -65,12 +66,8 @@ const attachToSession = (sessionName: string, cols: number, rows: number): pty.I
     name: 'xterm-256color',
     cols,
     rows,
-    cwd: process.env.HOME || '/',
-    env: {
-      ...sanitizedEnv(),
-      TERM: 'xterm-256color',
-      COLORTERM: 'truecolor',
-    },
+    cwd: PRISTINE_ENV.HOME || '/',
+    env: buildShellEnv(),
   });
 
 const cleanup = (conn: IActiveConnection, sessionExited = false) => {

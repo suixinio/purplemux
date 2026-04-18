@@ -1,3 +1,4 @@
+import './src/lib/pristine-env';
 import { createServer, request as httpRequest } from 'http';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { createConnection } from 'net';

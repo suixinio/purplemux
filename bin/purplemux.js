@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+if (!process.env.__PMUX_PRISTINE_ENV) {
+  process.env.__PMUX_PRISTINE_ENV = JSON.stringify(process.env);
+}
+
 const path = require('path');
 
 const CLI_COMMANDS = new Set([

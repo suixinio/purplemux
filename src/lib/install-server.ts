@@ -4,7 +4,8 @@ import * as pty from 'node-pty';
 import os from 'os';
 import { needsSetup } from '@/lib/config-store';
 import { verifyRequestSession } from '@/lib/auth';
-import { sanitizedEnv } from '@/lib/tmux';
+import { buildShellEnv } from '@/lib/shell-env';
+import { PRISTINE_ENV } from '@/lib/pristine-env';
 import { MSG_STDIN, MSG_RESIZE, encodeStdout, textDecoder } from '@/lib/terminal-protocol';
 import { createLogger } from '@/lib/logger';
 
@@ -85,7 +86,7 @@ export const handleInstallConnection = async (ws: WebSocket, request: IncomingMe
     cleanup();
   }
 
-  const shell = os.userInfo().shell || process.env.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
+  const shell = os.userInfo().shell || PRISTINE_ENV.SHELL || (process.platform === 'darwin' ? '/bin/zsh' : '/bin/bash');
   const cols = parseInt(url.searchParams.get('cols') || '', 10) || 80;
   const rows = parseInt(url.searchParams.get('rows') || '', 10) || 24;
 
@@ -95,12 +96,10 @@ export const handleInstallConnection = async (ws: WebSocket, request: IncomingMe
       name: 'xterm-256color',
       cols,
       rows,
-      cwd: process.env.HOME || '/',
+      cwd: PRISTINE_ENV.HOME || '/',
       env: {
-        ...sanitizedEnv(),
+        ...buildShellEnv(),
         SHELL: shell,
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor',
       },
     });
   } catch (err) {

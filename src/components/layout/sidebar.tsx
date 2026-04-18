@@ -71,7 +71,8 @@ const Sidebar = () => {
   const { items: sidebarItems } = useSidebarItems();
   const activeWebviewId = useWebviewStore((s) => s.activeId);
 
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsOpen = useWorkspaceStore((s) => s.isSettingsDialogOpen);
+  const setSettingsOpen = useWorkspaceStore((s) => s.setSettingsDialogOpen);
   const storedSidebarTab = useWorkspaceStore((s) => s.sidebarTab);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -93,7 +94,7 @@ const Sidebar = () => {
     const handler = () => setSettingsOpen(true);
     window.addEventListener('open-settings', handler);
     return () => window.removeEventListener('open-settings', handler);
-  }, []);
+  }, [setSettingsOpen]);
 
   useEffect(() => {
     const modKey = isMac ? 'Meta' : 'Control';

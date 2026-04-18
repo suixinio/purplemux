@@ -4,14 +4,16 @@ import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { useSelectWorkspace } from '@/hooks/use-sidebar-actions';
 import { WORKSPACE_NUMBER_KEYS, KEY_MAP } from '@/lib/keyboard-shortcuts';
 
-const HOTKEY_OPTIONS = {
-  preventDefault: true,
-  enableOnFormTags: true as const,
-};
-
 const useGlobalShortcuts = () => {
   const selectWorkspace = useSelectWorkspace();
   const router = useRouter();
+  const isSettingsDialogOpen = useWorkspaceStore((s) => s.isSettingsDialogOpen);
+
+  const hotkeyOptions = {
+    preventDefault: true,
+    enableOnFormTags: true as const,
+    enabled: !isSettingsDialogOpen,
+  };
 
   useHotkeys(
     WORKSPACE_NUMBER_KEYS,
@@ -28,7 +30,7 @@ const useGlobalShortcuts = () => {
         selectWorkspace(workspace.id);
       }
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 
   useHotkeys(
@@ -36,7 +38,7 @@ const useGlobalShortcuts = () => {
     () => {
       window.dispatchEvent(new Event('open-settings'));
     },
-    HOTKEY_OPTIONS,
+    { preventDefault: true, enableOnFormTags: true as const },
   );
 
   useHotkeys(
@@ -46,7 +48,7 @@ const useGlobalShortcuts = () => {
       const ws = await store.createWorkspace('');
       if (ws) selectWorkspace(ws.id);
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 
   useHotkeys(
@@ -58,7 +60,7 @@ const useGlobalShortcuts = () => {
         new CustomEvent('rename-workspace', { detail: activeWorkspaceId }),
       );
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 
   useHotkeys(
@@ -66,7 +68,7 @@ const useGlobalShortcuts = () => {
     () => {
       useWorkspaceStore.getState().toggleSidebar();
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 
   useHotkeys(
@@ -74,7 +76,7 @@ const useGlobalShortcuts = () => {
     () => {
       router.push('/reports');
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 
   useHotkeys(
@@ -82,7 +84,7 @@ const useGlobalShortcuts = () => {
     () => {
       router.push('/stats');
     },
-    HOTKEY_OPTIONS,
+    hotkeyOptions,
   );
 };
 

@@ -22,6 +22,7 @@ interface IWorkspaceState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   sidebarTab: 'workspace' | 'sessions';
+  isSettingsDialogOpen: boolean;
   isLoading: boolean;
   error: string | null;
 
@@ -38,6 +39,7 @@ interface IWorkspaceState {
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
   setSidebarTab: (tab: 'workspace' | 'sessions') => void;
+  setSettingsDialogOpen: (open: boolean) => void;
   validateDirectory: (directory: string) => Promise<IValidateResponse>;
 }
 
@@ -108,6 +110,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   sidebarCollapsed: initialSidebar.sidebarCollapsed,
   sidebarWidth: initialSidebar.sidebarWidth,
   sidebarTab: initialSidebar.sidebarTab,
+  isSettingsDialogOpen: false,
   isLoading: initialWs.isLoading,
   error: null,
 
@@ -271,6 +274,10 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   setSidebarTab: (tab) => {
     set({ sidebarTab: tab });
     try { localStorage.setItem('sidebar-tab', tab); } catch { /* */ }
+  },
+
+  setSettingsDialogOpen: (open) => {
+    set({ isSettingsDialogOpen: open });
   },
 
   validateDirectory: async (directory) => {
