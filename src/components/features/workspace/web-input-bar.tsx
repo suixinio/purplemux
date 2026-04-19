@@ -10,14 +10,14 @@ import useMessageHistory from '@/hooks/use-message-history';
 import { registerPushTarget } from '@/hooks/use-web-push';
 import InterruptDialog from '@/components/features/workspace/interrupt-dialog';
 import MessageHistoryPicker from '@/components/features/workspace/message-history-picker';
-import { isImageFile, uploadImage, SUPPORTED_MIMES } from '@/lib/upload-image-client';
+import { isImageFile, uploadImage } from '@/lib/upload-image-client';
+import { uploadFile } from '@/lib/upload-file-client';
 import { countImageRefs, waitForImageAttachments } from '@/lib/image-attach-detector';
 import type { TCliState } from '@/types/timeline';
 
 const DEFAULT_MAX_ROWS = 5;
 const LINE_HEIGHT = 20;
 const PADDING_Y = 16;
-const ATTACH_ACCEPT = Array.from(SUPPORTED_MIMES).join(',');
 
 const escapePathForPrompt = (filePath: string): string =>
   filePath.replace(/[ \t\\'"(){}[\]!#$&;`|*?<>~^%]/g, '\\$&');
@@ -303,38 +303,74 @@ const WebInputBar = ({
     });
   }, []);
 
-  const uploadAndAttach = useCallback(async (files: File[]): Promise<boolean> => {
-    const images = files.filter(isImageFile);
-    if (images.length === 0) return false;
-    const remainingSlots = Math.max(0, MAX_ATTACHMENTS - attachments.length);
+  const insertAtCursor = useCallback((text: string) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const current = textarea.value;
+    const focused = typeof document !== 'undefined' && document.activeElement === textarea;
+    const start = focused ? textarea.selectionStart ?? current.length : current.length;
+    const end = focused ? textarea.selectionEnd ?? current.length : current.length;
+    const before = current.slice(0, start);
+    const after = current.slice(end);
+    const prefix = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
+    const suffix = after.length > 0 && !/^\s/.test(after) ? ' ' : '';
+    const inserted = `${prefix}${text}${suffix}`;
+    const next = `${before}${inserted}${after}`;
+    setValue(next);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      const pos = before.length + inserted.length;
+      el.setSelectionRange(pos, pos);
+      el.focus();
+    });
+  }, [setValue, textareaRef]);
+
+  const uploadImagesAsChips = useCallback(async (images: File[]): Promise<void> => {
+    if (images.length === 0) return;
+    const remainingSlots = Math.max(0, MAX_ATTACHMENTS - attachmentsRef.current.length);
     if (remainingSlots === 0) {
       toast.error(t('attachmentLimitReached', { max: MAX_ATTACHMENTS }));
-      return true;
+      return;
     }
     const accepted = images.slice(0, remainingSlots);
     if (accepted.length < images.length) {
       toast.warning(t('attachmentLimitReached', { max: MAX_ATTACHMENTS }));
     }
+    const results = await Promise.all(
+      accepted.map(async (file) => ({ file, result: await uploadImage(file, { wsId, tabId }) })),
+    );
+    const next: IAttachment[] = results.map(({ file, result }) => ({
+      id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
+      path: result.path,
+      filename: file.name || 'image',
+      thumbnail: URL.createObjectURL(file),
+    }));
+    setAttachments((prev) => [...prev, ...next]);
+  }, [wsId, tabId, t]);
+
+  const uploadFilesAsPaths = useCallback(async (files: File[]): Promise<void> => {
+    if (files.length === 0) return;
+    const results = await Promise.all(files.map((file) => uploadFile(file, { wsId, tabId })));
+    const text = results.map((r) => r.path).join(' ');
+    if (text.length > 0) insertAtCursor(text);
+  }, [wsId, tabId, insertAtCursor]);
+
+  const uploadAndAttach = useCallback(async (files: File[]): Promise<boolean> => {
+    if (files.length === 0) return false;
+    const images = files.filter(isImageFile);
+    const others = files.filter((f) => !isImageFile(f));
+    if (images.length === 0 && others.length === 0) return false;
     setIsUploading(true);
     try {
-      const results = await Promise.all(
-        accepted.map(async (file) => ({ file, result: await uploadImage(file, { wsId, tabId }) })),
-      );
-      const next: IAttachment[] = results.map(({ file, result }) => ({
-        id: typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`,
-        path: result.path,
-        filename: file.name || 'image',
-        thumbnail: URL.createObjectURL(file),
-      }));
-      setAttachments((prev) => [...prev, ...next]);
-      return true;
+      await Promise.all([uploadImagesAsChips(images), uploadFilesAsPaths(others)]);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Upload failed');
-      return true;
     } finally {
       setIsUploading(false);
     }
-  }, [wsId, tabId, attachments.length, t]);
+    return true;
+  }, [uploadImagesAsChips, uploadFilesAsPaths]);
 
   const handleAttachClick = useCallback(() => {
     fileInputRef.current?.click();
@@ -358,7 +394,7 @@ const WebInputBar = ({
   const handlePaste = useCallback(async (e: ClipboardEvent<HTMLTextAreaElement>) => {
     const items = e.clipboardData?.files;
     if (!items || items.length === 0) return;
-    const files = Array.from(items).filter(isImageFile);
+    const files = Array.from(items);
     if (files.length === 0) return;
     e.preventDefault();
     await uploadAndAttach(files);
@@ -467,7 +503,6 @@ const WebInputBar = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept={ATTACH_ACCEPT}
                 multiple
                 className="hidden"
                 onChange={handleFileInputChange}

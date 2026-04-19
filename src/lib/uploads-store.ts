@@ -8,6 +8,7 @@ const UPLOADS_DIR = path.join(BASE_DIR, 'uploads');
 
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_BYTES = 10 * 1024 * 1024;
+const GENERIC_MAX_BYTES = 50 * 1024 * 1024;
 
 const MIME_EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
@@ -27,6 +28,13 @@ interface ISaveImageOptions {
 interface ISaveImageResult {
   path: string;
   filename: string;
+}
+
+interface ISaveFileOptions {
+  data: Buffer;
+  originalName?: string;
+  wsId?: string;
+  tabId?: string;
 }
 
 const sanitizeId = (value?: string): string => {
@@ -59,6 +67,32 @@ const saveImage = async ({ data, mime, originalName, wsId, tabId }: ISaveImageOp
   await fs.mkdir(dir, { recursive: true });
 
   const filename = buildFilename(originalName, mime);
+  const fullPath = path.join(dir, filename);
+  await fs.writeFile(fullPath, data, { mode: 0o600 });
+
+  return { path: fullPath, filename };
+};
+
+const buildGenericFilename = (originalName: string | undefined): string => {
+  const stamp = Date.now();
+  const rand = randomBytes(4).toString('hex');
+  const parsed = originalName ? path.parse(originalName) : { name: '', ext: '' };
+  const baseRaw = parsed.name || 'file';
+  const base = baseRaw.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40) || 'file';
+  const extRaw = parsed.ext ? parsed.ext.replace(/[^a-zA-Z0-9.]/g, '') : '';
+  const ext = extRaw.startsWith('.') ? extRaw.slice(0, 16) : '';
+  return `${stamp}-${rand}-${base}${ext}`;
+};
+
+const saveFile = async ({ data, originalName, wsId, tabId }: ISaveFileOptions): Promise<ISaveImageResult> => {
+  if (data.length > GENERIC_MAX_BYTES) {
+    throw new Error(`File exceeds ${GENERIC_MAX_BYTES} bytes`);
+  }
+
+  const dir = path.join(UPLOADS_DIR, sanitizeId(wsId), sanitizeId(tabId));
+  await fs.mkdir(dir, { recursive: true });
+
+  const filename = buildGenericFilename(originalName);
   const fullPath = path.join(dir, filename);
   await fs.writeFile(fullPath, data, { mode: 0o600 });
 
@@ -159,10 +193,12 @@ const cleanupAllUploads = async (): Promise<ICleanupResult> =>
 
 export {
   saveImage,
+  saveFile,
   cleanupExpiredUploads,
   cleanupAllUploads,
   isValidMime,
   MAX_BYTES,
+  GENERIC_MAX_BYTES,
   UPLOADS_DIR,
 };
 export type { ISaveImageResult, ICleanupResult };
