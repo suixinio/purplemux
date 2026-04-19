@@ -29,29 +29,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const layoutOptions = resumeSessionId ? { panelType: 'claude-code' as const } : undefined;
       const workspace = await createWorkspace(resolvedDirectory, name, layoutOptions);
 
-      if (resumeSessionId) {
-        const layout = await readLayoutFile(resolveLayoutFile(workspace.id));
-        if (layout) {
-          const tab = collectAllTabs(layout.root)[0];
-          if (tab) {
-            getStatusManager().registerTab(tab.id, {
-              cliState: 'inactive',
-              workspaceId: workspace.id,
-              tabName: tab.name,
-              tmuxSession: tab.sessionName,
-              lastEvent: null,
-              eventSeq: 0,
-            });
-            setTimeout(async () => {
-              try {
-                const resumeCmd = await buildResumeCommand(resumeSessionId, workspace.id);
-                await sendKeys(tab.sessionName, resumeCmd);
-              } catch (err) {
-                log.warn(`resume sendKeys failed: ${err instanceof Error ? err.message : err}`);
-              }
-            }, SHELL_READY_DELAY_MS);
+      const layout = await readLayoutFile(resolveLayoutFile(workspace.id));
+      const defaultTab = layout ? collectAllTabs(layout.root)[0] : null;
+
+      if (defaultTab && defaultTab.panelType !== 'web-browser') {
+        getStatusManager().registerTab(defaultTab.id, {
+          cliState: 'inactive',
+          workspaceId: workspace.id,
+          tabName: defaultTab.name,
+          tmuxSession: defaultTab.sessionName,
+          lastEvent: null,
+          eventSeq: 0,
+        });
+      }
+
+      if (resumeSessionId && defaultTab) {
+        setTimeout(async () => {
+          try {
+            const resumeCmd = await buildResumeCommand(resumeSessionId, workspace.id);
+            await sendKeys(defaultTab.sessionName, resumeCmd);
+          } catch (err) {
+            log.warn(`resume sendKeys failed: ${err instanceof Error ? err.message : err}`);
           }
-        }
+        }, SHELL_READY_DELAY_MS);
       }
 
       return res.status(200).json(workspace);
