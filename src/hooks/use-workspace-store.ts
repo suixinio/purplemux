@@ -26,6 +26,7 @@ interface IWorkspaceState {
   isCheatSheetOpen: boolean;
   isLoading: boolean;
   error: string | null;
+  pendingDeleteIds: Set<string>;
 
   hydrate: (data: IWorkspaceInitialData) => void;
   fetchWorkspaces: () => Promise<void>;
@@ -33,6 +34,8 @@ interface IWorkspaceState {
   createWorkspace: (directory: string, name?: string, resumeSessionId?: string) => Promise<IWorkspace | null>;
   deleteWorkspace: (workspaceId: string) => Promise<boolean>;
   removeWorkspace: (workspaceId: string) => void;
+  markPendingDelete: (workspaceId: string) => void;
+  unmarkPendingDelete: (workspaceId: string) => void;
   switchWorkspace: (workspaceId: string) => void;
   renameWorkspace: (workspaceId: string, name: string) => Promise<boolean>;
   reorderWorkspaces: (fromIndex: number, toIndex: number) => void;
@@ -106,6 +109,14 @@ const saveActive = (updates: {
   });
 };
 
+let syncTicketCounter = 0;
+let lastAppliedSyncTicket = 0;
+let mutationFenceTicket = 0;
+
+const bumpMutationFence = () => {
+  mutationFenceTicket = syncTicketCounter;
+};
+
 const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   workspaces: initialWs.workspaces,
   activeWorkspaceId: initialWs.workspaces.length > 0 ? resolveActiveWorkspaceId(initialWs.workspaces) : null,
@@ -116,6 +127,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   isCheatSheetOpen: false,
   isLoading: initialWs.isLoading,
   error: null,
+  pendingDeleteIds: new Set<string>(),
 
   hydrate: (data) => {
     const activeWorkspaceId = resolveActiveWorkspaceId(data.workspaces, data.activeWorkspaceId);
@@ -152,13 +164,39 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   },
 
   syncWorkspaces: async () => {
+    const myTicket = ++syncTicketCounter;
     try {
       const res = await fetch('/api/workspace');
       if (!res.ok) return;
       const data = await res.json();
+      if (myTicket < lastAppliedSyncTicket || myTicket <= mutationFenceTicket) return;
+      lastAppliedSyncTicket = myTicket;
+
       const current = get().workspaces;
-      if (JSON.stringify(current) === JSON.stringify(data.workspaces)) return;
-      set({ workspaces: data.workspaces });
+      const pending = get().pendingDeleteIds;
+      const serverList: IWorkspace[] = data.workspaces;
+      const serverMap = new Map<string, IWorkspace>(serverList.map((w) => [w.id, w]));
+
+      const merged: IWorkspace[] = [];
+      const seen = new Set<string>();
+      for (const w of current) {
+        const updated = serverMap.get(w.id);
+        if (updated) {
+          merged.push(updated);
+          seen.add(w.id);
+        } else if (pending.has(w.id)) {
+          merged.push(w);
+          seen.add(w.id);
+        }
+      }
+      for (const w of serverList) {
+        if (seen.has(w.id)) continue;
+        if (pending.has(w.id)) continue;
+        merged.push(w);
+      }
+
+      if (JSON.stringify(current) === JSON.stringify(merged)) return;
+      set({ workspaces: merged });
     } catch (err) {
       console.log(`[workspace-store] sync error: ${err instanceof Error ? err.message : err}`);
     }
@@ -176,7 +214,12 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         throw new Error(data.error || t('workspace', 'createFailed'));
       }
       const ws: IWorkspace = await res.json();
-      set((state) => ({ workspaces: [...state.workspaces, ws] }));
+      bumpMutationFence();
+      set((state) => ({
+        workspaces: state.workspaces.some((w) => w.id === ws.id)
+          ? state.workspaces
+          : [...state.workspaces, ws],
+      }));
       return ws;
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('workspace', 'createFailed');
@@ -188,7 +231,8 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   deleteWorkspace: async (workspaceId) => {
     try {
       const res = await fetch(`/api/workspace/${workspaceId}`, { method: 'DELETE' });
-      if (!res.ok && res.status !== 204 && res.status !== 404) throw new Error();
+      if (!res.ok && res.status !== 404) throw new Error();
+      bumpMutationFence();
       return true;
     } catch {
       toast.error(t('workspace', 'deleteFailed'));
@@ -206,6 +250,24 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         if (activeWorkspaceId) saveActiveWorkspaceIdToServer(activeWorkspaceId);
       }
       return { workspaces: remaining, activeWorkspaceId };
+    });
+  },
+
+  markPendingDelete: (workspaceId) => {
+    set((state) => {
+      if (state.pendingDeleteIds.has(workspaceId)) return state;
+      const next = new Set(state.pendingDeleteIds);
+      next.add(workspaceId);
+      return { pendingDeleteIds: next };
+    });
+  },
+
+  unmarkPendingDelete: (workspaceId) => {
+    set((state) => {
+      if (!state.pendingDeleteIds.has(workspaceId)) return state;
+      const next = new Set(state.pendingDeleteIds);
+      next.delete(workspaceId);
+      return { pendingDeleteIds: next };
     });
   },
 

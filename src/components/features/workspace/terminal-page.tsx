@@ -13,6 +13,7 @@ import { requestSync } from '@/hooks/use-claude-status';
 import PaneLayout from '@/components/features/workspace/pane-layout';
 import ContentHeader from '@/components/features/workspace/content-header';
 import useSidebarActions from '@/hooks/use-sidebar-actions';
+import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
 
 const TerminalPage = () => {
   const t = useTranslations('terminal');
@@ -70,27 +71,7 @@ const TerminalPage = () => {
     useTabMetadataStore.getState().retainOnly(allTabIds);
   }, [layout.layout]);
 
-  useEffect(() => {
-    if (!allTabsEmpty) return;
-
-    const { activeWorkspaceId, workspaces, switchWorkspace, deleteWorkspace, removeWorkspace } = useWorkspaceStore.getState();
-    if (!activeWorkspaceId) return;
-
-    const idx = workspaces.findIndex((w) => w.id === activeWorkspaceId);
-    const adjacent = workspaces[idx + 1] || workspaces[idx - 1];
-
-    layout.clearLayout();
-
-    if (adjacent) {
-      removeWorkspace(activeWorkspaceId);
-      deleteWorkspace(activeWorkspaceId);
-      switchWorkspace(adjacent.id);
-    } else {
-      deleteWorkspace(activeWorkspaceId).then(() => {
-        removeWorkspace(activeWorkspaceId);
-      });
-    }
-  }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
+  useAutoDeleteEmptyWorkspace(allTabsEmpty, layout.clearLayout);
 
   const handleSelectWorkspace = useCallback(
     (workspaceId: string) => {

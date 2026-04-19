@@ -18,6 +18,7 @@ import useTabStore from '@/hooks/use-tab-store';
 import type { TCliState } from '@/types/timeline';
 import useConfigStore from '@/hooks/use-config-store';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
+import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
 
 const MobileTerminalPage = () => {
   const t = useTranslations('terminal');
@@ -79,27 +80,7 @@ const MobileTerminalPage = () => {
     useTabMetadataStore.getState().retainOnly(allTabIds);
   }, [layout.layout]);
 
-  useEffect(() => {
-    if (!allTabsEmpty) return;
-    const { activeWorkspaceId: wsId, workspaces: wsList, switchWorkspace, deleteWorkspace, removeWorkspace } =
-      useWorkspaceStore.getState();
-    if (!wsId) return;
-
-    const idx = wsList.findIndex((w) => w.id === wsId);
-    const adjacent = wsList[idx + 1] || wsList[idx - 1];
-
-    layout.clearLayout();
-
-    if (adjacent) {
-      removeWorkspace(wsId);
-      deleteWorkspace(wsId);
-      switchWorkspace(adjacent.id);
-    } else {
-      deleteWorkspace(wsId).then(() => {
-        removeWorkspace(wsId);
-      });
-    }
-  }, [allTabsEmpty, layout.clearLayout]); // eslint-disable-line react-hooks/exhaustive-deps
+  useAutoDeleteEmptyWorkspace(allTabsEmpty, layout.clearLayout);
 
   // Derive active pane/tab from layout store (same as desktop)
   const activePaneId = layout.layout?.activePaneId ?? null;

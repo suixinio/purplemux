@@ -224,34 +224,39 @@ const Sidebar = () => {
     }
 
     const store = useWorkspaceStore.getState();
-    const success = await store.deleteWorkspace(id);
+    store.markPendingDelete(id);
+    try {
+      const success = await store.deleteWorkspace(id);
 
-    if (!success) {
+      if (!success) {
+        setDeletingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        return;
+      }
+
+      setFadingOutIds((prev) => new Set(prev).add(id));
+      await new Promise<void>((resolve) => setTimeout(resolve, 150));
+
+      store.removeWorkspace(id);
       setDeletingIds((prev) => {
         const next = new Set(prev);
         next.delete(id);
         return next;
       });
-      return;
-    }
+      setFadingOutIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
 
-    setFadingOutIds((prev) => new Set(prev).add(id));
-    await new Promise<void>((resolve) => setTimeout(resolve, 150));
-
-    store.removeWorkspace(id);
-    setDeletingIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-    setFadingOutIds((prev) => {
-      const next = new Set(prev);
-      next.delete(id);
-      return next;
-    });
-
-    if (workspaces.length <= 1) {
-      store.fetchWorkspaces();
+      if (workspaces.length <= 1) {
+        store.fetchWorkspaces();
+      }
+    } finally {
+      store.unmarkPendingDelete(id);
     }
   }, [deleteTarget, activeWorkspaceId, workspaces, selectWorkspace]);
 
