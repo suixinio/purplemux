@@ -313,7 +313,7 @@ const WebInputBar = ({
     const before = current.slice(0, start);
     const after = current.slice(end);
     const prefix = before.length > 0 && !/\s$/.test(before) ? ' ' : '';
-    const suffix = after.length > 0 && !/^\s/.test(after) ? ' ' : '';
+    const suffix = after.length === 0 || !/^\s/.test(after) ? ' ' : '';
     const inserted = `${prefix}${text}${suffix}`;
     const next = `${before}${inserted}${after}`;
     setValue(next);
