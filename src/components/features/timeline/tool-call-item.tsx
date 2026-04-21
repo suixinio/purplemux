@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo, useRef, memo } from 'react';
+import { useState, useMemo, memo } from 'react';
 import { useTranslations } from 'next-intl';
-import { createPatch } from 'diff';
-import type { Diff2HtmlUIConfig } from 'diff2html/lib/ui/js/diff2html-ui-base';
+import { useTheme } from 'next-themes';
+import { DiffView, DiffModeEnum, getLang } from '@git-diff-view/react';
+import { generateDiffFile } from '@git-diff-view/file';
 import {
   FileText,
   FilePen,
@@ -39,17 +40,7 @@ const renderToolIcon = (toolName: TToolName, size: number) => {
   return <IconComponent size={size} />;
 };
 
-const DIFF2HTML_CONFIG: Diff2HtmlUIConfig = {
-  outputFormat: 'line-by-line',
-  drawFileList: false,
-  matching: 'lines',
-  highlight: true,
-  fileContentToggle: false,
-  stickyFileHeaders: false,
-  synchronisedScroll: false,
-};
-
-const DiffView = ({
+const InlineDiffView = ({
   oldString,
   newString,
   filePath,
@@ -58,31 +49,32 @@ const DiffView = ({
   newString: string;
   filePath?: string;
 }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { resolvedTheme } = useTheme();
+  const theme: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark';
 
-  const patch = useMemo(() => {
+  const diffFile = useMemo(() => {
     const name = filePath ? filePath.split('/').pop() || filePath : 'file';
-    return createPatch(name, oldString, newString, undefined, undefined, { context: 3 });
-  }, [oldString, newString, filePath]);
+    const lang = getLang(name);
+    const file = generateDiffFile(name, oldString, name, newString, lang, lang, { context: 3 });
+    file.initTheme(theme);
+    file.init();
+    file.buildSplitDiffLines();
+    file.buildUnifiedDiffLines();
+    return file;
+  }, [oldString, newString, filePath, theme]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    let cancelled = false;
-    import('diff2html/lib/ui/js/diff2html-ui-slim').then(({ Diff2HtmlUI }) => {
-      if (cancelled || !containerRef.current) return;
-      const ui = new Diff2HtmlUI(containerRef.current, patch, DIFF2HTML_CONFIG);
-      ui.draw();
-    });
-
-    return () => {
-      cancelled = true;
-      if (el) el.innerHTML = '';
-    };
-  }, [patch]);
-
-  return <div ref={containerRef} className="diff-panel-content diff-panel-content--inline mt-1.5 text-xs" />;
+  return (
+    <div className="diff-panel-content mt-1.5 overflow-hidden rounded border border-border text-xs">
+      <DiffView
+        diffFile={diffFile}
+        diffViewMode={DiffModeEnum.Unified}
+        diffViewTheme={theme}
+        diffViewHighlight
+        diffViewWrap={false}
+        diffViewFontSize={12}
+      />
+    </div>
+  );
 };
 
 const ToolCallItem = ({ entry, result }: IToolCallItemProps) => {
@@ -128,7 +120,7 @@ const ToolCallItem = ({ entry, result }: IToolCallItemProps) => {
           </button>
           {isDiffOpen && entry.diff && (
             <div className="ml-4">
-              <DiffView
+              <InlineDiffView
                 oldString={entry.diff.oldString}
                 newString={entry.diff.newString}
                 filePath={entry.diff.filePath}

@@ -1,7 +1,7 @@
 import "@/styles/globals.css";
 import "@/styles/pretendard.css";
 import "@xterm/xterm/css/xterm.css";
-import "diff2html/bundles/css/diff2html.min.css";
+import "@git-diff-view/react/styles/diff-view.css";
 import type { ReactElement, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import dayjs from "dayjs";

@@ -1,32 +1,41 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { useTheme } from 'next-themes';
 import { RefreshCw, GitBranch, Columns2, Rows2 } from 'lucide-react';
-import type { OutputFormatType } from 'diff2html/lib/types';
+import { DiffView, DiffModeEnum, getLang } from '@git-diff-view/react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
 import useIsMobile from '@/hooks/use-is-mobile';
+import { parseMultiFileDiff, getDisplayName, buildFileDiffString } from '@/lib/parse-git-diff';
 
 interface IDiffPanelProps {
   sessionName: string;
 }
+
+type TViewMode = 'split' | 'unified';
 
 const POLL_INTERVAL = 10_000;
 
 const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
+  const { resolvedTheme } = useTheme();
+  const theme: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark';
+
   const [diff, setDiff] = useState('');
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasUpdate, setHasUpdate] = useState(false);
-  const [outputFormat, setOutputFormat] = useState<OutputFormatType>(() => {
-    if (typeof window === 'undefined') return 'side-by-side';
+  const [viewMode, setViewMode] = useState<TViewMode>(() => {
+    if (typeof window === 'undefined') return 'split';
     const saved = localStorage.getItem('diff-output-format');
-    return saved === 'line-by-line' ? 'line-by-line' : 'side-by-side';
+    return saved === 'line-by-line' ? 'unified' : 'split';
   });
+
   const pollTimerRef = useRef(0);
   const currentHashRef = useRef('');
-  const containerRef = useRef<HTMLDivElement>(null);
+
+  const effectiveMode: TViewMode = isMobile ? 'unified' : viewMode;
 
   const fetchDiff = useCallback(async () => {
     setLoading(true);
@@ -37,11 +46,7 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
       const data = await res.json();
       setIsGitRepo(data.isGitRepo);
       if (data.isGitRepo) {
-        const nextDiff = data.diff ?? '';
-        if (!nextDiff && containerRef.current) {
-          containerRef.current.innerHTML = '';
-        }
-        setDiff(nextDiff);
+        setDiff(data.diff ?? '');
         currentHashRef.current = data.hash ?? '';
       }
     } finally {
@@ -71,9 +76,7 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
     pollTimerRef.current = window.setInterval(pollForChanges, POLL_INTERVAL);
     const handleVisibility = () => {
-      if (document.visibilityState === 'visible') {
-        pollForChanges();
-      }
+      if (document.visibilityState === 'visible') pollForChanges();
     };
     document.addEventListener('visibilitychange', handleVisibility);
 
@@ -83,35 +86,25 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
     };
   }, [isGitRepo, pollForChanges]);
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    if (!diff) {
-      el.innerHTML = '';
-      return;
-    }
-
-    let cancelled = false;
-    import('diff2html/lib/ui/js/diff2html-ui-slim').then(({ Diff2HtmlUI }) => {
-      if (cancelled || !containerRef.current) return;
-      containerRef.current.innerHTML = '';
-      const ui = new Diff2HtmlUI(containerRef.current, diff, {
-        outputFormat: isMobile ? 'line-by-line' : outputFormat,
-        drawFileList: true,
-        matching: 'lines',
-        highlight: true,
-        fileListToggle: true,
-        fileListStartVisible: false,
-        fileContentToggle: false,
-        synchronisedScroll: true,
-        stickyFileHeaders: true,
-      });
-      ui.draw();
+  const diffFiles = useMemo(() => {
+    if (!diff) return [];
+    return parseMultiFileDiff(diff).map((f) => {
+      const displayName = getDisplayName(f);
+      const lang = getLang(displayName);
+      const renderable = !f.isBinary && f.hunks.length > 0;
+      return {
+        source: f,
+        displayName,
+        data: renderable
+          ? {
+              oldFile: { fileName: f.oldName, fileLang: lang },
+              newFile: { fileName: f.newName, fileLang: lang },
+              hunks: [buildFileDiffString(f)],
+            }
+          : null,
+      };
     });
-
-    return () => { cancelled = true; };
-  }, [diff, outputFormat, isMobile]);
+  }, [diff]);
 
   if (loading && isGitRepo === null) {
     return (
@@ -147,27 +140,21 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
           {!isMobile && (
             <button
               className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
-              onClick={() => setOutputFormat((f) => {
-                const next = f === 'side-by-side' ? 'line-by-line' : 'side-by-side';
-                localStorage.setItem('diff-output-format', next);
+              onClick={() => setViewMode((m) => {
+                const next: TViewMode = m === 'split' ? 'unified' : 'split';
+                localStorage.setItem('diff-output-format', next === 'unified' ? 'line-by-line' : 'side-by-side');
                 return next;
               })}
-              title={outputFormat === 'side-by-side' ? t('lineByLine') : t('sideBySide')}
+              title={viewMode === 'split' ? t('lineByLine') : t('sideBySide')}
             >
-              {outputFormat === 'side-by-side' ? (
-                <Rows2 className="h-3.5 w-3.5" />
-              ) : (
-                <Columns2 className="h-3.5 w-3.5" />
-              )}
+              {viewMode === 'split' ? <Rows2 className="h-3.5 w-3.5" /> : <Columns2 className="h-3.5 w-3.5" />}
             </button>
           )}
 
           <button
             className={cn(
               'flex h-7 w-7 items-center justify-center rounded',
-              hasUpdate
-                ? 'text-ui-blue hover:bg-accent'
-                : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+              hasUpdate ? 'text-ui-blue hover:bg-accent' : 'text-muted-foreground hover:bg-accent hover:text-foreground',
               loading && 'animate-spin',
             )}
             onClick={fetchDiff}
@@ -188,10 +175,39 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
             </div>
           </div>
         )}
-        <div
-          ref={containerRef}
-          className={cn('diff-panel-content text-xs', !diff && 'hidden')}
-        />
+
+        {diffFiles.length > 0 && (
+          <div className="diff-panel-content flex flex-col gap-2 p-2 text-xs">
+            {diffFiles.map((f, i) => (
+              <div key={`${f.displayName}-${i}`} className="overflow-hidden rounded border border-border bg-card">
+                <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-secondary px-3 py-1.5">
+                  <span className="truncate font-mono text-xs text-foreground">{f.displayName}</span>
+                  {f.source.isNew && <span className="rounded bg-ui-teal/15 px-1 text-[10px] text-ui-teal">NEW</span>}
+                  {f.source.isDeleted && <span className="rounded bg-ui-red/15 px-1 text-[10px] text-ui-red">DEL</span>}
+                  {f.source.isRenamed && <span className="rounded bg-ui-blue/15 px-1 text-[10px] text-ui-blue">RENAME</span>}
+                  <span className="ml-auto flex items-center gap-2 text-[11px]">
+                    {f.source.additions > 0 && <span className="text-ui-teal">+{f.source.additions}</span>}
+                    {f.source.deletions > 0 && <span className="text-ui-red">-{f.source.deletions}</span>}
+                  </span>
+                </div>
+                {f.data ? (
+                  <DiffView
+                    data={f.data}
+                    diffViewMode={effectiveMode === 'unified' ? DiffModeEnum.Unified : DiffModeEnum.Split}
+                    diffViewTheme={theme}
+                    diffViewHighlight
+                    diffViewWrap={false}
+                    diffViewFontSize={12}
+                  />
+                ) : (
+                  <div className="px-3 py-2 text-muted-foreground">
+                    {f.source.isBinary ? 'Binary file' : 'No diff content'}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

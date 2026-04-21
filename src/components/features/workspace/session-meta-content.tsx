@@ -81,7 +81,7 @@ export const MetaCompact = ({
           </div>
         </>
       )}
-      {totalCost !== null && (
+      {totalCost !== null && totalCost > 0 && (
         <>
           <Separator />
           <span className="shrink-0 font-mono text-muted-foreground">
