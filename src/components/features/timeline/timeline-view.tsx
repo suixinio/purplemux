@@ -49,6 +49,13 @@ const RESUME_TOKEN_THRESHOLD = 100_000;
 const RESUME_IDLE_MINUTES = 70;
 const ANCHOR_OFFSET = 12;
 const ANCHOR_SETTLE_DELAY_MS = 300;
+const SHRINK_SCROLL_DELTA_THRESHOLD = 10;
+
+const getOffsetInScroller = (el: HTMLElement, scrollEl: HTMLElement): number => {
+  const elRect = el.getBoundingClientRect();
+  const scrollRect = scrollEl.getBoundingClientRect();
+  return elRect.top - scrollRect.top + scrollEl.scrollTop;
+};
 
 const ElapsedTime = ({ since }: { since: number }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -240,18 +247,15 @@ const TimelineView = ({
   const spacerRef = useRef<HTMLDivElement | null>(null);
   const armedRef = useRef(false);
   const wasBusyRef = useRef(false);
-  const pendingClearArmedRef = useRef(false);
-  const pendingClearEntryCountRef = useRef(0);
+  const lastShrinkScrollTopRef = useRef<number | null>(null);
+  const [responseReceived, setResponseReceived] = useState(false);
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
     targetScrollTop: (defaultTarget, { scrollElement }) => {
       const el = anchorElRef.current;
       if (!el) return defaultTarget;
-      const elementRect = el.getBoundingClientRect();
-      const containerRect = scrollElement.getBoundingClientRect();
-      const elementTop = elementRect.top - containerRect.top + scrollElement.scrollTop;
-      return elementTop - ANCHOR_OFFSET;
+      return getOffsetInScroller(el, scrollElement) - ANCHOR_OFFSET;
     },
   });
   const [anchorUserId, setAnchorUserId] = useState<string | null>(null);
@@ -265,7 +269,8 @@ const TimelineView = ({
     setAnchorUserId(null);
     armedRef.current = false;
     wasBusyRef.current = false;
-    pendingClearArmedRef.current = false;
+    lastShrinkScrollTopRef.current = null;
+    setResponseReceived(false);
   }
 
   useEffect(() => {
@@ -295,21 +300,15 @@ const TimelineView = ({
   useEffect(() => {
     if (cliState === 'busy') {
       wasBusyRef.current = true;
-      pendingClearArmedRef.current = false;
-      return;
+    } else if (wasBusyRef.current && anchorUserId) {
+      setResponseReceived(true);
     }
-    if (!wasBusyRef.current || !anchorUserId) return;
-    if (!pendingClearArmedRef.current) {
-      pendingClearArmedRef.current = true;
-      pendingClearEntryCountRef.current = entries.length;
-      return;
-    }
-    if (entries.length !== pendingClearEntryCountRef.current) {
-      setSpacerHeight(0);
-      wasBusyRef.current = false;
-      pendingClearArmedRef.current = false;
-    }
-  }, [cliState, anchorUserId, entries.length]);
+  }, [cliState, anchorUserId]);
+
+  useEffect(() => {
+    setResponseReceived(false);
+    wasBusyRef.current = false;
+  }, [anchorUserId]);
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
   const currentContextTokens = sessionStats?.currentContextTokens ?? 0;
@@ -352,7 +351,34 @@ const TimelineView = ({
     setSpacerHeight((prev) => (prev === next ? prev : next));
   }, [scrollRef]);
 
+  const shrinkSpacerSafely = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    const userEl = anchorElRef.current;
+    const spacerEl = spacerRef.current;
+    if (!scrollEl || !userEl || !spacerEl) return;
+    const scrollTop = scrollEl.scrollTop;
+    const last = lastShrinkScrollTopRef.current;
+    if (last !== null && Math.abs(scrollTop - last) < SHRINK_SCROLL_DELTA_THRESHOLD) return;
+    const current = spacerEl.offsetHeight;
+    if (current === 0) return;
+    const userBottom = userEl.offsetTop + userEl.offsetHeight;
+    const postUserHeight = Math.max(0, spacerEl.offsetTop - userBottom);
+    const available = scrollEl.clientHeight - userEl.offsetHeight - ANCHOR_OFFSET;
+    const pinRemainder = Math.max(0, available - postUserHeight);
+    const pin = Math.max(0, getOffsetInScroller(userEl, scrollEl) - ANCHOR_OFFSET);
+    const atPin = scrollTop >= pin - 2;
+    const target = atPin ? pinRemainder : 0;
+    if (current <= target) return;
+    const maxScroll = scrollEl.scrollHeight - scrollEl.clientHeight;
+    const headroom = Math.max(0, maxScroll - scrollTop);
+    const shrinkBy = Math.min(current - target, headroom);
+    if (shrinkBy <= 0) return;
+    lastShrinkScrollTopRef.current = scrollTop;
+    setSpacerHeight(current - shrinkBy);
+  }, [scrollRef]);
+
   useLayoutEffect(() => {
+    lastShrinkScrollTopRef.current = null;
     if (!anchorUserId) {
       setSpacerHeight(0);
       return;
@@ -367,6 +393,23 @@ const TimelineView = ({
     ro.observe(scrollEl);
     return () => ro.disconnect();
   }, [scrollRef, measureSpacer]);
+
+  useEffect(() => {
+    if (!anchorUserId || !responseReceived) return;
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
+    const onScroll = () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollTimer = setTimeout(shrinkSpacerSafely, 150);
+    };
+    scrollEl.addEventListener('scroll', onScroll, { passive: true });
+    shrinkSpacerSafely();
+    return () => {
+      if (scrollTimer) clearTimeout(scrollTimer);
+      scrollEl.removeEventListener('scroll', onScroll);
+    };
+  }, [scrollRef, shrinkSpacerSafely, anchorUserId, responseReceived]);
 
   const isLoadingMoreRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -508,7 +551,8 @@ const TimelineView = ({
               <span>컨텍스트 압축 중…</span>
             </div>
           )}
-          <div ref={spacerRef} aria-hidden style={{ height: spacerHeight }} />
+          {/* overflow-anchor: none prevents the browser from anchoring scroll to this spacer when its height changes */}
+          <div ref={spacerRef} aria-hidden style={{ height: spacerHeight, overflowAnchor: 'none' }} />
         </div>
       </div>
       {isReconnecting && <ReconnectBanner />}
