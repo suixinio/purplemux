@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { RefreshCw, GitBranch, Columns2, Rows2 } from 'lucide-react';
+import { RefreshCw, GitBranch, Columns2, Rows2, FileText, ChevronDown, ChevronRight } from 'lucide-react';
 import { DiffView, DiffModeEnum, getLang } from '@git-diff-view/react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
 import useIsMobile from '@/hooks/use-is-mobile';
+import useConfigStore from '@/hooks/use-config-store';
 import { parseMultiFileDiff, getDisplayName, buildFileDiffString } from '@/lib/parse-git-diff';
 
 interface IDiffPanelProps {
@@ -16,11 +17,20 @@ type TViewMode = 'split' | 'unified';
 
 const POLL_INTERVAL = 10_000;
 
+const DIFF_FONT_SIZE: Record<string, number> = {
+  normal: 12,
+  large: 14,
+  'x-large': 16,
+};
+
 const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
   const { resolvedTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark';
+
+  const fontSize = useConfigStore((s) => s.fontSize);
+  const diffFontSize = DIFF_FONT_SIZE[fontSize] ?? DIFF_FONT_SIZE.normal;
 
   const [diff, setDiff] = useState('');
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
@@ -31,11 +41,21 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
     const saved = localStorage.getItem('diff-output-format');
     return saved === 'line-by-line' ? 'unified' : 'split';
   });
+  const [collapsedFiles, setCollapsedFiles] = useState<Set<string>>(() => new Set());
 
   const pollTimerRef = useRef(0);
   const currentHashRef = useRef('');
 
   const effectiveMode: TViewMode = isMobile ? 'unified' : viewMode;
+
+  const toggleFile = useCallback((key: string) => {
+    setCollapsedFiles((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }, []);
 
   const fetchDiff = useCallback(async () => {
     setLoading(true);
@@ -88,11 +108,12 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
   const diffFiles = useMemo(() => {
     if (!diff) return [];
-    return parseMultiFileDiff(diff).map((f) => {
+    return parseMultiFileDiff(diff).map((f, i) => {
       const displayName = getDisplayName(f);
       const lang = getLang(displayName);
       const renderable = !f.isBinary && f.hunks.length > 0;
       return {
+        key: `${displayName}#${i}`,
         source: f,
         displayName,
         data: renderable
@@ -105,6 +126,16 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
       };
     });
   }, [diff]);
+
+  const totals = useMemo(() => {
+    let add = 0;
+    let del = 0;
+    for (const f of diffFiles) {
+      add += f.source.additions;
+      del += f.source.deletions;
+    }
+    return { files: diffFiles.length, add, del };
+  }, [diffFiles]);
 
   if (loading && isGitRepo === null) {
     return (
@@ -178,34 +209,55 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
 
         {diffFiles.length > 0 && (
           <div className="diff-panel-content flex flex-col gap-2 p-2 text-xs">
-            {diffFiles.map((f, i) => (
-              <div key={`${f.displayName}-${i}`} className="overflow-hidden rounded border border-border bg-card">
-                <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-secondary px-3 py-1.5">
-                  <span className="truncate font-mono text-xs text-foreground">{f.displayName}</span>
-                  {f.source.isNew && <span className="rounded bg-ui-teal/15 px-1 text-[10px] text-ui-teal">NEW</span>}
-                  {f.source.isDeleted && <span className="rounded bg-ui-red/15 px-1 text-[10px] text-ui-red">DEL</span>}
-                  {f.source.isRenamed && <span className="rounded bg-ui-blue/15 px-1 text-[10px] text-ui-blue">RENAME</span>}
-                  <span className="ml-auto flex items-center gap-2 text-[11px]">
-                    {f.source.additions > 0 && <span className="text-ui-teal">+{f.source.additions}</span>}
-                    {f.source.deletions > 0 && <span className="text-ui-red">-{f.source.deletions}</span>}
-                  </span>
+            <div className="flex items-center gap-3 px-1 text-[11px] text-muted-foreground">
+              <span className="flex items-center gap-1">
+                <FileText className="h-3 w-3" />
+                {totals.files}
+              </span>
+              {totals.add > 0 && <span className="text-ui-teal">+{totals.add}</span>}
+              {totals.del > 0 && <span className="text-ui-red">-{totals.del}</span>}
+            </div>
+
+            {diffFiles.map((f) => {
+              const isCollapsed = collapsedFiles.has(f.key);
+              return (
+                <div key={f.key} className="overflow-hidden rounded border border-border bg-card">
+                  <button
+                    type="button"
+                    onClick={() => toggleFile(f.key)}
+                    className="sticky top-0 z-10 flex w-full items-center gap-2 border-b border-border bg-secondary px-3 py-1.5 text-left hover:bg-accent"
+                  >
+                    {isCollapsed
+                      ? <ChevronRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+                      : <ChevronDown className="h-3 w-3 shrink-0 text-muted-foreground" />}
+                    <span className="truncate font-mono text-xs text-foreground">{f.displayName}</span>
+                    {f.source.isNew && <span className="rounded bg-ui-teal/15 px-1 text-[10px] text-ui-teal">NEW</span>}
+                    {f.source.isDeleted && <span className="rounded bg-ui-red/15 px-1 text-[10px] text-ui-red">DEL</span>}
+                    {f.source.isRenamed && <span className="rounded bg-ui-blue/15 px-1 text-[10px] text-ui-blue">RENAME</span>}
+                    <span className="ml-auto flex items-center gap-2 text-[11px]">
+                      {f.source.additions > 0 && <span className="text-ui-teal">+{f.source.additions}</span>}
+                      {f.source.deletions > 0 && <span className="text-ui-red">-{f.source.deletions}</span>}
+                    </span>
+                  </button>
+                  {!isCollapsed && (
+                    f.data ? (
+                      <DiffView
+                        data={f.data}
+                        diffViewMode={effectiveMode === 'unified' ? DiffModeEnum.Unified : DiffModeEnum.Split}
+                        diffViewTheme={theme}
+                        diffViewHighlight
+                        diffViewWrap={isMobile}
+                        diffViewFontSize={diffFontSize}
+                      />
+                    ) : (
+                      <div className="px-3 py-2 text-muted-foreground">
+                        {f.source.isBinary ? 'Binary file' : 'No diff content'}
+                      </div>
+                    )
+                  )}
                 </div>
-                {f.data ? (
-                  <DiffView
-                    data={f.data}
-                    diffViewMode={effectiveMode === 'unified' ? DiffModeEnum.Unified : DiffModeEnum.Split}
-                    diffViewTheme={theme}
-                    diffViewHighlight
-                    diffViewWrap={false}
-                    diffViewFontSize={12}
-                  />
-                ) : (
-                  <div className="px-3 py-2 text-muted-foreground">
-                    {f.source.isBinary ? 'Binary file' : 'No diff content'}
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
