@@ -37,6 +37,33 @@ const Separator = () => (
   <span className="mx-1.5 text-muted-foreground/50">·</span>
 );
 
+const ExpandableLine = ({
+  text,
+  className,
+  breakAll = false,
+}: {
+  text: string;
+  className?: string;
+  breakAll?: boolean;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => setExpanded((v) => !v)}
+      className={cn(
+        'min-w-0 cursor-pointer text-left',
+        !expanded && 'truncate',
+        expanded && (breakAll ? 'whitespace-pre-wrap break-all' : 'whitespace-pre-wrap break-words'),
+        className,
+      )}
+      title={expanded ? undefined : text}
+    >
+      {text}
+    </button>
+  );
+};
+
 
 export const MetaCompact = ({
   title,
@@ -201,7 +228,7 @@ export const MetaDetail = ({
         </div>
       </div>
 
-      <span className="max-h-20 overflow-y-auto text-sm font-medium text-foreground">{title}</span>
+      <ExpandableLine text={title} className="text-sm font-medium text-foreground" />
 
       <div className="mt-1 flex flex-col gap-1">
         <div className="flex items-baseline gap-2">
@@ -324,16 +351,14 @@ export const MetaDetail = ({
                 </Tooltip>
               </div>
             )}
-            {tmuxInfo.lastCommand && (
+            {(tmuxInfo.lastCommand || tmuxInfo.command) && (
               <div className="flex items-baseline gap-2">
                 <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('process')}</span>
-                <span className="font-mono text-xs text-muted-foreground">{tmuxInfo.lastCommand}</span>
-              </div>
-            )}
-            {!tmuxInfo.lastCommand && tmuxInfo.command && (
-              <div className="flex items-baseline gap-2">
-                <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('process')}</span>
-                <span className="font-mono text-xs text-muted-foreground">{tmuxInfo.command}</span>
+                <ExpandableLine
+                  text={tmuxInfo.lastCommand ?? tmuxInfo.command!}
+                  className="flex-1 font-mono text-xs text-muted-foreground"
+                  breakAll
+                />
               </div>
             )}
             {tmuxInfo.pid && (
