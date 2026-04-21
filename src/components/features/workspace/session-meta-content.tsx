@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import dayjs from 'dayjs';
-import { GitBranch, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive, Copy, Check } from 'lucide-react';
+import { GitBranch, GitCommit, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive, Copy, Check } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/claude-tokens';
@@ -321,55 +321,96 @@ export const MetaDetail = ({
 
       {gitStatus && (
         <div className="mt-1 border-t border-border pt-2">
-          <div className="flex items-baseline gap-2">
-            <span className="w-14 shrink-0 text-xs text-muted-foreground/70">Git</span>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-              {gitStatus.staged > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-ui-green">
-                  <CircleDot size={11} />
-                  {gitStatus.staged} staged
-                </span>
-              )}
-              {gitStatus.modified > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-ui-amber">
-                  <FilePen size={11} />
-                  {gitStatus.modified} modified
-                  {(gitStatus.insertions > 0 || gitStatus.deletions > 0) && (
-                    <span className="text-muted-foreground/70">
-                      (<span className="text-ui-green">+{gitStatus.insertions}</span>{' '}<span className="text-ui-red">-{gitStatus.deletions}</span>)
-                    </span>
-                  )}
-                </span>
-              )}
-              {gitStatus.untracked > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-                  <FileQuestion size={11} />
-                  {gitStatus.untracked} untracked
-                </span>
-              )}
-              {gitStatus.ahead > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-ui-blue">
-                  <ArrowUp size={11} />
-                  {gitStatus.ahead} ahead
-                </span>
-              )}
-              {gitStatus.behind > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-claude-active">
-                  <ArrowDown size={11} />
-                  {gitStatus.behind} behind
-                </span>
-              )}
-              {gitStatus.stash > 0 && (
-                <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
-                  <Archive size={11} />
-                  {gitStatus.stash} stash
-                </span>
-              )}
-              {gitStatus.staged === 0 && gitStatus.modified === 0 && gitStatus.untracked === 0 &&
-                gitStatus.ahead === 0 && gitStatus.behind === 0 && gitStatus.stash === 0 && (
-                <span className="text-xs text-muted-foreground/50">clean</span>
-              )}
+          <div className="flex flex-col gap-1">
+            <div className="flex items-baseline gap-2">
+              <span className="w-14 shrink-0 text-xs text-muted-foreground/70">Git</span>
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                {branch && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                    <GitBranch size={11} />
+                    {branch}
+                  </span>
+                )}
+                {gitStatus.staged > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-green">
+                    <CircleDot size={11} />
+                    {gitStatus.staged} staged
+                  </span>
+                )}
+                {gitStatus.modified > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-amber">
+                    <FilePen size={11} />
+                    {gitStatus.modified} modified
+                    {(gitStatus.insertions > 0 || gitStatus.deletions > 0) && (
+                      <span className="text-muted-foreground/70">
+                        (<span className="text-ui-green">+{gitStatus.insertions}</span>{' '}<span className="text-ui-red">-{gitStatus.deletions}</span>)
+                      </span>
+                    )}
+                  </span>
+                )}
+                {gitStatus.untracked > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                    <FileQuestion size={11} />
+                    {gitStatus.untracked} untracked
+                  </span>
+                )}
+                {gitStatus.ahead > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-ui-blue">
+                    <ArrowUp size={11} />
+                    {gitStatus.ahead} ahead
+                  </span>
+                )}
+                {gitStatus.behind > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-claude-active">
+                    <ArrowDown size={11} />
+                    {gitStatus.behind} behind
+                  </span>
+                )}
+                {gitStatus.stash > 0 && (
+                  <span className="flex items-center gap-1 font-mono text-xs text-muted-foreground">
+                    <Archive size={11} />
+                    {gitStatus.stash} stash
+                  </span>
+                )}
+                {gitStatus.staged === 0 && gitStatus.modified === 0 && gitStatus.untracked === 0 &&
+                  gitStatus.ahead === 0 && gitStatus.behind === 0 && gitStatus.stash === 0 && (
+                  <span className="text-xs text-muted-foreground/50">clean</span>
+                )}
+              </div>
             </div>
+            {gitStatus.recentCommits && gitStatus.recentCommits.length > 0 && (
+              <div className="flex flex-col gap-0.5">
+                {gitStatus.recentCommits.map((commit) => (
+                  <div key={commit.hash} className="flex items-center gap-2 text-xs">
+                    <GitCommit size={11} className="shrink-0 text-muted-foreground/60" />
+                    <span className="shrink-0 font-mono text-ui-amber">{commit.shortHash}</span>
+                    <span className="min-w-0 max-w-[80px] shrink-0 truncate font-mono text-ui-blue">
+                      {commit.author}
+                    </span>
+                    <span className="shrink-0 font-mono text-muted-foreground/60">
+                      {dayjs(commit.timestamp).fromNow(true)}
+                    </span>
+                    {commit.isMerge ? (
+                      <span className="shrink-0 font-mono text-muted-foreground/60">merge</span>
+                    ) : (
+                      <div className="flex shrink-0 items-center gap-1.5 font-mono text-muted-foreground/60">
+                        {commit.filesChanged > 0 && <span>{commit.filesChanged}F</span>}
+                        {commit.insertions > 0 && <span className="text-ui-green">+{commit.insertions}</span>}
+                        {commit.deletions > 0 && <span className="text-ui-red">-{commit.deletions}</span>}
+                      </div>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger className="min-w-0 truncate text-muted-foreground">
+                        {commit.subject}
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[400px]">
+                        <p className="text-xs">{commit.subject}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

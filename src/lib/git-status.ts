@@ -7,6 +7,18 @@ const execFile = promisify(execFileCb);
 
 const CMD_TIMEOUT = 5000;
 
+export interface IGitCommit {
+  hash: string;
+  shortHash: string;
+  author: string;
+  timestamp: number;
+  subject: string;
+  isMerge: boolean;
+  filesChanged: number;
+  insertions: number;
+  deletions: number;
+}
+
 export interface IGitStatus {
   staged: number;
   modified: number;
@@ -16,6 +28,7 @@ export interface IGitStatus {
   stash: number;
   insertions: number;
   deletions: number;
+  recentCommits: IGitCommit[];
 }
 
 const parsePortcelain = (stdout: string): Pick<IGitStatus, 'staged' | 'modified' | 'untracked'> => {
@@ -91,6 +104,64 @@ const getDiffStats = async (cwd: string): Promise<Pick<IGitStatus, 'insertions' 
   }
 };
 
+const COMMIT_DELIMITER = '__COMMIT__';
+const SHORTSTAT_RE = /(\d+) files? changed(?:, (\d+) insertions?\(\+\))?(?:, (\d+) deletions?\(-\))?/;
+
+const getRecentCommits = async (cwd: string, count = 3): Promise<IGitCommit[]> => {
+  try {
+    const { stdout } = await execFile(
+      'git',
+      [
+        '-C',
+        cwd,
+        'log',
+        `-${count}`,
+        `--format=${COMMIT_DELIMITER}%H|%an|%at|%P|%s`,
+        '--shortstat',
+      ],
+      { timeout: CMD_TIMEOUT },
+    );
+
+    const blocks = stdout
+      .split(COMMIT_DELIMITER)
+      .map((b) => b.trim())
+      .filter(Boolean);
+
+    return blocks.map((block) => {
+      const [header, statLine] = block.split('\n').map((s) => s.trim());
+      const [hash, author, timestampStr, parents, ...subjectParts] = header.split('|');
+      const subject = subjectParts.join('|');
+      const isMerge = parents.trim().split(/\s+/).length > 1;
+
+      let filesChanged = 0;
+      let insertions = 0;
+      let deletions = 0;
+      if (statLine) {
+        const m = statLine.match(SHORTSTAT_RE);
+        if (m) {
+          filesChanged = parseInt(m[1], 10) || 0;
+          insertions = parseInt(m[2], 10) || 0;
+          deletions = parseInt(m[3], 10) || 0;
+        }
+      }
+
+      return {
+        hash,
+        shortHash: hash.slice(0, 7),
+        author,
+        timestamp: parseInt(timestampStr, 10) * 1000,
+        subject,
+        isMerge,
+        filesChanged,
+        insertions,
+        deletions,
+      };
+    });
+  } catch {
+    return [];
+  }
+};
+
 const GIT_STATUS_TTL = 15_000;
 
 export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | null> => {
@@ -111,10 +182,11 @@ export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | nu
     );
 
     const porcelain = parsePortcelain(stdout);
-    const [aheadBehind, stash, diffStats] = await Promise.all([
+    const [aheadBehind, stash, diffStats, recentCommits] = await Promise.all([
       getAheadBehind(cwd),
       getStashCount(cwd),
       getDiffStats(cwd),
+      getRecentCommits(cwd),
     ]);
 
     const status: IGitStatus = {
@@ -122,6 +194,7 @@ export const getGitStatus = async (tmuxSession: string): Promise<IGitStatus | nu
       ...aheadBehind,
       stash,
       ...diffStats,
+      recentCommits,
     };
     setCached(cacheKey, status, GIT_STATUS_TTL);
     return status;

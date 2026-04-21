@@ -189,6 +189,13 @@ export const ACTIONS = {
     defaultKey: `${mod}+b`,
     display: { mac: '⌘B', other: 'Ctrl+B' },
   },
+  'view.toggle_sidebar_tab': {
+    id: 'view.toggle_sidebar_tab',
+    label: 'Toggle sidebar tab (Workspace ↔ Sessions)',
+    category: 'view',
+    defaultKey: `${mod}+shift+b`,
+    display: { mac: '⌘⇧B', other: 'Ctrl+Shift+B' },
+  },
   'view.notes': {
     id: 'view.notes',
     label: 'Notes',

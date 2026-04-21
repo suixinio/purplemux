@@ -10,6 +10,8 @@ import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useConfigStore from '@/hooks/use-config-store';
 import useIsMac from '@/hooks/use-is-mac';
+import useShortcutHints from '@/hooks/use-shortcut-hints';
+import ShortcutKey from '@/components/shortcut-key';
 import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
 import { buildEditorUrl, isSafeEditorTarget, isWebEditorUrl } from '@/lib/editor-url';
@@ -64,6 +66,7 @@ const ContentHeader = ({
   const t = useTranslations('terminal');
   const isMac = useIsMac();
   const mod = isMac ? '⌘' : 'Ctrl+';
+  const showShortcuts = useShortcutHints();
   const [isToggling, setIsToggling] = useState(false);
 
   const panes = collectPanes(root);
@@ -179,59 +182,89 @@ const ContentHeader = ({
 
           {editorPreset !== 'off' && <div className="h-5 w-px bg-border" />}
 
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-7 w-7 items-center justify-center text-muted-foreground',
-                canSplit
-                  ? 'hover:text-foreground'
-                  : 'cursor-not-allowed opacity-30',
-              )}
-              onClick={canSplit && paneId ? () => onSplitPane(paneId, 'horizontal') : undefined}
-              disabled={!canSplit}
-              aria-label={t('splitVertical')}
-            >
-              {isSplitting ? (
-                <Spinner className="h-3 w-3" />
-              ) : (
-                <SplitVerticalIcon className="h-3.5 w-3.5" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{t('splitVerticalShortcut', { shortcut: `${mod}D` })}</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger
-              className={cn(
-                'flex h-7 w-7 items-center justify-center text-muted-foreground',
-                canSplit
-                  ? 'hover:text-foreground'
-                  : 'cursor-not-allowed opacity-30',
-              )}
-              onClick={canSplit && paneId ? () => onSplitPane(paneId, 'vertical') : undefined}
-              disabled={!canSplit}
-              aria-label={t('splitHorizontal')}
-            >
-              {isSplitting ? (
-                <Spinner className="h-3 w-3" />
-              ) : (
-                <SplitHorizontalIcon className="h-3.5 w-3.5" />
-              )}
-            </TooltipTrigger>
-            <TooltipContent side="bottom">{t('splitHorizontalShortcut', { shortcut: `${mod}⇧D` })}</TooltipContent>
-          </Tooltip>
-
-          {paneCount >= 2 && (
+          <div className="relative">
             <Tooltip>
               <TooltipTrigger
-                className="flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground"
-                onClick={onEqualizeRatios}
-                aria-label={t('equalSplit')}
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center text-muted-foreground',
+                  canSplit
+                    ? 'hover:text-foreground'
+                    : 'cursor-not-allowed opacity-30',
+                )}
+                onClick={canSplit && paneId ? () => onSplitPane(paneId, 'horizontal') : undefined}
+                disabled={!canSplit}
+                aria-label={t('splitVertical')}
               >
-                <EqualizeIcon className="h-3.5 w-3.5" />
+                {isSplitting ? (
+                  <Spinner className="h-3 w-3" />
+                ) : (
+                  <SplitVerticalIcon className="h-3.5 w-3.5" />
+                )}
               </TooltipTrigger>
-              <TooltipContent side="bottom">{t('equalSplit')}</TooltipContent>
+              <TooltipContent side="bottom">{t('splitVerticalShortcut', { shortcut: `${mod}D` })}</TooltipContent>
             </Tooltip>
+            <ShortcutKey
+              mac="⌘D"
+              other="^D"
+              className={cn(
+                'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                showShortcuts ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+          </div>
+
+          <div className="relative">
+            <Tooltip>
+              <TooltipTrigger
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center text-muted-foreground',
+                  canSplit
+                    ? 'hover:text-foreground'
+                    : 'cursor-not-allowed opacity-30',
+                )}
+                onClick={canSplit && paneId ? () => onSplitPane(paneId, 'vertical') : undefined}
+                disabled={!canSplit}
+                aria-label={t('splitHorizontal')}
+              >
+                {isSplitting ? (
+                  <Spinner className="h-3 w-3" />
+                ) : (
+                  <SplitHorizontalIcon className="h-3.5 w-3.5" />
+                )}
+              </TooltipTrigger>
+              <TooltipContent side="bottom">{t('splitHorizontalShortcut', { shortcut: `${mod}⇧D` })}</TooltipContent>
+            </Tooltip>
+            <ShortcutKey
+              mac="⌘⇧D"
+              other="^⇧D"
+              className={cn(
+                'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                showShortcuts ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+          </div>
+
+          {paneCount >= 2 && (
+            <div className="relative">
+              <Tooltip>
+                <TooltipTrigger
+                  className="flex h-7 w-7 items-center justify-center text-muted-foreground hover:text-foreground"
+                  onClick={onEqualizeRatios}
+                  aria-label={t('equalSplit')}
+                >
+                  <EqualizeIcon className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t('equalSplit')}</TooltipContent>
+              </Tooltip>
+              <ShortcutKey
+                mac="⌘⌥="
+                other="^⌥="
+                className={cn(
+                  'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                  showShortcuts ? 'opacity-100' : 'opacity-0',
+                )}
+              />
+            </div>
           )}
         </div>
       </TooltipProvider>

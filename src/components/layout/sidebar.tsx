@@ -11,7 +11,7 @@ import useTabStore from '@/hooks/use-tab-store';
 import { useNotificationCount, NotificationPanel } from '@/components/features/workspace/notification-sheet';
 import AppLogo from '@/components/layout/app-logo';
 import ShortcutKey from '@/components/shortcut-key';
-import { isMac } from '@/lib/keyboard-shortcuts';
+import useShortcutHints from '@/hooks/use-shortcut-hints';
 import { useRouter } from 'next/router';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -85,8 +85,7 @@ const Sidebar = () => {
   const handleSidebarTabChange = useCallback((v: string) => {
     useWorkspaceStore.getState().setSidebarTab(v as 'workspace' | 'sessions');
   }, []);
-  const [showShortcuts, setShowShortcuts] = useState(false);
-  const modTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const showShortcuts = useShortcutHints();
 
   useEffect(() => {
     if (workspaces.length === 0) {
@@ -99,44 +98,6 @@ const Sidebar = () => {
     window.addEventListener('open-settings', handler);
     return () => window.removeEventListener('open-settings', handler);
   }, [setSettingsOpen]);
-
-  useEffect(() => {
-    const modKey = isMac ? 'Meta' : 'Control';
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key !== modKey || modTimerRef.current) return;
-      modTimerRef.current = setTimeout(() => {
-        setShowShortcuts(true);
-      }, 500);
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key !== modKey) return;
-      if (modTimerRef.current) {
-        clearTimeout(modTimerRef.current);
-        modTimerRef.current = null;
-      }
-      setShowShortcuts(false);
-    };
-
-    const handleBlur = () => {
-      if (modTimerRef.current) {
-        clearTimeout(modTimerRef.current);
-        modTimerRef.current = null;
-      }
-      setShowShortcuts(false);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('blur', handleBlur);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('blur', handleBlur);
-      if (modTimerRef.current) clearTimeout(modTimerRef.current);
-    };
-  }, []);
 
   const [isCreating, setIsCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<IWorkspace | null>(null);
@@ -363,15 +324,35 @@ const Sidebar = () => {
             className="gap-0"
           >
             <TabsList className="h-7 w-full">
-              <TabsTrigger value="workspace" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+              <TabsTrigger value="workspace" className="relative h-full flex-1 px-2.5 text-[11px] tracking-wide">
                 WORKSPACE
+                {sidebarTab !== 'workspace' && (
+                  <ShortcutKey
+                    mac="⌘⇧B"
+                    other="^⇧B"
+                    className={cn(
+                      'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                      showShortcuts ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                )}
               </TabsTrigger>
-              <TabsTrigger value="sessions" className="h-full flex-1 px-2.5 text-[11px] tracking-wide">
+              <TabsTrigger value="sessions" className="relative h-full flex-1 px-2.5 text-[11px] tracking-wide">
                 SESSIONS
                 {sessionsBadge > 0 && (
                   <span className="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded bg-[var(--ui-coral)] px-0.5 text-[9px] font-medium leading-none text-white">
                     {sessionsBadge}
                   </span>
+                )}
+                {sidebarTab !== 'sessions' && (
+                  <ShortcutKey
+                    mac="⌘⇧B"
+                    other="^⇧B"
+                    className={cn(
+                      'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                      showShortcuts ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
                 )}
               </TabsTrigger>
             </TabsList>

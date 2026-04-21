@@ -85,6 +85,17 @@ const useGlobalShortcuts = () => {
   );
 
   useBoundHotkey(
+    'view.toggle_sidebar_tab',
+    () => {
+      const store = useWorkspaceStore.getState();
+      const next = store.sidebarTab === 'workspace' ? 'sessions' : 'workspace';
+      store.setSidebarTab(next);
+      if (store.sidebarCollapsed) store.toggleSidebar();
+    },
+    enabled,
+  );
+
+  useBoundHotkey(
     'view.notes',
     () => {
       router.push('/reports');
