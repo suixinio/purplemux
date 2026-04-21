@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import { z } from 'zod';
 import { nanoid } from 'nanoid';
+import { diffLines } from 'diff';
 import type {
   ITimelineEntry,
   ITimelineUserMessage,
@@ -25,6 +26,17 @@ import type {
 } from '@/types/timeline';
 
 export const INTERRUPT_PREFIX = '[Request interrupted by user';
+
+const countDiffLines = (oldStr: string, newStr: string): { added: number; removed: number } => {
+  let added = 0;
+  let removed = 0;
+  for (const change of diffLines(oldStr, newStr)) {
+    const count = change.count ?? 0;
+    if (change.added) added += count;
+    else if (change.removed) removed += count;
+  }
+  return { added, removed };
+};
 
 const EXCLUDED_TYPES = new Set([
   'progress', 'system', 'file-history-snapshot',
@@ -127,10 +139,9 @@ export const summarizeToolCall = (name: string, input: Record<string, unknown> =
       const fp = String(input.file_path ?? '');
       const oldStr = String(input.old_string ?? '');
       const newStr = String(input.new_string ?? '');
-      const oldLines = oldStr ? oldStr.split('\n').length : 0;
-      const newLines = newStr ? newStr.split('\n').length : 0;
       const verb = oldStr ? 'Update' : 'Create';
-      return `${verb} ${fp} (+${newLines}, -${oldLines})`;
+      const { added, removed } = countDiffLines(oldStr, newStr);
+      return `${verb} ${fp} (+${added}, -${removed})`;
     }
     case 'Write':
       return `Write ${String(input.file_path ?? '')}`;

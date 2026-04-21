@@ -15,12 +15,20 @@ import {
   SearchCode,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import useIsMobile from '@/hooks/use-is-mobile';
+import useConfigStore from '@/hooks/use-config-store';
 import type { ITimelineToolCall, ITimelineToolResult, TToolName } from '@/types/timeline';
 
 interface IToolCallItemProps {
   entry: ITimelineToolCall;
   result?: ITimelineToolResult;
 }
+
+const DIFF_FONT_SIZE: Record<string, number> = {
+  normal: 12,
+  large: 14,
+  'x-large': 16,
+};
 
 const TOOL_ICONS: Record<string, typeof FileText> = {
   Read: FileText,
@@ -51,6 +59,9 @@ const InlineDiffView = ({
 }) => {
   const { resolvedTheme } = useTheme();
   const theme: 'light' | 'dark' = resolvedTheme === 'light' ? 'light' : 'dark';
+  const isMobile = useIsMobile();
+  const fontSize = useConfigStore((s) => s.fontSize);
+  const diffFontSize = DIFF_FONT_SIZE[fontSize] ?? DIFF_FONT_SIZE.normal;
 
   const diffFile = useMemo(() => {
     const name = filePath ? filePath.split('/').pop() || filePath : 'file';
@@ -70,8 +81,8 @@ const InlineDiffView = ({
         diffViewMode={DiffModeEnum.Unified}
         diffViewTheme={theme}
         diffViewHighlight
-        diffViewWrap={false}
-        diffViewFontSize={12}
+        diffViewWrap={isMobile}
+        diffViewFontSize={diffFontSize}
       />
     </div>
   );
@@ -98,7 +109,7 @@ const ToolCallItem = ({ entry, result }: IToolCallItemProps) => {
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-xs font-mono break-all block">{entry.summary}</span>
-          {result && result.summary && (
+          {result && result.summary && !(hasDiff && !result.isError) && (
             <p
               className={cn(
                 'mt-0.5 text-xs whitespace-pre-wrap break-words font-mono',
