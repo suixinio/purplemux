@@ -32,6 +32,8 @@
     "path": "Ruta",
     "process": "Proceso",
     "size": "Tamaño",
-    "session": "Sesión"
+    "session": "Sesión",
+    "contextHintAmber": "El contexto supera la mitad",
+    "contextHintRed": "Cerca del límite — considera /compact o iniciar una nueva sesión"
   }
 }

@@ -32,6 +32,8 @@
     "path": "路徑",
     "process": "處理程序",
     "size": "大小",
-    "session": "工作階段"
+    "session": "工作階段",
+    "contextHintAmber": "上下文已超過一半",
+    "contextHintRed": "接近上限 — 建議 /compact 或開啟新工作階段"
   }
 }

@@ -76,6 +76,9 @@ const SessionMetaBar = ({ entries, sessionName, sessionId, jsonlPath, sessionSum
           title={meta.title}
           totalCost={meta.totalCost}
           branch={branch}
+          usedPercentage={meta.usedPercentage}
+          currentContextTokens={meta.currentContextTokens}
+          contextWindowSize={meta.contextWindowSize}
         />
         <ChevronDown
           size={14}

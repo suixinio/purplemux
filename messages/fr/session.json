@@ -32,6 +32,8 @@
     "path": "Chemin",
     "process": "Processus",
     "size": "Taille",
-    "session": "Session"
+    "session": "Session",
+    "contextHintAmber": "Le contexte dépasse la moitié",
+    "contextHintRed": "Proche de la limite — envisagez /compact ou une nouvelle session"
   }
 }

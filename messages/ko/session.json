@@ -32,6 +32,8 @@
     "path": "경로",
     "process": "프로세스",
     "size": "크기",
-    "session": "세션"
+    "session": "세션",
+    "contextHintAmber": "컨텍스트가 절반을 넘었습니다",
+    "contextHintRed": "한도에 가까워졌습니다 — 압축하거나 새 세션을 시작하세요"
   }
 }

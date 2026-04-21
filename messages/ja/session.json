@@ -32,6 +32,8 @@
     "path": "パス",
     "process": "プロセス",
     "size": "サイズ",
-    "session": "セッション"
+    "session": "セッション",
+    "contextHintAmber": "コンテキストが半分を超えました",
+    "contextHintRed": "上限に近づいています — /compact または新しいセッションを検討してください"
   }
 }

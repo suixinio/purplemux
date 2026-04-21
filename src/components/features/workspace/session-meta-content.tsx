@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/claude-tokens';
 import type { IGitStatus } from '@/lib/git-status';
+import ContextRing from '@/components/features/workspace/context-ring';
 
 const CopyIconButton = ({ text, className }: { text: string; className?: string }) => {
   const [copied, setCopied] = useState(false);
@@ -41,12 +42,23 @@ export const MetaCompact = ({
   title,
   totalCost,
   branch,
+  usedPercentage,
+  currentContextTokens,
+  contextWindowSize,
 }: {
   title: string;
   totalCost: number | null;
   branch: string | null;
+  usedPercentage: number | null;
+  currentContextTokens: number | null;
+  contextWindowSize: number | null;
 }) => {
   const truncatedTitle = title.length > 30 ? `${title.slice(0, 30)}…` : title;
+  const hasTokens =
+    currentContextTokens !== null && contextWindowSize !== null && contextWindowSize > 0;
+  const contextPercentage =
+    usedPercentage ??
+    (hasTokens ? (currentContextTokens! / contextWindowSize!) * 100 : null);
 
   return (
     <div className="flex min-w-0 flex-1 items-center text-xs">
@@ -60,6 +72,15 @@ export const MetaCompact = ({
           </TooltipContent>
         )}
       </Tooltip>
+      {branch && (
+        <>
+          <Separator />
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <GitBranch size={12} className="shrink-0" />
+            <span className="truncate font-mono">{branch}</span>
+          </div>
+        </>
+      )}
       {totalCost !== null && (
         <>
           <Separator />
@@ -68,13 +89,14 @@ export const MetaCompact = ({
           </span>
         </>
       )}
-      {branch && (
+      {contextPercentage !== null && (
         <>
           <Separator />
-          <div className="flex items-center gap-1 text-muted-foreground">
-            <GitBranch size={12} className="shrink-0" />
-            <span className="truncate font-mono">{branch}</span>
-          </div>
+          <ContextRing
+            percentage={contextPercentage}
+            currentTokens={currentContextTokens}
+            windowSize={contextWindowSize}
+          />
         </>
       )}
     </div>

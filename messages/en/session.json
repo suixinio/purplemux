@@ -32,6 +32,8 @@
     "path": "Path",
     "process": "Process",
     "size": "Size",
-    "session": "Session"
+    "session": "Session",
+    "contextHintAmber": "Context is over half full",
+    "contextHintRed": "Nearing the limit — consider /compact or starting a new session"
   }
 }

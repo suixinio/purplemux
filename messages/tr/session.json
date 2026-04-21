@@ -32,6 +32,8 @@
     "path": "Yol",
     "process": "İşlem",
     "size": "Boyut",
-    "session": "Oturum"
+    "session": "Oturum",
+    "contextHintAmber": "Bağlam yarıyı aştı",
+    "contextHintRed": "Sınıra yaklaşıyor — /compact veya yeni bir oturum düşünün"
   }
 }

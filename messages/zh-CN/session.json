@@ -32,6 +32,8 @@
     "path": "路径",
     "process": "进程",
     "size": "大小",
-    "session": "会话"
+    "session": "会话",
+    "contextHintAmber": "上下文已超过一半",
+    "contextHintRed": "接近上限 — 考虑 /compact 或开启新会话"
   }
 }
