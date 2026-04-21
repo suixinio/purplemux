@@ -48,6 +48,9 @@ const useToastNotification = () => {
           id: toastIdFor(tabId),
           description: body,
           duration: toastDuration,
+          classNames: {
+            description: 'line-clamp-2',
+          },
           action: {
             label: t('notification', 'openTab'),
             onClick: () => navigateToTab(workspaceId, tabId),
