@@ -47,6 +47,8 @@ interface ITimelineViewProps {
 
 const RESUME_TOKEN_THRESHOLD = 100_000;
 const RESUME_IDLE_MINUTES = 70;
+const ANCHOR_OFFSET = 12;
+const ANCHOR_SETTLE_DELAY_MS = 300;
 
 const ElapsedTime = ({ since }: { since: number }) => {
   const [elapsed, setElapsed] = useState(0);
@@ -234,29 +236,56 @@ const TimelineView = ({
   const t = useTranslations('timeline');
   const needsInput = cliState === 'needs-input';
   const isCompacting = compactingSince != null && Date.now() - compactingSince < 60_000;
+  const anchorElRef = useRef<HTMLDivElement | null>(null);
+  const spacerRef = useRef<HTMLDivElement | null>(null);
+  const armedRef = useRef(false);
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
+    targetScrollTop: (defaultTarget, { scrollElement }) => {
+      const el = anchorElRef.current;
+      if (!el) return defaultTarget;
+      const elementRect = el.getBoundingClientRect();
+      const containerRect = scrollElement.getBoundingClientRect();
+      const elementTop = elementRect.top - containerRect.top + scrollElement.scrollTop;
+      return elementTop - ANCHOR_OFFSET;
+    },
   });
+  const [anchorUserId, setAnchorUserId] = useState<string | null>(null);
+  const [spacerHeight, setSpacerHeight] = useState(0);
   const [skipAnimation, setSkipAnimation] = useState(true);
   const [prevSessionId, setPrevSessionId] = useState(sessionId);
 
   if (prevSessionId !== sessionId) {
     setPrevSessionId(sessionId);
     setSkipAnimation(true);
+    setAnchorUserId(null);
+    armedRef.current = false;
   }
 
   useEffect(() => {
     if (!scrollToBottomRef) return;
     scrollToBottomRef.current = () => {
+      armedRef.current = true;
       scrollToBottom('smooth');
-      setTimeout(() => scrollToBottom('smooth'), 300);
+      setTimeout(() => scrollToBottom('smooth'), ANCHOR_SETTLE_DELAY_MS);
     };
     return () => { scrollToBottomRef.current = undefined; };
   }, [scrollToBottomRef, scrollToBottom]);
 
   const groupedItems = useMemo(() => groupTimelineEntries(entries), [entries]);
   const hasDisplayItems = groupedItems.length > 0;
+
+  const lastUserMessageId = useMemo(
+    () => groupedItems.findLast((item) => item.type === 'entry' && item.entry.type === 'user-message')?.id ?? null,
+    [groupedItems],
+  );
+
+  useEffect(() => {
+    if (armedRef.current && lastUserMessageId && lastUserMessageId !== anchorUserId) {
+      setAnchorUserId(lastUserMessageId);
+    }
+  }, [lastUserMessageId, anchorUserId]);
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
   const currentContextTokens = sessionStats?.currentContextTokens ?? 0;
@@ -286,6 +315,34 @@ const TimelineView = ({
       requestAnimationFrame(() => setSkipAnimation(false));
     }
   }, [skipAnimation, entries.length, scrollToBottom]);
+
+  const measureSpacer = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    const userEl = anchorElRef.current;
+    const spacerEl = spacerRef.current;
+    if (!scrollEl || !userEl || !spacerEl) return;
+    const userBottom = userEl.offsetTop + userEl.offsetHeight;
+    const postUserHeight = Math.max(0, spacerEl.offsetTop - userBottom);
+    const available = scrollEl.clientHeight - userEl.offsetHeight - ANCHOR_OFFSET;
+    const next = Math.max(0, available - postUserHeight);
+    setSpacerHeight((prev) => (prev === next ? prev : next));
+  }, [scrollRef]);
+
+  useLayoutEffect(() => {
+    if (!anchorUserId) {
+      setSpacerHeight(0);
+      return;
+    }
+    measureSpacer();
+  }, [anchorUserId, measureSpacer]);
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+    const ro = new ResizeObserver(() => measureSpacer());
+    ro.observe(scrollEl);
+    return () => ro.disconnect();
+  }, [scrollRef, measureSpacer]);
 
   const isLoadingMoreRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -394,7 +451,11 @@ const TimelineView = ({
             <TaskChecklist tasks={tasks} cliState={cliState} />
           )}
           {groupedItems.map((item) => (
-            <div key={item.id} className="px-4 py-1.5">
+            <div
+              key={item.id}
+              ref={item.id === anchorUserId ? anchorElRef : undefined}
+              className="px-4 py-1.5"
+            >
               {item.type === 'tool-group' ? (
                 <ToolGroupItem toolCalls={item.toolCalls} toolResults={item.toolResults} />
               ) : (
@@ -423,6 +484,7 @@ const TimelineView = ({
               <span>컨텍스트 압축 중…</span>
             </div>
           )}
+          <div ref={spacerRef} aria-hidden style={{ height: spacerHeight }} />
         </div>
       </div>
       {isReconnecting && <ReconnectBanner />}
