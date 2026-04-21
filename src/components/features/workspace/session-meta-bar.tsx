@@ -6,20 +6,24 @@ import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
 import useTmuxInfo from '@/hooks/use-tmux-info';
-import type { ITimelineEntry, IInitMeta } from '@/types/timeline';
+import useMessageCounts from '@/hooks/use-message-counts';
+import type { ITimelineEntry, IInitMeta, ISessionStats } from '@/types/timeline';
 
 interface ISessionMetaBarProps {
   entries: ITimelineEntry[];
   sessionName: string;
   sessionId: string | null;
+  jsonlPath: string | null;
   sessionSummary?: string;
   initMeta?: IInitMeta;
+  sessionStats?: ISessionStats | null;
 }
 
 const RELATIVE_TIME_INTERVAL_MS = 60_000;
 
-const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary, initMeta }: ISessionMetaBarProps) => {
-  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary, initMeta);
+const SessionMetaBar = ({ entries, sessionName, sessionId, jsonlPath, sessionSummary, initMeta, sessionStats }: ISessionMetaBarProps) => {
+  const { meta, isExpanded, toggleExpanded, collapse } = useSessionMeta(entries, sessionSummary, initMeta, sessionStats);
+  const messageCounts = useMessageCounts(jsonlPath, isExpanded);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, isExpanded);
   const tmuxInfo = useTmuxInfo(sessionName, isExpanded);
@@ -96,16 +100,17 @@ const SessionMetaBar = ({ entries, sessionName, sessionId, sessionSummary, initM
             createdAt={meta.createdAt}
             updatedAt={meta.updatedAt}
             fileSize={meta.fileSize}
-            userCount={meta.userCount}
-            assistantCount={meta.assistantCount}
+            userCount={messageCounts?.userCount ?? meta.userCount}
+            assistantCount={messageCounts?.assistantCount ?? meta.assistantCount}
+            toolCount={messageCounts?.toolCount ?? null}
+            toolBreakdown={messageCounts?.toolBreakdown ?? null}
             inputTokens={meta.inputTokens}
             outputTokens={meta.outputTokens}
-            cacheCreationTokens={meta.cacheCreationTokens}
-            cacheReadTokens={meta.cacheReadTokens}
-            totalTokens={meta.totalTokens}
-            contextWindowTokens={meta.contextWindowTokens}
             totalCost={meta.totalCost}
-            tokensByModel={meta.tokensByModel}
+            currentContextTokens={meta.currentContextTokens}
+            contextWindowSize={meta.contextWindowSize}
+            usedPercentage={meta.usedPercentage}
+            model={meta.model}
             branch={branch}
             isBranchLoading={isBranchLoading}
             gitStatus={gitStatus}

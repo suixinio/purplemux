@@ -26,6 +26,7 @@ import { listInterfaceIps, resolveBindPlan } from './src/lib/network-access';
 import { getCurrentSpec, initAccessFilter, isRequestAllowed, setBoundHost } from './src/lib/access-filter';
 import { initShellPath } from './src/lib/preflight';
 import { cleanupExpiredUploads } from './src/lib/uploads-store';
+import { cleanupOrphanSessionStats } from './src/lib/session-stats';
 import { createLogger } from './src/lib/logger';
 import pkg from './package.json';
 
@@ -393,6 +394,10 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
       if (r.deleted > 0) log.info(`uploads cleanup: removed ${r.deleted} files (${r.freedBytes} bytes)`);
     })
     .catch((err) => log.warn(`uploads cleanup failed: ${err instanceof Error ? err.message : err}`));
+
+  cleanupOrphanSessionStats().catch((err) =>
+    log.warn(`session-stats cleanup failed: ${err instanceof Error ? err.message : err}`),
+  );
 
   const mode = dev ? 'development' : process.env.NODE_ENV;
   const urls = listInterfaceIps(accessSpec, result.port);

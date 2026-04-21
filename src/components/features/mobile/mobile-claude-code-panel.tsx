@@ -11,6 +11,7 @@ import useSessionMeta from '@/hooks/use-session-meta';
 import useGitBranch from '@/hooks/use-git-branch';
 import useGitStatus from '@/hooks/use-git-status';
 import useTmuxInfo from '@/hooks/use-tmux-info';
+import useMessageCounts from '@/hooks/use-message-counts';
 import SessionListView from '@/components/features/workspace/session-list-view';
 import SessionEmptyView from '@/components/features/workspace/session-empty-view';
 import BypassPromptCard from '@/components/features/workspace/bypass-prompt-card';
@@ -91,8 +92,10 @@ const MobileClaudeCodePanel = ({
     entries,
     tasks,
     sessionId,
+    jsonlPath,
     sessionSummary,
     initMeta,
+    sessionStats,
     claudeProcess: claudeProcessFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
@@ -152,10 +155,14 @@ const MobileClaudeCodePanel = ({
 
   const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'session-list' as const);
 
-  const { meta } = useSessionMeta(entries, sessionSummary, initMeta);
+  const { meta } = useSessionMeta(entries, sessionSummary, initMeta, sessionStats);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName);
   const { status: gitStatus } = useGitStatus(sessionName, metaSheetOpen);
   const tmuxInfo = useTmuxInfo(sessionName, metaSheetOpen);
+  const messageCounts = useMessageCounts(jsonlPath, metaSheetOpen);
+  const metaWithCounts = messageCounts
+    ? { ...meta, userCount: messageCounts.userCount, assistantCount: messageCounts.assistantCount }
+    : meta;
 
   const isInputVisible = view === 'timeline';
 
@@ -292,6 +299,7 @@ const MobileClaudeCodePanel = ({
           sessionName={sessionName}
           tabId={tabId}
           initMeta={initMeta}
+          sessionStats={sessionStats}
           cliState={storeCliState}
           compactingSince={compactingSince}
           wsStatus={wsStatus}
@@ -334,7 +342,9 @@ const MobileClaudeCodePanel = ({
       <MobileMetaSheet
         open={metaSheetOpen}
         onOpenChange={setMetaSheetOpen}
-        meta={meta}
+        meta={metaWithCounts}
+        toolCount={messageCounts?.toolCount ?? null}
+        toolBreakdown={messageCounts?.toolBreakdown ?? null}
         branch={branch}
         isBranchLoading={isBranchLoading}
         sessionId={sessionId}

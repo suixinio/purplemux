@@ -10,6 +10,7 @@ import type {
   ITimelineToolResult,
   ITaskItem,
   IInitMeta,
+  ISessionStats,
   TCliState,
   TTimelineConnectionStatus,
 } from '@/types/timeline';
@@ -32,6 +33,7 @@ interface ITimelineViewProps {
   sessionName?: string;
   tabId?: string;
   initMeta?: IInitMeta;
+  sessionStats?: ISessionStats | null;
   cliState: TCliState;
   compactingSince?: number | null;
   wsStatus: TTimelineConnectionStatus;
@@ -218,6 +220,7 @@ const TimelineView = ({
   sessionName,
   tabId,
   initMeta,
+  sessionStats,
   cliState,
   compactingSince,
   wsStatus,
@@ -256,11 +259,12 @@ const TimelineView = ({
   const hasDisplayItems = groupedItems.length > 0;
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
-  const resumeProbeDepsKey = `${cliState}:${initMeta?.contextWindowTokens ?? 0}:${initMeta?.lastTimestamp ?? 0}:${sessionName ?? ''}`;
+  const currentContextTokens = sessionStats?.currentContextTokens ?? 0;
+  const resumeProbeDepsKey = `${cliState}:${currentContextTokens}:${initMeta?.lastTimestamp ?? 0}:${sessionName ?? ''}`;
 
   useEffect(() => {
     if (cliState !== 'idle' || !initMeta || !sessionName
-      || initMeta.contextWindowTokens < RESUME_TOKEN_THRESHOLD
+      || currentContextTokens < RESUME_TOKEN_THRESHOLD
       || !initMeta.lastTimestamp) {
       setShouldProbeResumeDialog(false);
       return;

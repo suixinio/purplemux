@@ -4,7 +4,7 @@ import dayjs from 'dayjs';
 import { GitBranch, GitCommit, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowDown, Archive, Copy, Check } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { formatTokenCount, formatTokenDetail, formatCost, formatModelDisplayName } from '@/lib/claude-tokens';
+import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/claude-tokens';
 import type { IGitStatus } from '@/lib/git-status';
 
 const CopyIconButton = ({ text, className }: { text: string; className?: string }) => {
@@ -31,16 +31,6 @@ const CopyIconButton = ({ text, className }: { text: string; className?: string 
     </button>
   );
 };
-
-export interface IModelTokens {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  cost: number | null;
-}
 
 const Separator = () => (
   <span className="mx-1.5 text-muted-foreground/50">·</span>
@@ -110,14 +100,15 @@ export interface IMetaDetailProps {
   fileSize: number;
   userCount: number;
   assistantCount: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  contextWindowTokens: number;
+  toolCount: number | null;
+  toolBreakdown: Record<string, number> | null;
+  inputTokens: number | null;
+  outputTokens: number | null;
   totalCost: number | null;
-  tokensByModel: IModelTokens[];
+  currentContextTokens: number | null;
+  contextWindowSize: number | null;
+  usedPercentage: number | null;
+  model: string | null;
   branch: string | null;
   isBranchLoading: boolean;
   gitStatus: IGitStatus | null;
@@ -148,14 +139,15 @@ export const MetaDetail = ({
   fileSize,
   userCount,
   assistantCount,
+  toolCount,
+  toolBreakdown,
   inputTokens,
   outputTokens,
-  cacheCreationTokens,
-  cacheReadTokens,
-  totalTokens,
-  contextWindowTokens,
   totalCost,
-  tokensByModel,
+  currentContextTokens,
+  contextWindowSize,
+  usedPercentage,
+  model,
   branch,
   isBranchLoading,
   gitStatus,
@@ -164,6 +156,8 @@ export const MetaDetail = ({
   const t = useTranslations('session.meta');
   const createdRelative = createdAt ? dayjs(createdAt).fromNow() : '';
   const updatedRelative = updatedAt ? dayjs(updatedAt).fromNow() : '';
+  const hasTokens = inputTokens !== null && outputTokens !== null;
+  const hasContext = currentContextTokens !== null && contextWindowSize !== null && contextWindowSize > 0;
 
   return (
     <div className="flex flex-col gap-1">
@@ -192,34 +186,51 @@ export const MetaDetail = ({
           <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('message')}</span>
           <span className="text-xs text-muted-foreground">
             {t('userAssistant', { userCount, assistantCount })}
+            {toolCount !== null && toolCount > 0 && (
+              <>
+                {' / '}
+                <Tooltip>
+                  <TooltipTrigger className="cursor-default">
+                    {t('toolsCount', { count: toolCount })}
+                  </TooltipTrigger>
+                  {toolBreakdown && Object.keys(toolBreakdown).length > 0 && (
+                    <TooltipContent side="bottom">
+                      <div className="flex flex-col gap-0.5 font-mono text-xs">
+                        {Object.entries(toolBreakdown)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([name, count]) => (
+                            <div key={name} className="flex justify-between gap-4">
+                              <span>{name}</span>
+                              <span className="text-muted-foreground">{count}</span>
+                            </div>
+                          ))}
+                      </div>
+                    </TooltipContent>
+                  )}
+                </Tooltip>
+              </>
+            )}
           </span>
         </div>
 
-        <div className="flex items-baseline gap-2">
-          <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('tokens')}</span>
-          <div className="flex flex-col gap-0.5">
+        {hasTokens && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('tokens')}</span>
             <span className="font-mono text-xs text-muted-foreground">
-              {t('inputOutputTotal', { input: formatTokenDetail(inputTokens), output: formatTokenDetail(outputTokens), total: formatTokenDetail(totalTokens) })}
+              {t('inputOutput', { input: formatTokenDetail(inputTokens!), output: formatTokenDetail(outputTokens!) })}
             </span>
-            {(cacheCreationTokens > 0 || cacheReadTokens > 0) && (
-              <span className="font-mono text-xs text-muted-foreground/60">
-                cache: {formatTokenCount(cacheCreationTokens)} write, {formatTokenCount(cacheReadTokens)} read
-              </span>
-            )}
-            {contextWindowTokens > 0 && (
-              <span className="font-mono text-xs text-muted-foreground/60">
-                context: {formatTokenCount(contextWindowTokens)}
-              </span>
-            )}
-            {tokensByModel.map((m) => (
-              <span key={m.model} className="font-mono text-xs text-muted-foreground/60">
-                {formatModelDisplayName(m.model)}
-                {tokensByModel.length > 1 ? `: ${formatTokenCount(m.totalTokens)}` : ''}
-                {m.cost !== null ? ` (${formatCost(m.cost)})` : ''}
-              </span>
-            ))}
           </div>
-        </div>
+        )}
+
+        {hasContext && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('context')}</span>
+            <span className="font-mono text-xs text-muted-foreground">
+              {formatTokenCount(currentContextTokens!)} / {formatTokenCount(contextWindowSize!)}
+              {usedPercentage !== null ? ` (${usedPercentage}%)` : ''}
+            </span>
+          </div>
+        )}
 
         {totalCost !== null && (
           <div className="flex items-baseline gap-2">
@@ -227,6 +238,13 @@ export const MetaDetail = ({
             <span className="font-mono text-xs text-muted-foreground">
               {formatCost(totalCost)}
             </span>
+          </div>
+        )}
+
+        {model && (
+          <div className="flex items-baseline gap-2">
+            <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('model')}</span>
+            <span className="font-mono text-xs text-muted-foreground">{model}</span>
           </div>
         )}
 

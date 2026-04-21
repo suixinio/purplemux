@@ -12,8 +12,8 @@ import { cwdToProjectPath } from './session-list';
 import { updateTabClaudeSessionId, updateTabClaudeSummary, updateTabLastUserMessage, parseSessionName } from './layout-store';
 import { getStatusManager } from './status-manager';
 import { buildResumeCommand, isValidSessionId } from './claude-command';
-import { calculateCost } from './claude-tokens';
-import type { TTimelineServerMessage, IInitMeta, ITimelineEntry } from '@/types/timeline';
+import { extractSessionIdFromJsonlPath, readSessionStats } from './session-stats';
+import type { TTimelineServerMessage, IInitMeta, ITimelineEntry, ISessionStats } from '@/types/timeline';
 import path from 'path';
 import { isAllowedJsonlPath } from './path-validation';
 import { createLogger } from '@/lib/logger';
@@ -71,14 +71,26 @@ interface IFileWatcher {
   initOffsets: Map<WebSocket, number>;
 }
 
-const connections = new Map<WebSocket, ITimelineConnection>();
-const fileWatchers = new Map<string, IFileWatcher>();
-const sessionWatchers = new Map<string, ISessionWatcher>();
-
 interface IJsonlWatcher {
   stop: () => void;
 }
-const pendingJsonlWatchers = new Map<string, IJsonlWatcher>();
+
+const gTimeline = globalThis as unknown as {
+  __pmuxTimelineConnections?: Map<WebSocket, ITimelineConnection>;
+  __pmuxTimelineFileWatchers?: Map<string, IFileWatcher>;
+  __pmuxTimelineSessionWatchers?: Map<string, ISessionWatcher>;
+  __pmuxTimelinePendingJsonlWatchers?: Map<string, IJsonlWatcher>;
+};
+
+if (!gTimeline.__pmuxTimelineConnections) gTimeline.__pmuxTimelineConnections = new Map();
+if (!gTimeline.__pmuxTimelineFileWatchers) gTimeline.__pmuxTimelineFileWatchers = new Map();
+if (!gTimeline.__pmuxTimelineSessionWatchers) gTimeline.__pmuxTimelineSessionWatchers = new Map();
+if (!gTimeline.__pmuxTimelinePendingJsonlWatchers) gTimeline.__pmuxTimelinePendingJsonlWatchers = new Map();
+
+const connections = gTimeline.__pmuxTimelineConnections;
+const fileWatchers = gTimeline.__pmuxTimelineFileWatchers;
+const sessionWatchers = gTimeline.__pmuxTimelineSessionWatchers;
+const pendingJsonlWatchers = gTimeline.__pmuxTimelinePendingJsonlWatchers;
 
 const canSend = (ws: WebSocket): boolean =>
   ws.readyState === WebSocket.OPEN && ws.bufferedAmount < BACKPRESSURE_LIMIT;
@@ -86,6 +98,15 @@ const canSend = (ws: WebSocket): boolean =>
 const sendJson = (ws: WebSocket, msg: TTimelineServerMessage) => {
   if (canSend(ws)) {
     ws.send(JSON.stringify(msg));
+  }
+};
+
+export const broadcastSessionStats = (stats: ISessionStats) => {
+  for (const fw of fileWatchers.values()) {
+    if (extractSessionIdFromJsonlPath(fw.jsonlPath) !== stats.sessionId) continue;
+    for (const ws of fw.connections) {
+      sendJson(ws, { type: 'timeline:stats-update', sessionStats: stats });
+    }
   }
 };
 
@@ -283,19 +304,6 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
   let lastTimestamp = 0;
   let userCount = 0;
   let assistantCount = 0;
-  let inputTokens = 0;
-  let outputTokens = 0;
-  let cacheCreationTokens = 0;
-  let cacheReadTokens = 0;
-  let contextWindowTokens = 0;
-  const modelMap = new Map<string, {
-    inputTokens: number;
-    outputTokens: number;
-    cacheCreationTokens: number;
-    cacheCreation5mTokens: number;
-    cacheCreation1hTokens: number;
-    cacheReadTokens: number;
-  }>();
 
   for (const entry of entries) {
     if (!createdAt && entry.timestamp) {
@@ -306,61 +314,9 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
     }
     updatedAt = new Date(entry.timestamp).toISOString();
 
-    if (entry.type === 'user-message') {
-      userCount++;
-    } else if (entry.type === 'assistant-message') {
-      assistantCount++;
-      if (entry.usage) {
-        const cc = entry.usage.cache_creation_input_tokens ?? 0;
-        const cr = entry.usage.cache_read_input_tokens ?? 0;
-        const cc1h = entry.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
-        const cc5m = entry.usage.cache_creation?.ephemeral_5m_input_tokens ?? Math.max(0, cc - cc1h);
-        inputTokens += entry.usage.input_tokens;
-        outputTokens += entry.usage.output_tokens;
-        cacheCreationTokens += cc;
-        cacheReadTokens += cr;
-
-        contextWindowTokens = entry.usage.input_tokens + entry.usage.output_tokens + cc + cr;
-
-        const model = entry.model ?? 'unknown';
-        const existing = modelMap.get(model) ?? {
-          inputTokens: 0, outputTokens: 0, cacheCreationTokens: 0,
-          cacheCreation5mTokens: 0, cacheCreation1hTokens: 0, cacheReadTokens: 0,
-        };
-        existing.inputTokens += entry.usage.input_tokens;
-        existing.outputTokens += entry.usage.output_tokens;
-        existing.cacheCreationTokens += cc;
-        existing.cacheCreation5mTokens += cc5m;
-        existing.cacheCreation1hTokens += cc1h;
-        existing.cacheReadTokens += cr;
-        modelMap.set(model, existing);
-      }
-    }
+    if (entry.type === 'user-message') userCount++;
+    else if (entry.type === 'assistant-message') assistantCount++;
   }
-
-  const tokensByModel = Array.from(modelMap.entries())
-    .map(([model, tokens]) => ({
-      model,
-      inputTokens: tokens.inputTokens,
-      outputTokens: tokens.outputTokens,
-      cacheCreationTokens: tokens.cacheCreationTokens,
-      cacheReadTokens: tokens.cacheReadTokens,
-      totalTokens: tokens.inputTokens + tokens.outputTokens + tokens.cacheCreationTokens + tokens.cacheReadTokens,
-      cost: calculateCost(
-        model,
-        tokens.inputTokens,
-        tokens.outputTokens,
-        tokens.cacheCreation5mTokens,
-        tokens.cacheCreation1hTokens,
-        tokens.cacheReadTokens,
-      ),
-    }))
-    .sort((a, b) => b.totalTokens - a.totalTokens);
-
-  const totalCost = tokensByModel.reduce<number | null>((sum, m) => {
-    if (m.cost === null) return sum;
-    return (sum ?? 0) + m.cost;
-  }, null);
 
   return {
     createdAt: createdAtOverride ?? createdAt,
@@ -369,15 +325,7 @@ const computeInitMeta = (entries: ITimelineEntry[], fileSize: number, createdAtO
     fileSize,
     userCount,
     assistantCount,
-    inputTokens,
-    outputTokens,
-    cacheCreationTokens,
-    cacheReadTokens,
-    totalTokens: inputTokens + outputTokens + cacheCreationTokens + cacheReadTokens,
-    contextWindowTokens,
-    totalCost,
     customTitle,
-    tokensByModel,
   };
 };
 
@@ -435,16 +383,20 @@ const subscribeToFile = async (ws: WebSocket, jsonlPath: string, sessionId?: str
   const firstTimestamp = result.hasMore ? await readFirstTimestamp(jsonlPath) : null;
   const meta = computeInitMeta(result.entries, result.fileSize, firstTimestamp, result.customTitle);
 
+  const resolvedSessionId = sessionId ?? extractSessionIdFromJsonlPath(jsonlPath) ?? '';
+  const sessionStats = resolvedSessionId ? await readSessionStats(resolvedSessionId) : null;
+
   sendJson(ws, {
     type: 'timeline:init',
     entries: result.entries,
-    sessionId: sessionId ?? '',
+    sessionId: resolvedSessionId,
     totalEntries: result.entries.length,
     startByteOffset: result.startByteOffset,
     hasMore: result.hasMore,
     jsonlPath,
     summary: result.summary,
     meta,
+    sessionStats,
   });
 
   if (!isNewWatcher) {

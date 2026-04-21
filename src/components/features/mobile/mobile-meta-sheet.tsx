@@ -1,6 +1,6 @@
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MetaDetail } from '@/components/features/workspace/session-meta-content';
-import type { IMetaDetailProps, ITmuxInfo } from '@/components/features/workspace/session-meta-content';
+import type { ITmuxInfo } from '@/components/features/workspace/session-meta-content';
 import type { IGitStatus } from '@/lib/git-status';
 
 interface ISessionMetaData {
@@ -10,20 +10,21 @@ interface ISessionMetaData {
   fileSize: number;
   userCount: number;
   assistantCount: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  contextWindowTokens: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
   totalCost: number | null;
-  tokensByModel: IMetaDetailProps['tokensByModel'];
+  currentContextTokens: number | null;
+  contextWindowSize: number | null;
+  usedPercentage: number | null;
+  model: string | null;
 }
 
 interface IMobileMetaSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   meta: ISessionMetaData;
+  toolCount: number | null;
+  toolBreakdown: Record<string, number> | null;
   branch: string | null;
   isBranchLoading: boolean;
   sessionId: string | null;
@@ -35,6 +36,8 @@ const MobileMetaSheet = ({
   open,
   onOpenChange,
   meta,
+  toolCount,
+  toolBreakdown,
   branch,
   isBranchLoading,
   sessionId,
@@ -53,14 +56,15 @@ const MobileMetaSheet = ({
           fileSize={meta.fileSize}
           userCount={meta.userCount}
           assistantCount={meta.assistantCount}
+          toolCount={toolCount}
+          toolBreakdown={toolBreakdown}
           inputTokens={meta.inputTokens}
           outputTokens={meta.outputTokens}
-          cacheCreationTokens={meta.cacheCreationTokens}
-          cacheReadTokens={meta.cacheReadTokens}
-          totalTokens={meta.totalTokens}
-          contextWindowTokens={meta.contextWindowTokens}
           totalCost={meta.totalCost}
-          tokensByModel={meta.tokensByModel}
+          currentContextTokens={meta.currentContextTokens}
+          contextWindowSize={meta.contextWindowSize}
+          usedPercentage={meta.usedPercentage}
+          model={meta.model}
           branch={branch}
           isBranchLoading={isBranchLoading}
           gitStatus={gitStatus}

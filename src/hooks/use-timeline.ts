@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import type {
   ITimelineEntry,
   IInitMeta,
+  ISessionStats,
   ITaskItem,
   TCliState,
   TTimelineConnectionStatus,
@@ -36,8 +37,10 @@ interface IUseTimelineReturn {
   entries: ITimelineEntry[];
   tasks: ITaskItem[];
   sessionId: string | null;
+  jsonlPath: string | null;
   sessionSummary: string | undefined;
   initMeta: IInitMeta | undefined;
+  sessionStats: ISessionStats | null;
   claudeProcess: boolean | null;
   claudeInstalled: boolean;
   wsStatus: TTimelineConnectionStatus;
@@ -68,6 +71,8 @@ const useTimeline = ({
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [sessionSummary, setSessionSummary] = useState<string | undefined>();
   const [initMeta, setInitMeta] = useState<IInitMeta | undefined>();
+  const [sessionStats, setSessionStats] = useState<ISessionStats | null>(null);
+  const [jsonlPath, setJsonlPath] = useState<string | null>(null);
 
   const entriesRef = useRef(entries);
   useEffect(() => {
@@ -95,13 +100,15 @@ const useTimeline = ({
     setSessionId(null);
     setSessionSummary(undefined);
     setInitMeta(undefined);
+    setSessionStats(null);
+    setJsonlPath(null);
     jsonlPathRef.current = null;
     startByteOffsetRef.current = 0;
   }
 
   const isLoading = !wsInitReceived;
 
-  const handleInit = useCallback((newEntries: ITimelineEntry[], _totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMoreInit?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean) => {
+  const handleInit = useCallback((newEntries: ITimelineEntry[], _totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMoreInit?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean, initStats?: ISessionStats | null) => {
     setWsInitReceived(true);
     setClaudeInstalled(true);
     setEntries((prev) => {
@@ -126,8 +133,10 @@ const useTimeline = ({
     setHasMore(hasMoreInit ?? false);
     setSessionSummary(summary);
     setInitMeta(meta);
+    setSessionStats(initStats ?? null);
     if (jsonlPath) {
       jsonlPathRef.current = jsonlPath;
+      setJsonlPath(jsonlPath);
     }
     if (initSessionId) {
       setSessionId(initSessionId);
@@ -226,6 +235,7 @@ const useTimeline = ({
       setEntries([]);
       setSessionSummary(undefined);
       setInitMeta(undefined);
+      setSessionStats(null);
       setHasMore(false);
       return;
     }
@@ -243,8 +253,13 @@ const useTimeline = ({
     setEntries([]);
     setSessionSummary(undefined);
     setInitMeta(undefined);
+    setSessionStats(null);
     setHasMore(false);
     setWsInitReceived(false);
+  }, []);
+
+  const handleStatsUpdate = useCallback((stats: ISessionStats) => {
+    setSessionStats(stats);
   }, []);
 
   const loadMore = useCallback(async () => {
@@ -316,6 +331,7 @@ const useTimeline = ({
     onInit: handleInit,
     onAppend: handleAppend,
     onSessionChanged: handleSessionChanged,
+    onStatsUpdate: handleStatsUpdate,
     onError: handleError,
     onResumeStarted: handleResumeStarted,
     onResumeBlocked: handleResumeBlocked,
@@ -364,8 +380,10 @@ const useTimeline = ({
     entries,
     tasks,
     sessionId,
+    jsonlPath,
     sessionSummary,
     initMeta,
+    sessionStats,
     claudeProcess,
     claudeInstalled,
     wsStatus,

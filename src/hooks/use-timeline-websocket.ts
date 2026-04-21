@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type {
   ITimelineEntry,
   IInitMeta,
+  ISessionStats,
   TTimelineConnectionStatus,
   TTimelineServerMessage,
 } from '@/types/timeline';
@@ -27,9 +28,10 @@ interface IUseTimelineWebSocketOptions {
   sessionName: string;
   claudeSessionId?: string | null;
   enabled: boolean;
-  onInit: (entries: ITimelineEntry[], totalEntries: number, sessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMore?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean) => void;
+  onInit: (entries: ITimelineEntry[], totalEntries: number, sessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMore?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean, sessionStats?: ISessionStats | null) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
   onSessionChanged: (newSessionId: string, reason: string) => void;
+  onStatsUpdate?: (stats: ISessionStats) => void;
   onError?: (error: { code: string; message: string }) => void;
   onResumeStarted?: (payload: IResumeStartedPayload) => void;
   onResumeBlocked?: (payload: IResumeBlockedPayload) => void;
@@ -51,6 +53,7 @@ const useTimelineWebSocket = ({
   onInit,
   onAppend,
   onSessionChanged,
+  onStatsUpdate,
   onError,
   onResumeStarted,
   onResumeBlocked,
@@ -65,15 +68,15 @@ const useTimelineWebSocket = ({
   const connectIdRef = useRef(0);
 
   const callbacksRef = useRef({
-    onInit, onAppend, onSessionChanged, onError,
+    onInit, onAppend, onSessionChanged, onStatsUpdate, onError,
     onResumeStarted, onResumeBlocked, onResumeError,
   });
   useEffect(() => {
     callbacksRef.current = {
-      onInit, onAppend, onSessionChanged, onError,
+      onInit, onAppend, onSessionChanged, onStatsUpdate, onError,
       onResumeStarted, onResumeBlocked, onResumeError,
     };
-  }, [onInit, onAppend, onSessionChanged, onError, onResumeStarted, onResumeBlocked, onResumeError]);
+  }, [onInit, onAppend, onSessionChanged, onStatsUpdate, onError, onResumeStarted, onResumeBlocked, onResumeError]);
 
   const doConnectRef = useRef<(connectId: number) => void>(() => {});
 
@@ -114,13 +117,16 @@ const useTimelineWebSocket = ({
           const msg = JSON.parse(event.data) as TTimelineServerMessage;
           switch (msg.type) {
             case 'timeline:init':
-              callbacksRef.current.onInit(msg.entries, msg.totalEntries, msg.sessionId, msg.summary, msg.meta, msg.startByteOffset, msg.hasMore, msg.jsonlPath, msg.isClaudeStarting);
+              callbacksRef.current.onInit(msg.entries, msg.totalEntries, msg.sessionId, msg.summary, msg.meta, msg.startByteOffset, msg.hasMore, msg.jsonlPath, msg.isClaudeStarting, msg.sessionStats);
               break;
             case 'timeline:append':
               callbacksRef.current.onAppend(msg.entries);
               break;
             case 'timeline:session-changed':
               callbacksRef.current.onSessionChanged(msg.newSessionId, msg.reason);
+              break;
+            case 'timeline:stats-update':
+              callbacksRef.current.onStatsUpdate?.(msg.sessionStats);
               break;
             case 'timeline:error':
               callbacksRef.current.onError?.({ code: msg.code, message: msg.message });

@@ -83,21 +83,8 @@ export interface IRateLimitWindow {
 
 export interface IRateLimitsData {
   ts: number;
-  model: string;
   five_hour: IRateLimitWindow | null;
   seven_day: IRateLimitWindow | null;
-  context: {
-    used_pct: number;
-    remaining_pct: number;
-    input_tokens: number;
-    output_tokens: number;
-    window_size: number;
-  } | null;
-  cost: {
-    total_cost_usd: number;
-    total_duration_ms: number;
-    total_duration_api_ms: number;
-  } | null;
 }
 
 export interface IRateLimitsUpdateMessage {

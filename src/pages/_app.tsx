@@ -107,6 +107,13 @@ const MOBILE_TOAST_OFFSET = {
   right: 16,
 };
 
+const DESKTOP_TOAST_OFFSET = {
+  top: 56,
+  bottom: 24,
+  left: 24,
+  right: 24,
+};
+
 const ThemedToaster = () => {
   const { resolvedTheme } = useTheme();
   const isMobile = useIsMobile();
@@ -117,7 +124,7 @@ const ThemedToaster = () => {
     <Toaster
       position={position}
       theme={resolvedTheme as 'light' | 'dark'}
-      offset={isMobile ? MOBILE_TOAST_OFFSET : undefined}
+      offset={isMobile ? MOBILE_TOAST_OFFSET : DESKTOP_TOAST_OFFSET}
       mobileOffset={MOBILE_TOAST_OFFSET}
       closeButton
     />

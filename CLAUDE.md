@@ -279,6 +279,58 @@ npm version prerelease --preid=beta  # 1.0.0 → 1.0.1-beta.0
 
 This updates `package.json` and creates a git tag in one step, keeping the tag and version in sync.
 
+### 18. Module Isolation Between Custom Server and Next.js
+
+In **both** dev and production, the outer custom server (`server.ts`) and Next.js (pages + API routes) use **separate module graphs** inside the same Node process. Any `src/lib/*` module imported from both sides is instantiated **twice** — same source, **independent module-level state**.
+
+- **Dev** (`pnpm dev`): `tsx watch server.ts` loads `server.ts` through Node's loader, while Next dev compiles pages and API routes with its own bundler (Turbopack/webpack). HMR can re-evaluate a Next-side module on file change, resetting its state again.
+- **Production** (`pnpm start`): `tsup` bundles `server.ts` into `dist/server.js` (with `src/lib/*` inlined), and `next build` bundles API routes into `.next/standalone/.next/server/chunks/*.js` (with their own inlined copy of the same `src/lib/*`). `dist/server.js` `require()`s the standalone entry, so both live in one process — but Node's module cache keys on file path, and the two copies sit in different files.
+
+Shared `node_modules` (e.g. `ws`, `pino`) resolve to a single instance because both bundlers leave them `external`. Anything authored under `src/` does not.
+
+#### When to consider
+
+Any **module-level value with identity or side effects** that must be seen by both the custom server and Next API routes:
+
+- Singletons — managers, stores (e.g. `StatusManager`)
+- Collections — `Map`/`Set` of WebSocket clients, sessions, locks
+- Mutex/lock chains — `Promise` chains used to serialize file writes
+- Caches — content/ETag/dedupe caches
+- Side-effecting singletons — loggers with transport workers (pino), file watchers, timers
+- Tokens/secrets generated once per process (e.g. CLI token)
+
+Symptoms of getting this wrong: state written from `server.ts` is invisible to API routes, locks don't actually serialize writes, two transport workers fight over the same log file, a WebSocket broadcast reaches only half the clients.
+
+Pure functions, types, and constants do **not** need this treatment.
+
+#### Solution: namespace on `globalThis`
+
+`globalThis` is the one object guaranteed to be shared across both module graphs within a single Node process. Hang shared state off it under a `__pt` prefixed key, guarded so re-evaluation doesn't overwrite it.
+
+```typescript
+// ✅ shared across server.ts, API routes, and HMR reloads
+const g = globalThis as unknown as { __ptFooStore?: Map<string, IFoo> };
+if (!g.__ptFooStore) g.__ptFooStore = new Map();
+const store = g.__ptFooStore;
+
+// ✅ singleton accessor
+const g = globalThis as unknown as { __ptBarManager?: BarManager };
+export const getBarManager = (): BarManager => {
+  if (!g.__ptBarManager) g.__ptBarManager = new BarManager();
+  return g.__ptBarManager;
+};
+
+// ❌ module-level — reset on HMR, duplicated across module graphs
+const store = new Map<string, IFoo>();
+```
+
+#### Conventions
+
+- **Key prefix**: `__pt` + PascalCase (e.g. `__ptStatusManager`, `__ptConfigLock`). Older code uses `__purplemux_` — keep existing keys as-is, but use `__pt` for new entries.
+- **Guard every write**: `if (!g.__ptX) g.__ptX = ...` — never unconditionally assign, or HMR will clobber live state.
+- **Type the cast once per file**: `const g = globalThis as unknown as { __ptX?: T }` at the top, then use `g.__ptX` inline.
+- Existing examples: `src/lib/status-manager.ts`, `src/lib/config-store.ts`, `src/lib/sync-server.ts`, `src/lib/terminal-server.ts`, `src/lib/logger.ts`, `src/lib/cli-token.ts`.
+
 ---
 
 ## Detailed Guides

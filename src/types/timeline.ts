@@ -223,23 +223,22 @@ export interface IInitMeta {
   fileSize: number;
   userCount: number;
   assistantCount: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  contextWindowTokens: number;
-  totalCost: number | null;
   customTitle?: string;
-  tokensByModel: {
-    model: string;
-    inputTokens: number;
-    outputTokens: number;
-    cacheCreationTokens: number;
-    cacheReadTokens: number;
-    totalTokens: number;
-    cost: number | null;
-  }[];
+}
+
+export interface ISessionStats {
+  sessionId: string;
+  transcriptPath?: string;
+
+  inputTokens?: number;
+  outputTokens?: number;
+  cost?: number | null;
+  currentContextTokens?: number;
+  contextWindowSize?: number;
+  usedPercentage?: number | null;
+  model?: string | null;
+  exceeds200k?: boolean;
+  receivedAt?: number;
 }
 
 export interface ITimelineInitMessage {
@@ -252,7 +251,13 @@ export interface ITimelineInitMessage {
   jsonlPath?: string | null;
   summary?: string;
   meta?: IInitMeta;
+  sessionStats?: ISessionStats | null;
   isClaudeStarting?: boolean;
+}
+
+export interface ITimelineStatsUpdateMessage {
+  type: 'timeline:stats-update';
+  sessionStats: ISessionStats;
 }
 
 export interface ITimelineAppendMessage {
@@ -296,7 +301,8 @@ export type TTimelineServerMessage =
   | ITimelineErrorMessage
   | ITimelineResumeStartedMessage
   | ITimelineResumeBlockedMessage
-  | ITimelineResumeErrorMessage;
+  | ITimelineResumeErrorMessage
+  | ITimelineStatsUpdateMessage;
 
 export interface ITimelineSubscribeMessage {
   type: 'timeline:subscribe';

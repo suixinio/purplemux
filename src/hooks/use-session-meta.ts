@@ -1,17 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
-import type { ITimelineEntry, IInitMeta } from '@/types/timeline';
-import { calculateCost } from '@/lib/claude-tokens';
-
-interface IModelTokens {
-  model: string;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  cost: number | null;
-}
+import type { ITimelineEntry, IInitMeta, ISessionStats } from '@/types/timeline';
 
 export interface ISessionMetaData {
   title: string;
@@ -20,14 +9,14 @@ export interface ISessionMetaData {
   fileSize: number;
   userCount: number;
   assistantCount: number;
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheReadTokens: number;
-  totalTokens: number;
-  contextWindowTokens: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
   totalCost: number | null;
-  tokensByModel: IModelTokens[];
+  currentContextTokens: number | null;
+  contextWindowSize: number | null;
+  usedPercentage: number | null;
+  model: string | null;
+  exceeds200k: boolean;
 }
 
 interface IUseSessionMetaReturn {
@@ -44,225 +33,108 @@ const createEmptyMeta = (newSessionTitle: string): ISessionMetaData => ({
   fileSize: 0,
   userCount: 0,
   assistantCount: 0,
-  inputTokens: 0,
-  outputTokens: 0,
-  cacheCreationTokens: 0,
-  cacheReadTokens: 0,
-  totalTokens: 0,
-  contextWindowTokens: 0,
+  inputTokens: null,
+  outputTokens: null,
   totalCost: null,
-  tokensByModel: [],
+  currentContextTokens: null,
+  contextWindowSize: null,
+  usedPercentage: null,
+  model: null,
+  exceeds200k: false,
 });
 
-interface IAccumulator {
-  inputTokens: number;
-  outputTokens: number;
-  cacheCreationTokens: number;
-  cacheCreation5mTokens: number;
-  cacheCreation1hTokens: number;
-  cacheReadTokens: number;
-}
+const findFirstUserMessage = (entries: ITimelineEntry[]): string | null => {
+  for (const entry of entries) {
+    if (entry.type === 'user-message') return entry.text;
+  }
+  return null;
+};
 
-const createAccumulator = (): IAccumulator => ({
-  inputTokens: 0,
-  outputTokens: 0,
-  cacheCreationTokens: 0,
-  cacheCreation5mTokens: 0,
-  cacheCreation1hTokens: 0,
-  cacheReadTokens: 0,
-});
-
-const accumulateUsage = (
-  entries: ITimelineEntry[],
-  afterTimestamp?: number,
-): {
-  userCount: number;
-  assistantCount: number;
-  acc: IAccumulator;
-  contextWindowTokens: number;
-  updatedAt: string | null;
-  modelMap: Map<string, IAccumulator>;
-  firstUserMessage: string | null;
-} => {
+const countMessages = (entries: ITimelineEntry[], afterTimestamp?: number): { userCount: number; assistantCount: number; updatedAt: string | null } => {
   let userCount = 0;
   let assistantCount = 0;
   let updatedAt: string | null = null;
-  let contextWindowTokens = 0;
-  let firstUserMessage: string | null = null;
-  const acc = createAccumulator();
-  const modelMap = new Map<string, IAccumulator>();
 
   for (const entry of entries) {
     if (afterTimestamp !== undefined && entry.timestamp <= afterTimestamp) continue;
-
     updatedAt = new Date(entry.timestamp).toISOString();
-
-    if (entry.type === 'user-message') {
-      userCount++;
-      if (firstUserMessage === null) firstUserMessage = entry.text;
-    } else if (entry.type === 'assistant-message') {
-      assistantCount++;
-      if (entry.usage) {
-        const cc = entry.usage.cache_creation_input_tokens ?? 0;
-        const cr = entry.usage.cache_read_input_tokens ?? 0;
-        const cc1h = entry.usage.cache_creation?.ephemeral_1h_input_tokens ?? 0;
-        const cc5m = entry.usage.cache_creation?.ephemeral_5m_input_tokens ?? Math.max(0, cc - cc1h);
-        acc.inputTokens += entry.usage.input_tokens;
-        acc.outputTokens += entry.usage.output_tokens;
-        acc.cacheCreationTokens += cc;
-        acc.cacheCreation5mTokens += cc5m;
-        acc.cacheCreation1hTokens += cc1h;
-        acc.cacheReadTokens += cr;
-
-        contextWindowTokens = entry.usage.input_tokens + entry.usage.output_tokens + cc + cr;
-
-        const model = entry.model ?? 'unknown';
-        const existing = modelMap.get(model) ?? createAccumulator();
-        existing.inputTokens += entry.usage.input_tokens;
-        existing.outputTokens += entry.usage.output_tokens;
-        existing.cacheCreationTokens += cc;
-        existing.cacheCreation5mTokens += cc5m;
-        existing.cacheCreation1hTokens += cc1h;
-        existing.cacheReadTokens += cr;
-        modelMap.set(model, existing);
-      }
-    }
+    if (entry.type === 'user-message') userCount++;
+    else if (entry.type === 'assistant-message') assistantCount++;
   }
 
-  return { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap, firstUserMessage };
+  return { userCount, assistantCount, updatedAt };
 };
 
-const buildTokensByModel = (modelMap: Map<string, IAccumulator>): IModelTokens[] =>
-  Array.from(modelMap.entries())
-    .map(([model, t]) => ({
-      model,
-      inputTokens: t.inputTokens,
-      outputTokens: t.outputTokens,
-      cacheCreationTokens: t.cacheCreationTokens,
-      cacheReadTokens: t.cacheReadTokens,
-      totalTokens: t.inputTokens + t.outputTokens + t.cacheCreationTokens + t.cacheReadTokens,
-      cost: calculateCost(
-        model,
-        t.inputTokens,
-        t.outputTokens,
-        t.cacheCreation5mTokens,
-        t.cacheCreation1hTokens,
-        t.cacheReadTokens,
-      ),
-    }))
-    .sort((a, b) => b.totalTokens - a.totalTokens);
+const applyStats = (base: ISessionMetaData, stats: ISessionStats | null | undefined): ISessionMetaData => {
+  if (!stats) return base;
+  return {
+    ...base,
+    inputTokens: stats.inputTokens ?? null,
+    outputTokens: stats.outputTokens ?? null,
+    totalCost: stats.cost ?? null,
+    currentContextTokens: stats.currentContextTokens || null,
+    contextWindowSize: stats.contextWindowSize || null,
+    usedPercentage: stats.usedPercentage ?? null,
+    model: stats.model ?? null,
+    exceeds200k: stats.exceeds200k ?? false,
+  };
+};
 
-const sumCost = (models: IModelTokens[]): number | null =>
-  models.reduce<number | null>((sum, m) => {
-    if (m.cost === null) return sum;
-    return (sum ?? 0) + m.cost;
-  }, null);
+const computeMeta = (
+  entries: ITimelineEntry[],
+  sessionStats: ISessionStats | null | undefined,
+  initMeta: IInitMeta | undefined,
+  newSessionTitle: string,
+): ISessionMetaData => {
+  const base = createEmptyMeta(newSessionTitle);
 
-const computeMetaFromEntries = (entries: ITimelineEntry[], newSessionTitle: string): ISessionMetaData => {
-  if (entries.length === 0) return createEmptyMeta(newSessionTitle);
-
-  const { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap, firstUserMessage } = accumulateUsage(entries);
-  const tokensByModel = buildTokensByModel(modelMap);
-
-  let createdAt: string | null = null;
-  if (entries.length > 0 && entries[0].timestamp) {
-    createdAt = new Date(entries[0].timestamp).toISOString();
+  if (initMeta) {
+    const { userCount, assistantCount, updatedAt } = countMessages(entries, initMeta.lastTimestamp);
+    const title = initMeta.customTitle ?? findFirstUserMessage(entries) ?? newSessionTitle;
+    return applyStats({
+      ...base,
+      title,
+      createdAt: initMeta.createdAt,
+      updatedAt: updatedAt ?? initMeta.updatedAt,
+      fileSize: initMeta.fileSize,
+      userCount: initMeta.userCount + userCount,
+      assistantCount: initMeta.assistantCount + assistantCount,
+    }, sessionStats);
   }
 
-  return {
-    title: firstUserMessage ?? newSessionTitle,
+  if (entries.length === 0) return applyStats(base, sessionStats);
+
+  const { userCount, assistantCount, updatedAt } = countMessages(entries);
+  const title = findFirstUserMessage(entries) ?? newSessionTitle;
+  const createdAt = entries[0].timestamp ? new Date(entries[0].timestamp).toISOString() : null;
+
+  return applyStats({
+    ...base,
+    title,
     createdAt,
     updatedAt,
-    fileSize: 0,
     userCount,
     assistantCount,
-    inputTokens: acc.inputTokens,
-    outputTokens: acc.outputTokens,
-    cacheCreationTokens: acc.cacheCreationTokens,
-    cacheReadTokens: acc.cacheReadTokens,
-    totalTokens: acc.inputTokens + acc.outputTokens + acc.cacheCreationTokens + acc.cacheReadTokens,
-    contextWindowTokens,
-    totalCost: sumCost(tokensByModel),
-    tokensByModel,
-  };
+  }, sessionStats);
 };
 
-const mergeTokensByModel = (base: IModelTokens[], delta: IModelTokens[]): IModelTokens[] => {
-  const map = new Map<string, IModelTokens>();
-  for (const m of base) map.set(m.model, { ...m });
-  for (const d of delta) {
-    const existing = map.get(d.model);
-    if (existing) {
-      existing.inputTokens += d.inputTokens;
-      existing.outputTokens += d.outputTokens;
-      existing.cacheCreationTokens += d.cacheCreationTokens;
-      existing.cacheReadTokens += d.cacheReadTokens;
-      existing.totalTokens += d.totalTokens;
-      existing.cost = existing.cost !== null && d.cost !== null
-        ? existing.cost + d.cost
-        : existing.cost ?? d.cost;
-    } else {
-      map.set(d.model, { ...d });
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => b.totalTokens - a.totalTokens);
-};
-
-const mergeWithInitMeta = (entries: ITimelineEntry[], initMeta: IInitMeta, newSessionTitle: string): ISessionMetaData => {
-  let title = initMeta.customTitle ?? newSessionTitle;
-  if (!initMeta.customTitle) {
-    for (const entry of entries) {
-      if (entry.type === 'user-message') {
-        title = entry.text;
-        break;
-      }
-    }
-  }
-
-  const { userCount, assistantCount, acc, contextWindowTokens, updatedAt, modelMap } = accumulateUsage(entries, initMeta.lastTimestamp);
-  const deltaTokensByModel = buildTokensByModel(modelMap);
-  const deltaCost = sumCost(deltaTokensByModel);
-
-  const mergedInput = initMeta.inputTokens + acc.inputTokens;
-  const mergedOutput = initMeta.outputTokens + acc.outputTokens;
-  const mergedCacheCreation = initMeta.cacheCreationTokens + acc.cacheCreationTokens;
-  const mergedCacheRead = initMeta.cacheReadTokens + acc.cacheReadTokens;
-  const mergedCost = initMeta.totalCost !== null && deltaCost !== null
-    ? initMeta.totalCost + deltaCost
-    : initMeta.totalCost ?? deltaCost;
-
-  return {
-    title,
-    createdAt: initMeta.createdAt,
-    updatedAt: updatedAt ?? initMeta.updatedAt,
-    fileSize: initMeta.fileSize,
-    userCount: initMeta.userCount + userCount,
-    assistantCount: initMeta.assistantCount + assistantCount,
-    inputTokens: mergedInput,
-    outputTokens: mergedOutput,
-    cacheCreationTokens: mergedCacheCreation,
-    cacheReadTokens: mergedCacheRead,
-    totalTokens: mergedInput + mergedOutput + mergedCacheCreation + mergedCacheRead,
-    contextWindowTokens: contextWindowTokens || initMeta.contextWindowTokens,
-    totalCost: mergedCost,
-    tokensByModel: mergeTokensByModel(initMeta.tokensByModel, deltaTokensByModel),
-  };
-};
-
-const useSessionMeta = (entries: ITimelineEntry[], sessionSummary?: string, initMeta?: IInitMeta): IUseSessionMetaReturn => {
+const useSessionMeta = (
+  entries: ITimelineEntry[],
+  sessionSummary?: string,
+  initMeta?: IInitMeta,
+  sessionStats?: ISessionStats | null,
+): IUseSessionMetaReturn => {
   const t = useTranslations('session');
   const newSessionTitle = t('newSessionTitle');
   const [isExpanded, setIsExpanded] = useState(false);
 
   const meta = useMemo(() => {
-    const computed = initMeta
-      ? mergeWithInitMeta(entries, initMeta, newSessionTitle)
-      : computeMetaFromEntries(entries, newSessionTitle);
+    const computed = computeMeta(entries, sessionStats, initMeta, newSessionTitle);
     if (sessionSummary) {
       return { ...computed, title: sessionSummary };
     }
     return computed;
-  }, [entries, sessionSummary, initMeta, newSessionTitle]);
+  }, [entries, sessionSummary, initMeta, sessionStats, newSessionTitle]);
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);
