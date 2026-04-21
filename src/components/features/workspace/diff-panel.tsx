@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { RefreshCw, GitBranch, Columns2, Rows2, FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { RefreshCw, GitBranch, Columns2, Rows2, FileText, ChevronDown, ChevronRight, ArrowUp, ArrowDown } from 'lucide-react';
 import { DiffView, DiffModeEnum, getLang } from '@git-diff-view/react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
@@ -36,6 +36,8 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [hasUpdate, setHasUpdate] = useState(false);
+  const [ahead, setAhead] = useState(0);
+  const [behind, setBehind] = useState(0);
   const [viewMode, setViewMode] = useState<TViewMode>(() => {
     if (typeof window === 'undefined') return 'split';
     const saved = localStorage.getItem('diff-output-format');
@@ -67,6 +69,8 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
       setIsGitRepo(data.isGitRepo);
       if (data.isGitRepo) {
         setDiff(data.diff ?? '');
+        setAhead(data.ahead ?? 0);
+        setBehind(data.behind ?? 0);
         currentHashRef.current = data.hash ?? '';
       }
     } finally {
@@ -162,6 +166,23 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
         <GitBranch className="h-3.5 w-3.5 text-muted-foreground" />
         <span className="text-xs font-medium text-foreground">Diff</span>
         <span className="text-xs text-muted-foreground">HEAD</span>
+
+        {(ahead > 0 || behind > 0) && (
+          <div className="flex items-center gap-1.5 font-mono text-[11px]">
+            {ahead > 0 && (
+              <span className="flex items-center gap-0.5 text-ui-blue" title={`${ahead} commit(s) to push`}>
+                <ArrowUp className="h-3 w-3" />
+                {ahead}
+              </span>
+            )}
+            {behind > 0 && (
+              <span className="flex items-center gap-0.5 text-claude-active" title={`${behind} commit(s) to pull`}>
+                <ArrowDown className="h-3 w-3" />
+                {behind}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="ml-auto flex items-center gap-1">
           {hasUpdate && (

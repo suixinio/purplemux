@@ -239,6 +239,9 @@ const TimelineView = ({
   const anchorElRef = useRef<HTMLDivElement | null>(null);
   const spacerRef = useRef<HTMLDivElement | null>(null);
   const armedRef = useRef(false);
+  const wasBusyRef = useRef(false);
+  const pendingClearArmedRef = useRef(false);
+  const pendingClearEntryCountRef = useRef(0);
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -261,6 +264,8 @@ const TimelineView = ({
     setSkipAnimation(true);
     setAnchorUserId(null);
     armedRef.current = false;
+    wasBusyRef.current = false;
+    pendingClearArmedRef.current = false;
   }
 
   useEffect(() => {
@@ -286,6 +291,25 @@ const TimelineView = ({
       setAnchorUserId(lastUserMessageId);
     }
   }, [lastUserMessageId, anchorUserId]);
+
+  useEffect(() => {
+    if (cliState === 'busy') {
+      wasBusyRef.current = true;
+      pendingClearArmedRef.current = false;
+      return;
+    }
+    if (!wasBusyRef.current || !anchorUserId) return;
+    if (!pendingClearArmedRef.current) {
+      pendingClearArmedRef.current = true;
+      pendingClearEntryCountRef.current = entries.length;
+      return;
+    }
+    if (entries.length !== pendingClearEntryCountRef.current) {
+      setSpacerHeight(0);
+      wasBusyRef.current = false;
+      pendingClearArmedRef.current = false;
+    }
+  }, [cliState, anchorUserId, entries.length]);
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
   const currentContextTokens = sessionStats?.currentContextTokens ?? 0;

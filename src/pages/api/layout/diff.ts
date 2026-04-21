@@ -9,6 +9,23 @@ const execFile = promisify(execFileCb);
 const log = createLogger('diff');
 const CMD_TIMEOUT = 10000;
 
+const getAheadBehind = async (cwd: string): Promise<{ ahead: number; behind: number }> => {
+  try {
+    const { stdout } = await execFile(
+      'git',
+      ['rev-list', '--left-right', '--count', 'HEAD...@{upstream}'],
+      { cwd, timeout: CMD_TIMEOUT },
+    );
+    const parts = stdout.trim().split(/\s+/);
+    return {
+      ahead: parseInt(parts[0], 10) || 0,
+      behind: parseInt(parts[1], 10) || 0,
+    };
+  } catch {
+    return { ahead: 0, behind: 0 };
+  }
+};
+
 const computeDiffHash = async (cwd: string) => {
   const [{ stdout: headOut }, { stdout: statusOut }, { stdout: shortstatOut }] = await Promise.all([
     execFile('git', ['rev-parse', 'HEAD'], { cwd, timeout: CMD_TIMEOUT }),
@@ -56,10 +73,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       return res.status(200).json({ isGitRepo: true, hash });
     }
 
-    const [{ stdout: diff }, { stdout: statusOut }, hash] = await Promise.all([
+    const [{ stdout: diff }, { stdout: statusOut }, hash, aheadBehind] = await Promise.all([
       execFile('git', ['diff', 'HEAD'], { cwd, timeout: CMD_TIMEOUT, maxBuffer: 5 * 1024 * 1024 }),
       execFile('git', ['status', '--porcelain', '-uall'], { cwd, timeout: CMD_TIMEOUT }),
       computeDiffHash(cwd),
+      getAheadBehind(cwd),
     ]);
 
     const untrackedFiles = statusOut
@@ -79,7 +97,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
     }
 
-    return res.status(200).json({ isGitRepo: true, diff: fullDiff, hash });
+    return res.status(200).json({ isGitRepo: true, diff: fullDiff, hash, ahead: aheadBehind.ahead, behind: aheadBehind.behind });
   } catch (err) {
     log.error(`git diff failed: ${err instanceof Error ? err.message : err}`);
     return res.status(500).json({ error: 'Failed to get diff' });
