@@ -340,7 +340,7 @@ export const MetaDetail = ({
       {gitStatus && (
         <div className="mt-1 border-t border-border pt-2">
           <div className="flex flex-col gap-1">
-            <div className="flex items-baseline gap-2">
+            <div className="flex items-center gap-2">
               <span className="w-14 shrink-0 text-xs text-muted-foreground/70">Git</span>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
                 {branch && (
