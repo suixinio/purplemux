@@ -30,6 +30,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
+import { TOAST_POSITIONS, type TToastPosition } from '@/lib/toast-position';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
 import { EDITOR_PRESETS, buildEditorUrl, type TEditorPreset } from '@/lib/editor-url';
@@ -582,10 +583,69 @@ const ClaudeTab = () => {
   );
 };
 
+const ToastPositionSelect = ({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: TToastPosition;
+  onChange: (v: TToastPosition) => void;
+  ariaLabel: string;
+}) => {
+  const t = useTranslations('settings.notification');
+  return (
+    <Popover>
+      <PopoverTrigger
+        aria-label={ariaLabel}
+        className="inline-flex h-8 min-w-[140px] items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
+      >
+        <span>{t(`positions.${value}`)}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-[160px] p-1">
+        {TOAST_POSITIONS.map((p) => (
+          <button
+            key={p}
+            type="button"
+            className={cn(
+              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground',
+              value === p && 'bg-accent text-accent-foreground',
+            )}
+            onClick={() => onChange(p)}
+          >
+            <Check className={cn('h-3.5 w-3.5', value === p ? 'opacity-100' : 'opacity-0')} />
+            {t(`positions.${p}`)}
+          </button>
+        ))}
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 const NotificationTab = () => {
   const t = useTranslations('settings.notification');
   const notificationsEnabled = useConfigStore((state) => state.notificationsEnabled);
   const setNotificationsEnabled = useConfigStore((state) => state.setNotificationsEnabled);
+  const toastOnCompleteEnabled = useConfigStore((state) => state.toastOnCompleteEnabled);
+  const setToastOnCompleteEnabled = useConfigStore((state) => state.setToastOnCompleteEnabled);
+  const toastDuration = useConfigStore((state) => state.toastDuration);
+  const setToastDuration = useConfigStore((state) => state.setToastDuration);
+  const toastPositionDesktop = useConfigStore((state) => state.toastPositionDesktop);
+  const setToastPositionDesktop = useConfigStore((state) => state.setToastPositionDesktop);
+  const toastPositionMobile = useConfigStore((state) => state.toastPositionMobile);
+  const setToastPositionMobile = useConfigStore((state) => state.setToastPositionMobile);
+
+  const [durationDraft, setDurationDraft] = useState<string | null>(null);
+  const durationInput = durationDraft ?? String(Math.round(toastDuration / 1000));
+
+  const commitDuration = () => {
+    const parsed = Number(durationDraft);
+    setDurationDraft(null);
+    if (!Number.isFinite(parsed)) return;
+    const clamped = Math.min(60, Math.max(1, Math.round(parsed)));
+    const ms = clamped * 1000;
+    if (ms !== toastDuration) setToastDuration(ms);
+  };
 
   const showWebPushHint = typeof window !== 'undefined'
     && !((window as unknown as Record<string, unknown>).electronAPI)
@@ -597,29 +657,100 @@ const NotificationTab = () => {
     && Notification.permission === 'denied';
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <div className="space-y-0.5">
-          <Label htmlFor="notifications-enabled" className="text-sm font-medium">
-            {t('enable')}
-          </Label>
-          <p className="text-sm text-muted-foreground">
-            {t('enableDescription')}
-          </p>
+    <div className="space-y-6">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="notifications-enabled" className="text-sm font-medium">
+              {t('enable')}
+            </Label>
+            <p className="text-sm text-muted-foreground">
+              {t('enableDescription')}
+            </p>
+          </div>
+          <Switch
+            id="notifications-enabled"
+            checked={notificationsEnabled}
+            onCheckedChange={setNotificationsEnabled}
+            disabled={showWebPushHint || showDeniedHint}
+          />
         </div>
-        <Switch
-          id="notifications-enabled"
-          checked={notificationsEnabled}
-          onCheckedChange={setNotificationsEnabled}
-          disabled={showWebPushHint || showDeniedHint}
-        />
+        {showDeniedHint && (
+          <p className="text-sm text-destructive">{t('permissionDenied')}</p>
+        )}
+        {showWebPushHint && (
+          <p className="text-sm text-muted-foreground">{t('notSupported')}</p>
+        )}
       </div>
-      {showDeniedHint && (
-        <p className="text-sm text-destructive">{t('permissionDenied')}</p>
-      )}
-      {showWebPushHint && (
-        <p className="text-sm text-muted-foreground">{t('notSupported')}</p>
-      )}
+
+      <div className="border-t pt-6 space-y-4">
+        <div>
+          <p className="text-sm font-medium">{t('toastSection')}</p>
+          <p className="text-sm text-muted-foreground">{t('toastSectionDescription')}</p>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="space-y-0.5">
+            <Label htmlFor="toast-enabled" className="text-sm font-medium">
+              {t('toastEnable')}
+            </Label>
+            <p className="text-sm text-muted-foreground">{t('toastEnableDescription')}</p>
+          </div>
+          <Switch
+            id="toast-enabled"
+            checked={toastOnCompleteEnabled}
+            onCheckedChange={setToastOnCompleteEnabled}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium">{t('toastDuration')}</p>
+            <p className="text-sm text-muted-foreground">{t('toastDurationDescription')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              min={1}
+              max={60}
+              step={1}
+              value={durationInput}
+              onChange={(e) => setDurationDraft(e.target.value)}
+              onBlur={commitDuration}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+              }}
+              disabled={!toastOnCompleteEnabled}
+              className="h-8 w-20 text-sm"
+            />
+            <span className="text-sm text-muted-foreground">{t('toastDurationUnit')}</span>
+          </div>
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium">{t('toastPositionDesktop')}</p>
+            <p className="text-sm text-muted-foreground">{t('toastPositionDesktopDescription')}</p>
+          </div>
+          <ToastPositionSelect
+            value={toastPositionDesktop}
+            onChange={setToastPositionDesktop}
+            ariaLabel={t('toastPositionDesktop')}
+          />
+        </div>
+
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium">{t('toastPositionMobile')}</p>
+            <p className="text-sm text-muted-foreground">{t('toastPositionMobileDescription')}</p>
+          </div>
+          <ToastPositionSelect
+            value={toastPositionMobile}
+            onChange={setToastPositionMobile}
+            ariaLabel={t('toastPositionMobile')}
+          />
+        </div>
+      </div>
     </div>
   );
 };

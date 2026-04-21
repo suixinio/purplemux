@@ -25,7 +25,9 @@ import { Toaster } from "sonner";
 import useTerminalTheme from "@/hooks/use-terminal-theme";
 import useClaudeStatus from "@/hooks/use-claude-status";
 import useNativeNotification from "@/hooks/use-native-notification";
+import useToastNotification from "@/hooks/use-toast-notification";
 import useWebPush from "@/hooks/use-web-push";
+import useIsMobile from "@/hooks/use-is-mobile";
 import useWorkspaceStore from "@/hooks/use-workspace-store";
 import useConfigStore from "@/hooks/use-config-store";
 import { setMessages } from "@/lib/i18n";
@@ -93,13 +95,33 @@ const CustomCSSSync = () => {
 const ClaudeStatusProvider = () => {
   useClaudeStatus();
   useNativeNotification();
+  useToastNotification();
   useWebPush();
   return null;
 };
 
+const MOBILE_TOAST_OFFSET = {
+  top: 'calc(env(safe-area-inset-top) + 56px)',
+  bottom: 'calc(env(safe-area-inset-bottom) + 16px)',
+  left: 16,
+  right: 16,
+};
+
 const ThemedToaster = () => {
   const { resolvedTheme } = useTheme();
-  return <Toaster position="bottom-right" theme={resolvedTheme as 'light' | 'dark'} closeButton />;
+  const isMobile = useIsMobile();
+  const positionDesktop = useConfigStore((s) => s.toastPositionDesktop);
+  const positionMobile = useConfigStore((s) => s.toastPositionMobile);
+  const position = isMobile ? positionMobile : positionDesktop;
+  return (
+    <Toaster
+      position={position}
+      theme={resolvedTheme as 'light' | 'dark'}
+      offset={isMobile ? MOBILE_TOAST_OFFSET : undefined}
+      mobileOffset={MOBILE_TOAST_OFFSET}
+      closeButton
+    />
+  );
 };
 
 const ElectronTitlebar = ({ isElectron }: { isElectron: boolean }) => {

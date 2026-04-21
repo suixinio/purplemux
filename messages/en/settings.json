@@ -87,7 +87,26 @@
     "enable": "Enable Notifications",
     "enableDescription": "Show system notifications when Claude tasks complete.",
     "permissionDenied": "Browser notification permission denied. Please allow in browser settings.",
-    "notSupported": "Web Push is not supported in this browser."
+    "notSupported": "Web Push is not supported in this browser.",
+    "toastSection": "In-app Toast",
+    "toastSectionDescription": "Shows only while the window is in the foreground. System notifications handle the background.",
+    "toastEnable": "Show toast on task complete",
+    "toastEnableDescription": "A transient toast appears in addition to the sidebar count.",
+    "toastDuration": "Duration",
+    "toastDurationDescription": "How long the toast stays before auto-dismiss.",
+    "toastDurationUnit": "seconds",
+    "toastPositionDesktop": "Desktop position",
+    "toastPositionDesktopDescription": "Where toasts appear on wider screens.",
+    "toastPositionMobile": "Mobile position",
+    "toastPositionMobileDescription": "Where toasts appear on narrow screens.",
+    "positions": {
+      "top-left": "Top left",
+      "top-center": "Top center",
+      "top-right": "Top right",
+      "bottom-left": "Bottom left",
+      "bottom-center": "Bottom center",
+      "bottom-right": "Bottom right"
+    }
   },
   "agent": {
     "enableMenu": "Enable Agent Menu",

@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "Activer les notifications",
-    "enableDescription": "Affiche des notifications système lorsque les tâches Claude sont terminées. Fonctionne uniquement dans l'application Electron."
+    "enableDescription": "Affiche des notifications système lorsque les tâches Claude sont terminées. Fonctionne uniquement dans l'application Electron.",
+    "permissionDenied": "Autorisation des notifications du navigateur refusée. Veuillez l'autoriser dans les paramètres du navigateur.",
+    "notSupported": "Web Push n'est pas pris en charge par ce navigateur.",
+    "toastSection": "Toast dans l'application",
+    "toastSectionDescription": "S'affiche uniquement lorsque la fenêtre est au premier plan. Les notifications système gèrent l'arrière-plan.",
+    "toastEnable": "Afficher un toast à la fin d'une tâche",
+    "toastEnableDescription": "Un toast éphémère s'affiche en plus du compteur de la barre latérale.",
+    "toastDuration": "Durée",
+    "toastDurationDescription": "Durée d'affichage du toast avant sa fermeture automatique.",
+    "toastDurationUnit": "secondes",
+    "toastPositionDesktop": "Position sur ordinateur",
+    "toastPositionDesktopDescription": "Où les toasts apparaissent sur les écrans larges.",
+    "toastPositionMobile": "Position sur mobile",
+    "toastPositionMobileDescription": "Où les toasts apparaissent sur les écrans étroits.",
+    "positions": {
+      "top-left": "En haut à gauche",
+      "top-center": "En haut au centre",
+      "top-right": "En haut à droite",
+      "bottom-left": "En bas à gauche",
+      "bottom-center": "En bas au centre",
+      "bottom-right": "En bas à droite"
+    }
   },
   "agent": {
     "enableMenu": "Activer le menu Agent",

@@ -17,5 +17,7 @@
   "filesModified": "{count} Dateien geändert",
   "toolCalls": "{count} Toolaufrufe",
   "showMore": "{count} weitere",
-  "showLess": "Weniger"
+  "showLess": "Weniger",
+  "toastCompleteTitle": "Aufgabe abgeschlossen",
+  "openTab": "Öffnen"
 }

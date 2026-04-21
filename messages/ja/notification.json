@@ -17,5 +17,7 @@
   "filesModified": "ファイル{count}件変更",
   "toolCalls": "ツール{count}回",
   "showMore": "過去の記録 {count}件",
-  "showLess": "閉じる"
+  "showLess": "閉じる",
+  "toastCompleteTitle": "タスク完了",
+  "openTab": "開く"
 }

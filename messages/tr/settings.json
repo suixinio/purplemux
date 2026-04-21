@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "Bildirimleri Etkinleştir",
-    "enableDescription": "Claude görevleri tamamlandığında sistem bildirimleri gösterir. Yalnızca Electron uygulamasında çalışır."
+    "enableDescription": "Claude görevleri tamamlandığında sistem bildirimleri gösterir. Yalnızca Electron uygulamasında çalışır.",
+    "permissionDenied": "Tarayıcı bildirim izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.",
+    "notSupported": "Web Push bu tarayıcıda desteklenmiyor.",
+    "toastSection": "Uygulama içi toast",
+    "toastSectionDescription": "Yalnızca pencere ön plandayken görünür. Arka plandaki bildirimleri sistem üstlenir.",
+    "toastEnable": "Görev tamamlandığında toast göster",
+    "toastEnableDescription": "Kenar çubuğundaki sayaca ek olarak geçici bir toast görünür.",
+    "toastDuration": "Süre",
+    "toastDurationDescription": "Toast otomatik olarak kapanmadan önce ne kadar görüneceği.",
+    "toastDurationUnit": "saniye",
+    "toastPositionDesktop": "Masaüstü konumu",
+    "toastPositionDesktopDescription": "Toast bildirimlerinin geniş ekranlarda görüneceği yer.",
+    "toastPositionMobile": "Mobil konumu",
+    "toastPositionMobileDescription": "Toast bildirimlerinin dar ekranlarda görüneceği yer.",
+    "positions": {
+      "top-left": "Sol üst",
+      "top-center": "Üst orta",
+      "top-right": "Sağ üst",
+      "bottom-left": "Sol alt",
+      "bottom-center": "Alt orta",
+      "bottom-right": "Sağ alt"
+    }
   },
   "agent": {
     "enableMenu": "Ajan Menüsünü Etkinleştir",

@@ -17,5 +17,7 @@
   "filesModified": "{count} dosya değiştirildi",
   "toolCalls": "{count} araç çağrısı",
   "showMore": "{count} daha",
-  "showLess": "Daha az"
+  "showLess": "Daha az",
+  "toastCompleteTitle": "Görev tamamlandı",
+  "openTab": "Aç"
 }

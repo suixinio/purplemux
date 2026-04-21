@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "Benachrichtigungen aktivieren",
-    "enableDescription": "Systembenachrichtigungen anzeigen, wenn Claude-Aufgaben abgeschlossen sind. Funktioniert nur in der Electron-App."
+    "enableDescription": "Systembenachrichtigungen anzeigen, wenn Claude-Aufgaben abgeschlossen sind. Funktioniert nur in der Electron-App.",
+    "permissionDenied": "Browser-Benachrichtigungsberechtigung verweigert. Bitte in den Browser-Einstellungen erlauben.",
+    "notSupported": "Web Push wird in diesem Browser nicht unterstützt.",
+    "toastSection": "In-App-Toast",
+    "toastSectionDescription": "Wird nur angezeigt, während das Fenster im Vordergrund ist. Systembenachrichtigungen übernehmen den Hintergrund.",
+    "toastEnable": "Toast bei Aufgabenabschluss anzeigen",
+    "toastEnableDescription": "Zusätzlich zur Seitenleiste erscheint ein kurzer Toast.",
+    "toastDuration": "Anzeigedauer",
+    "toastDurationDescription": "Wie lange der Toast vor dem automatischen Ausblenden sichtbar bleibt.",
+    "toastDurationUnit": "Sekunden",
+    "toastPositionDesktop": "Position auf dem Desktop",
+    "toastPositionDesktopDescription": "Wo Toasts auf breiten Bildschirmen erscheinen.",
+    "toastPositionMobile": "Position auf dem Handy",
+    "toastPositionMobileDescription": "Wo Toasts auf schmalen Bildschirmen erscheinen.",
+    "positions": {
+      "top-left": "Oben links",
+      "top-center": "Oben mittig",
+      "top-right": "Oben rechts",
+      "bottom-left": "Unten links",
+      "bottom-center": "Unten mittig",
+      "bottom-right": "Unten rechts"
+    }
   },
   "agent": {
     "enableMenu": "Agentenmenü aktivieren",

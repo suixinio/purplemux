@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "Включить уведомления",
-    "enableDescription": "Показывать системные уведомления при завершении задач Claude. Работает только в Electron-приложении."
+    "enableDescription": "Показывать системные уведомления при завершении задач Claude. Работает только в Electron-приложении.",
+    "permissionDenied": "Разрешение на уведомления браузера отклонено. Разрешите в настройках браузера.",
+    "notSupported": "Web Push не поддерживается в этом браузере.",
+    "toastSection": "Тост в приложении",
+    "toastSectionDescription": "Отображается только когда окно активно. За фоновые уведомления отвечает система.",
+    "toastEnable": "Показывать тост при завершении задачи",
+    "toastEnableDescription": "В дополнение к счётчику на боковой панели появляется кратковременный тост.",
+    "toastDuration": "Длительность",
+    "toastDurationDescription": "Как долго тост виден перед автоматическим закрытием.",
+    "toastDurationUnit": "секунд",
+    "toastPositionDesktop": "Положение на десктопе",
+    "toastPositionDesktopDescription": "Где появляются тосты на широких экранах.",
+    "toastPositionMobile": "Положение на мобильном",
+    "toastPositionMobileDescription": "Где появляются тосты на узких экранах.",
+    "positions": {
+      "top-left": "Сверху слева",
+      "top-center": "Сверху по центру",
+      "top-right": "Сверху справа",
+      "bottom-left": "Снизу слева",
+      "bottom-center": "Снизу по центру",
+      "bottom-right": "Снизу справа"
+    }
   },
   "agent": {
     "enableMenu": "Включить меню агентов",

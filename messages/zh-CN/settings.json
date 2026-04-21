@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "启用通知",
-    "enableDescription": "Claude任务完成时显示系统通知。仅在Electron应用中有效。"
+    "enableDescription": "Claude任务完成时显示系统通知。仅在Electron应用中有效。",
+    "permissionDenied": "浏览器通知权限被拒绝。请在浏览器设置中允许。",
+    "notSupported": "此浏览器不支持 Web Push。",
+    "toastSection": "应用内提示",
+    "toastSectionDescription": "仅在窗口处于前台时显示。后台通知由系统通知处理。",
+    "toastEnable": "任务完成时显示提示",
+    "toastEnableDescription": "除侧边栏计数外，还会短暂显示一个提示。",
+    "toastDuration": "显示时长",
+    "toastDurationDescription": "提示自动消失前的持续时间。",
+    "toastDurationUnit": "秒",
+    "toastPositionDesktop": "桌面位置",
+    "toastPositionDesktopDescription": "提示在宽屏上显示的位置。",
+    "toastPositionMobile": "移动设备位置",
+    "toastPositionMobileDescription": "提示在窄屏上显示的位置。",
+    "positions": {
+      "top-left": "左上",
+      "top-center": "顶部居中",
+      "top-right": "右上",
+      "bottom-left": "左下",
+      "bottom-center": "底部居中",
+      "bottom-right": "右下"
+    }
   },
   "agent": {
     "enableMenu": "启用智能体菜单",

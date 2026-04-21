@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "Ativar Notificacoes",
-    "enableDescription": "Exibir notificacoes do sistema quando tarefas do Claude forem concluidas. Funciona apenas no aplicativo Electron."
+    "enableDescription": "Exibir notificacoes do sistema quando tarefas do Claude forem concluidas. Funciona apenas no aplicativo Electron.",
+    "permissionDenied": "Permissão de notificação do navegador negada. Permita-a nas configurações do navegador.",
+    "notSupported": "Web Push não é suportado neste navegador.",
+    "toastSection": "Toast no aplicativo",
+    "toastSectionDescription": "Exibido apenas enquanto a janela estiver em primeiro plano. Notificações do sistema cuidam do segundo plano.",
+    "toastEnable": "Mostrar toast ao concluir tarefa",
+    "toastEnableDescription": "Um toast temporário aparece além do contador da barra lateral.",
+    "toastDuration": "Duração",
+    "toastDurationDescription": "Tempo que o toast permanece antes de desaparecer automaticamente.",
+    "toastDurationUnit": "segundos",
+    "toastPositionDesktop": "Posição no desktop",
+    "toastPositionDesktopDescription": "Onde os toasts aparecem em telas largas.",
+    "toastPositionMobile": "Posição no celular",
+    "toastPositionMobileDescription": "Onde os toasts aparecem em telas estreitas.",
+    "positions": {
+      "top-left": "Superior esquerdo",
+      "top-center": "Superior centro",
+      "top-right": "Superior direito",
+      "bottom-left": "Inferior esquerdo",
+      "bottom-center": "Inferior centro",
+      "bottom-right": "Inferior direito"
+    }
   },
   "agent": {
     "enableMenu": "Ativar Menu de Agentes",

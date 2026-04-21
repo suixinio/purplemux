@@ -6,6 +6,7 @@ import { broadcastSync } from '@/lib/sync-server';
 import { createLogger } from '@/lib/logger';
 import type { TNetworkAccess } from '@/lib/network-access';
 import type { TEditorPreset } from '@/lib/editor-url';
+import type { TToastPosition } from '@/lib/toast-position';
 
 const log = createLogger('config');
 
@@ -19,6 +20,10 @@ export interface IConfigData {
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
+  toastOnCompleteEnabled?: boolean;
+  toastDuration?: number;
+  toastPositionDesktop?: TToastPosition;
+  toastPositionMobile?: TToastPosition;
   locale?: string;
   fontSize?: string;
   systemResourcesEnabled?: boolean;

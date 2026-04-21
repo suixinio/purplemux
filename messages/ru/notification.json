@@ -17,5 +17,7 @@
   "filesModified": "Изменено файлов: {count}",
   "toolCalls": "Вызовов инструментов: {count}",
   "showMore": "Ещё {count}",
-  "showLess": "Свернуть"
+  "showLess": "Свернуть",
+  "toastCompleteTitle": "Задача завершена",
+  "openTab": "Открыть"
 }

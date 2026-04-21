@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "啟用通知",
-    "enableDescription": "Claude 任務完成時顯示系統通知。僅在 Electron 應用程式中有效。"
+    "enableDescription": "Claude 任務完成時顯示系統通知。僅在 Electron 應用程式中有效。",
+    "permissionDenied": "瀏覽器通知權限被拒絕。請在瀏覽器設定中允許。",
+    "notSupported": "此瀏覽器不支援 Web Push。",
+    "toastSection": "應用程式內提示",
+    "toastSectionDescription": "僅在視窗位於前景時顯示。背景通知由系統通知處理。",
+    "toastEnable": "任務完成時顯示提示",
+    "toastEnableDescription": "除側邊欄計數外，還會短暫顯示一個提示。",
+    "toastDuration": "顯示時間",
+    "toastDurationDescription": "提示自動消失前的持續時間。",
+    "toastDurationUnit": "秒",
+    "toastPositionDesktop": "桌面位置",
+    "toastPositionDesktopDescription": "提示在寬螢幕上顯示的位置。",
+    "toastPositionMobile": "行動裝置位置",
+    "toastPositionMobileDescription": "提示在窄螢幕上顯示的位置。",
+    "positions": {
+      "top-left": "左上",
+      "top-center": "頂部置中",
+      "top-right": "右上",
+      "bottom-left": "左下",
+      "bottom-center": "底部置中",
+      "bottom-right": "右下"
+    }
   },
   "agent": {
     "enableMenu": "啟用代理選單",

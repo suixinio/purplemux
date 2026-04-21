@@ -85,7 +85,28 @@
   },
   "notification": {
     "enable": "通知を有効化",
-    "enableDescription": "Claudeタスク完了時にシステム通知を表示します。Electronアプリでのみ動作します。"
+    "enableDescription": "Claudeタスク完了時にシステム通知を表示します。Electronアプリでのみ動作します。",
+    "permissionDenied": "ブラウザの通知許可が拒否されました。ブラウザの設定で許可してください。",
+    "notSupported": "このブラウザは Web Push に対応していません。",
+    "toastSection": "アプリ内トースト",
+    "toastSectionDescription": "ウィンドウが前面にあるときのみ表示されます。バックグラウンドはシステム通知が担当します。",
+    "toastEnable": "タスク完了時にトーストを表示",
+    "toastEnableDescription": "サイドバーのカウントに加えて、一時的なトーストを表示します。",
+    "toastDuration": "表示時間",
+    "toastDurationDescription": "トーストが自動的に消えるまでの時間です。",
+    "toastDurationUnit": "秒",
+    "toastPositionDesktop": "デスクトップでの位置",
+    "toastPositionDesktopDescription": "広い画面でトーストを表示する位置です。",
+    "toastPositionMobile": "モバイルでの位置",
+    "toastPositionMobileDescription": "狭い画面でトーストを表示する位置です。",
+    "positions": {
+      "top-left": "左上",
+      "top-center": "上中央",
+      "top-right": "右上",
+      "bottom-left": "左下",
+      "bottom-center": "下中央",
+      "bottom-right": "右下"
+    }
   },
   "agent": {
     "enableMenu": "エージェントメニューを有効化",

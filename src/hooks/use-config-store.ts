@@ -1,7 +1,14 @@
 import { create } from 'zustand';
 import type { TEditorPreset } from '@/lib/editor-url';
+import type { TToastPosition } from '@/lib/toast-position';
+
+export type { TToastPosition } from '@/lib/toast-position';
 
 export type TNetworkAccess = 'localhost' | 'tailscale' | 'all';
+
+export const DEFAULT_TOAST_DURATION = 10000;
+export const DEFAULT_TOAST_POSITION_DESKTOP: TToastPosition = 'top-right';
+export const DEFAULT_TOAST_POSITION_MOBILE: TToastPosition = 'top-center';
 
 export interface IConfigInitialData {
   appTheme?: string | null;
@@ -11,6 +18,10 @@ export interface IConfigInitialData {
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
+  toastOnCompleteEnabled?: boolean;
+  toastDuration?: number;
+  toastPositionDesktop?: TToastPosition;
+  toastPositionMobile?: TToastPosition;
   hasAuthPassword?: boolean;
   locale?: string;
   fontSize?: string;
@@ -25,6 +36,10 @@ interface IConfigState {
   editorUrl: string;
   editorPreset: TEditorPreset;
   notificationsEnabled: boolean;
+  toastOnCompleteEnabled: boolean;
+  toastDuration: number;
+  toastPositionDesktop: TToastPosition;
+  toastPositionMobile: TToastPosition;
   hasAuthPassword: boolean;
   locale: string;
   customCSS: string;
@@ -39,6 +54,10 @@ interface IConfigState {
   setEditorUrl: (url: string) => void;
   setEditorPreset: (preset: TEditorPreset) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
+  setToastOnCompleteEnabled: (enabled: boolean) => void;
+  setToastDuration: (duration: number) => void;
+  setToastPositionDesktop: (position: TToastPosition) => void;
+  setToastPositionMobile: (position: TToastPosition) => void;
   changePassword: (password: string) => void;
   setLocale: (locale: string) => void;
   setCustomCSS: (css: string) => void;
@@ -47,7 +66,24 @@ interface IConfigState {
   setNetworkAccess: (value: TNetworkAccess) => void;
 }
 
-const initialConfig = { notificationsEnabled: true, editorUrl: '', editorPreset: 'code-server' as TEditorPreset, dangerouslySkipPermissions: false, hasAuthPassword: false, locale: 'en', customCSS: '', fontSize: 'normal', systemResourcesEnabled: false, networkAccess: 'all' as TNetworkAccess, hostEnvLocked: false, bindHostIsLocal: false };
+const initialConfig = {
+  notificationsEnabled: true,
+  toastOnCompleteEnabled: true,
+  toastDuration: DEFAULT_TOAST_DURATION,
+  toastPositionDesktop: DEFAULT_TOAST_POSITION_DESKTOP,
+  toastPositionMobile: DEFAULT_TOAST_POSITION_MOBILE,
+  editorUrl: '',
+  editorPreset: 'code-server' as TEditorPreset,
+  dangerouslySkipPermissions: false,
+  hasAuthPassword: false,
+  locale: 'en',
+  customCSS: '',
+  fontSize: 'normal',
+  systemResourcesEnabled: false,
+  networkAccess: 'all' as TNetworkAccess,
+  hostEnvLocked: false,
+  bindHostIsLocal: false,
+};
 
 const saveConfig = (updates: Record<string, unknown>) => {
   fetch('/api/config', {
@@ -64,6 +100,10 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   editorUrl: initialConfig.editorUrl,
   editorPreset: initialConfig.editorPreset,
   notificationsEnabled: initialConfig.notificationsEnabled,
+  toastOnCompleteEnabled: initialConfig.toastOnCompleteEnabled,
+  toastDuration: initialConfig.toastDuration,
+  toastPositionDesktop: initialConfig.toastPositionDesktop,
+  toastPositionMobile: initialConfig.toastPositionMobile,
   hasAuthPassword: initialConfig.hasAuthPassword,
   locale: initialConfig.locale,
   customCSS: initialConfig.customCSS,
@@ -79,6 +119,10 @@ const useConfigStore = create<IConfigState>((set, get) => ({
       editorUrl: data.editorUrl ?? '',
       editorPreset: data.editorPreset ?? 'code-server',
       notificationsEnabled: data.notificationsEnabled ?? true,
+      toastOnCompleteEnabled: data.toastOnCompleteEnabled ?? true,
+      toastDuration: data.toastDuration ?? DEFAULT_TOAST_DURATION,
+      toastPositionDesktop: data.toastPositionDesktop ?? DEFAULT_TOAST_POSITION_DESKTOP,
+      toastPositionMobile: data.toastPositionMobile ?? DEFAULT_TOAST_POSITION_MOBILE,
       hasAuthPassword: data.hasAuthPassword ?? false,
       locale: data.locale ?? 'en',
       customCSS: data.customCSS ?? '',
@@ -110,6 +154,30 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   setNotificationsEnabled: (enabled) => {
     set({ notificationsEnabled: enabled });
     saveConfig({ notificationsEnabled: enabled });
+  },
+
+  setToastOnCompleteEnabled: (enabled) => {
+    if (get().toastOnCompleteEnabled === enabled) return;
+    set({ toastOnCompleteEnabled: enabled });
+    saveConfig({ toastOnCompleteEnabled: enabled });
+  },
+
+  setToastDuration: (duration) => {
+    if (get().toastDuration === duration) return;
+    set({ toastDuration: duration });
+    saveConfig({ toastDuration: duration });
+  },
+
+  setToastPositionDesktop: (position) => {
+    if (get().toastPositionDesktop === position) return;
+    set({ toastPositionDesktop: position });
+    saveConfig({ toastPositionDesktop: position });
+  },
+
+  setToastPositionMobile: (position) => {
+    if (get().toastPositionMobile === position) return;
+    set({ toastPositionMobile: position });
+    saveConfig({ toastPositionMobile: position });
   },
 
   changePassword: (password) => {
