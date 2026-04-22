@@ -25,9 +25,9 @@ interface IToolCallItemProps {
 }
 
 const DIFF_FONT_SIZE: Record<string, number> = {
-  normal: 12,
-  large: 14,
-  'x-large': 16,
+  normal: 11,
+  large: 13,
+  'x-large': 15,
 };
 
 const TOOL_ICONS: Record<string, typeof FileText> = {

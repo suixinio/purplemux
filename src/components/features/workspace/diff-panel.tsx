@@ -18,9 +18,9 @@ type TViewMode = 'split' | 'unified';
 const POLL_INTERVAL = 10_000;
 
 const DIFF_FONT_SIZE: Record<string, number> = {
-  normal: 12,
-  large: 14,
-  'x-large': 16,
+  normal: 11,
+  large: 13,
+  'x-large': 15,
 };
 
 const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
