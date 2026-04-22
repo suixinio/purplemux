@@ -737,11 +737,19 @@ const bootstrap = async () => {
   const appTheme = readAppConfig().appTheme || 'dark';
   nativeTheme.themeSource = appTheme as 'dark' | 'light' | 'system';
 
+  // splash/about:blank 엔트리가 히스토리에 남으면 마우스 뒤로가기 버튼으로 복귀 불가 상태에 빠짐
+  const clearSplashHistory = (win: BrowserWindow) => {
+    win.webContents.once('did-finish-load', () => {
+      if (!win.isDestroyed()) win.webContents.navigationHistory.clear();
+    });
+  };
+
   if (serverConfig.mode === 'remote' && serverConfig.remoteUrl) {
     const win = createWindow('about:blank');
     loadSplash(win);
     await shellEnvReady;
     win.loadURL(serverConfig.remoteUrl);
+    clearSplashHistory(win);
   } else {
     serverConfig = { mode: 'local' };
     // 윈도우를 먼저 띄우고 로딩 화면을 보여준 뒤, 서버가 준비되면 전환
@@ -750,6 +758,7 @@ const bootstrap = async () => {
     await shellEnvReady;
     const port = await startLocalServer();
     win.loadURL(`http://localhost:${port}`);
+    clearSplashHistory(win);
   }
 
   updateMenu();
