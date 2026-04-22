@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import useIsMobile from '@/hooks/use-is-mobile';
 import DiffHistoryView from '@/components/features/workspace/diff-history-view';
 import DiffFileList from '@/components/features/workspace/diff-file-list';
@@ -262,51 +263,62 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
             </button>
           </div>
 
-          <div className="ml-auto flex items-center gap-1">
-            {hasUpdate && activeTab === 'changes' && (
-              <span className="text-xs text-ui-blue">{t('hasChanges')}</span>
-            )}
-
-            {activeTab === 'changes' && !isMobile && (
-              <button
-                className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
-                onClick={() => setViewMode((m) => {
-                  const next: TViewMode = m === 'split' ? 'unified' : 'split';
-                  localStorage.setItem('diff-output-format', next === 'unified' ? 'line-by-line' : 'side-by-side');
-                  return next;
-                })}
-                title={viewMode === 'split' ? t('lineByLine') : t('sideBySide')}
-              >
-                {viewMode === 'split' ? <Rows2 className="h-3.5 w-3.5" /> : <Columns2 className="h-3.5 w-3.5" />}
-              </button>
-            )}
-
-            <button
-              className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
-              onClick={handleSync}
-              disabled={syncing || loading}
-              title={syncing ? t('syncing') : t('sync')}
-            >
-              {syncing
-                ? <Spinner className="h-3.5 w-3.5" />
-                : <ArrowDownUp className="h-3.5 w-3.5" />}
-            </button>
-
-            <button
-              className={cn(
-                'flex h-7 w-7 items-center justify-center rounded',
-                hasUpdate && activeTab === 'changes'
-                  ? 'text-ui-blue hover:bg-accent'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                loading && 'animate-spin',
+          <TooltipProvider>
+            <div className="ml-auto flex items-center gap-1">
+              {hasUpdate && activeTab === 'changes' && (
+                <span className="text-xs text-ui-blue">{t('hasChanges')}</span>
               )}
-              onClick={handleRefresh}
-              disabled={loading}
-              title={t('refresh')}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-            </button>
-          </div>
+
+              {activeTab === 'changes' && !isMobile && (
+                <Tooltip>
+                  <TooltipTrigger
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                    onClick={() => setViewMode((m) => {
+                      const next: TViewMode = m === 'split' ? 'unified' : 'split';
+                      localStorage.setItem('diff-output-format', next === 'unified' ? 'line-by-line' : 'side-by-side');
+                      return next;
+                    })}
+                    aria-label={viewMode === 'split' ? t('lineByLine') : t('sideBySide')}
+                  >
+                    {viewMode === 'split' ? <Rows2 className="h-3.5 w-3.5" /> : <Columns2 className="h-3.5 w-3.5" />}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{viewMode === 'split' ? t('lineByLine') : t('sideBySide')}</TooltipContent>
+                </Tooltip>
+              )}
+
+              <Tooltip>
+                <TooltipTrigger
+                  className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  onClick={handleSync}
+                  disabled={syncing || loading}
+                  aria-label={syncing ? t('syncing') : t('sync')}
+                >
+                  {syncing
+                    ? <Spinner className="h-3.5 w-3.5" />
+                    : <ArrowDownUp className="h-3.5 w-3.5" />}
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{syncing ? t('syncing') : t('sync')}</TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded',
+                    hasUpdate && activeTab === 'changes'
+                      ? 'text-ui-blue hover:bg-accent'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                    loading && 'animate-spin',
+                  )}
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  aria-label={t('refresh')}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                </TooltipTrigger>
+                <TooltipContent side="bottom">{t('refresh')}</TooltipContent>
+              </Tooltip>
+            </div>
+          </TooltipProvider>
         </div>
 
         <div className="flex min-w-0 items-center gap-2 text-xs">
