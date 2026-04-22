@@ -176,6 +176,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
+  const pendingClaudeInputRef = useRef<string | null>(null);
   const clickedTerminalRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const pendingFocusRef = useRef<(() => void) | null>(null);
@@ -608,6 +609,22 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     updateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, updateTabPanelType]);
 
+  const handleSendToClaude = useCallback((text: string) => {
+    pendingClaudeInputRef.current = text;
+    handleSwitchPanelType('claude-code');
+  }, [handleSwitchPanelType]);
+
+  useEffect(() => {
+    if (activePanelType !== 'claude-code' || !pendingClaudeInputRef.current) return;
+    const text = pendingClaudeInputRef.current;
+    pendingClaudeInputRef.current = null;
+    const timer = window.setTimeout(() => {
+      setInputValueRef.current?.(text);
+      focusInputRef.current?.();
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [activePanelType]);
+
   const handleWebUrlChange = useCallback((url: string) => {
     if (!activeTabId || !layoutWsId) return;
     fetch(`/api/layout/pane/${paneId}/tabs/${activeTabId}?workspace=${layoutWsId}`, {
@@ -818,6 +835,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           <DiffPanel
             key={activeTab.sessionName}
             sessionName={activeTab.sessionName}
+            onSendToClaude={handleSendToClaude}
           />
         )}
 

@@ -21,5 +21,12 @@
   "syncErrorDiverged": "Branches diverged. Rebase or merge in terminal",
   "syncErrorRejected": "Push rejected. Try syncing again",
   "syncErrorTimeout": "Sync timed out",
-  "syncErrorGeneric": "Sync failed"
+  "syncErrorGeneric": "Sync failed",
+  "askClaude": "Ask Claude",
+  "claudePromptDiverged": "Git sync failed. {branch} has diverged from {upstream}. Please rebase onto the latest origin and resolve any conflicts.",
+  "claudePromptRejected": "Git push was rejected. There appear to be new commits on {upstream}. Please pull to merge, then push again.",
+  "claudePromptAuth": "Git authentication failed. Please check the credential helper or SSH configuration and try again.",
+  "claudePromptNoUpstream": "The {branch} branch has no upstream. Please push to origin and set up the tracking branch.",
+  "claudePromptTimeout": "Git sync timed out. Please check the network connection and retry.",
+  "claudePromptGeneric": "Git sync failed. Please review the error below and resolve it."
 }

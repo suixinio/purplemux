@@ -10,6 +10,7 @@ import DiffFileList from '@/components/features/workspace/diff-file-list';
 
 interface IDiffPanelProps {
   sessionName: string;
+  onSendToClaude?: (text: string) => void;
 }
 
 interface IHeadCommit {
@@ -20,12 +21,41 @@ interface IHeadCommit {
   timestamp: number;
 }
 
+interface ISyncStep {
+  name: 'fetch' | 'pull' | 'push';
+  ok: boolean;
+  skipped: boolean;
+  stdout: string;
+  stderr: string;
+}
+
 type TViewMode = 'split' | 'unified';
 type TTab = 'changes' | 'history';
+type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'timeout' | 'unknown';
 
 const POLL_INTERVAL = 10_000;
+const ERROR_TOAST_DURATION = 15_000;
+const MAX_STDERR_LENGTH = 800;
 
-const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
+const ERROR_MESSAGE_KEYS = {
+  'no-upstream': 'syncErrorNoUpstream',
+  auth: 'syncErrorAuth',
+  diverged: 'syncErrorDiverged',
+  rejected: 'syncErrorRejected',
+  timeout: 'syncErrorTimeout',
+  unknown: 'syncErrorGeneric',
+} as const;
+
+const CLAUDE_PROMPT_KEYS = {
+  'no-upstream': 'claudePromptNoUpstream',
+  auth: 'claudePromptAuth',
+  diverged: 'claudePromptDiverged',
+  rejected: 'claudePromptRejected',
+  timeout: 'claudePromptTimeout',
+  unknown: 'claudePromptGeneric',
+} as const;
+
+const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
 
@@ -125,16 +155,31 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
           toast.success(`${t('syncSuccess')} · ${parts.join(' ')}`);
         }
       } else {
-        const kind = data.errorKind ?? 'unknown';
-        const messageKey = (
-          kind === 'no-upstream' ? 'syncErrorNoUpstream' :
-          kind === 'auth' ? 'syncErrorAuth' :
-          kind === 'diverged' ? 'syncErrorDiverged' :
-          kind === 'rejected' ? 'syncErrorRejected' :
-          kind === 'timeout' ? 'syncErrorTimeout' :
-          'syncErrorGeneric'
-        ) as 'syncErrorNoUpstream' | 'syncErrorAuth' | 'syncErrorDiverged' | 'syncErrorRejected' | 'syncErrorTimeout' | 'syncErrorGeneric';
-        toast.error(t(messageKey));
+        const kind: TSyncErrorKind = data.errorKind ?? 'unknown';
+        const messageKey = ERROR_MESSAGE_KEYS[kind];
+        const failedStep = (data.steps as ISyncStep[] | undefined)?.find((s) => !s.ok && !s.skipped);
+        const stderr = failedStep?.stderr ?? failedStep?.stdout ?? '';
+
+        toast.error(t(messageKey), {
+          duration: ERROR_TOAST_DURATION,
+          action: onSendToClaude ? {
+            label: t('askClaude'),
+            onClick: () => {
+              const promptKey = CLAUDE_PROMPT_KEYS[kind];
+              const intro = t(promptKey, {
+                branch: branch || 'HEAD',
+                upstream: data.upstream ?? '',
+              });
+              const trimmedStderr = stderr.length > MAX_STDERR_LENGTH
+                ? stderr.slice(0, MAX_STDERR_LENGTH) + '\n...(truncated)'
+                : stderr;
+              const body = trimmedStderr
+                ? `${intro}\n\n\`\`\`\n${trimmedStderr.trim()}\n\`\`\``
+                : intro;
+              onSendToClaude(body);
+            },
+          } : undefined,
+        });
       }
 
       fetchDiff();
@@ -144,7 +189,7 @@ const DiffPanel = ({ sessionName }: IDiffPanelProps) => {
     } finally {
       setSyncing(false);
     }
-  }, [sessionName, syncing, t, fetchDiff]);
+  }, [sessionName, syncing, t, fetchDiff, onSendToClaude, branch]);
 
   useEffect(() => {
     fetchDiff();

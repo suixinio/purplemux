@@ -176,7 +176,7 @@ const DiffHistoryView = ({ sessionName, refreshToken, viewMode }: IDiffHistoryVi
 
             {detail && (
               <div className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px]">
-                <span className="shrink-0 font-mono text-muted-foreground">{detail.commit.shortHash}</span>
+                <span className="shrink-0 font-mono text-ui-purple">{detail.commit.shortHash}</span>
                 <span className="shrink-0 text-muted-foreground">·</span>
                 <span className="truncate text-foreground" title={detail.commit.subject}>
                   {detail.commit.subject}
@@ -249,24 +249,24 @@ const DiffHistoryView = ({ sessionName, refreshToken, viewMode }: IDiffHistoryVi
                         <GitMerge
                           className={cn(
                             'mt-[3px] h-3 w-3',
-                            isAhead ? 'text-ui-blue' : 'text-muted-foreground',
+                            isAhead ? 'text-ui-blue' : 'text-foreground/70',
                           )}
                         />
                       ) : (
                         <span
                           className={cn(
                             'mt-[6px] h-1.5 w-1.5 rounded-full',
-                            isAhead ? 'bg-ui-blue' : 'bg-muted-foreground/70',
+                            isAhead ? 'bg-ui-blue' : 'bg-foreground/50',
                           )}
                         />
                       )}
                       {!isLast && (
-                        <span className="mt-[2px] flex-1 border-l border-border/60" />
+                        <span className="mt-[2px] flex-1 border-l border-border" />
                       )}
                     </div>
 
                     <div className="flex min-w-0 flex-1 items-baseline gap-2">
-                      <span className="shrink-0 text-muted-foreground/70">{c.shortHash}</span>
+                      <span className="shrink-0 text-ui-purple">{c.shortHash}</span>
                       <span className="min-w-0 flex-1 truncate text-foreground" title={c.subject}>
                         {c.subject}
                       </span>
@@ -281,7 +281,7 @@ const DiffHistoryView = ({ sessionName, refreshToken, viewMode }: IDiffHistoryVi
                         </span>
                       )}
                       <span
-                        className="w-8 shrink-0 text-right tabular-nums text-muted-foreground/60"
+                        className="w-8 shrink-0 text-right tabular-nums text-muted-foreground"
                         title={absoluteTime(c.timestamp)}
                       >
                         {compactFromNow(c.timestamp)}
