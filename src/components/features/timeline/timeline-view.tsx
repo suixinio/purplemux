@@ -49,7 +49,6 @@ const RESUME_TOKEN_THRESHOLD = 100_000;
 const RESUME_IDLE_MINUTES = 70;
 const ANCHOR_OFFSET = 12;
 const ANCHOR_SETTLE_DELAY_MS = 300;
-const SHRINK_SCROLL_DELTA_THRESHOLD = 10;
 
 const getOffsetInScroller = (el: HTMLElement, scrollEl: HTMLElement): number => {
   const elRect = el.getBoundingClientRect();
@@ -247,8 +246,8 @@ const TimelineView = ({
   const spacerRef = useRef<HTMLDivElement | null>(null);
   const armedRef = useRef(false);
   const wasBusyRef = useRef(false);
-  const lastShrinkScrollTopRef = useRef<number | null>(null);
-  const [responseReceived, setResponseReceived] = useState(false);
+  const pendingShrinkRef = useRef(false);
+  const entryCountAtArmRef = useRef(-1);
   const { scrollRef, contentRef, scrollToBottom, isAtBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -269,8 +268,7 @@ const TimelineView = ({
     setAnchorUserId(null);
     armedRef.current = false;
     wasBusyRef.current = false;
-    lastShrinkScrollTopRef.current = null;
-    setResponseReceived(false);
+    pendingShrinkRef.current = false;
   }
 
   useEffect(() => {
@@ -296,19 +294,6 @@ const TimelineView = ({
       setAnchorUserId(lastUserMessageId);
     }
   }, [lastUserMessageId, anchorUserId]);
-
-  useEffect(() => {
-    if (cliState === 'busy') {
-      wasBusyRef.current = true;
-    } else if (wasBusyRef.current && anchorUserId) {
-      setResponseReceived(true);
-    }
-  }, [cliState, anchorUserId]);
-
-  useEffect(() => {
-    setResponseReceived(false);
-    wasBusyRef.current = false;
-  }, [anchorUserId]);
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
   const currentContextTokens = sessionStats?.currentContextTokens ?? 0;
@@ -356,11 +341,9 @@ const TimelineView = ({
     const userEl = anchorElRef.current;
     const spacerEl = spacerRef.current;
     if (!scrollEl || !userEl || !spacerEl) return;
-    const scrollTop = scrollEl.scrollTop;
-    const last = lastShrinkScrollTopRef.current;
-    if (last !== null && Math.abs(scrollTop - last) < SHRINK_SCROLL_DELTA_THRESHOLD) return;
     const current = spacerEl.offsetHeight;
     if (current === 0) return;
+    const scrollTop = scrollEl.scrollTop;
     const userBottom = userEl.offsetTop + userEl.offsetHeight;
     const postUserHeight = Math.max(0, spacerEl.offsetTop - userBottom);
     const available = scrollEl.clientHeight - userEl.offsetHeight - ANCHOR_OFFSET;
@@ -373,12 +356,12 @@ const TimelineView = ({
     const headroom = Math.max(0, maxScroll - scrollTop);
     const shrinkBy = Math.min(current - target, headroom);
     if (shrinkBy <= 0) return;
-    lastShrinkScrollTopRef.current = scrollTop;
     setSpacerHeight(current - shrinkBy);
   }, [scrollRef]);
 
   useLayoutEffect(() => {
-    lastShrinkScrollTopRef.current = null;
+    wasBusyRef.current = false;
+    pendingShrinkRef.current = false;
     if (!anchorUserId) {
       setSpacerHeight(0);
       return;
@@ -395,21 +378,23 @@ const TimelineView = ({
   }, [scrollRef, measureSpacer]);
 
   useEffect(() => {
-    if (!anchorUserId || !responseReceived) return;
-    const scrollEl = scrollRef.current;
-    if (!scrollEl) return;
-    let scrollTimer: ReturnType<typeof setTimeout> | null = null;
-    const onScroll = () => {
-      if (scrollTimer) clearTimeout(scrollTimer);
-      scrollTimer = setTimeout(shrinkSpacerSafely, 150);
-    };
-    scrollEl.addEventListener('scroll', onScroll, { passive: true });
-    shrinkSpacerSafely();
-    return () => {
-      if (scrollTimer) clearTimeout(scrollTimer);
-      scrollEl.removeEventListener('scroll', onScroll);
-    };
-  }, [scrollRef, shrinkSpacerSafely, anchorUserId, responseReceived]);
+    if (!anchorUserId) return;
+    if (cliState === 'busy') {
+      wasBusyRef.current = true;
+      pendingShrinkRef.current = false;
+      return;
+    }
+    if (wasBusyRef.current) {
+      wasBusyRef.current = false;
+      pendingShrinkRef.current = true;
+      entryCountAtArmRef.current = entries.length;
+      return;
+    }
+    if (pendingShrinkRef.current && entries.length !== entryCountAtArmRef.current) {
+      pendingShrinkRef.current = false;
+      shrinkSpacerSafely();
+    }
+  }, [cliState, anchorUserId, entries.length, shrinkSpacerSafely]);
 
   const isLoadingMoreRef = useRef(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
