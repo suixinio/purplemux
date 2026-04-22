@@ -203,7 +203,13 @@ const DiffHistoryView = ({ sessionName, refreshToken, viewMode }: IDiffHistoryVi
               </div>
             ) : detail ? (
               detail.diff ? (
-                <DiffFileList diff={detail.diff} viewMode={viewMode} />
+                <DiffFileList
+                  diff={detail.diff}
+                  viewMode={viewMode}
+                  sessionName={sessionName}
+                  oldRef={detail.commit.parents[0] ?? 'HEAD'}
+                  newRef={detail.commit.hash}
+                />
               ) : (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   {t('noChanges')}

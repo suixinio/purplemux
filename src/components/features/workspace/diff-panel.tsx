@@ -380,7 +380,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
                 </div>
               </div>
             )}
-            {diff && <DiffFileList diff={diff} viewMode={viewMode} />}
+            {diff && <DiffFileList diff={diff} viewMode={viewMode} sessionName={sessionName} />}
           </>
         )}
       </div>
