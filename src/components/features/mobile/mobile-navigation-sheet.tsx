@@ -1,7 +1,8 @@
-import { useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback, useRef } from 'react';
 import {
   ChevronDown,
   ChevronRight,
+  FolderPlus,
   GitCompareArrows,
   Globe,
   Plus,
@@ -23,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import type { IWorkspace, IPaneNode, ITab } from '@/types/terminal';
+import type { IWorkspace, IWorkspaceGroup, IPaneNode, ITab } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
 import { formatTabTitle } from '@/lib/tab-title';
@@ -31,6 +32,8 @@ import ProcessIcon from '@/components/icons/process-icon';
 import TabStatusIndicator from '@/components/features/workspace/tab-status-indicator';
 import WorkspaceStatusIndicator from '@/components/features/workspace/workspace-status-indicator';
 import SidebarRateLimits from '@/components/layout/sidebar-rate-limits';
+import MobileWorkspaceGroupHeader from '@/components/features/mobile/mobile-workspace-group-header';
+import RenameGroupDialog from '@/components/features/workspace/rename-group-dialog';
 
 const WorkspacePortsLabel = ({ workspaceId }: { workspaceId: string }) => {
   const label = useTabStore(
@@ -67,8 +70,10 @@ const MobileNavigationSheet = ({
 }: IMobileNavigationSheetProps) => {
   const t = useTranslations('mobile');
   const tc = useTranslations('common');
+  const ts = useTranslations('sidebar');
   const router = useRouter();
   const mobileTab = useWorkspaceStore((s) => s.sidebarTab);
+  const groups = useWorkspaceStore((s) => s.groups);
 
   const handleMobileTabChange = useCallback((v: string) => {
     useWorkspaceStore.getState().setSidebarTab(v as 'workspace' | 'sessions');
@@ -76,6 +81,7 @@ const MobileNavigationSheet = ({
   const { attentionCount, busyCount } = useNotificationCount();
   const sessionsBadge = attentionCount + busyCount;
   const [expandedWsId, setExpandedWsId] = useState<string | null>(activeWorkspaceId);
+  const [renameGroupId, setRenameGroupId] = useState<string | null>(null);
   const [prevOpen, setPrevOpen] = useState(open);
   if (open !== prevOpen) {
     setPrevOpen(open);
@@ -85,6 +91,23 @@ const MobileNavigationSheet = ({
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const metadata = useTabMetadataStore((s) => s.metadata);
   const { items: sidebarItems } = useSidebarItems();
+
+  const handleToggleGroup = useCallback((groupId: string) => {
+    useWorkspaceStore.getState().toggleGroupCollapsed(groupId);
+  }, []);
+
+  const handleRenameGroupRequest = useCallback((groupId: string) => {
+    setRenameGroupId(groupId);
+  }, []);
+
+  const handleUngroupGroup = useCallback((groupId: string) => {
+    useWorkspaceStore.getState().ungroupGroup(groupId);
+  }, []);
+
+  const handleCreateGroup = useCallback(async () => {
+    const defaultName = ts('defaultGroupName');
+    await useWorkspaceStore.getState().createGroup(defaultName);
+  }, [ts]);
 
   const handleToggleWorkspace = useCallback(
     (workspaceId: string) => {
@@ -217,6 +240,80 @@ const MobileNavigationSheet = ({
     });
   };
 
+  type TSection =
+    | { type: 'group'; group: IWorkspaceGroup; workspaces: IWorkspace[] }
+    | { type: 'ungrouped'; workspaces: IWorkspace[] };
+
+  const sections = useMemo<TSection[]>(() => {
+    const validGroupIds = new Set(groups.map((g) => g.id));
+    const byGroup = new Map<string, IWorkspace[]>();
+    const ungrouped: IWorkspace[] = [];
+    for (const ws of workspaces) {
+      const gid = ws.groupId ?? null;
+      if (gid && validGroupIds.has(gid)) {
+        const list = byGroup.get(gid) ?? [];
+        list.push(ws);
+        byGroup.set(gid, list);
+      } else {
+        ungrouped.push(ws);
+      }
+    }
+    const sortedGroups = [...groups].sort((a, b) => a.order - b.order);
+    const out: TSection[] = sortedGroups.map((g) => ({
+      type: 'group',
+      group: g,
+      workspaces: byGroup.get(g.id) ?? [],
+    }));
+    out.push({ type: 'ungrouped', workspaces: ungrouped });
+    return out;
+  }, [workspaces, groups]);
+
+  const renderWorkspaceRow = (ws: IWorkspace) => {
+    const isExpanded = ws.id === expandedWsId;
+    const isActive = ws.id === activeWorkspaceId;
+    return (
+      <div key={ws.id}>
+        <button
+          className={cn(
+            'flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors',
+            isActive
+              ? 'font-medium text-foreground'
+              : 'text-foreground hover:bg-accent/50',
+          )}
+          onClick={() => handleToggleWorkspace(ws.id)}
+        >
+          {isExpanded ? (
+            <ChevronDown size={14} className="shrink-0 text-muted-foreground" />
+          ) : (
+            <ChevronRight size={14} className="shrink-0 text-muted-foreground" />
+          )}
+          <div className="min-w-0 flex-1">
+            <span className="block truncate">{ws.name}</span>
+            <WorkspacePortsLabel workspaceId={ws.id} />
+            {!isExpanded && (
+              <WorkspaceStatusIndicator
+                workspaceId={ws.id}
+                tabs={(workspaceLayouts[ws.id] ?? []).flatMap((pane) =>
+                  [...pane.tabs].sort((a, b) => a.order - b.order),
+                )}
+              />
+            )}
+          </div>
+        </button>
+        <div
+          className="grid transition-[grid-template-rows] duration-200 ease-in-out"
+          style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
+        >
+          <div className="overflow-hidden">{renderPaneTree(ws.id)}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const renameTargetGroup = renameGroupId
+    ? groups.find((g) => g.id === renameGroupId) ?? null
+    : null;
+
   return (
     <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent side="left" className="w-72 gap-0 p-0" showCloseButton={false}>
@@ -255,54 +352,32 @@ const MobileNavigationSheet = ({
             className="flex-1 overflow-y-auto"
             style={{ scrollbarWidth: 'none' }}
           >
-            {workspaces.map((ws) => {
-              const isExpanded = ws.id === expandedWsId;
-              const isActive = ws.id === activeWorkspaceId;
-              return (
-                <div key={ws.id}>
-                  <button
-                    className={cn(
-                      'flex w-full items-center gap-2 px-4 py-3 text-left text-sm transition-colors',
-                      isActive
-                        ? 'font-medium text-foreground'
-                        : 'text-foreground hover:bg-accent/50',
+            {sections.map((section) => {
+              if (section.type === 'group') {
+                return (
+                  <div key={`group-${section.group.id}`} className="pt-1">
+                    <MobileWorkspaceGroupHeader
+                      group={section.group}
+                      count={section.workspaces.length}
+                      onToggle={handleToggleGroup}
+                      onRenameRequest={handleRenameGroupRequest}
+                      onUngroup={handleUngroupGroup}
+                    />
+                    {!section.group.collapsed && (
+                      <div className="pl-4">
+                        {section.workspaces.map(renderWorkspaceRow)}
+                        {section.workspaces.length === 0 && (
+                          <div className="px-4 py-2 text-xs italic text-muted-foreground/50">
+                            {ts('emptyGroup')}
+                          </div>
+                        )}
+                      </div>
                     )}
-                    onClick={() => handleToggleWorkspace(ws.id)}
-                  >
-                    {isExpanded ? (
-                      <ChevronDown
-                        size={14}
-                        className="shrink-0 text-muted-foreground"
-                      />
-                    ) : (
-                      <ChevronRight
-                        size={14}
-                        className="shrink-0 text-muted-foreground"
-                      />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <span className="block truncate">{ws.name}</span>
-                      <WorkspacePortsLabel workspaceId={ws.id} />
-                      {!isExpanded && (
-                        <WorkspaceStatusIndicator
-                          workspaceId={ws.id}
-                          tabs={(workspaceLayouts[ws.id] ?? []).flatMap((pane) =>
-                            [...pane.tabs].sort((a, b) => a.order - b.order),
-                          )}
-                        />
-                      )}
-                    </div>
-                  </button>
-
-                  <div
-                    className="grid transition-[grid-template-rows] duration-200 ease-in-out"
-                    style={{ gridTemplateRows: isExpanded ? '1fr' : '0fr' }}
-                  >
-                    <div className="overflow-hidden">
-                      {renderPaneTree(ws.id)}
-                    </div>
                   </div>
-                </div>
+                );
+              }
+              return (
+                <div key="ungrouped">{section.workspaces.map(renderWorkspaceRow)}</div>
               );
             })}
           </div>
@@ -312,13 +387,22 @@ const MobileNavigationSheet = ({
 
         <div className="shrink-0 border-t">
           {mobileTab === 'workspace' && (
-            <button
-              className="flex w-full items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
-              onClick={onCreateWorkspace}
-            >
-              <Plus size={16} />
-              Workspace
-            </button>
+            <div className="flex items-stretch">
+              <button
+                className="flex flex-1 items-center gap-2 px-4 py-3 text-sm text-muted-foreground transition-colors hover:bg-accent"
+                onClick={onCreateWorkspace}
+              >
+                <Plus size={16} />
+                Workspace
+              </button>
+              <button
+                className="flex w-12 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:bg-accent"
+                onClick={handleCreateGroup}
+                aria-label={ts('newGroup')}
+              >
+                <FolderPlus size={16} />
+              </button>
+            </div>
           )}
           <SidebarRateLimits />
           <div className="flex items-center gap-0.5 px-3 pt-1 pb-4">
@@ -353,6 +437,15 @@ const MobileNavigationSheet = ({
           </div>
         </div>
       </SheetContent>
+
+      {renameTargetGroup && (
+        <RenameGroupDialog
+          open={!!renameTargetGroup}
+          onOpenChange={(v) => { if (!v) setRenameGroupId(null); }}
+          groupId={renameTargetGroup.id}
+          currentName={renameTargetGroup.name}
+        />
+      )}
     </Sheet>
   );
 };

@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import packageJson from '../../../../package.json';
 import isElectron from '@/hooks/use-is-electron';
-import { Bell, Check, ChevronDown, ChevronRight, ChevronsUpDown, Dices, FolderCode, Globe, ImageIcon, Keyboard, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Trash2, Wrench, X, Zap } from 'lucide-react';
+import { Bell, ChevronDown, ChevronRight, Dices, FolderCode, Globe, ImageIcon, Keyboard, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Trash2, Wrench, X, Zap } from 'lucide-react';
 import ClaudeLogo from '@/components/icons/claude-logo';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -26,7 +26,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
@@ -122,31 +128,22 @@ const GeneralTab = () => {
           <p className="text-sm font-medium">{t('language')}</p>
           <p className="text-sm text-muted-foreground">{t('languageDescription')}</p>
         </div>
-        <Popover>
-          <PopoverTrigger
-            className="inline-flex h-8 min-w-[180px] items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
-          >
-            <span>{LOCALES.find((l) => l.id === locale)?.label ?? 'English'}</span>
-            <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-[180px] p-1">
-            <div className="max-h-[280px] overflow-y-auto">
+        <Select
+          items={LOCALES.map((l) => ({ label: l.label, value: l.id }))}
+          value={locale}
+          onValueChange={(v) => v && setLocale(v)}
+        >
+          <SelectTrigger className="min-w-[200px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
             {LOCALES.map((l) => (
-              <button
-                key={l.id}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground',
-                  locale === l.id && 'bg-accent text-accent-foreground',
-                )}
-                onClick={() => setLocale(l.id)}
-              >
-                <Check className={cn('h-3.5 w-3.5', locale === l.id ? 'opacity-100' : 'opacity-0')} />
+              <SelectItem key={l.id} value={l.id}>
                 {l.label}
-              </button>
+              </SelectItem>
             ))}
-            </div>
-          </PopoverContent>
-        </Popover>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -610,32 +607,24 @@ const ToastPositionSelect = ({
   ariaLabel: string;
 }) => {
   const t = useTranslations('settings.notification');
+  const items = TOAST_POSITIONS.map((p) => ({ label: t(`positions.${p}`), value: p }));
   return (
-    <Popover>
-      <PopoverTrigger
-        aria-label={ariaLabel}
-        className="inline-flex h-8 min-w-[140px] items-center justify-between gap-2 rounded-md border border-input bg-background px-3 text-sm hover:bg-accent hover:text-accent-foreground"
-      >
-        <span>{t(`positions.${value}`)}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 shrink-0 opacity-50" />
-      </PopoverTrigger>
-      <PopoverContent align="end" className="w-[160px] p-1">
-        {TOAST_POSITIONS.map((p) => (
-          <button
-            key={p}
-            type="button"
-            className={cn(
-              'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-accent hover:text-accent-foreground',
-              value === p && 'bg-accent text-accent-foreground',
-            )}
-            onClick={() => onChange(p)}
-          >
-            <Check className={cn('h-3.5 w-3.5', value === p ? 'opacity-100' : 'opacity-0')} />
-            {t(`positions.${p}`)}
-          </button>
+    <Select
+      items={items}
+      value={value}
+      onValueChange={(v) => v && onChange(v as TToastPosition)}
+    >
+      <SelectTrigger aria-label={ariaLabel} className="min-w-[160px]">
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent>
+        {items.map((it) => (
+          <SelectItem key={it.value} value={it.value}>
+            {it.label}
+          </SelectItem>
         ))}
-      </PopoverContent>
-    </Popover>
+      </SelectContent>
+    </Select>
   );
 };
 

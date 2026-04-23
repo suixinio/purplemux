@@ -10,6 +10,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 
 interface IRenameWorkspaceDialogProps {
@@ -26,28 +33,41 @@ const RenameWorkspaceDialog = ({
   currentName,
 }: IRenameWorkspaceDialogProps) => {
   const t = useTranslations('workspace');
+  const ts = useTranslations('sidebar');
   const tc = useTranslations('common');
+  const groups = useWorkspaceStore((s) => s.groups);
+  const currentGroupId = useWorkspaceStore(
+    (s) => s.workspaces.find((w) => w.id === workspaceId)?.groupId ?? null,
+  );
   const [name, setName] = useState(currentName);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(currentGroupId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [prevOpen, setPrevOpen] = useState(open);
   if (prevOpen !== open) {
     setPrevOpen(open);
     if (open) {
       setName(currentName);
+      setSelectedGroupId(currentGroupId);
       setIsSubmitting(false);
     }
   }
 
   const trimmed = name.trim();
-  const canSubmit = trimmed.length > 0 && trimmed !== currentName && !isSubmitting;
+  const nameChanged = trimmed.length > 0 && trimmed !== currentName;
+  const groupChanged = selectedGroupId !== currentGroupId;
+  const canSubmit = (nameChanged || groupChanged) && !isSubmitting;
 
   const handleSubmit = useCallback(async () => {
     if (!canSubmit) return;
     setIsSubmitting(true);
-    const ok = await useWorkspaceStore.getState().renameWorkspace(workspaceId, trimmed);
+    const store = useWorkspaceStore.getState();
+    const results = await Promise.all([
+      nameChanged ? store.renameWorkspace(workspaceId, trimmed) : Promise.resolve(true),
+      groupChanged ? store.moveWorkspaceToGroup(workspaceId, selectedGroupId) : Promise.resolve(true),
+    ]);
     setIsSubmitting(false);
-    if (ok) onOpenChange(false);
-  }, [canSubmit, workspaceId, trimmed, onOpenChange]);
+    if (results.every(Boolean)) onOpenChange(false);
+  }, [canSubmit, workspaceId, nameChanged, groupChanged, trimmed, selectedGroupId, onOpenChange]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -58,6 +78,12 @@ const RenameWorkspaceDialog = ({
     },
     [canSubmit, handleSubmit],
   );
+
+  const UNGROUPED_VALUE = '__ungrouped__';
+  const groupItems = [
+    { label: ts('ungrouped'), value: UNGROUPED_VALUE },
+    ...groups.map((g) => ({ label: g.name, value: g.id })),
+  ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -73,6 +99,27 @@ const RenameWorkspaceDialog = ({
           onKeyDown={handleKeyDown}
           autoFocus
         />
+
+        {groups.length > 0 && (
+          <Select
+            items={groupItems}
+            value={selectedGroupId ?? UNGROUPED_VALUE}
+            onValueChange={(v) =>
+              setSelectedGroupId(v === UNGROUPED_VALUE ? null : v)
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {groupItems.map((it) => (
+                <SelectItem key={it.value} value={it.value}>
+                  {it.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
 
         <DialogFooter>
           <Button
