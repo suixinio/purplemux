@@ -7,5 +7,14 @@
   "notes": "노트",
   "stats": "사용량 통계",
   "collapseSidebar": "사이드바 접기",
-  "expandSidebar": "사이드바 펼치기"
+  "expandSidebar": "사이드바 펼치기",
+  "newWorkspace": "새 Workspace",
+  "newGroup": "새 그룹",
+  "renameGroup": "그룹 이름 변경",
+  "ungroup": "그룹 해제",
+  "moveToGroup": "그룹으로 이동",
+  "removeFromGroup": "그룹에서 제거",
+  "ungrouped": "그룹 없음",
+  "defaultGroupName": "새 그룹",
+  "emptyGroup": "(비어 있음)"
 }

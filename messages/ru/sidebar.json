@@ -7,5 +7,14 @@
   "notes": "Заметки",
   "stats": "Статистика использования",
   "collapseSidebar": "Свернуть боковую панель",
-  "expandSidebar": "Развернуть боковую панель"
+  "expandSidebar": "Развернуть боковую панель",
+  "newWorkspace": "Новое рабочее пространство",
+  "newGroup": "Новая группа",
+  "renameGroup": "Переименовать группу",
+  "ungroup": "Разгруппировать",
+  "moveToGroup": "Переместить в группу",
+  "removeFromGroup": "Убрать из группы",
+  "ungrouped": "Без группы",
+  "defaultGroupName": "Новая группа",
+  "emptyGroup": "(пусто)"
 }

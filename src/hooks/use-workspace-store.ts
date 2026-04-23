@@ -1,7 +1,16 @@
 import { create } from 'zustand';
 import { toast } from 'sonner';
 import { t } from '@/lib/i18n';
-import type { IWorkspace } from '@/types/terminal';
+import { getVisuallyOrderedWorkspaces } from '@/lib/workspace-order';
+import type { IWorkspace, IWorkspaceGroup } from '@/types/terminal';
+
+const reorderToVisual = (
+  workspaces: IWorkspace[],
+  groups: IWorkspaceGroup[],
+): IWorkspace[] => {
+  const ordered = getVisuallyOrderedWorkspaces(workspaces, groups);
+  return ordered.map((ws, i) => (ws.order === i ? ws : { ...ws, order: i }));
+};
 
 interface IValidateResponse {
   valid: boolean;
@@ -11,6 +20,7 @@ interface IValidateResponse {
 
 export interface IWorkspaceInitialData {
   workspaces: IWorkspace[];
+  groups?: IWorkspaceGroup[];
   activeWorkspaceId?: string;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
@@ -18,6 +28,7 @@ export interface IWorkspaceInitialData {
 
 interface IWorkspaceState {
   workspaces: IWorkspace[];
+  groups: IWorkspaceGroup[];
   activeWorkspaceId: string | null;
   sidebarCollapsed: boolean;
   sidebarWidth: number;
@@ -38,7 +49,13 @@ interface IWorkspaceState {
   unmarkPendingDelete: (workspaceId: string) => void;
   switchWorkspace: (workspaceId: string) => void;
   renameWorkspace: (workspaceId: string, name: string) => Promise<boolean>;
-  reorderWorkspaces: (fromIndex: number, toIndex: number) => void;
+  reorderWorkspaces: (fromIndex: number, toIndex: number, nextGroupId?: string | null) => void;
+  moveWorkspaceToGroup: (workspaceId: string, groupId: string | null) => Promise<boolean>;
+  createGroup: (name?: string) => Promise<IWorkspaceGroup | null>;
+  renameGroup: (groupId: string, name: string) => Promise<boolean>;
+  ungroupGroup: (groupId: string) => Promise<boolean>;
+  toggleGroupCollapsed: (groupId: string) => void;
+  reorderGroups: (fromIndex: number, toIndex: number) => void;
   toggleSidebar: () => void;
   setSidebarWidth: (width: number) => void;
   saveSidebarWidth: (width: number) => void;
@@ -119,6 +136,7 @@ const bumpMutationFence = () => {
 
 const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
   workspaces: initialWs.workspaces,
+  groups: [],
   activeWorkspaceId: initialWs.workspaces.length > 0 ? resolveActiveWorkspaceId(initialWs.workspaces) : null,
   sidebarCollapsed: initialSidebar.sidebarCollapsed,
   sidebarWidth: initialSidebar.sidebarWidth,
@@ -135,6 +153,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
     if (activeWorkspaceId) saveActiveWorkspaceIdToServer(activeWorkspaceId);
     set({
       workspaces: data.workspaces,
+      groups: data.groups ?? [],
       activeWorkspaceId,
       sidebarCollapsed: data.sidebarCollapsed,
       sidebarWidth: data.sidebarWidth,
@@ -153,6 +172,7 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
       setStoredActiveWorkspaceId(activeWorkspaceId);
       set({
         workspaces: data.workspaces,
+        groups: data.groups ?? [],
         activeWorkspaceId,
         sidebarCollapsed: data.sidebarCollapsed ?? false,
         sidebarWidth: data.sidebarWidth ?? 240,
@@ -195,8 +215,18 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
         merged.push(w);
       }
 
-      if (JSON.stringify(current) === JSON.stringify(merged)) return;
-      set({ workspaces: merged });
+      const serverGroups: IWorkspaceGroup[] = data.groups ?? [];
+      const currentGroups = get().groups;
+      const groupsChanged = JSON.stringify(currentGroups) !== JSON.stringify(serverGroups);
+      const nextGroups = groupsChanged ? serverGroups : currentGroups;
+      const nextWorkspaces = reorderToVisual(merged, nextGroups);
+      const workspacesChanged = JSON.stringify(current) !== JSON.stringify(nextWorkspaces);
+
+      if (!workspacesChanged && !groupsChanged) return;
+      set({
+        workspaces: workspacesChanged ? nextWorkspaces : current,
+        groups: nextGroups,
+      });
     } catch (err) {
       console.log(`[workspace-store] sync error: ${err instanceof Error ? err.message : err}`);
     }
@@ -304,16 +334,157 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
     }
   },
 
-  reorderWorkspaces: (fromIndex, toIndex) => {
+  reorderWorkspaces: (fromIndex, toIndex, nextGroupId) => {
     const list = [...get().workspaces];
     const [moved] = list.splice(fromIndex, 1);
+    if (nextGroupId !== undefined) {
+      moved.groupId = nextGroupId;
+    }
     list.splice(toIndex, 0, moved);
+    bumpMutationFence();
     set({ workspaces: list });
 
     fetch('/api/workspace/reorder', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ workspaceIds: list.map((w) => w.id) }),
+      body: JSON.stringify({
+        items: list.map((w) => ({ id: w.id, groupId: w.groupId ?? null })),
+      }),
+    }).catch(() => {
+      toast.error(t('workspace', 'reorderFailed'));
+      get().fetchWorkspaces();
+    });
+  },
+
+  moveWorkspaceToGroup: async (workspaceId, groupId) => {
+    const prev = get().workspaces.find((w) => w.id === workspaceId);
+    if (!prev) return false;
+    const prevGroupId = prev.groupId ?? null;
+    if (prevGroupId === groupId) return true;
+    bumpMutationFence();
+    set((state) => {
+      const updated = state.workspaces.map((w) =>
+        w.id === workspaceId ? { ...w, groupId } : w,
+      );
+      return { workspaces: reorderToVisual(updated, state.groups) };
+    });
+    try {
+      const res = await fetch(`/api/workspace/${workspaceId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ groupId }),
+      });
+      if (!res.ok) throw new Error();
+      return true;
+    } catch {
+      set((state) => {
+        const reverted = state.workspaces.map((w) =>
+          w.id === workspaceId ? { ...w, groupId: prevGroupId } : w,
+        );
+        return { workspaces: reorderToVisual(reverted, state.groups) };
+      });
+      toast.error(t('workspace', 'reorderFailed'));
+      return false;
+    }
+  },
+
+  createGroup: async (name) => {
+    try {
+      const res = await fetch('/api/workspace/group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name ?? '' }),
+      });
+      if (!res.ok) throw new Error();
+      const group: IWorkspaceGroup = await res.json();
+      bumpMutationFence();
+      set((state) => ({
+        groups: state.groups.some((g) => g.id === group.id) ? state.groups : [...state.groups, group],
+      }));
+      return group;
+    } catch {
+      toast.error(t('workspace', 'createFailed'));
+      return null;
+    }
+  },
+
+  renameGroup: async (groupId, name) => {
+    const prev = get().groups.find((g) => g.id === groupId);
+    const previousName = prev?.name ?? '';
+    set((state) => ({
+      groups: state.groups.map((g) => (g.id === groupId ? { ...g, name } : g)),
+    }));
+    try {
+      const res = await fetch(`/api/workspace/group/${groupId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+      if (!res.ok) throw new Error();
+      return true;
+    } catch {
+      set((state) => ({
+        groups: state.groups.map((g) => (g.id === groupId ? { ...g, name: previousName } : g)),
+      }));
+      toast.error(t('workspace', 'renameFailed'));
+      return false;
+    }
+  },
+
+  ungroupGroup: async (groupId) => {
+    const prevGroups = get().groups;
+    const prevWorkspaces = get().workspaces;
+    bumpMutationFence();
+    set((state) => {
+      const nextGroups = state.groups.filter((g) => g.id !== groupId);
+      const updated = state.workspaces.map((w) =>
+        w.groupId === groupId ? { ...w, groupId: null } : w,
+      );
+      return {
+        groups: nextGroups,
+        workspaces: reorderToVisual(updated, nextGroups),
+      };
+    });
+    try {
+      const res = await fetch(`/api/workspace/group/${groupId}`, { method: 'DELETE' });
+      if (!res.ok && res.status !== 404) throw new Error();
+      return true;
+    } catch {
+      set({ groups: prevGroups, workspaces: prevWorkspaces });
+      toast.error(t('workspace', 'deleteFailed'));
+      return false;
+    }
+  },
+
+  toggleGroupCollapsed: (groupId) => {
+    const group = get().groups.find((g) => g.id === groupId);
+    if (!group) return;
+    const next = !group.collapsed;
+    set((state) => ({
+      groups: state.groups.map((g) => (g.id === groupId ? { ...g, collapsed: next } : g)),
+    }));
+    fetch(`/api/workspace/group/${groupId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ collapsed: next }),
+    }).catch(() => { /* tolerate */ });
+  },
+
+  reorderGroups: (fromIndex, toIndex) => {
+    const list = [...get().groups];
+    const [moved] = list.splice(fromIndex, 1);
+    list.splice(toIndex, 0, moved);
+    list.forEach((g, i) => { g.order = i; });
+    bumpMutationFence();
+    set((state) => ({
+      groups: list,
+      workspaces: reorderToVisual(state.workspaces, list),
+    }));
+
+    fetch('/api/workspace/group/reorder', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ groupIds: list.map((g) => g.id) }),
     }).catch(() => {
       toast.error(t('workspace', 'reorderFailed'));
       get().fetchWorkspaces();

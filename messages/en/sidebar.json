@@ -7,5 +7,14 @@
   "notes": "Notes",
   "stats": "Usage stats",
   "collapseSidebar": "Collapse sidebar",
-  "expandSidebar": "Expand sidebar"
+  "expandSidebar": "Expand sidebar",
+  "newWorkspace": "New Workspace",
+  "newGroup": "New Group",
+  "renameGroup": "Rename group",
+  "ungroup": "Ungroup",
+  "moveToGroup": "Move to group",
+  "removeFromGroup": "Remove from group",
+  "ungrouped": "Ungrouped",
+  "defaultGroupName": "New Group",
+  "emptyGroup": "(empty)"
 }

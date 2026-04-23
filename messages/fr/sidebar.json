@@ -7,5 +7,14 @@
   "notes": "Notes",
   "stats": "Statistiques d'utilisation",
   "collapseSidebar": "Réduire la barre latérale",
-  "expandSidebar": "Développer la barre latérale"
+  "expandSidebar": "Développer la barre latérale",
+  "newWorkspace": "Nouvel espace de travail",
+  "newGroup": "Nouveau groupe",
+  "renameGroup": "Renommer le groupe",
+  "ungroup": "Dissoudre le groupe",
+  "moveToGroup": "Déplacer vers le groupe",
+  "removeFromGroup": "Retirer du groupe",
+  "ungrouped": "Non groupé",
+  "defaultGroupName": "Nouveau groupe",
+  "emptyGroup": "(vide)"
 }

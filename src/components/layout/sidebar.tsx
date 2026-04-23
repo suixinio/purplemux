@@ -1,9 +1,10 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   ChevronsLeft,
   ChevronsRight,
   Plus,
+  FolderPlus,
   Settings,
   LogOut,
 } from 'lucide-react';
@@ -26,9 +27,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import type { IWorkspace } from '@/types/terminal';
+import type { IWorkspace, IWorkspaceGroup } from '@/types/terminal';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import WorkspaceItem from '@/components/features/workspace/workspace-item';
+import WorkspaceGroupHeader from '@/components/features/workspace/workspace-group-header';
 import dynamic from 'next/dynamic';
 
 const SettingsDialog = dynamic(
@@ -59,6 +61,7 @@ const Sidebar = () => {
   const tc = useTranslations('common');
   const router = useRouter();
   const workspaces = useWorkspaceStore((s) => s.workspaces);
+  const groups = useWorkspaceStore((s) => s.groups);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
   const collapsed = useWorkspaceStore((s) => s.sidebarCollapsed);
   const width = useWorkspaceStore((s) => s.sidebarWidth);
@@ -103,9 +106,12 @@ const Sidebar = () => {
   const [deleteTarget, setDeleteTarget] = useState<IWorkspace | null>(null);
   const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
   const [fadingOutIds, setFadingOutIds] = useState<Set<string>>(new Set());
-
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-  const [dropIndex, setDropIndex] = useState<number | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    position: number;
+    groupId: string | null;
+    edge: 'before' | 'after' | 'group-start';
+  } | null>(null);
 
   const [isDragging, setIsDragging] = useState(false);
   const isResizing = useRef(false);
@@ -159,6 +165,23 @@ const Sidebar = () => {
       setIsCreating(false);
     }
   }, [selectWorkspace]);
+
+  const handleCreateGroup = useCallback(async () => {
+    const defaultName = t('defaultGroupName');
+    await useWorkspaceStore.getState().createGroup(defaultName);
+  }, [t]);
+
+  const handleRenameGroup = useCallback((groupId: string, name: string) => {
+    useWorkspaceStore.getState().renameGroup(groupId, name);
+  }, []);
+
+  const handleToggleGroup = useCallback((groupId: string) => {
+    useWorkspaceStore.getState().toggleGroupCollapsed(groupId);
+  }, []);
+
+  const handleUngroup = useCallback((groupId: string) => {
+    useWorkspaceStore.getState().ungroupGroup(groupId);
+  }, []);
 
   const handleDeleteRequest = useCallback(
     (workspaceId: string) => {
@@ -240,31 +263,150 @@ const Sidebar = () => {
   const handleDragEnd = useCallback((e: React.DragEvent) => {
     (e.target as HTMLElement).style.opacity = '';
     setDragIndex(null);
-    setDropIndex(null);
+    setDropTarget(null);
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragIndex !== null && index !== dragIndex) {
-      setDropIndex(index);
-    }
-  }, [dragIndex]);
+  const handleWsDragOver = useCallback(
+    (e: React.DragEvent, position: number, groupId: string | null) => {
+      if (dragIndex === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      const edge: 'before' | 'after' = e.clientY < midpoint ? 'before' : 'after';
+      setDropTarget({ position, groupId, edge });
+    },
+    [dragIndex],
+  );
 
-  const handleDrop = useCallback((e: React.DragEvent, toIndex: number) => {
-    e.preventDefault();
-    if (dragIndex !== null && dragIndex !== toIndex) {
-      useWorkspaceStore.getState().reorderWorkspaces(dragIndex, toIndex);
-    }
-    setDragIndex(null);
-    setDropIndex(null);
-  }, [dragIndex]);
+  const handleGroupHeaderDragOver = useCallback(
+    (e: React.DragEvent, firstWsPosition: number, groupId: string) => {
+      if (dragIndex === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setDropTarget({ position: firstWsPosition, groupId, edge: 'group-start' });
+    },
+    [dragIndex],
+  );
+
+  const handleUngroupedAreaDragOver = useCallback(
+    (e: React.DragEvent, lastPosition: number) => {
+      if (dragIndex === null) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      setDropTarget({ position: lastPosition, groupId: null, edge: 'after' });
+    },
+    [dragIndex],
+  );
+
+  const handleWsDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      if (dragIndex === null || !dropTarget) {
+        setDragIndex(null);
+        setDropTarget(null);
+        return;
+      }
+      const insertBefore =
+        dropTarget.edge === 'before' || dropTarget.edge === 'group-start'
+          ? dropTarget.position
+          : dropTarget.position + 1;
+      const finalIdx = dragIndex < insertBefore ? insertBefore - 1 : insertBefore;
+      const current = useWorkspaceStore.getState().workspaces[dragIndex];
+      const groupChanged =
+        current && (current.groupId ?? null) !== (dropTarget.groupId ?? null);
+      if (finalIdx !== dragIndex || groupChanged) {
+        useWorkspaceStore
+          .getState()
+          .reorderWorkspaces(dragIndex, finalIdx, dropTarget.groupId);
+      }
+      setDragIndex(null);
+      setDropTarget(null);
+    },
+    [dragIndex, dropTarget],
+  );
 
   const handleToggleCollapse = useCallback(() => {
     useWorkspaceStore.getState().toggleSidebar();
   }, []);
 
   const isNavActive = (path: string) => router.pathname.startsWith(path);
+
+  type TRenderEntry = { ws: IWorkspace; flatIdx: number };
+  type TRenderSection =
+    | { type: 'group'; group: IWorkspaceGroup; workspaces: TRenderEntry[]; firstWsPosition: number }
+    | { type: 'ungrouped'; workspaces: TRenderEntry[]; lastPosition: number };
+
+  const renderedSections = useMemo<TRenderSection[]>(() => {
+    const byGroup = new Map<string, TRenderEntry[]>();
+    const ungrouped: TRenderEntry[] = [];
+    workspaces.forEach((ws, flatIdx) => {
+      const gid = ws.groupId ?? null;
+      if (gid && groups.some((g) => g.id === gid)) {
+        const list = byGroup.get(gid) ?? [];
+        list.push({ ws, flatIdx });
+        byGroup.set(gid, list);
+      } else {
+        ungrouped.push({ ws, flatIdx });
+      }
+    });
+
+    const sortedGroups = [...groups].sort((a, b) => a.order - b.order);
+    const sections: TRenderSection[] = [];
+    for (const g of sortedGroups) {
+      const list = byGroup.get(g.id) ?? [];
+      const firstWsPosition = list[0]?.flatIdx ?? workspaces.length;
+      sections.push({ type: 'group', group: g, workspaces: list, firstWsPosition });
+    }
+    sections.push({
+      type: 'ungrouped',
+      workspaces: ungrouped,
+      lastPosition: ungrouped.length > 0 ? ungrouped[ungrouped.length - 1].flatIdx : workspaces.length - 1,
+    });
+    return sections;
+  }, [workspaces, groups]);
+
+  const renderWorkspaceRow = (entry: TRenderEntry) => {
+    const { ws, flatIdx } = entry;
+    const isDropBefore =
+      dropTarget?.position === flatIdx &&
+      dropTarget.edge === 'before' &&
+      dragIndex !== null &&
+      dragIndex !== flatIdx;
+    const isDropAfter =
+      dropTarget?.position === flatIdx &&
+      dropTarget.edge === 'after' &&
+      dragIndex !== null &&
+      dragIndex !== flatIdx;
+
+    return (
+      <div
+        key={ws.id}
+        draggable
+        onDragStart={(e) => handleDragStart(e, flatIdx)}
+        onDragEnd={handleDragEnd}
+        onDragOver={(e) => handleWsDragOver(e, flatIdx, ws.groupId ?? null)}
+        onDrop={handleWsDrop}
+        style={{
+          opacity: fadingOutIds.has(ws.id) ? 0 : undefined,
+          transition: 'opacity 150ms ease-out',
+          borderTop: isDropBefore ? '2px solid var(--focus-indicator)' : undefined,
+          borderBottom: isDropAfter ? '2px solid var(--focus-indicator)' : undefined,
+        }}
+      >
+        <WorkspaceItem
+          workspace={ws}
+          isActive={ws.id === activeWorkspaceId && router.pathname === '/' && !activeWebviewId}
+          isDeleting={deletingIds.has(ws.id)}
+          shortcutLabel={flatIdx < 8 ? `⌘${flatIdx + 1}` : flatIdx === workspaces.length - 1 ? '⌘9' : undefined}
+          showShortcut={showShortcuts}
+          onSelect={selectWorkspace}
+          onRename={handleRename}
+          onDelete={handleDeleteRequest}
+        />
+      </div>
+    );
+  };
 
   return (
     <div className="relative flex shrink-0">
@@ -363,6 +505,11 @@ const Sidebar = () => {
           <div
             className="flex-1 overflow-y-auto"
             style={{ scrollbarWidth: 'none' }}
+            onDragOver={(e) => {
+              if (dragIndex === null) return;
+              e.preventDefault();
+              e.dataTransfer.dropEffect = 'move';
+            }}
           >
             {!isLoading && workspaces.length === 0 && (
               <div className="flex flex-col items-center gap-2 p-4">
@@ -372,37 +519,65 @@ const Sidebar = () => {
               </div>
             )}
 
-            {workspaces.map((ws, i) => (
-              <div
-                key={ws.id}
-                draggable
-                onDragStart={(e) => handleDragStart(e, i)}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e) => handleDragOver(e, i)}
-                onDrop={(e) => handleDrop(e, i)}
-                style={{
-                  opacity: fadingOutIds.has(ws.id) ? 0 : undefined,
-                  transition: 'opacity 150ms ease-out',
-                  borderTop: dropIndex === i && dragIndex !== null && dragIndex > i
-                    ? '2px solid var(--focus-indicator)'
-                    : undefined,
-                  borderBottom: dropIndex === i && dragIndex !== null && dragIndex < i
-                    ? '2px solid var(--focus-indicator)'
-                    : undefined,
-                }}
-              >
-                <WorkspaceItem
-                  workspace={ws}
-                  isActive={ws.id === activeWorkspaceId && router.pathname === '/' && !activeWebviewId}
-                  isDeleting={deletingIds.has(ws.id)}
-                  shortcutLabel={i < 8 ? `⌘${i + 1}` : i === workspaces.length - 1 ? '⌘9' : undefined}
-                  showShortcut={showShortcuts}
-                  onSelect={selectWorkspace}
-                  onRename={handleRename}
-                  onDelete={handleDeleteRequest}
-                />
-              </div>
-            ))}
+            {renderedSections.map((section) => {
+              if (section.type === 'group') {
+                return (
+                  <div key={`group-${section.group.id}`}>
+                    <div
+                      onDragOver={(e) =>
+                        handleGroupHeaderDragOver(e, section.firstWsPosition, section.group.id)
+                      }
+                      onDrop={handleWsDrop}
+                      style={{
+                        borderBottom:
+                          dropTarget?.edge === 'group-start' && dropTarget.groupId === section.group.id
+                            ? '2px solid var(--focus-indicator)'
+                            : undefined,
+                      }}
+                    >
+                      <WorkspaceGroupHeader
+                        group={section.group}
+                        count={section.workspaces.length}
+                        onToggle={handleToggleGroup}
+                        onRename={handleRenameGroup}
+                        onUngroup={handleUngroup}
+                      />
+                    </div>
+                    {!section.group.collapsed &&
+                      section.workspaces.map((entry) => renderWorkspaceRow(entry))}
+                    {!section.group.collapsed && section.workspaces.length === 0 && (
+                      <div
+                        className={cn(
+                          'flex h-6 items-center px-3 text-[11px] italic text-muted-foreground/50',
+                          dragIndex !== null &&
+                            dropTarget?.edge === 'group-start' &&
+                            dropTarget.groupId === section.group.id &&
+                            'border-b-2 border-[var(--focus-indicator)]',
+                        )}
+                        onDragOver={(e) =>
+                          handleGroupHeaderDragOver(e, section.firstWsPosition, section.group.id)
+                        }
+                        onDrop={handleWsDrop}
+                      >
+                        {t('emptyGroup')}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key="ungrouped"
+                  className="min-h-[8px]"
+                  onDragOver={(e) =>
+                    handleUngroupedAreaDragOver(e, section.lastPosition)
+                  }
+                  onDrop={handleWsDrop}
+                >
+                  {section.workspaces.map((entry) => renderWorkspaceRow(entry))}
+                </div>
+              );
+            })}
           </div>
         ) : (
           <NotificationPanel className="px-2 pt-2 pb-2" />
@@ -410,9 +585,9 @@ const Sidebar = () => {
 
         <div className="shrink-0 border-t border-sidebar-border">
           {sidebarTab === 'workspace' && (
-            <div className="relative">
+            <div className="relative flex h-9 items-stretch">
               <button
-                className="flex h-9 w-full items-center gap-2 px-3 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent disabled:opacity-50"
+                className="flex flex-1 items-center gap-2 px-3 text-sm text-muted-foreground transition-colors hover:bg-sidebar-accent disabled:opacity-50"
                 onClick={handleCreateWorkspace}
                 disabled={isCreating}
                 aria-label={t('addWorkspace')}
@@ -424,10 +599,18 @@ const Sidebar = () => {
                 mac="⌘N"
                 other="^N"
                 className={cn(
-                  'absolute right-2 top-1/2 -translate-y-1/2 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                  'pointer-events-none absolute right-9 top-1/2 -translate-y-1/2 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200',
                   showShortcuts ? 'opacity-100' : 'opacity-0',
                 )}
               />
+              <button
+                className="flex w-9 items-center justify-center text-muted-foreground transition-colors hover:bg-sidebar-accent"
+                onClick={handleCreateGroup}
+                aria-label={t('newGroup')}
+                title={t('newGroup')}
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+              </button>
             </div>
           )}
 

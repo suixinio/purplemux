@@ -7,5 +7,14 @@
   "notes": "Notlar",
   "stats": "Kullanım istatistikleri",
   "collapseSidebar": "Kenar çubuğunu daralt",
-  "expandSidebar": "Kenar çubuğunu genişlet"
+  "expandSidebar": "Kenar çubuğunu genişlet",
+  "newWorkspace": "Yeni Çalışma Alanı",
+  "newGroup": "Yeni Grup",
+  "renameGroup": "Grubu yeniden adlandır",
+  "ungroup": "Grubu çöz",
+  "moveToGroup": "Gruba taşı",
+  "removeFromGroup": "Gruptan çıkar",
+  "ungrouped": "Gruplanmamış",
+  "defaultGroupName": "Yeni Grup",
+  "emptyGroup": "(boş)"
 }

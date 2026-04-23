@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { reorderWorkspaces } from '@/lib/workspace-store';
+import { reorderWorkspaces, type IReorderItem } from '@/lib/workspace-store';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'PATCH') {
@@ -7,12 +7,23 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { workspaceIds } = req.body ?? {};
-  if (!Array.isArray(workspaceIds) || workspaceIds.length === 0) {
-    return res.status(400).json({ error: 'workspaceIds array required' });
+  const body = req.body ?? {};
+
+  let items: IReorderItem[] | null = null;
+  if (Array.isArray(body.items) && body.items.length > 0) {
+    items = body.items.map((it: { id: unknown; groupId?: unknown }) => ({
+      id: String(it.id),
+      groupId: it.groupId === null ? null : typeof it.groupId === 'string' ? it.groupId : undefined,
+    }));
+  } else if (Array.isArray(body.workspaceIds) && body.workspaceIds.length > 0) {
+    items = body.workspaceIds.map((id: string) => ({ id: String(id) }));
   }
 
-  const ok = await reorderWorkspaces(workspaceIds);
+  if (!items) {
+    return res.status(400).json({ error: 'items array required' });
+  }
+
+  const ok = await reorderWorkspaces(items);
   if (!ok) {
     return res.status(400).json({ error: 'Invalid order' });
   }

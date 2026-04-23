@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect, memo } from 'react';
-import { Pencil, Trash2 } from 'lucide-react';
+import { useCallback, useEffect, memo } from 'react';
+import { Pencil, Trash2, FolderPlus, FolderMinus, Folder } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/utils';
 import {
@@ -7,10 +7,15 @@ import {
   ContextMenuContent,
   ContextMenuItem,
   ContextMenuSeparator,
+  ContextMenuSub,
+  ContextMenuSubContent,
+  ContextMenuSubTrigger,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu';
 import type { IWorkspace } from '@/types/terminal';
 import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
+import useWorkspaceStore from '@/hooks/use-workspace-store';
+import useInlineEdit from '@/hooks/use-inline-edit';
 import WorkspaceStatusIndicator from '@/components/features/workspace/workspace-status-indicator';
 
 interface IWorkspaceItemProps {
@@ -36,42 +41,16 @@ const WorkspaceItem = ({
 }: IWorkspaceItemProps) => {
   const t = useTranslations('terminal');
   const tc = useTranslations('common');
-  const [isEditing, setIsEditing] = useState(false);
-  const [editValue, setEditValue] = useState(workspace.name);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const ts = useTranslations('sidebar');
+  const groups = useWorkspaceStore((s) => s.groups);
 
-  useEffect(() => {
-    if (isEditing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [isEditing]);
-
-  const commitRename = useCallback(() => {
-    const trimmed = editValue.trim();
-    setIsEditing(false);
-    if (!trimmed) {
-      const dirName = (workspace.directories[0] ?? '').split('/').filter(Boolean).pop() || workspace.name;
-      if (dirName !== workspace.name) {
-        onRename(workspace.id, dirName);
-      }
-      setEditValue(dirName);
-      return;
-    }
-    if (trimmed !== workspace.name) {
-      onRename(workspace.id, trimmed);
-    }
-  }, [editValue, workspace.id, workspace.name, workspace.directories, onRename]);
-
-  const cancelRename = useCallback(() => {
-    setIsEditing(false);
-    setEditValue(workspace.name);
-  }, [workspace.name]);
-
-  const startEditing = useCallback(() => {
-    setEditValue(workspace.name);
-    setIsEditing(true);
-  }, [workspace.name]);
+  const { isEditing, draft, setDraft, inputRef, startEditing, commit, handleKeyDown } =
+    useInlineEdit({
+      value: workspace.name,
+      onCommit: (next) => onRename(workspace.id, next),
+      onEmpty: () =>
+        (workspace.directories[0] ?? '').split('/').filter(Boolean).pop() || workspace.name,
+    });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -83,42 +62,33 @@ const WorkspaceItem = ({
     return () => window.removeEventListener('rename-workspace', handler);
   }, [workspace.id, startEditing]);
 
-  const handleDoubleClick = useCallback(() => {
-    startEditing();
-  }, [startEditing]);
-
   const handleClick = useCallback(() => {
     if (!isEditing && !isActive) {
       onSelect(workspace.id);
     }
   }, [isEditing, isActive, onSelect, workspace.id]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        commitRename();
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        cancelRename();
-      }
-    },
-    [commitRename, cancelRename],
-  );
+  const handleMoveToGroup = useCallback((groupId: string | null) => {
+    useWorkspaceStore.getState().moveWorkspaceToGroup(workspace.id, groupId);
+  }, [workspace.id]);
 
-  const displayDirs = workspace.directories
-    .map((d) => d.replace(/^\/Users\/[^/]+/, '~'));
+  const handleCreateGroupAndMove = useCallback(async () => {
+    const store = useWorkspaceStore.getState();
+    const defaultName = ts('defaultGroupName');
+    const group = await store.createGroup(defaultName);
+    if (group) {
+      store.moveWorkspaceToGroup(workspace.id, group.id);
+    }
+  }, [workspace.id, ts]);
 
-  const portsLabel = useTabStore(
-    (state) => selectWorkspacePortsLabel(state.tabs, workspace.id),
-  );
+  const displayDirs = workspace.directories.map((d) => d.replace(/^\/Users\/[^/]+/, '~'));
+  const portsLabel = useTabStore((state) => selectWorkspacePortsLabel(state.tabs, workspace.id));
 
   return (
     <ContextMenu>
       <ContextMenuTrigger
         className={cn(
-          'relative flex cursor-pointer flex-col justify-center border-l-2 px-3 py-2 transition-colors duration-75',
-          'overflow-hidden',
+          'relative flex cursor-pointer flex-col justify-center overflow-hidden border-l-2 px-3 py-2 transition-colors duration-75',
           isActive
             ? 'border-l-focus-indicator bg-accent text-foreground'
             : 'border-l-transparent text-muted-foreground hover:bg-sidebar-accent',
@@ -128,7 +98,7 @@ const WorkspaceItem = ({
           transition: 'opacity 150ms, background-color 75ms',
         }}
         onClick={handleClick}
-        onDoubleClick={handleDoubleClick}
+        onDoubleClick={startEditing}
         role="button"
         aria-current={isActive ? 'true' : undefined}
         tabIndex={0}
@@ -148,10 +118,10 @@ const WorkspaceItem = ({
           <input
             ref={inputRef}
             className="w-full border-b border-accent-color bg-transparent p-0 text-sm font-medium leading-tight text-foreground outline-none"
-            value={editValue}
-            onChange={(e) => setEditValue(e.target.value)}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={commitRename}
+            onBlur={commit}
           />
         ) : (
           <span className="truncate border-b border-transparent text-sm font-medium leading-tight">
@@ -175,6 +145,38 @@ const WorkspaceItem = ({
           <Pencil className="mr-2 h-3.5 w-3.5" />
           {t('rename')}
         </ContextMenuItem>
+        <ContextMenuSub>
+          <ContextMenuSubTrigger>
+            <Folder className="mr-2 h-3.5 w-3.5" />
+            {ts('moveToGroup')}
+          </ContextMenuSubTrigger>
+          <ContextMenuSubContent>
+            {groups.map((g) => (
+              <ContextMenuItem
+                key={g.id}
+                disabled={workspace.groupId === g.id}
+                onClick={() => handleMoveToGroup(g.id)}
+              >
+                <Folder className="mr-2 h-3.5 w-3.5" />
+                {g.name}
+              </ContextMenuItem>
+            ))}
+            {groups.length > 0 && <ContextMenuSeparator />}
+            <ContextMenuItem onClick={handleCreateGroupAndMove}>
+              <FolderPlus className="mr-2 h-3.5 w-3.5" />
+              {ts('newGroup')}
+            </ContextMenuItem>
+            {workspace.groupId && (
+              <>
+                <ContextMenuSeparator />
+                <ContextMenuItem onClick={() => handleMoveToGroup(null)}>
+                  <FolderMinus className="mr-2 h-3.5 w-3.5" />
+                  {ts('removeFromGroup')}
+                </ContextMenuItem>
+              </>
+            )}
+          </ContextMenuSubContent>
+        </ContextMenuSub>
         <ContextMenuSeparator />
         <ContextMenuItem
           className="text-ui-red focus:text-ui-red"

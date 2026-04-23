@@ -58,10 +58,19 @@ export interface IWorkspace {
   name: string;
   directories: string[];
   order: number;
+  groupId?: string | null;
+}
+
+export interface IWorkspaceGroup {
+  id: string;
+  name: string;
+  order: number;
+  collapsed?: boolean;
 }
 
 export interface IWorkspacesData {
   workspaces: IWorkspace[];
+  groups?: IWorkspaceGroup[];
   activeWorkspaceId?: string;
   sidebarCollapsed: boolean;
   sidebarWidth: number;

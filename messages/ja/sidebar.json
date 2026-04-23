@@ -7,5 +7,14 @@
   "notes": "メモ",
   "stats": "使用状況",
   "collapseSidebar": "サイドバーを折りたたむ",
-  "expandSidebar": "サイドバーを展開"
+  "expandSidebar": "サイドバーを展開",
+  "newWorkspace": "新規ワークスペース",
+  "newGroup": "新規グループ",
+  "renameGroup": "グループの名前を変更",
+  "ungroup": "グループを解除",
+  "moveToGroup": "グループに移動",
+  "removeFromGroup": "グループから外す",
+  "ungrouped": "未グループ化",
+  "defaultGroupName": "新規グループ",
+  "emptyGroup": "（空）"
 }

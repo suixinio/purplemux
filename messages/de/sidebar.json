@@ -7,5 +7,14 @@
   "notes": "Notizen",
   "stats": "Nutzungsstatistiken",
   "collapseSidebar": "Seitenleiste einklappen",
-  "expandSidebar": "Seitenleiste ausklappen"
+  "expandSidebar": "Seitenleiste ausklappen",
+  "newWorkspace": "Neuer Arbeitsbereich",
+  "newGroup": "Neue Gruppe",
+  "renameGroup": "Gruppe umbenennen",
+  "ungroup": "Gruppierung aufheben",
+  "moveToGroup": "In Gruppe verschieben",
+  "removeFromGroup": "Aus Gruppe entfernen",
+  "ungrouped": "Nicht gruppiert",
+  "defaultGroupName": "Neue Gruppe",
+  "emptyGroup": "(leer)"
 }
