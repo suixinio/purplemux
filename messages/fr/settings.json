@@ -69,7 +69,9 @@
   },
   "claude": {
     "skipPermissions": "Ignorer les vérifications de permissions",
-    "skipPermissionsDescription": "Ajoute l'option --dangerously-skip-permissions lors de l'exécution de Claude CLI."
+    "skipPermissionsDescription": "Ajoute l'option --dangerously-skip-permissions lors de l'exécution de Claude CLI.",
+    "showTerminal": "Afficher le terminal avec Claude",
+    "showTerminalDescription": "Affiche la zone du terminal à côté de Claude Code. Désactivé, les nouveaux onglets Claude s'ouvrent avec le terminal réduit."
   },
   "auth": {
     "changePassword": "Changer le mot de passe",

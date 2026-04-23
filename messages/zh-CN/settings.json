@@ -69,7 +69,9 @@
   },
   "claude": {
     "skipPermissions": "跳过权限检查",
-    "skipPermissionsDescription": "运行Claude CLI时添加--dangerously-skip-permissions选项。"
+    "skipPermissionsDescription": "运行Claude CLI时添加--dangerously-skip-permissions选项。",
+    "showTerminal": "在 Claude 中一同显示终端",
+    "showTerminalDescription": "在 Claude Code 旁显示终端区域。关闭时，新的 Claude 标签页将以折叠的终端打开。"
   },
   "auth": {
     "changePassword": "更改密码",

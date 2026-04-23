@@ -561,6 +561,8 @@ const ClaudeTab = () => {
   const t = useTranslations('settings.claude');
   const dangerouslySkipPermissions = useConfigStore((state) => state.dangerouslySkipPermissions);
   const setDangerouslySkipPermissions = useConfigStore((state) => state.setDangerouslySkipPermissions);
+  const claudeShowTerminal = useConfigStore((state) => state.claudeShowTerminal);
+  const setClaudeShowTerminal = useConfigStore((state) => state.setClaudeShowTerminal);
 
   return (
     <div className="space-y-4">
@@ -577,6 +579,21 @@ const ClaudeTab = () => {
           id="skip-permissions"
           checked={dangerouslySkipPermissions}
           onCheckedChange={setDangerouslySkipPermissions}
+        />
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="space-y-0.5">
+          <Label htmlFor="show-terminal" className="text-sm font-medium">
+            {t('showTerminal')}
+          </Label>
+          <p className="text-sm text-muted-foreground">
+            {t('showTerminalDescription')}
+          </p>
+        </div>
+        <Switch
+          id="show-terminal"
+          checked={claudeShowTerminal}
+          onCheckedChange={setClaudeShowTerminal}
         />
       </div>
     </div>

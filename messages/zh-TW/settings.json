@@ -69,7 +69,9 @@
   },
   "claude": {
     "skipPermissions": "跳過權限檢查",
-    "skipPermissionsDescription": "執行 Claude CLI 時加入 --dangerously-skip-permissions 選項。"
+    "skipPermissionsDescription": "執行 Claude CLI 時加入 --dangerously-skip-permissions 選項。",
+    "showTerminal": "在 Claude 中一同顯示終端機",
+    "showTerminalDescription": "在 Claude Code 旁顯示終端機區域。關閉時，新的 Claude 分頁將以收合的終端機開啟。"
   },
   "auth": {
     "changePassword": "變更密碼",

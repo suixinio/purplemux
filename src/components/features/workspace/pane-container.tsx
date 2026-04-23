@@ -99,6 +99,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const { theme: terminalTheme } = useTerminalTheme();
   const configFontSize = useConfigStore((s) => s.fontSize);
+  const claudeShowTerminal = useConfigStore((s) => s.claudeShowTerminal);
+  const effectiveTerminalCollapsed = activeTab?.terminalCollapsed ?? !claudeShowTerminal;
   const [hasEverConnected, setHasEverConnected] = useState(false);
   const [sessionSwitching, setSessionSwitching] = useState(false);
   const sessionSwitchTimerRef = useRef(0);
@@ -752,10 +754,9 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     suppressTerminalSaveRef.current = true;
     if (isClaudeCode) {
       const ratio = activeTab?.terminalRatio ?? 30;
-      const collapsed = activeTab?.terminalCollapsed ?? false;
-      setIsTerminalCollapsed(collapsed);
+      setIsTerminalCollapsed(effectiveTerminalCollapsed);
       splitGroupRef.current.setLayout(
-        collapsed
+        effectiveTerminalCollapsed
           ? { timeline: 100, 'terminal-area': 0 }
           : { timeline: 100 - ratio, 'terminal-area': ratio },
       );
@@ -861,8 +862,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           defaultLayout={isClaudeCode
             ? (() => {
                 const ratio = activeTab?.terminalRatio ?? 30;
-                const collapsed = activeTab?.terminalCollapsed ?? false;
-                return collapsed
+                return effectiveTerminalCollapsed
                   ? { timeline: 100, 'terminal-area': 0 }
                   : { timeline: 100 - ratio, 'terminal-area': ratio };
               })()
@@ -875,8 +875,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             if (area === undefined) return;
             const collapsed = area <= 0;
             const patch: { terminalRatio?: number; terminalCollapsed?: boolean } = {};
-            const currentCollapsed = activeTab?.terminalCollapsed ?? false;
-            if (collapsed !== currentCollapsed) {
+            if (collapsed !== effectiveTerminalCollapsed) {
               patch.terminalCollapsed = collapsed;
               setIsTerminalCollapsed(collapsed);
             }

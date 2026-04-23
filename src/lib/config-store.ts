@@ -17,6 +17,7 @@ export interface IConfigData {
   terminalTheme?: { light: string; dark: string };
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
+  claudeShowTerminal?: boolean;
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;

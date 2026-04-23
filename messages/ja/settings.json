@@ -69,7 +69,9 @@
   },
   "claude": {
     "skipPermissions": "権限チェックをスキップ",
-    "skipPermissionsDescription": "Claude CLI実行時に--dangerously-skip-permissionsオプションを追加します。"
+    "skipPermissionsDescription": "Claude CLI実行時に--dangerously-skip-permissionsオプションを追加します。",
+    "showTerminal": "Claudeでターミナルを一緒に表示",
+    "showTerminalDescription": "Claude Codeと並べてターミナル領域を表示します。オフにすると、新しいClaudeタブはターミナルを閉じた状態で開きます。"
   },
   "auth": {
     "changePassword": "パスワード変更",

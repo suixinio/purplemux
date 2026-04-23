@@ -15,6 +15,7 @@ export interface IConfigInitialData {
   terminalTheme?: { light: string; dark: string } | null;
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
+  claudeShowTerminal?: boolean;
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
@@ -33,6 +34,7 @@ export interface IConfigInitialData {
 
 interface IConfigState {
   dangerouslySkipPermissions: boolean;
+  claudeShowTerminal: boolean;
   editorUrl: string;
   editorPreset: TEditorPreset;
   notificationsEnabled: boolean;
@@ -51,6 +53,7 @@ interface IConfigState {
 
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
+  setClaudeShowTerminal: (enabled: boolean) => void;
   setEditorUrl: (url: string) => void;
   setEditorPreset: (preset: TEditorPreset) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
@@ -75,6 +78,7 @@ const initialConfig = {
   editorUrl: '',
   editorPreset: 'code-server' as TEditorPreset,
   dangerouslySkipPermissions: false,
+  claudeShowTerminal: true,
   hasAuthPassword: false,
   locale: 'en',
   customCSS: '',
@@ -97,6 +101,7 @@ const saveConfig = (updates: Record<string, unknown>) => {
 
 const useConfigStore = create<IConfigState>((set, get) => ({
   dangerouslySkipPermissions: initialConfig.dangerouslySkipPermissions,
+  claudeShowTerminal: initialConfig.claudeShowTerminal,
   editorUrl: initialConfig.editorUrl,
   editorPreset: initialConfig.editorPreset,
   notificationsEnabled: initialConfig.notificationsEnabled,
@@ -116,6 +121,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   hydrate: (data) => {
     set({
       dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
+      claudeShowTerminal: data.claudeShowTerminal ?? true,
       editorUrl: data.editorUrl ?? '',
       editorPreset: data.editorPreset ?? 'code-server',
       notificationsEnabled: data.notificationsEnabled ?? true,
@@ -137,6 +143,11 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   setDangerouslySkipPermissions: (enabled) => {
     set({ dangerouslySkipPermissions: enabled });
     saveConfig({ dangerouslySkipPermissions: enabled });
+  },
+
+  setClaudeShowTerminal: (enabled) => {
+    set({ claudeShowTerminal: enabled });
+    saveConfig({ claudeShowTerminal: enabled });
   },
 
   setEditorUrl: (url) => {
