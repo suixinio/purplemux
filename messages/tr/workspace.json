@@ -1,6 +1,6 @@
 {
   "add": "Çalışma Alanı Ekle",
-  "renameTitle": "Çalışma Alanını Yeniden Adlandır",
+  "editTitle": "Çalışma Alanını Düzenle",
   "namePlaceholder": "Çalışma alanı adını girin",
   "projectDirectory": "Proje dizini",
   "directoryPlaceholder": "Dizin yolunu girin",

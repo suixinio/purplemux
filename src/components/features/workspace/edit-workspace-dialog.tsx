@@ -19,19 +19,19 @@ import {
 } from '@/components/ui/select';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 
-interface IRenameWorkspaceDialogProps {
+interface IEditWorkspaceDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
   currentName: string;
 }
 
-const RenameWorkspaceDialog = ({
+const EditWorkspaceDialog = ({
   open,
   onOpenChange,
   workspaceId,
   currentName,
-}: IRenameWorkspaceDialogProps) => {
+}: IEditWorkspaceDialogProps) => {
   const t = useTranslations('workspace');
   const ts = useTranslations('sidebar');
   const tc = useTranslations('common');
@@ -89,7 +89,7 @@ const RenameWorkspaceDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{t('renameTitle')}</DialogTitle>
+          <DialogTitle>{t('editTitle')}</DialogTitle>
         </DialogHeader>
 
         <Input
@@ -139,4 +139,4 @@ const RenameWorkspaceDialog = ({
   );
 };
 
-export default RenameWorkspaceDialog;
+export default EditWorkspaceDialog;

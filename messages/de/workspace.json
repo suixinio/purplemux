@@ -1,6 +1,6 @@
 {
   "add": "Arbeitsbereich hinzufügen",
-  "renameTitle": "Arbeitsbereich umbenennen",
+  "editTitle": "Arbeitsbereich bearbeiten",
   "namePlaceholder": "Arbeitsbereichsnamen eingeben",
   "projectDirectory": "Projektverzeichnis",
   "directoryPlaceholder": "Verzeichnispfad eingeben",

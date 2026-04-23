@@ -17,7 +17,7 @@ import {
 import useTabStore, { selectGlobalStatus } from '@/hooks/use-tab-store';
 import AppLogo from '@/components/layout/app-logo';
 import { useNotificationCount } from '@/components/features/workspace/notification-sheet';
-import RenameWorkspaceDialog from '@/components/features/workspace/rename-workspace-dialog';
+import EditWorkspaceDialog from '@/components/features/workspace/edit-workspace-dialog';
 
 interface IAppHeaderProps {
   onMenuOpen?: () => void;
@@ -36,7 +36,7 @@ const AppHeader = ({ onMenuOpen, workspaceId, workspaceName }: IAppHeaderProps) 
   const hasBusy = useTabStore((s) => selectGlobalStatus(s.tabs).busyCount > 0);
   const { attentionCount, busyCount } = useNotificationCount();
   const sessionsBadge = attentionCount + busyCount;
-  const [renameOpen, setRenameOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   return (
     <header className="flex h-12 shrink-0 items-center justify-between border-b border-sidebar-border bg-background px-3">
@@ -62,7 +62,7 @@ const AppHeader = ({ onMenuOpen, workspaceId, workspaceName }: IAppHeaderProps) 
             {workspaceId ? (
               <button
                 type="button"
-                onClick={() => setRenameOpen(true)}
+                onClick={() => setEditOpen(true)}
                 className="truncate rounded px-1 py-0.5 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {workspaceName}
@@ -111,9 +111,9 @@ const AppHeader = ({ onMenuOpen, workspaceId, workspaceName }: IAppHeaderProps) 
         </div>
       </TooltipProvider>
       {workspaceId && workspaceName && (
-        <RenameWorkspaceDialog
-          open={renameOpen}
-          onOpenChange={setRenameOpen}
+        <EditWorkspaceDialog
+          open={editOpen}
+          onOpenChange={setEditOpen}
           workspaceId={workspaceId}
           currentName={workspaceName}
         />

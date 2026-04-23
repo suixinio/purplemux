@@ -1,6 +1,6 @@
 {
   "add": "ワークスペースを追加",
-  "renameTitle": "ワークスペース名を変更",
+  "editTitle": "ワークスペースを編集",
   "namePlaceholder": "ワークスペース名を入力",
   "projectDirectory": "プロジェクトディレクトリ",
   "directoryPlaceholder": "ディレクトリパスを入力",
