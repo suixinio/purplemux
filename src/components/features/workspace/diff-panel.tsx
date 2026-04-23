@@ -32,9 +32,10 @@ interface ISyncStep {
 
 type TViewMode = 'split' | 'unified';
 type TTab = 'changes' | 'history';
-type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'timeout' | 'unknown';
+type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'local-changes' | 'timeout' | 'unknown';
 
 const POLL_INTERVAL = 10_000;
+const FETCH_INTERVAL = 3 * 60_000;
 const ERROR_TOAST_DURATION = 15_000;
 const MAX_STDERR_LENGTH = 800;
 
@@ -43,6 +44,7 @@ const ERROR_MESSAGE_KEYS = {
   auth: 'syncErrorAuth',
   diverged: 'syncErrorDiverged',
   rejected: 'syncErrorRejected',
+  'local-changes': 'syncErrorLocalChanges',
   timeout: 'syncErrorTimeout',
   unknown: 'syncErrorGeneric',
 } as const;
@@ -52,6 +54,7 @@ const CLAUDE_PROMPT_KEYS = {
   auth: 'claudePromptAuth',
   diverged: 'claudePromptDiverged',
   rejected: 'claudePromptRejected',
+  'local-changes': 'claudePromptLocalChanges',
   timeout: 'claudePromptTimeout',
   unknown: 'claudePromptGeneric',
 } as const;
@@ -85,12 +88,15 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
 
   const pollTimerRef = useRef(0);
   const currentHashRef = useRef('');
+  const lastFetchAtRef = useRef(0);
 
-  const fetchDiff = useCallback(async () => {
+  const fetchDiff = useCallback(async (opts: { remoteFetch?: boolean } = {}) => {
     setLoading(true);
     setHasUpdate(false);
     try {
-      const res = await fetch(`/api/layout/diff?session=${sessionName}`);
+      const params = new URLSearchParams({ session: sessionName });
+      if (opts.remoteFetch) params.set('fetch', 'true');
+      const res = await fetch(`/api/layout/diff?${params}`);
       if (!res.ok) return;
       const data = await res.json();
       setIsGitRepo(data.isGitRepo);
@@ -104,6 +110,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
         setStash(data.stash ?? 0);
         setHeadCommit(data.headCommit ?? null);
         currentHashRef.current = data.hash ?? '';
+        if (data.fetched) lastFetchAtRef.current = Date.now();
       }
     } finally {
       setLoading(false);
@@ -111,11 +118,18 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
   }, [sessionName]);
 
   const pollForChanges = useCallback(async () => {
+    const shouldFetch = Date.now() - lastFetchAtRef.current >= FETCH_INTERVAL;
     try {
-      const res = await fetch(`/api/layout/diff?session=${sessionName}&hashOnly=true`);
+      const params = new URLSearchParams({ session: sessionName, hashOnly: 'true' });
+      if (shouldFetch) params.set('fetch', 'true');
+      const res = await fetch(`/api/layout/diff?${params}`);
       if (!res.ok) return;
       const data = await res.json();
-      if (data.isGitRepo && data.hash && data.hash !== currentHashRef.current) {
+      if (!data.isGitRepo) return;
+      if (data.fetched) lastFetchAtRef.current = Date.now();
+      setAhead(data.ahead ?? 0);
+      setBehind(data.behind ?? 0);
+      if (data.hash && data.hash !== currentHashRef.current) {
         setHasUpdate(true);
       }
     } catch {
@@ -124,7 +138,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
   }, [sessionName]);
 
   const handleRefresh = useCallback(() => {
-    fetchDiff();
+    fetchDiff({ remoteFetch: true });
     setHistoryRefreshToken((n) => n + 1);
   }, [fetchDiff]);
 
@@ -193,7 +207,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
   }, [sessionName, syncing, t, fetchDiff, onSendToClaude, branch]);
 
   useEffect(() => {
-    fetchDiff();
+    fetchDiff({ remoteFetch: true });
   }, [fetchDiff]);
 
   useEffect(() => {
@@ -242,6 +256,20 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
     ? `(detached @ ${headCommit.shortHash})`
     : branch || '—';
 
+  const hasSyncWork = ahead > 0 || behind > 0;
+  const SyncIcon = behind > 0 && ahead === 0
+    ? ArrowDown
+    : ahead > 0 && behind === 0
+      ? ArrowUp
+      : ArrowDownUp;
+  const syncCountLabel = [
+    behind > 0 ? `↓${behind}` : '',
+    ahead > 0 ? `↑${ahead}` : '',
+  ].filter(Boolean).join(' ');
+  const syncTitle = syncing
+    ? t('syncing')
+    : hasSyncWork ? `${t('sync')} · ${syncCountLabel}` : t('sync');
+
   return (
     <div className="flex h-full flex-col bg-card">
       <div className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-1.5">
@@ -288,16 +316,21 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
 
               <Tooltip>
                 <TooltipTrigger
-                  className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+                  className={cn(
+                    'flex h-7 w-7 items-center justify-center rounded hover:bg-accent disabled:opacity-50',
+                    hasSyncWork && !syncing
+                      ? 'text-ui-blue'
+                      : 'text-muted-foreground hover:text-foreground',
+                  )}
                   onClick={handleSync}
                   disabled={syncing || loading}
-                  aria-label={syncing ? t('syncing') : t('sync')}
+                  aria-label={syncTitle}
                 >
                   {syncing
                     ? <Spinner className="h-3.5 w-3.5" />
-                    : <ArrowDownUp className="h-3.5 w-3.5" />}
+                    : <SyncIcon className="h-3.5 w-3.5" />}
                 </TooltipTrigger>
-                <TooltipContent side="bottom">{syncing ? t('syncing') : t('sync')}</TooltipContent>
+                <TooltipContent side="bottom">{syncTitle}</TooltipContent>
               </Tooltip>
 
               <Tooltip>

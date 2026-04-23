@@ -9,7 +9,7 @@ const log = createLogger('git-sync');
 const CMD_TIMEOUT = 30_000;
 
 type TStepName = 'fetch' | 'pull' | 'push';
-export type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'timeout' | 'unknown';
+export type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'local-changes' | 'timeout' | 'unknown';
 
 interface IStep {
   name: TStepName;
@@ -54,6 +54,11 @@ const classifyError = (step: IGitResult): TSyncErrorKind => {
     s.includes('could not read from remote') ||
     s.includes('invalid credentials')
   ) return 'auth';
+  if (
+    s.includes('would be overwritten by merge') ||
+    s.includes('would be overwritten by checkout') ||
+    s.includes('commit your changes or stash them')
+  ) return 'local-changes';
   if (s.includes('divergent') || s.includes('not possible to fast-forward') || s.includes('non-fast-forward')) {
     return step.stderr.toLowerCase().includes('push') ? 'rejected' : 'diverged';
   }

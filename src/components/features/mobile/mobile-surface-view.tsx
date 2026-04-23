@@ -72,6 +72,7 @@ const MobileSurfaceView = ({
   onDeleteTab,
   onSwitchTab,
   onRemoveTabLocally: _onRemoveTabLocally,
+  onUpdateTabPanelType,
   onCliStateChange,
   onOpenNewTabDialog,
 }: IMobileSurfaceViewProps) => {
@@ -127,6 +128,7 @@ const MobileSurfaceView = ({
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
   const pendingRestartRef = useRef<string | null>(null);
+  const pendingClaudeInputRef = useRef<string | null>(null);
   const lastTitleRef = useRef('');
   const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : null);
@@ -384,6 +386,23 @@ const MobileSurfaceView = ({
     sendStdin(`${cmd}\r`);
   }, [claudeProcess, status, sendStdin]);
 
+  const handleSendToClaude = useCallback((text: string) => {
+    if (!activeTabId) return;
+    pendingClaudeInputRef.current = text;
+    onUpdateTabPanelType(paneId, activeTabId, 'claude-code');
+  }, [activeTabId, paneId, onUpdateTabPanelType]);
+
+  useEffect(() => {
+    if (!isClaudeCode || !pendingClaudeInputRef.current) return;
+    const text = pendingClaudeInputRef.current;
+    pendingClaudeInputRef.current = null;
+    const timer = window.setTimeout(() => {
+      setInputValueRef.current?.(text);
+      focusInputRef.current?.();
+    }, 100);
+    return () => window.clearTimeout(timer);
+  }, [isClaudeCode]);
+
   const handleWebUrlChange = useCallback((url: string) => {
     if (!activeTabId || !layoutWsId) return;
     fetch(`/api/layout/pane/${paneId}/tabs/${activeTabId}?workspace=${layoutWsId}`, {
@@ -435,6 +454,7 @@ const MobileSurfaceView = ({
         <DiffPanel
           key={activeTab.sessionName}
           sessionName={activeTab.sessionName}
+          onSendToClaude={handleSendToClaude}
         />
       )}
 

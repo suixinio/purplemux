@@ -8,6 +8,7 @@ import { createLogger } from '@/lib/logger';
 const execFile = promisify(execFileCb);
 const log = createLogger('diff');
 const CMD_TIMEOUT = 10000;
+const FETCH_TIMEOUT = 20000;
 
 const getAheadBehind = async (cwd: string): Promise<{ ahead: number; behind: number }> => {
   try {
@@ -101,6 +102,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   const session = req.query.session as string | undefined;
   const hashOnly = req.query.hashOnly === 'true';
+  const doFetch = req.query.fetch === 'true';
 
   if (!session) {
     return res.status(400).json({ error: 'session parameter required' });
@@ -122,10 +124,29 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(200).json({ isGitRepo: false, diff: '', hash: '' });
   }
 
+  let fetched = false;
+  if (doFetch) {
+    try {
+      await execFile('git', ['fetch', '--prune'], { cwd, timeout: FETCH_TIMEOUT });
+      fetched = true;
+    } catch (err) {
+      log.warn(`silent fetch failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
   try {
     if (hashOnly) {
-      const hash = await computeDiffHash(cwd);
-      return res.status(200).json({ isGitRepo: true, hash });
+      const [hash, aheadBehind] = await Promise.all([
+        computeDiffHash(cwd),
+        getAheadBehind(cwd),
+      ]);
+      return res.status(200).json({
+        isGitRepo: true,
+        hash,
+        ahead: aheadBehind.ahead,
+        behind: aheadBehind.behind,
+        fetched,
+      });
     }
 
     const [{ stdout: diff }, { stdout: statusOut }, hash, aheadBehind, meta] = await Promise.all([
@@ -164,6 +185,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       isDetached: meta.isDetached,
       stash: meta.stash,
       headCommit: meta.headCommit,
+      fetched,
     });
   } catch (err) {
     log.error(`git diff failed: ${err instanceof Error ? err.message : err}`);
