@@ -50,8 +50,6 @@ purplemux leans on a handful of modern browser APIs. If any of these are missing
 
 purplemux ships a built-in self-check at **Settings → Browser check**. It runs the same probes listed above and shows a green / amber / red badge per feature, so you can verify without reading a spec sheet.
 
-On the CLI, `purplemux doctor` prints the same report to the terminal for remote debugging.
-
 ## Known quirks
 
 - **Safari 17 + private windows** — IndexedDB is disabled, so your workspace cache won't persist across restarts. Use a regular window.
