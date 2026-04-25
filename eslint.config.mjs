@@ -26,6 +26,10 @@ const eslintConfig = defineConfig([
     "electron/**",
     "release/**",
     "scripts/**",
+    // Landing site (Eleventy / CJS, separate build)
+    "landing-src/**",
+    "eleventy.config.js",
+    "_site/**",
   ]),
 ]);
 
