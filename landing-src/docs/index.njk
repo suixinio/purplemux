@@ -1,5 +1,4 @@
 ---
-layout: layouts/doc.njk
 title: Documentation
 description: Everything you need to run, customize, and extend purplemux.
 eyebrow: Start here
@@ -11,8 +10,8 @@ permalink: /docs/index.html
 {%- for group in docsNav %}
 {%- for item in group.items %}
   <a class="doc-home-card" href="/purplemux/docs/{{ item.slug }}/">
-    <span class="doc-home-card-title">{{ item.label }}</span>
-    <span class="doc-home-card-desc">{{ group.group }}</span>
+    <span class="doc-home-card-title">{{ item.label.en }}</span>
+    <span class="doc-home-card-desc">{{ group.group.en }}</span>
   </a>
 {%- endfor %}
 {%- endfor %}

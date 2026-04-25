@@ -220,12 +220,15 @@
       }
     });
 
+    var currentLocale = searchState.input.dataset.locale || 'en';
+
     fetch('/purplemux/search-index.json')
       .then(function (r) { return r.json(); })
       .then(function (data) {
-        searchState.index = data;
+        var scoped = data.filter(function (d) { return (d.locale || 'en') === currentLocale; });
+        searchState.index = scoped;
         if (typeof Fuse !== 'undefined') {
-          searchState.fuse = new Fuse(data, {
+          searchState.fuse = new Fuse(scoped, {
             keys: [
               { name: 'title', weight: 0.6 },
               { name: 'description', weight: 0.3 },

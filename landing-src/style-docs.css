@@ -95,6 +95,50 @@
 }
 .doc-nav-github:hover { color: var(--foreground); background: var(--secondary); }
 
+.doc-nav-lang {
+  position: relative;
+}
+.doc-nav-lang > summary {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.65rem;
+  height: 32px;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  border-radius: var(--radius);
+  cursor: pointer;
+  user-select: none;
+}
+.doc-nav-lang > summary::-webkit-details-marker { display: none; }
+.doc-nav-lang > summary::marker { display: none; content: ''; }
+.doc-nav-lang > summary:hover { color: var(--foreground); background: var(--secondary); }
+
+.doc-nav-lang-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+  z-index: 60;
+}
+.doc-nav-lang-menu a {
+  padding: 0.4rem 0.7rem;
+  border-radius: 4px;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  text-decoration: none;
+}
+.doc-nav-lang-menu a:hover { color: var(--foreground); background: var(--secondary); }
+.doc-nav-lang-menu a.is-active { color: var(--brand); background: var(--brand-soft); }
+
 /* ── Shell ─────────────────────────────────────────── */
 .doc-shell {
   display: grid;

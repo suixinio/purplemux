@@ -18,10 +18,22 @@ module.exports = function (eleventyConfig) {
     };
   });
 
+  eleventyConfig.addFilter('swapDocsLocale', (url) => {
+    if (typeof url !== 'string') return '/purplemux/docs/';
+    if (url.startsWith('/ko/docs/')) return '/purplemux/docs/' + url.slice(9);
+    if (url.startsWith('/docs/')) return '/purplemux/ko/docs/' + url.slice(6);
+    return '/purplemux' + url;
+  });
+
   eleventyConfig.addCollection('docs', (api) =>
     api
       .getAll()
-      .filter((item) => item.url && item.url.startsWith('/docs/') && item.url !== '/docs/')
+      .filter((item) => {
+        if (!item.url) return false;
+        const isDoc = item.url.startsWith('/docs/') || item.url.startsWith('/ko/docs/');
+        const isIndex = item.url === '/docs/' || item.url === '/ko/docs/';
+        return isDoc && !isIndex;
+      })
       .sort((a, b) => (a.url > b.url ? 1 : -1)),
   );
 
