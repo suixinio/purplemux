@@ -331,7 +331,8 @@
   }
   .doc-sidebar.is-open { transform: translateX(0); }
   .doc-sidebar-close { display: inline-flex; }
-  .doc-main { padding: 2rem 1.25rem 3rem; }
+  .doc-main { padding: 1rem 1.25rem 3rem; }
+  .doc-header { margin-bottom: 1.5rem; padding-bottom: 1rem; }
 }
 
 .doc-article { max-width: var(--doc-content-max); min-width: 0; }
@@ -407,7 +408,6 @@
 }
 
 .doc-content pre {
-  position: relative;
   padding: 1rem 1.1rem;
   background: var(--card);
   border: 1px solid var(--border);
@@ -418,6 +418,27 @@
   line-height: 1.6;
 }
 .doc-content pre code { color: var(--foreground); background: transparent; border: 0; padding: 0; }
+
+.code-block-wrap {
+  position: relative;
+}
+.code-block-wrap .copy-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  background: var(--secondary);
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  transition: color 120ms;
+}
+.code-block-wrap .copy-btn:hover { color: var(--foreground); }
+.code-block-wrap .copy-btn.is-copied { color: var(--ui-teal); }
 
 .doc-content blockquote {
   border-left: 3px solid var(--brand);

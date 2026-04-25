@@ -53,27 +53,32 @@
 
   function addCopyButtons() {
     document.querySelectorAll('.doc-content pre').forEach(function (pre) {
-      if (pre.querySelector('.copy-btn')) return;
+      var parent = pre.parentElement;
+      if (parent && parent.classList.contains('code-block-wrap')) return;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'code-block-wrap';
+      parent.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+
       var btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'copy-btn';
       btn.setAttribute('aria-label', 'Copy');
       btn.textContent = '⧉';
-      btn.style.cssText = 'position:absolute;top:8px;right:8px;width:26px;height:26px;border:1px solid var(--border);background:var(--secondary);color:var(--muted-foreground);border-radius:4px;cursor:pointer;font-family:inherit;font-size:13px;';
       btn.addEventListener('click', function () {
         var code = pre.querySelector('code');
         var text = code ? code.innerText : pre.innerText;
         navigator.clipboard.writeText(text).then(function () {
           btn.textContent = '✓';
-          btn.style.color = 'var(--ui-teal)';
+          btn.classList.add('is-copied');
           setTimeout(function () {
             btn.textContent = '⧉';
-            btn.style.color = 'var(--muted-foreground)';
+            btn.classList.remove('is-copied');
           }, 1400);
         });
       });
-      pre.style.position = 'relative';
-      pre.appendChild(btn);
+      wrap.appendChild(btn);
     });
   }
 
