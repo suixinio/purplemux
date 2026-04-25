@@ -48,9 +48,9 @@ E ainda
 - **Gerenciamento de abas** — Múltiplas abas, reordenação por arrasto, títulos automáticos baseados no nome do processo
 - **Atalhos de teclado** — Divisão, troca de abas, movimento de foco
 - **Temas do terminal** — Modo escuro / claro e vários esquemas de cores
-- **Workspaces** — Salve e restaure layouts de painéis, abas e diretórios de trabalho por workspace
-- **Visualizador de Git Diff** — Inspecione o git diff direto em um painel do terminal. Alternância Side-by-side / Line-by-line com destaque de sintaxe
-- **Painel de navegador web** — Navegador embutido ao lado do terminal para conferir o resultado de desenvolvimento (Electron)
+- **Workspaces e grupos** — Salve e restaure layouts de painéis, abas e diretórios de trabalho por workspace. Organize os workspaces em grupos com arrastar e soltar
+- **Fluxo de trabalho Git** — Side-by-side / Line-by-line com destaque de sintaxe, expansão de hunks inline e uma aba de histórico paginada. Fetch / pull / push direto do painel com indicadores ahead/behind — se o sync falhar (dirty worktree, conflitos), Ask Claude em um clique
+- **Painel de navegador web** — Navegador embutido ao lado do terminal para conferir o resultado de desenvolvimento (Electron). Controle pelo CLI `purplemux` e alterne viewports com um emulador de dispositivo integrado
 
 ### Integração com Claude Code
 
@@ -59,6 +59,7 @@ E ainda
 - **Resume em um clique** — Retome sessões pausadas direto do navegador
 - **Resume automático** — Restauração automática de sessões anteriores do Claude ao iniciar o servidor
 - **Prompts rápidos** — Cadastre prompts frequentes e envie com um clique
+- **Anexos** — Solte imagens no campo de chat ou anexe arquivos para inserir o caminho. Funciona também no mobile
 - **Histórico de mensagens** — Reutilize mensagens anteriores
 - **Estatísticas de uso** — Tokens (input / output / cache read / cache write), custo, análise por projeto e relatórios de IA diários
 - **Rate limit** — Saldo de 5 horas / 7 dias com contagem regressiva de reset

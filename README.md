@@ -48,9 +48,9 @@ Plus
 - **Tab management** — Multiple tabs, drag to reorder, auto titles from process names
 - **Keyboard shortcuts** — Splits, tab switching, focus movement
 - **Terminal themes** — Dark / light mode, multiple color themes
-- **Workspaces** — Save and restore panel layouts, tabs, and working directories as workspaces
-- **Git diff viewer** — Inspect git diffs right inside a terminal panel. Toggle side-by-side / line-by-line, with syntax highlighting
-- **Web browser panel** — An embedded browser next to the terminal for checking dev output (Electron)
+- **Workspaces & groups** — Save and restore panel layouts, tabs, and working directories. Organize workspaces into groups with drag-and-drop
+- **Git workflow** — Side-by-side / line-by-line diff with syntax highlighting, inline hunk expansion, and a paginated history tab. Fetch / pull / push from the panel with ahead/behind indicators — if sync fails (dirty worktree, conflicts), Ask Claude in one click
+- **Web browser panel** — Embedded browser for checking dev output (Electron). Drive it from the `purplemux` CLI and switch viewports with a built-in device emulator
 
 ### Claude Code integration
 
@@ -59,6 +59,7 @@ Plus
 - **One-click resume** — Restart a paused session directly from the browser
 - **Auto resume** — Recover previous Claude sessions on server start
 - **Quick prompts** — Register frequently used prompts and send with one click
+- **Attachments** — Drop images into the chat input, or attach files to insert their paths. Works on mobile
 - **Message history** — Reuse previous messages
 - **Usage analytics** — Tokens (input / output / cache read / cache write), cost, per-project breakdowns, daily AI reports
 - **Rate limits** — 5-hour / 7-day remaining usage with reset countdown

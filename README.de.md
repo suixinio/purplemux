@@ -48,9 +48,9 @@ Außerdem
 - **Tab-Management** — Mehrere Tabs, Reihenfolge per Drag, automatische Titel auf Basis der Prozessnamen
 - **Tastenkürzel** — Splits, Tab-Wechsel, Fokusbewegung
 - **Terminal-Themes** — Dark-/Light-Modus, mehrere Farbschemata
-- **Workspaces** — Panel-Layouts, Tabs und Arbeitsverzeichnisse pro Workspace speichern und wiederherstellen
-- **Git-Diff-Viewer** — Git-Diffs direkt im Terminal-Panel einsehen. Umschaltbar zwischen Side-by-side / Line-by-line, mit Syntax-Highlighting
-- **Webbrowser-Panel** — Eingebetteter Browser neben dem Terminal zum Prüfen der Entwicklungsausgabe (Electron)
+- **Workspaces & Gruppen** — Panel-Layouts, Tabs und Arbeitsverzeichnisse pro Workspace speichern und wiederherstellen. Workspaces per Drag-and-Drop in Gruppen organisieren
+- **Git-Workflow** — Side-by-side / Line-by-line mit Syntax-Highlighting, Inline-Hunk-Erweiterung und ein paginierter Verlaufs-Tab. Fetch / Pull / Push direkt aus dem Panel (mit Ahead/Behind-Anzeige) — schlägt der Sync fehl (dirty worktree, Konflikte), per Klick Claude fragen
+- **Webbrowser-Panel** — Eingebetteter Browser neben dem Terminal zum Prüfen der Entwicklungsausgabe (Electron). Über die `purplemux`-CLI steuerbar, mit eingebautem Geräte-Emulator zum Umschalten der Viewports
 
 ### Claude-Code-Integration
 
@@ -59,6 +59,7 @@ Außerdem
 - **Ein-Klick-Resume** — Unterbrochene Sessions direkt im Browser wieder aufnehmen
 - **Auto-Resume** — Stellt beim Serverstart vorherige Claude-Sessions automatisch wieder her
 - **Schnell-Prompts** — Häufig genutzte Prompts hinterlegen und mit einem Klick senden
+- **Anhänge** — Bilder direkt in die Chat-Eingabe ziehen oder Dateien anhängen, deren Pfad automatisch eingefügt wird. Funktioniert auch mobil
 - **Nachrichtenverlauf** — Frühere Nachrichten wiederverwenden
 - **Nutzungsstatistik** — Tokens (input / output / cache read / cache write), Kosten, Auswertung pro Projekt, tägliche KI-Berichte
 - **Rate-Limits** — Restkontingent 5 Stunden / 7 Tage mit Reset-Countdown

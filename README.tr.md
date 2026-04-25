@@ -48,9 +48,9 @@ Ayrıca
 - **Sekme yönetimi** — Çoklu sekme, sürükleyerek sıralama, süreç adına dayalı otomatik başlıklar
 - **Klavye kısayolları** — Bölme, sekme değiştirme, odak hareketi
 - **Terminal temaları** — Koyu / açık mod, çeşitli renk temaları
-- **Çalışma alanları** — Panel düzenini, sekmeleri ve çalışma dizinlerini çalışma alanı bazında kaydedin ve geri yükleyin
-- **Git diff görüntüleyici** — Git diff'leri doğrudan terminal panelinde inceleyin. Side-by-side / Line-by-line geçişi ve sözdizimi vurgulaması
-- **Web tarayıcı paneli** — Geliştirme çıktısını kontrol etmek için terminalin yanında gömülü tarayıcı (Electron)
+- **Çalışma alanları & gruplar** — Panel düzenini, sekmeleri ve çalışma dizinlerini çalışma alanı bazında kaydedin ve geri yükleyin. Çalışma alanlarını sürükle-bırak ile gruplara ayırarak yönetin
+- **Git iş akışı** — Side-by-side / Line-by-line geçişi ve sözdizimi vurgulamasıyla birlikte satır içi hunk genişletme ve sayfalandırılmış geçmiş sekmesi. Panelden doğrudan fetch / pull / push (ahead/behind göstergeleriyle) — sync başarısız olursa (dirty worktree, çakışma) tek tıkla Ask Claude
+- **Web tarayıcı paneli** — Geliştirme çıktısını kontrol etmek için terminalin yanında gömülü tarayıcı (Electron). `purplemux` CLI'dan kontrol edin ve dahili cihaz öykünücüsüyle viewport'u değiştirin
 
 ### Claude Code entegrasyonu
 
@@ -59,6 +59,7 @@ Ayrıca
 - **Tek tıkla Resume** — Duraklatılmış oturumu doğrudan tarayıcıdan devam ettirin
 - **Otomatik Resume** — Sunucu başlatıldığında önceki Claude oturumlarını otomatik olarak kurtarır
 - **Hızlı prompt'lar** — Sık kullanılan prompt'ları kaydedin ve tek tıkla gönderin
+- **Ekler** — Sohbet alanına görseller bırakın veya dosya ekleyerek yolunu otomatik ekletin. Mobilde de çalışır
 - **Mesaj geçmişi** — Önceki mesajları tekrar kullanın
 - **Kullanım istatistikleri** — Token'lar (input / output / cache read / cache write), maliyet, proje bazlı kırılım, günlük AI raporları
 - **Rate limit** — 5 saat / 7 gün kalan kullanım ve sıfırlama geri sayımı

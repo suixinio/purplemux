@@ -48,9 +48,9 @@ Además
 - **Gestión de pestañas** — Múltiples pestañas, reordenación por arrastre, títulos automáticos basados en el nombre del proceso
 - **Atajos de teclado** — División, cambio de pestaña, movimiento de foco
 - **Temas de terminal** — Modo oscuro / claro y varios esquemas de color
-- **Workspaces** — Guarda y restaura diseños de paneles, pestañas y directorios de trabajo por workspace
-- **Visor de git diff** — Inspecciona diffs directamente en un panel del terminal. Conmuta entre Side-by-side / Line-by-line, con resaltado de sintaxis
-- **Panel de navegador web** — Navegador integrado junto al terminal para comprobar la salida de desarrollo (Electron)
+- **Workspaces y grupos** — Guarda y restaura diseños de paneles, pestañas y directorios de trabajo por workspace. Organiza los workspaces en grupos con arrastrar y soltar
+- **Flujo de trabajo Git** — Side-by-side / Line-by-line con resaltado de sintaxis, expansión de hunks en línea y una pestaña de historial paginada. Fetch / pull / push desde el panel con indicadores ahead/behind — si la sincronización falla (dirty worktree, conflictos), Ask Claude con un clic
+- **Panel de navegador web** — Navegador integrado junto al terminal para comprobar la salida de desarrollo (Electron). Contrólalo desde la CLI `purplemux` y cambia el viewport con un emulador de dispositivo integrado
 
 ### Integración con Claude Code
 
@@ -59,6 +59,7 @@ Además
 - **Reanudación en un clic** — Retoma una sesión pausada directamente desde el navegador
 - **Reanudación automática** — Recupera sesiones previas de Claude al arrancar el servidor
 - **Prompts rápidos** — Registra prompts frecuentes y envíalos con un clic
+- **Adjuntos** — Suelta imágenes en el cuadro de chat o adjunta archivos para insertar su ruta. También funciona en móvil
 - **Historial de mensajes** — Reutiliza mensajes anteriores
 - **Estadísticas de uso** — Tokens (input / output / cache read / cache write), coste, desglose por proyecto e informes diarios de IA
 - **Rate limits** — Saldo de 5 horas / 7 días y cuenta atrás para el reinicio

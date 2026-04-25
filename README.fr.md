@@ -48,9 +48,9 @@ Et aussi
 - **Gestion des onglets** — Onglets multiples, réorganisation par glisser, titres automatiques basés sur les noms de processus
 - **Raccourcis clavier** — Découpe, changement d'onglet, déplacement du focus
 - **Thèmes du terminal** — Mode sombre / clair, plusieurs palettes de couleurs
-- **Workspaces** — Sauvegardez et restaurez la disposition des panneaux, onglets et répertoires par workspace
-- **Visualiseur Git Diff** — Consultez le git diff directement dans un panneau du terminal. Bascule Side-by-side / Line-by-line, avec coloration syntaxique
-- **Panneau navigateur web** — Navigateur intégré à côté du terminal pour vérifier le rendu du développement (Electron)
+- **Workspaces et groupes** — Sauvegardez et restaurez la disposition des panneaux, onglets et répertoires par workspace. Organisez les workspaces en groupes par glisser-déposer
+- **Flux de travail Git** — Side-by-side / Line-by-line avec coloration syntaxique, expansion des hunks en ligne et un onglet d'historique paginé. Fetch / pull / push depuis le panneau, avec indicateurs ahead/behind — si la synchronisation échoue (dirty worktree, conflits), Ask Claude en un clic
+- **Panneau navigateur web** — Navigateur intégré à côté du terminal pour vérifier le rendu du développement (Electron). Pilotable depuis la CLI `purplemux` et changement de viewport via un émulateur d'appareil intégré
 
 ### Intégration Claude Code
 
@@ -59,6 +59,7 @@ Et aussi
 - **Reprise en un clic** — Reprenez une session suspendue directement depuis le navigateur
 - **Reprise automatique** — Restauration automatique des sessions Claude au démarrage du serveur
 - **Prompts rapides** — Enregistrez vos prompts récurrents et envoyez-les en un clic
+- **Pièces jointes** — Déposez des images dans le champ de chat, ou attachez des fichiers pour insérer leur chemin. Fonctionne aussi sur mobile
 - **Historique des messages** — Réutilisez vos anciens messages
 - **Statistiques d'usage** — Tokens (input / output / cache read / cache write), coût, ventilation par projet, rapports IA quotidiens
 - **Rate limits** — Solde 5 heures / 7 jours, compte à rebours de réinitialisation
