@@ -1,0 +1,37 @@
+---
+layout: layouts/doc.njk
+title: Keyboard shortcuts
+description: Every binding, auto-generated from src/lib/keyboard-shortcuts.ts.
+eyebrow: Reference
+permalink: /docs/keyboard-shortcuts/index.html
+---
+<p>These bindings come straight from <code>src/lib/keyboard-shortcuts.ts</code>. The page is rebuilt on every deploy, so it's always in sync with the app.</p>
+
+<p>On macOS the modifiers show as <kbd>⌘</kbd> (Cmd), <kbd>⌃</kbd> (Ctrl), <kbd>⌥</kbd> (Option), <kbd>⇧</kbd> (Shift). On Linux / Windows the same actions use <kbd>Ctrl</kbd> / <kbd>Alt</kbd> / <kbd>Shift</kbd>.</p>
+
+<div class="callout callout--tip">
+  <div class="callout-title">Customize</div>
+  <div class="callout-body">Open <strong>Settings → Shortcuts</strong> to rebind any editable action. Disabled bindings show <code>editable: false</code> in the source and are reserved for the number-row shortcuts.</div>
+</div>
+
+{%- for group in shortcuts %}
+<h2 id="{{ group.key }}">{{ group.label }}</h2>
+<table class="shortcut-table">
+  <thead>
+    <tr>
+      <th>Action</th>
+      <th>macOS</th>
+      <th>Linux / Windows</th>
+    </tr>
+  </thead>
+  <tbody>
+{%- for a in group.actions %}
+    <tr>
+      <td>{{ a.label }}</td>
+      <td><kbd>{{ a.mac }}</kbd></td>
+      <td><kbd>{{ a.other }}</kbd></td>
+    </tr>
+{%- endfor %}
+  </tbody>
+</table>
+{%- endfor %}

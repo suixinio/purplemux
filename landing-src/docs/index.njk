@@ -1,0 +1,19 @@
+---
+layout: layouts/doc.njk
+title: Documentation
+description: Everything you need to run, customize, and extend purplemux.
+eyebrow: Start here
+permalink: /docs/index.html
+---
+<p>These guides walk through installation, everyday use, and the internals. If you're brand new, start with <a href="/purplemux/docs/quickstart/">Quickstart</a>.</p>
+
+<div class="doc-home-grid">
+{%- for group in docsNav %}
+{%- for item in group.items %}
+  <a class="doc-home-card" href="/purplemux/docs/{{ item.slug }}/">
+    <span class="doc-home-card-title">{{ item.label }}</span>
+    <span class="doc-home-card-desc">{{ group.group }}</span>
+  </a>
+{%- endfor %}
+{%- endfor %}
+</div>
