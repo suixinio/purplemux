@@ -156,13 +156,15 @@ const TimelineEntryRenderer = ({ entry, sessionName }: { entry: ITimelineEntry; 
 };
 
 const SkeletonLoader = () => (
-  <div className="animate-delayed-fade-in flex flex-col gap-4 p-4">
-    {[48, 36, 40].map((w, i) => (
-      <div key={i} className="flex flex-col gap-2">
-        <div className="h-4 animate-pulse rounded bg-claude-active/20" style={{ width: `${w}%` }} />
-        <div className="h-4 animate-pulse rounded bg-claude-active/20" style={{ width: `${w - 10}%` }} />
-      </div>
-    ))}
+  <div className="mx-auto max-w-content">
+    <div className="animate-delayed-fade-in flex flex-col gap-4 p-4">
+      {[48, 36, 40].map((w, i) => (
+        <div key={i} className="flex flex-col gap-2">
+          <div className="h-4 animate-pulse rounded bg-claude-active/20" style={{ width: `${w}%` }} />
+          <div className="h-4 animate-pulse rounded bg-claude-active/20" style={{ width: `${w - 10}%` }} />
+        </div>
+      ))}
+    </div>
   </div>
 );
 
