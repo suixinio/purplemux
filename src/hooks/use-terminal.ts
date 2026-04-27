@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import type { ITerminalThemeColors } from "@/lib/terminal-themes";
 import { createMultilineUrlLinkProvider } from "@/lib/multiline-url-link-provider";
+import { copyToClipboard } from "@/lib/clipboard";
 import isElectron from "@/hooks/use-is-electron";
 
 interface IUseTerminalOptions {
@@ -186,29 +187,11 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
         readText: () => '',
         writeText: async (_selection, text) => {
           if (!text) return;
-          try {
-            if (window.isSecureContext && navigator.clipboard) {
-              await navigator.clipboard.writeText(text);
-            } else {
-              // HTTP(비-secure context)에서는 navigator.clipboard가 없으므로 레거시 폴백
-              const ta = document.createElement('textarea');
-              ta.value = text;
-              ta.setAttribute('readonly', '');
-              ta.style.position = 'fixed';
-              ta.style.top = '0';
-              ta.style.left = '0';
-              ta.style.opacity = '0';
-              ta.style.pointerEvents = 'none';
-              document.body.appendChild(ta);
-              ta.select();
-              const ok = document.execCommand('copy');
-              document.body.removeChild(ta);
-              if (!ok) throw new Error('execCommand copy failed');
-            }
+          const ok = await copyToClipboard(text);
+          if (ok) {
             toast.success(callbacksRef.current.t('copyPaneSuccess'), { id: COPY_TOAST_ID, duration: 1500 });
-          } catch {
-            // 브라우저 권한/포커스 이슈는 조용히 무시
           }
+          // 실패 시 브라우저 권한/포커스 이슈는 조용히 무시
         },
       };
       terminal.loadAddon(new ClipboardAddon(undefined, clipboardProvider));

@@ -9,6 +9,7 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from '@/components/ui/drawer';
+import { copyToClipboard } from '@/lib/clipboard';
 
 interface ICopyPaneDrawerProps {
   open: boolean;
@@ -60,11 +61,11 @@ const CopyPaneDrawer = ({ open, onOpenChange, sessionName }: ICopyPaneDrawerProp
 
   const handleCopyAll = useCallback(async () => {
     if (!content) return;
-    try {
-      await navigator.clipboard.writeText(content);
+    const ok = await copyToClipboard(content);
+    if (ok) {
       toast.success(t('copyPaneSuccess'), { duration: 1500 });
       onOpenChange(false);
-    } catch {
+    } else {
       toast.error(t('copyPaneCopyFailed'));
     }
   }, [content, onOpenChange, t]);

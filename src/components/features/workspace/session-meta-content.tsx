@@ -5,15 +5,17 @@ import { GitBranch, GitCommit, CircleDot, FilePen, FileQuestion, ArrowUp, ArrowD
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { formatTokenCount, formatTokenDetail, formatCost } from '@/lib/claude-tokens';
+import { copyToClipboard } from '@/lib/clipboard';
 import type { IGitStatus } from '@/lib/git-status';
 import ContextRing from '@/components/features/workspace/context-ring';
 
 const CopyIconButton = ({ text, className }: { text: string; className?: string }) => {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = (e: React.MouseEvent) => {
+  const handleCopy = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(text);
+    const ok = await copyToClipboard(text);
+    if (!ok) return;
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
