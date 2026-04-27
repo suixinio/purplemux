@@ -34,6 +34,8 @@ const PENDING_AUTOHIDE_DELAY_MS = 1000;
 const PENDING_FADE_OUT_DURATION_MS = 200;
 const ATTACHMENT_PLACEHOLDER_TIMEOUT_MS = 60_000;
 
+const normalizeUserMessageText = (s: string) => s.replace(/\s+/g, ' ').trim();
+
 interface IUseTimelineReturn {
   entries: ITimelineEntry[];
   tasks: ITaskItem[];
@@ -152,9 +154,9 @@ const useTimeline = ({
       const updated = [...prev];
       for (const entry of newEntries) {
         if (entry.type === 'user-message') {
-          const target = entry.text.trim();
+          const target = normalizeUserMessageText(entry.text);
           const pendingIdx = updated.findIndex(
-            (e) => e.type === 'user-message' && e.pending && (e.attachmentPlaceholder || e.text.trim() === target),
+            (e) => e.type === 'user-message' && e.pending && (e.attachmentPlaceholder || normalizeUserMessageText(e.text) === target),
           );
           if (pendingIdx !== -1) {
             const pending = updated[pendingIdx] as ITimelineEntry & { type: 'user-message' };
