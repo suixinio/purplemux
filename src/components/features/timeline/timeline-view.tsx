@@ -392,6 +392,12 @@ const TimelineView = ({
     }
     if (wasBusyRef.current) {
       wasBusyRef.current = false;
+      const lastUserIdx = entries.findLastIndex((e) => e.id === anchorUserId);
+      const hasResponseAfter = lastUserIdx >= 0 && entries.length > lastUserIdx + 1;
+      if (hasResponseAfter) {
+        shrinkSpacerSafely();
+        return;
+      }
       pendingShrinkRef.current = true;
       entryCountAtArmRef.current = entries.length;
       return;
@@ -400,7 +406,7 @@ const TimelineView = ({
       pendingShrinkRef.current = false;
       shrinkSpacerSafely();
     }
-  }, [cliState, anchorUserId, entries.length, shrinkSpacerSafely]);
+  }, [cliState, anchorUserId, entries, shrinkSpacerSafely]);
 
   const canObserveOverflow = !isLoading && !error && hasDisplayItems && !skipAnimation;
   useEffect(() => {
