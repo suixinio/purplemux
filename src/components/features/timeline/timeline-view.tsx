@@ -251,7 +251,6 @@ const TimelineView = ({
   const armedRef = useRef(false);
   const wasBusyRef = useRef(false);
   const pendingShrinkRef = useRef(false);
-  const entryCountAtArmRef = useRef(-1);
   const { scrollRef, contentRef, scrollToBottom } = useStickToBottom({
     resize: { damping: 0.8, stiffness: 0.05 },
     initial: 'instant',
@@ -298,8 +297,13 @@ const TimelineView = ({
     if (armedRef.current && lastUserMessageId && lastUserMessageId !== anchorUserId) {
       setAnchorUserId(lastUserMessageId);
       armedRef.current = false;
+      return;
     }
-  }, [lastUserMessageId, anchorUserId]);
+    if (anchorUserId && lastUserMessageId && lastUserMessageId !== anchorUserId) {
+      const anchorExists = entries.some((e) => e.id === anchorUserId);
+      if (!anchorExists) setAnchorUserId(lastUserMessageId);
+    }
+  }, [lastUserMessageId, anchorUserId, entries]);
 
   const [shouldProbeResumeDialog, setShouldProbeResumeDialog] = useState(false);
   const currentContextTokens = sessionStats?.currentContextTokens ?? 0;
@@ -384,6 +388,16 @@ const TimelineView = ({
   }, [scrollRef, measureSpacer]);
 
   useEffect(() => {
+    const contentEl = contentRef.current;
+    if (!contentEl) return;
+    const ro = new ResizeObserver(() => {
+      if (pendingShrinkRef.current) shrinkSpacerSafely();
+    });
+    ro.observe(contentEl);
+    return () => ro.disconnect();
+  }, [contentRef, shrinkSpacerSafely]);
+
+  useEffect(() => {
     if (!anchorUserId) return;
     if (cliState === 'busy') {
       wasBusyRef.current = true;
@@ -392,18 +406,14 @@ const TimelineView = ({
     }
     if (wasBusyRef.current) {
       wasBusyRef.current = false;
-      const lastUserIdx = entries.findLastIndex((e) => e.id === anchorUserId);
-      const hasResponseAfter = lastUserIdx >= 0 && entries.length > lastUserIdx + 1;
-      if (hasResponseAfter) {
-        shrinkSpacerSafely();
-        return;
-      }
       pendingShrinkRef.current = true;
-      entryCountAtArmRef.current = entries.length;
-      return;
+    } else if (!pendingShrinkRef.current) {
+      const lastUserIdx = entries.findLastIndex((e) => e.id === anchorUserId);
+      if (lastUserIdx >= 0 && entries.length > lastUserIdx + 1) {
+        pendingShrinkRef.current = true;
+      }
     }
-    if (pendingShrinkRef.current && entries.length !== entryCountAtArmRef.current) {
-      pendingShrinkRef.current = false;
+    if (pendingShrinkRef.current) {
       shrinkSpacerSafely();
     }
   }, [cliState, anchorUserId, entries, shrinkSpacerSafely]);
