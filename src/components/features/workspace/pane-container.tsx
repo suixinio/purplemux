@@ -23,6 +23,7 @@ import DiffPanel from '@/components/features/workspace/diff-panel';
 import PaneDisconnectedOverlay from '@/components/features/workspace/pane-disconnected-overlay';
 import PaneClaudeModePrompt from '@/components/features/workspace/pane-claude-mode-prompt';
 import PanePathInputOverlay from '@/components/features/workspace/pane-path-input-overlay';
+import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
@@ -38,6 +39,7 @@ interface ITermActions {
   reset: () => void;
   fit: () => { cols: number; rows: number };
   focus: () => void;
+  getBufferText: () => string;
 }
 
 interface IWsActions {
@@ -50,6 +52,7 @@ const NOOP_TERM_ACTIONS: ITermActions = {
   reset: () => {},
   fit: () => ({ cols: 80, rows: 24 }),
   focus: () => {},
+  getBufferText: () => '',
 };
 
 const NOOP_WS_ACTIONS: IWsActions = {
@@ -232,6 +235,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const claudeModeShownTabsRef = useRef<Set<string>>(new Set());
   const [showClaudeModePrompt, setShowClaudeModePrompt] = useState(false);
 
+  const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
+    enabled: isClaudeCode && claudeCliState === 'inactive',
+    getBufferText: () => termActionsRef.current.getBufferText(),
+    sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+  });
+
   useEffect(() => {
     if (!activeTabId || !isClaudeCode) return;
     if (isFocused && isCliIdle(claudeCliState)) {
@@ -300,7 +309,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     return true;
   }, []);
 
-  const { terminalRef, write, clear, reset, fit, focus, isReady } = useTerminal({
+  const { terminalRef, write, clear, reset, fit, focus, isReady, getBufferText } = useTerminal({
     theme: terminalTheme.colors,
     fontSize: (TERMINAL_FONT_SIZES[configFontSize] ?? TERMINAL_FONT_SIZES.normal)[isClaudeCode ? 'claudeCode' : 'normal'],
     onInput: (data) => {
@@ -408,7 +417,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     sendWebStdin,
     sendResize,
   } = useTerminalWebSocket({
-    onData: (data) => termActionsRef.current.write(data),
+    onData: (data) => {
+      termActionsRef.current.write(data);
+      onTrustData();
+    },
     onConnected: () => {
       setHasEverConnected(true);
       prevConnectedTabIdRef.current = activeTabIdRef.current;
@@ -427,7 +439,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   });
 
   useEffect(() => {
-    termActionsRef.current = { write, reset, fit, focus };
+    termActionsRef.current = { write, reset, fit, focus, getBufferText };
     wsActionsRef.current = { sendStdin, sendResize };
   });
 
@@ -916,6 +928,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   scrollToBottomRef={scrollToBottomRef}
                   addPendingMessageRef={addPendingMessageRef}
                   removePendingMessageRef={removePendingMessageRef}
+                  trustPrompt={trustPrompt}
+                  onTrustResponse={onTrustResponse}
                 />
               )}
               {isClaudeCode && !showInitialLoading && claudeInputVisible && (

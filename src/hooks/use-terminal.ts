@@ -122,6 +122,19 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
     terminalInstance.current?.clear();
   }, []);
 
+  const getBufferText = useCallback((): string => {
+    const term = terminalInstance.current;
+    if (!term) return '';
+    const buf = term.buffer.active;
+    const start = Math.max(0, buf.length - term.rows);
+    const lines: string[] = [];
+    for (let y = start; y < buf.length; y++) {
+      const line = buf.getLine(y);
+      lines.push(line ? line.translateToString(true) : '');
+    }
+    return lines.join('\n');
+  }, []);
+
   const fit = useCallback((): { cols: number; rows: number } => {
     const fitAddon = fitAddonRef.current;
     const terminal = terminalInstance.current;
@@ -317,7 +330,7 @@ const useTerminal = ({ theme, fontSize = DEFAULT_FONT_SIZE, onInput, onResize, o
     }
   }, [fontSize]);
 
-  return { terminalRef, write, clear, reset, fit, focus, isReady };
+  return { terminalRef, write, clear, reset, fit, focus, isReady, getBufferText };
 };
 
 export default useTerminal;

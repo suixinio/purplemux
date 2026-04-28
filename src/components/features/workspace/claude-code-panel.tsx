@@ -11,7 +11,9 @@ import { useSessionMetaCompute } from '@/hooks/use-session-meta';
 import SessionListView from '@/components/features/workspace/session-list-view';
 import SessionEmptyView from '@/components/features/workspace/session-empty-view';
 import BypassPromptCard from '@/components/features/workspace/bypass-prompt-card';
+import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 import SessionMetaBar, { SessionMetaBarSkeleton } from '@/components/features/workspace/session-meta-bar';
 
 interface IClaudeCodePanelProps {
@@ -25,6 +27,8 @@ interface IClaudeCodePanelProps {
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
   addPendingMessageRef?: React.MutableRefObject<((text: string, options?: { autoHide?: boolean; attachmentPlaceholder?: boolean }) => string) | undefined>;
   removePendingMessageRef?: React.MutableRefObject<((id: string) => void) | undefined>;
+  trustPrompt?: ITrustPromptInfo | null;
+  onTrustResponse?: (answer: TTrustAnswer) => void;
 }
 
 const ClaudeCodePanel = ({
@@ -38,6 +42,8 @@ const ClaudeCodePanel = ({
   scrollToBottomRef,
   addPendingMessageRef,
   removePendingMessageRef,
+  trustPrompt,
+  onTrustResponse,
 }: IClaudeCodePanelProps) => {
   const t = useTranslations('terminal');
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
@@ -184,6 +190,20 @@ const ClaudeCodePanel = ({
       <div className={cn('flex h-full w-full flex-col items-center justify-center gap-3 text-muted-foreground', className)}>
         <span className="text-sm font-medium">{t('installClaude')}</span>
         <span className="text-xs">{t('installClaudeHint')}</span>
+      </div>
+    );
+  }
+
+  if (trustPrompt && onTrustResponse) {
+    return (
+      <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
+        <TrustPromptCard folderPath={trustPrompt.folderPath} onRespond={onTrustResponse} />
+        <button
+          className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          onClick={onClose}
+        >
+          {t('checkTerminal')}
+        </button>
       </div>
     );
   }

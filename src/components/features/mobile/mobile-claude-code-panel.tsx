@@ -15,7 +15,9 @@ import useMessageCounts from '@/hooks/use-message-counts';
 import SessionListView from '@/components/features/workspace/session-list-view';
 import SessionEmptyView from '@/components/features/workspace/session-empty-view';
 import BypassPromptCard from '@/components/features/workspace/bypass-prompt-card';
+import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
 import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
 import { MetaCompact } from '@/components/features/workspace/session-meta-content';
@@ -38,6 +40,8 @@ interface IMobileClaudeCodePanelProps {
   onInputVisibleChange: (visible: boolean) => void;
   onRestartSession?: () => void;
   onNewSession?: () => void;
+  trustPrompt?: ITrustPromptInfo | null;
+  onTrustResponse?: (answer: TTrustAnswer) => void;
 }
 
 const MobileClaudeCodePanel = ({
@@ -55,6 +59,8 @@ const MobileClaudeCodePanel = ({
   onInputVisibleChange,
   onRestartSession,
   onNewSession,
+  trustPrompt,
+  onTrustResponse,
 }: IMobileClaudeCodePanelProps) => {
   const t = useTranslations('terminal');
   const { prompts: quickPrompts } = useQuickPrompts();
@@ -202,6 +208,14 @@ const MobileClaudeCodePanel = ({
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-muted text-muted-foreground">
         <span className="text-sm font-medium">{t('installClaude')}</span>
         <span className="text-xs">{t('installClaudeHint')}</span>
+      </div>
+    );
+  }
+
+  if (trustPrompt && onTrustResponse) {
+    return (
+      <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
+        <TrustPromptCard folderPath={trustPrompt.folderPath} onRespond={onTrustResponse} />
       </div>
     );
   }

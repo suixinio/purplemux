@@ -21,6 +21,7 @@ import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
+import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 
 
 interface ITermActions {
@@ -28,6 +29,7 @@ interface ITermActions {
   reset: () => void;
   fit: () => { cols: number; rows: number };
   focus: () => void;
+  getBufferText: () => string;
 }
 
 interface IWsActions {
@@ -40,6 +42,7 @@ const NOOP_TERM_ACTIONS: ITermActions = {
   reset: () => {},
   fit: () => ({ cols: 40, rows: 24 }),
   focus: () => {},
+  getBufferText: () => '',
 };
 
 const NOOP_WS_ACTIONS: IWsActions = {
@@ -132,6 +135,13 @@ const MobileSurfaceView = ({
   const lastTitleRef = useRef('');
   const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : null);
+  const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
+
+  const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
+    enabled: isClaudeCode && claudeCliState === 'inactive',
+    getBufferText: () => termActionsRef.current.getBufferText(),
+    sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+  });
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     onCliStateChange?.(state);
@@ -155,7 +165,7 @@ const MobileSurfaceView = ({
     return true;
   }, []);
 
-  const { terminalRef, write, clear, reset, fit, focus, isReady } = useTerminal({
+  const { terminalRef, write, clear, reset, fit, focus, isReady, getBufferText } = useTerminal({
     theme: terminalTheme.colors,
     fontSize: isClaudeCode ? undefined : MOBILE_FONT_SIZE,
     onInput: (data) => wsActionsRef.current.sendStdin(data),
@@ -248,7 +258,10 @@ const MobileSurfaceView = ({
     sendWebStdin,
     sendResize,
   } = useTerminalWebSocket({
-    onData: (data) => termActionsRef.current.write(data),
+    onData: (data) => {
+      termActionsRef.current.write(data);
+      onTrustData();
+    },
     onConnected: () => {
       setHasEverConnected(true);
       setAttemptedTabId(activeTabIdRef.current);
@@ -263,7 +276,7 @@ const MobileSurfaceView = ({
   });
 
   useEffect(() => {
-    termActionsRef.current = { write, reset, fit, focus };
+    termActionsRef.current = { write, reset, fit, focus, getBufferText };
     wsActionsRef.current = { sendStdin, sendResize };
   });
 
@@ -475,6 +488,8 @@ const MobileSurfaceView = ({
           onInputVisibleChange={handleInputVisibleChange}
           onRestartSession={handleRestartClaudeSession}
           onNewSession={handleNewClaudeSession}
+          trustPrompt={trustPrompt}
+          onTrustResponse={onTrustResponse}
         />
       )}
 
