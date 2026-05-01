@@ -739,6 +739,8 @@ class StatusManager {
         busySince: entry.busySince,
         dismissedAt: entry.dismissedAt,
         agentSessionId: entry.agentSessionId,
+        compactingSince: entry.compactingSince,
+        permissionRequest: entry.permissionRequest,
         lastEvent: entry.lastEvent,
         eventSeq: entry.eventSeq,
       };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { toast } from 'sonner';
 import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FilePlus, FileX, ShieldAlert, Terminal } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
@@ -210,6 +211,7 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const sendResponseRef = useRef<(key: TResponseKey) => Promise<void>>(async () => {});
+  const pendingKeyRef = useRef<TResponseKey | null>(null);
 
   const isVisible = cliState === 'needs-input';
 
@@ -225,11 +227,17 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
   useEffect(() => {
     if (!isVisible) {
       clearPendingTimeout();
+      const pending = pendingKeyRef.current;
+      if (pending) {
+        const messageKey = pending === 'y' ? 'codexApprovalGranted' : 'codexApprovalDenied';
+        toast.success(t(messageKey), { duration: 1500 });
+        pendingKeyRef.current = null;
+      }
       // eslint-disable-next-line react-hooks/set-state-in-effect -- 카드 unmount 동기화
       setIsSending(false);
       setShowDetails(false);
     }
-  }, [isVisible, clearPendingTimeout]);
+  }, [isVisible, clearPendingTimeout, t]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -249,11 +257,13 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
         notifyCodexApprovalSendFailed(i18n);
         return;
       }
+      pendingKeyRef.current = key;
       clearPendingTimeout();
       timeoutRef.current = setTimeout(() => {
         timeoutRef.current = null;
         const stillNeedsInput = useTabStore.getState().tabs[tabId]?.cliState === 'needs-input';
         if (stillNeedsInput) {
+          pendingKeyRef.current = null;
           notifyCodexApprovalNotApplied(i18n, () => {
             void sendResponseRef.current(key);
           });
