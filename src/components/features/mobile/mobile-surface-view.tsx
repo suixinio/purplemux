@@ -517,6 +517,7 @@ const MobileSurfaceView = ({
       {isCodex && activeTab && (
         <MobileCodexPanel
           tabId={activeTabId ?? undefined}
+          sessionName={activeTab.sessionName}
           onNewSession={handleNewCodexSession}
           onRestart={handleRestartCodexSession}
         />

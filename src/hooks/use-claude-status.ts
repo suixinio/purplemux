@@ -86,6 +86,7 @@ const useClaudeStatus = () => {
                 busySince: msg.busySince,
                 dismissedAt: msg.dismissedAt,
                 compactingSince: msg.compactingSince,
+                permissionRequest: msg.permissionRequest,
                 lastEvent: msg.lastEvent,
                 eventSeq: msg.eventSeq,
               });

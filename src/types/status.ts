@@ -1,6 +1,7 @@
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { TPanelType } from '@/types/terminal';
 import type { ISessionHistoryEntry } from '@/types/session-history';
+import type { IPermissionRequest } from '@/types/codex-permission';
 
 export type TTerminalStatus = 'idle' | 'running' | 'server';
 
@@ -37,6 +38,7 @@ export interface ITabStatusEntry {
   busySince?: number | null;
   dismissedAt?: number | null;
   compactingSince?: number | null;
+  permissionRequest?: IPermissionRequest | null;
   processRetries?: number;
   jsonlPath?: string | null;
   lastEvent?: ILastEvent | null;
@@ -79,6 +81,7 @@ export interface IStatusUpdateMessage {
   busySince?: number | null;
   dismissedAt?: number | null;
   compactingSince?: number | null;
+  permissionRequest?: IPermissionRequest | null;
   lastEvent?: ILastEvent | null;
   eventSeq?: number;
 }

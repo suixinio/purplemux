@@ -8,6 +8,7 @@ import OpenAIIcon from '@/components/icons/openai-icon';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
+import PermissionPromptCard from '@/components/features/timeline/permission-prompt-card';
 
 interface ICodexPanelProps {
   tabId: string;
@@ -20,7 +21,7 @@ interface ICodexPanelProps {
 
 const CodexPanel = ({
   tabId,
-  sessionName: _sessionName,
+  sessionName,
   className,
   onClose: _onClose,
   onNewSession,
@@ -92,14 +93,20 @@ const CodexPanel = ({
         <span className="text-sm font-medium text-foreground">Codex</span>
         <CodexStatusDot cliState={cliState} className="ml-auto" />
       </div>
-      <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
-        {cliState === 'busy' ? (
-          <Spinner className="h-4 w-4 text-muted-foreground" />
-        ) : (
-          <OpenAIIcon size={28} className="text-muted-foreground/60" />
-        )}
-        <p className="text-sm">{t('codexTimelinePlaceholder')}</p>
-      </div>
+      {cliState === 'needs-input' ? (
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+          <PermissionPromptCard tabId={tabId} sessionName={sessionName} />
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
+          {cliState === 'busy' ? (
+            <Spinner className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <OpenAIIcon size={28} className="text-muted-foreground/60" />
+          )}
+          <p className="text-sm">{t('codexTimelinePlaceholder')}</p>
+        </div>
+      )}
     </div>
   );
 };

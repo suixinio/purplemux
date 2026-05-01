@@ -3,6 +3,7 @@ import { createLogger } from '@/lib/logger';
 import { codexHookEvents } from '@/lib/providers/codex/hook-events';
 import {
   isCodexSessionSource,
+  parseCodexPermissionRequest,
   translateCodexHookEvent,
   type ICodexHookPayload,
 } from '@/lib/providers/codex/work-state-observer';
@@ -32,6 +33,12 @@ export const handleCodexHookEvent = (
   if (payload.hook_event_name === 'UserPromptSubmit' && typeof payload.prompt === 'string' && payload.prompt) {
     meta.lastUserMessage = payload.prompt;
     meta.agentSummary = payload.prompt.slice(0, SUMMARY_LIMIT);
+  }
+
+  if (payload.hook_event_name === 'PermissionRequest') {
+    meta.permissionRequest = parseCodexPermissionRequest(payload);
+  } else if (payload.hook_event_name === 'Stop') {
+    meta.permissionRequest = null;
   }
 
   const isClear = payload.hook_event_name === 'SessionStart' && payload.source === 'clear';

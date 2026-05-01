@@ -19,6 +19,7 @@ import type { IPaneInfo } from '@/lib/tmux';
 import type { ITab } from '@/types/terminal';
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData, TEventName, ILastEvent } from '@/types/status';
+import type { IPermissionRequest } from '@/types/codex-permission';
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
 import webpush from 'web-push';
@@ -753,6 +754,9 @@ class StatusManager {
     entry.readyForReviewAt = newState === 'ready-for-review' ? Date.now() : null;
     entry.busySince = newState === 'busy' ? Date.now() : null;
     if (newState === 'busy') entry.dismissedAt = null;
+    if (prevState === 'needs-input' && newState !== 'needs-input' && entry.permissionRequest) {
+      entry.permissionRequest = null;
+    }
 
     if (newState === 'ready-for-review' && entry.jsonlPath) {
       const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
@@ -999,6 +1003,7 @@ class StatusManager {
       lastUserMessage?: string | null;
       agentSummary?: string | null;
       clearMessages?: boolean;
+      permissionRequest?: IPermissionRequest | null;
     },
   ): { tabId: string; cliState: TCliState } | null {
     const tabId = this.findTabIdBySession(tmuxSession);
@@ -1031,6 +1036,10 @@ class StatusManager {
     }
     if (meta.agentSummary !== undefined && entry.agentSummary !== meta.agentSummary) {
       entry.agentSummary = meta.agentSummary;
+      changed = true;
+    }
+    if (meta.permissionRequest !== undefined && entry.permissionRequest !== meta.permissionRequest) {
+      entry.permissionRequest = meta.permissionRequest;
       changed = true;
     }
 
@@ -1148,6 +1157,7 @@ class StatusManager {
       dismissedAt: entry.dismissedAt,
       agentSessionId: entry.agentSessionId,
       compactingSince: entry.compactingSince,
+      permissionRequest: entry.permissionRequest,
       lastEvent: entry.lastEvent,
       eventSeq: entry.eventSeq,
     };
