@@ -9,7 +9,27 @@ const RECONNECT_DELAY = 3000;
 
 type TToastVariant = 'info' | 'success' | 'warning' | 'error';
 type TSystemToastAction = { kind: 'copy'; label: string; text: string; successMessage?: string };
+
+const SEEN_TOAST_STORAGE_KEY = 'pmux-seen-system-toasts';
 const seenToastKeys = new Set<string>();
+
+if (typeof window !== 'undefined') {
+  try {
+    const stored = window.sessionStorage.getItem(SEEN_TOAST_STORAGE_KEY);
+    if (stored) JSON.parse(stored).forEach((key: string) => seenToastKeys.add(key));
+  } catch {
+    // ignore parse / quota errors
+  }
+}
+
+const persistSeenToasts = () => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.sessionStorage.setItem(SEEN_TOAST_STORAGE_KEY, JSON.stringify([...seenToastKeys]));
+  } catch {
+    // sessionStorage may be disabled — dedup falls back to in-memory only
+  }
+};
 
 const buildToastAction = (action: TSystemToastAction | undefined) => {
   if (!action) return undefined;
@@ -36,6 +56,7 @@ const showSystemToast = (
 ) => {
   if (seenToastKeys.has(key)) return;
   seenToastKeys.add(key);
+  persistSeenToasts();
   const opts = { id: key, duration: durationMs, action: buildToastAction(action) };
   if (variant === 'warning') toast.warning(message, opts);
   else if (variant === 'error') toast.error(message, opts);
