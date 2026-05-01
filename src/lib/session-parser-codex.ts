@@ -413,6 +413,7 @@ const processResponseItem = (
         const status = safeString(payload.status);
         const finalStatus: TToolStatus =
           status === 'completed' ? 'success' : status === 'failed' ? 'error' : 'pending';
+        state.suppressedCallIds.add(callId);
         const entry: ITimelinePatchApply = {
           id: nanoid(),
           type: 'patch-apply',
@@ -440,6 +441,10 @@ const processResponseItem = (
     case 'custom_tool_call_output': {
       const callId = safeString(payload.call_id);
       if (!callId) return [];
+      if (state.suppressedCallIds.has(callId)) {
+        state.suppressedCallIds.delete(callId);
+        return [];
+      }
       const output = safeString(payload.output);
       const entry: ITimelineToolResult = {
         id: nanoid(),
