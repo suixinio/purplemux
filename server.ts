@@ -14,11 +14,10 @@ import { handleSyncConnection, gracefulSyncShutdown } from './src/lib/sync-serve
 import { handleStatusConnection, gracefulStatusShutdown } from './src/lib/status-server';
 import { getStatusManager } from './src/lib/status-manager';
 import { ensureHookSettings, removePortFile } from './src/lib/hook-settings';
-import { writeAllClaudePromptFiles } from './src/lib/claude-prompt';
 import { getCliToken } from './src/lib/cli-token';
 import { acquireLock, releaseLock, registerLockCleanup } from './src/lib/lock';
 import { scanSessions, applyConfig } from './src/lib/tmux';
-import { initWorkspaceStore, getWorkspaces } from './src/lib/workspace-store';
+import { initWorkspaceStore, getWorkspaces, writeAllWorkspacePrompts } from './src/lib/workspace-store';
 import { autoResumeOnStartup } from './src/lib/auto-resume';
 import { initAuthCredentials } from './src/lib/auth-credentials';
 import { initConfigStore, getConfig } from './src/lib/config-store';
@@ -387,7 +386,7 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
   await ensureHookSettings(result.port);
   getCliToken();
   const { workspaces } = await getWorkspaces();
-  await writeAllClaudePromptFiles(workspaces);
+  await writeAllWorkspacePrompts(workspaces);
 
   cleanupExpiredUploads()
     .then((r) => {

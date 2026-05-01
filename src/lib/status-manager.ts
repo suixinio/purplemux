@@ -2,7 +2,7 @@ import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
-import { getChildPids } from '@/lib/session-detection';
+import { getChildPids } from '@/lib/process-utils';
 import {
   detectAnyActiveSession,
   getProviderByPanelType,
@@ -16,6 +16,7 @@ import { createLogger } from '@/lib/logger';
 import { capturePaneAtWidth } from '@/lib/capture-at-width';
 import { parsePermissionOptions } from '@/lib/permission-prompt';
 import type { IPaneInfo } from '@/lib/tmux';
+import type { ITab } from '@/types/terminal';
 import type { TCliState, TToolName } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData, TEventName, ILastEvent } from '@/types/status';
 import type { ISessionHistoryEntry } from '@/types/session-history';
@@ -26,15 +27,21 @@ import { getVAPIDKeys } from '@/lib/vapid-keys';
 import { nanoid } from 'nanoid';
 import fs from 'fs/promises';
 import { watch, type FSWatcher } from 'fs';
-import path from 'path';
 
 const log = createLogger('status');
 const hookLog = createLogger('hooks');
 
-const sessionIdFromJsonlPath = (jsonlPath: string | null | undefined): string | null => {
-  if (!jsonlPath) return null;
-  return path.basename(jsonlPath, '.jsonl');
-};
+const entryAgentFields = (
+  provider: IAgentProvider | null,
+  tab: ITab,
+  jsonlPath: string | null | undefined,
+): { agentProviderId?: string; agentSessionId: string | null; agentSummary: string | null } => ({
+  agentProviderId: provider?.id,
+  agentSummary: provider?.readSummary(tab) ?? null,
+  agentSessionId: provider?.sessionIdFromJsonlPath(jsonlPath ?? null)
+    ?? provider?.readSessionId(tab)
+    ?? null,
+});
 
 // Notification hook의 notification_type 중 권한 요청류만 needs-input으로 전환.
 // idle_prompt(응답 후 60s idle 알람), computer_use_*, elicitation_*, auth_success 등은 상태 변경 없이 무시한다.
@@ -350,15 +357,6 @@ const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
   }
 };
 
-const CLAUDE_TITLE_RE = /^[✳⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠈]\s+/;
-
-const parseClaudePaneTitle = (paneTitle: string | null): string | null => {
-  if (!paneTitle) return null;
-  if (!CLAUDE_TITLE_RE.test(paneTitle)) return null;
-  const cleaned = paneTitle.replace(CLAUDE_TITLE_RE, '').trim();
-  return cleaned || null;
-};
-
 const g = globalThis as unknown as { __ptStatusManager?: StatusManager };
 
 class StatusManager {
@@ -426,14 +424,13 @@ class StatusManager {
           panelType: tab.panelType,
           terminalStatus,
           listeningPorts,
-          claudeSummary: tab.claudeSummary,
+          ...entryAgentFields(provider, tab, detected.jsonlPath),
           lastUserMessage: tab.lastUserMessage,
           lastAssistantMessage: detected.lastAssistantSnippet,
           currentAction: detected.currentAction,
           readyForReviewAt: cliState === 'ready-for-review' ? Date.now() : null,
           busySince: null,
           dismissedAt: tab.dismissedAt ?? null,
-          claudeSessionId: sessionIdFromJsonlPath(detected.jsonlPath) ?? tab.claudeSessionId ?? null,
           jsonlPath: detected.jsonlPath,
           lastEvent: syntheticLastEvent,
           eventSeq: 0,
@@ -581,11 +578,10 @@ class StatusManager {
             panelType: tab.panelType,
             terminalStatus,
             listeningPorts,
-            claudeSummary: tab.claudeSummary,
+            ...entryAgentFields(provider, tab, detected.jsonlPath),
             lastUserMessage: tab.lastUserMessage,
             lastAssistantMessage: detected.lastAssistantSnippet,
             currentAction: detected.currentAction,
-            claudeSessionId: sessionIdFromJsonlPath(detected.jsonlPath) ?? tab.claudeSessionId ?? null,
             jsonlPath: detected.jsonlPath,
             lastEvent: syntheticLastEvent,
             eventSeq: 0,
@@ -608,7 +604,9 @@ class StatusManager {
         existing.paneTitle = newPaneTitle;
         existing.workspaceId = ws.id;
         existing.panelType = tab.panelType;
-        existing.claudeSessionId = sessionIdFromJsonlPath(refreshed.jsonlPath) ?? tab.claudeSessionId ?? null;
+        existing.agentProviderId = provider?.id;
+        existing.agentSessionId = provider?.sessionIdFromJsonlPath(refreshed.jsonlPath)
+          ?? provider?.readSessionId(tab) ?? null;
         existing.jsonlPath = refreshed.jsonlPath ?? existing.jsonlPath;
         existing.lastUserMessage = tab.lastUserMessage;
 
@@ -630,17 +628,18 @@ class StatusManager {
         }
 
         let summaryChanged = false;
+        const tabSummary = provider ? provider.readSummary(tab) : null;
         if (existing.cliState === 'busy' || existing.cliState === 'needs-input') {
           const paneTitle = await getPaneTitle(tab.sessionName);
-          const liveSummary = parseClaudePaneTitle(paneTitle);
-          if (liveSummary && liveSummary !== existing.claudeSummary) {
-            existing.claudeSummary = liveSummary;
+          const liveSummary = provider?.parsePaneTitle(paneTitle) ?? null;
+          if (liveSummary && liveSummary !== existing.agentSummary) {
+            existing.agentSummary = liveSummary;
             summaryChanged = true;
             updateTabClaudeSummary(tab.sessionName, liveSummary).catch(() => {});
           }
         } else {
-          if (existing.claudeSummary !== tab.claudeSummary) {
-            existing.claudeSummary = tab.claudeSummary;
+          if (existing.agentSummary !== tabSummary) {
+            existing.agentSummary = tabSummary;
             summaryChanged = true;
           }
         }
@@ -692,14 +691,15 @@ class StatusManager {
         panelType: entry.panelType,
         terminalStatus: entry.terminalStatus,
         listeningPorts: entry.listeningPorts,
-        claudeSummary: entry.claudeSummary,
+        agentProviderId: entry.agentProviderId,
+        agentSummary: entry.agentSummary,
         lastUserMessage: entry.lastUserMessage,
         lastAssistantMessage: entry.lastAssistantMessage,
         currentAction: entry.currentAction,
         readyForReviewAt: entry.readyForReviewAt,
         busySince: entry.busySince,
         dismissedAt: entry.dismissedAt,
-        claudeSessionId: entry.claudeSessionId,
+        agentSessionId: entry.agentSessionId,
         lastEvent: entry.lastEvent,
         eventSeq: entry.eventSeq,
       };
@@ -763,7 +763,8 @@ class StatusManager {
       workspaceName: ws?.name ?? entry.workspaceId,
       workspaceDir: ws?.directories[0] ?? null,
       tabId,
-      claudeSessionId: entry.claudeSessionId ?? null,
+      // Field name kept `claudeSessionId` for session-history back-compat (persisted on disk).
+      claudeSessionId: entry.agentSessionId ?? null,
       prompt: stats?.lastUserText ?? entry.lastUserMessage,
       result: stats?.lastAssistantText ?? null,
       startedAt,
@@ -841,6 +842,9 @@ class StatusManager {
     return undefined;
   }
 
+  // TODO: integrate IAgentProvider.attachWorkStateObserver — providers will emit
+  // TAgentWorkStateEvent and this entry point will dispatch via that observer
+  // pipeline. See providers/types.ts for the event vocabulary.
   updateTabFromHook(tmuxSession: string, event: string, notificationType?: string): void {
     const tabId = this.findTabIdBySession(tmuxSession);
     if (!tabId) {
@@ -1014,14 +1018,15 @@ class StatusManager {
       panelType: entry.panelType,
       terminalStatus: entry.terminalStatus,
       listeningPorts: entry.listeningPorts,
-      claudeSummary: entry.claudeSummary,
+      agentProviderId: entry.agentProviderId,
+      agentSummary: entry.agentSummary,
       lastUserMessage: entry.lastUserMessage,
       lastAssistantMessage: entry.lastAssistantMessage,
       currentAction: entry.currentAction,
       readyForReviewAt: entry.readyForReviewAt,
       busySince: entry.busySince,
       dismissedAt: entry.dismissedAt,
-      claudeSessionId: entry.claudeSessionId,
+      agentSessionId: entry.agentSessionId,
       compactingSince: entry.compactingSince,
       lastEvent: entry.lastEvent,
       eventSeq: entry.eventSeq,
@@ -1062,10 +1067,12 @@ class StatusManager {
       const layout = await readLayoutFile(resolveLayoutFile(parsed.wsId));
       if (layout) {
         const tab = collectAllTabs(layout.root).find((t) => t.sessionName === tmuxSession);
-        if (tab?.claudeSessionId) {
+        const tabProvider = getProviderByPanelType(tab?.panelType);
+        const tabSessionId = tab && tabProvider ? tabProvider.readSessionId(tab) : null;
+        if (tab && tabSessionId) {
           const cwd = await getSessionCwd(tmuxSession);
           if (cwd) {
-            const candidate = `${cwdToProjectPath(cwd)}/${tab.claudeSessionId}.jsonl`;
+            const candidate = `${cwdToProjectPath(cwd)}/${tabSessionId}.jsonl`;
             try {
               await fs.access(candidate);
               jsonlPath = candidate;
@@ -1091,7 +1098,11 @@ class StatusManager {
     if (!jsonlPath) return;
 
     entry.jsonlPath = jsonlPath;
-    entry.claudeSessionId = sessionIdFromJsonlPath(jsonlPath) ?? entry.claudeSessionId;
+    const provider = getProviderByPanelType(entry.panelType);
+    if (provider) {
+      entry.agentProviderId = provider.id;
+      entry.agentSessionId = provider.sessionIdFromJsonlPath(jsonlPath) ?? entry.agentSessionId;
+    }
 
     if ((entry.cliState === 'busy' || entry.cliState === 'needs-input') && !this.jsonlWatchers.has(tabId)) {
       this.startJsonlWatch(tabId, jsonlPath);
@@ -1216,7 +1227,10 @@ class StatusManager {
       body,
       tabId,
       workspaceId: entry.workspaceId,
-      claudeSessionId: entry.claudeSessionId ?? null,
+      // Field name kept `claudeSessionId` for SW back-compat: existing service workers
+      // (public/sw.js) read this key and a brief stale-SW window during upgrade would
+      // break notifications if renamed.
+      claudeSessionId: entry.agentSessionId ?? null,
       workspaceName: ws?.name ?? '',
       workspaceDir: ws?.directories[0] ?? null,
     });

@@ -120,7 +120,7 @@ const collectItems = (
       readyForReviewAt: tab.readyForReviewAt,
       busySince: tab.busySince,
       dismissedAt: tab.dismissedAt,
-      claudeSessionId: tab.claudeSessionId,
+      claudeSessionId: tab.agentSessionId,
     });
   }
 
@@ -413,7 +413,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const sessionTabMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const [tabId, tab] of Object.entries(tabs)) {
-      if (tab.claudeSessionId) map.set(tab.claudeSessionId, tabId);
+      if (tab.agentSessionId) map.set(tab.agentSessionId, tabId);
     }
     return map;
   }, [tabs]);
@@ -425,8 +425,8 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const liveSessionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const [, tab] of Object.entries(tabs)) {
-      if ((tab.cliState === 'busy' || tab.cliState === 'needs-input' || tab.cliState === 'ready-for-review') && tab.claudeSessionId) {
-        ids.add(tab.claudeSessionId);
+      if ((tab.cliState === 'busy' || tab.cliState === 'needs-input' || tab.cliState === 'ready-for-review') && tab.agentSessionId) {
+        ids.add(tab.agentSessionId);
       }
     }
     return ids;
@@ -434,7 +434,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const reviewSessionIds = useMemo(() => {
     const ids = new Set<string>();
     for (const [, tab] of Object.entries(tabs)) {
-      if (tab.cliState === 'ready-for-review' && tab.claudeSessionId) ids.add(tab.claudeSessionId);
+      if (tab.cliState === 'ready-for-review' && tab.agentSessionId) ids.add(tab.agentSessionId);
     }
     return ids;
   }, [tabs]);

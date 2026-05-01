@@ -18,6 +18,7 @@ import {
 import type { ITab, TLayoutNode, IPaneNode, ILayoutData, TPanelType } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 import type { IAgentProvider } from '@/lib/providers/types';
+import { claudeProvider } from '@/lib/providers/claude';
 
 const log = createLogger('layout');
 
@@ -506,22 +507,12 @@ export const updateTabAgentSummary = (
 export const updateTabClaudeSessionId = (
   sessionName: string,
   claudeSessionId: string | null,
-): Promise<void> =>
-  mutateTab(sessionName, (tab) => {
-    if (tab.claudeSessionId === claudeSessionId) return false;
-    tab.claudeSessionId = claudeSessionId;
-    return true;
-  });
+): Promise<void> => updateTabAgentSessionId(sessionName, claudeProvider, claudeSessionId);
 
 export const updateTabClaudeSummary = (
   sessionName: string,
   claudeSummary: string | null,
-): Promise<void> =>
-  mutateTab(sessionName, (tab) => {
-    if (tab.claudeSummary === claudeSummary) return false;
-    tab.claudeSummary = claudeSummary;
-    return true;
-  });
+): Promise<void> => updateTabAgentSummary(sessionName, claudeProvider, claudeSummary);
 
 export const updateTabLastUserMessage = (
   sessionName: string,

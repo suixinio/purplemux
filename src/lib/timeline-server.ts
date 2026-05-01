@@ -2,7 +2,7 @@ import { IncomingMessage } from 'http';
 import { WebSocket } from 'ws';
 import { watch, type FSWatcher } from 'fs';
 import { existsSync, mkdirSync } from 'fs';
-import { type ISessionWatcher } from './session-detection';
+import { type ISessionWatcher } from '@/lib/providers/types';
 import { readTailEntries, parseIncremental, parseJsonlContent } from './session-parser';
 import { open as fsOpen } from 'fs/promises';
 import { createReadStream } from 'fs';
@@ -35,21 +35,13 @@ const MAX_CONNECTIONS = 32;
 const MAX_WATCHER_RETRIES = 3;
 const MAX_INIT_ENTRIES = 64;
 
-const CLAUDE_TITLE_RE = /^[✳⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠈]\s+/;
-
-const parseClaudePaneTitle = (paneTitle: string | null): string | null => {
-  if (!paneTitle) return null;
-  if (!CLAUDE_TITLE_RE.test(paneTitle)) return null;
-  const cleaned = paneTitle.replace(CLAUDE_TITLE_RE, '').trim();
-  return cleaned || null;
-};
-
-const resolveClaudeSummary = async (
+const resolveAgentSummary = async (
+  provider: IAgentProvider,
   sessionName: string,
   jsonlSummary: string | null | undefined,
 ): Promise<string | null> => {
   const paneTitle = await getPaneTitle(sessionName);
-  return parseClaudePaneTitle(paneTitle) ?? jsonlSummary ?? null;
+  return provider.parsePaneTitle(paneTitle) ?? jsonlSummary ?? null;
 };
 
 interface ITimelineConnection {
@@ -153,7 +145,7 @@ const subscribeAndUpdateSummary = async (
   provider: IAgentProvider,
 ) => {
   const jsonlSummary = await subscribeToFile(ws, jsonlPath, sessionId, sessionName, provider);
-  const summary = await resolveClaudeSummary(sessionName, jsonlSummary);
+  const summary = await resolveAgentSummary(provider, sessionName, jsonlSummary);
   await updateTabAgentSummary(sessionName, provider, summary).catch(() => {});
 };
 
@@ -237,7 +229,7 @@ const processFileChange = async (fw: IFileWatcher) => {
 
       if (!fw.summaryResolved && newEntries.some((e) => e.type === 'assistant-message')) {
         fw.summaryResolved = true;
-        const summary = await resolveClaudeSummary(fw.sessionName, undefined);
+        const summary = await resolveAgentSummary(fw.provider, fw.sessionName, undefined);
         if (summary) {
           await updateTabAgentSummary(fw.sessionName, fw.provider, summary).catch(() => {});
         }

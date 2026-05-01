@@ -1,17 +1,71 @@
+import path from 'path';
 import {
   detectActiveSession as detectClaudeSession,
   isClaudeRunning,
   watchSessionsDir,
-} from '@/lib/session-detection';
+} from '@/lib/providers/claude/session-detection';
 import {
   buildClaudeFlags,
   buildResumeCommand as buildClaudeResumeCommand,
   isValidSessionId as isValidClaudeSessionId,
 } from '@/lib/claude-command';
+import { writeClaudePromptFile } from '@/lib/claude-prompt';
+import { runClaudePreflight } from '@/lib/providers/claude/preflight';
 import type { IAgentProvider } from '@/lib/providers/types';
+import type { ITab, IAgentState } from '@/types/terminal';
+
+export const CLAUDE_PROVIDER_ID = 'claude';
+
+type TAgentField = 'sessionId' | 'jsonlPath' | 'summary';
+
+const LEGACY_KEY: Record<TAgentField, 'claudeSessionId' | 'claudeJsonlPath' | 'claudeSummary'> = {
+  sessionId: 'claudeSessionId',
+  jsonlPath: 'claudeJsonlPath',
+  summary: 'claudeSummary',
+};
+
+const ensureAgentState = (tab: ITab): IAgentState => {
+  if (tab.agentState?.providerId === CLAUDE_PROVIDER_ID) return tab.agentState;
+  const seeded: IAgentState = {
+    providerId: CLAUDE_PROVIDER_ID,
+    sessionId: tab.claudeSessionId ?? null,
+    jsonlPath: tab.claudeJsonlPath ?? null,
+    summary: tab.claudeSummary ?? null,
+  };
+  tab.agentState = seeded;
+  return seeded;
+};
+
+const readField = (tab: ITab, field: TAgentField): string | null => {
+  if (tab.agentState?.providerId === CLAUDE_PROVIDER_ID) {
+    const fromAgent = tab.agentState[field];
+    if (fromAgent !== null) return fromAgent;
+  }
+  return tab[LEGACY_KEY[field]] ?? null;
+};
+
+const writeField = (tab: ITab, field: TAgentField, value: string | null | undefined) => {
+  const v = value ?? null;
+  ensureAgentState(tab)[field] = v;
+  tab[LEGACY_KEY[field]] = v;
+};
+
+const CLAUDE_TITLE_RE = /^[✳⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠈]\s+/;
+
+const parsePaneTitle = (paneTitle: string | null): string | null => {
+  if (!paneTitle) return null;
+  if (!CLAUDE_TITLE_RE.test(paneTitle)) return null;
+  const cleaned = paneTitle.replace(CLAUDE_TITLE_RE, '').trim();
+  return cleaned || null;
+};
+
+const sessionIdFromJsonlPath = (jsonlPath: string | null | undefined): string | null => {
+  if (!jsonlPath) return null;
+  return path.basename(jsonlPath, '.jsonl');
+};
 
 export const claudeProvider: IAgentProvider = {
-  id: 'claude',
+  id: CLAUDE_PROVIDER_ID,
   displayName: 'Claude Code',
   panelType: 'claude-code',
 
@@ -29,16 +83,15 @@ export const claudeProvider: IAgentProvider = {
     return `claude ${flags}`;
   },
 
-  readSessionId: (tab) => tab.claudeSessionId ?? null,
-  writeSessionId: (tab, sessionId) => {
-    tab.claudeSessionId = sessionId ?? null;
-  },
-  readJsonlPath: (tab) => tab.claudeJsonlPath ?? null,
-  writeJsonlPath: (tab, jsonlPath) => {
-    tab.claudeJsonlPath = jsonlPath ?? null;
-  },
-  readSummary: (tab) => tab.claudeSummary ?? null,
-  writeSummary: (tab, summary) => {
-    tab.claudeSummary = summary ?? null;
-  },
+  readSessionId: (tab) => readField(tab, 'sessionId'),
+  writeSessionId: (tab, sessionId) => writeField(tab, 'sessionId', sessionId),
+  readJsonlPath: (tab) => readField(tab, 'jsonlPath'),
+  writeJsonlPath: (tab, jsonlPath) => writeField(tab, 'jsonlPath', jsonlPath),
+  readSummary: (tab) => readField(tab, 'summary'),
+  writeSummary: (tab, summary) => writeField(tab, 'summary', summary),
+
+  parsePaneTitle,
+  sessionIdFromJsonlPath,
+  preflight: runClaudePreflight,
+  writeWorkspacePrompt: writeClaudePromptFile,
 };

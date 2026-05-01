@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { verifyCliToken } from '@/lib/cli-token';
 import { findTab } from '@/lib/cli-utils';
 import { hasSession, getPaneCurrentCommand } from '@/lib/tmux';
+import { getProviderByPanelType } from '@/lib/providers';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -27,13 +28,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const command = await getPaneCurrentCommand(found.tab.sessionName);
+  const provider = getProviderByPanelType(found.tab.panelType);
   return res.status(200).json({
     tabId,
     workspaceId,
     alive: true,
     command,
     cliState: found.tab.cliState ?? null,
-    claudeSessionId: found.tab.claudeSessionId ?? null,
+    // Response key kept as `claudeSessionId` for back-compat with external CLI consumers.
+    claudeSessionId: provider?.readSessionId(found.tab) ?? null,
   });
 };
 

@@ -16,13 +16,26 @@ import {
   createDefaultLayout,
 } from '@/lib/layout-store';
 import type { ICreateLayoutOptions } from '@/lib/layout-store';
-import { writeClaudePromptFile } from '@/lib/claude-prompt';
+import { listProviders } from '@/lib/providers';
 import { getVisuallyOrderedWorkspaces } from '@/lib/workspace-order';
 import type { IWorkspace, IWorkspaceGroup, IWorkspacesData, ILayoutData } from '@/types/terminal';
 
 const log = createLogger('workspace');
 
 const WORKSPACE_PREFIX = 'Workspace ';
+
+export const writeWorkspacePrompts = async (ws: IWorkspace): Promise<void> => {
+  const tasks: Promise<void>[] = [];
+  for (const provider of listProviders()) {
+    const task = provider.writeWorkspacePrompt?.(ws);
+    if (task) tasks.push(task);
+  }
+  await Promise.all(tasks);
+};
+
+export const writeAllWorkspacePrompts = async (workspaces: IWorkspace[]): Promise<void> => {
+  await Promise.all(workspaces.map(writeWorkspacePrompts));
+};
 
 const nextWorkspaceName = (workspaces: IWorkspace[]): string => {
   let max = 0;
@@ -314,7 +327,7 @@ export const createWorkspace = async (directory: string, name?: string, layoutOp
     const workspace: IWorkspace = { id: wsId, name: wsName, directories: [directory] };
     data.workspaces.push(workspace);
     await writeWorkspacesFile(data);
-    await writeClaudePromptFile(workspace);
+    await writeWorkspacePrompts(workspace);
 
     log.debug(`Created: ${wsId} (${wsName}, ${directory})`);
     return workspace;
@@ -359,7 +372,7 @@ export const renameWorkspace = async (workspaceId: string, name: string): Promis
 
     ws.name = name;
     await writeWorkspacesFile(data);
-    await writeClaudePromptFile(ws);
+    await writeWorkspacePrompts(ws);
 
     log.debug(`Renamed: ${workspaceId} → "${name}"`);
     return { ...ws };
@@ -388,7 +401,7 @@ export const updateWorkspaceDirectories = async (workspaceId: string, directorie
     if (current === JSON.stringify(directories)) return;
     ws.directories = directories;
     await writeWorkspacesFile(data);
-    await writeClaudePromptFile(ws);
+    await writeWorkspacePrompts(ws);
   });
 
 export interface IReorderItem {

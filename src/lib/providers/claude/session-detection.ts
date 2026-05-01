@@ -5,8 +5,14 @@ import os from 'os';
 import { execFile as execFileCb } from 'child_process';
 import { promisify } from 'util';
 import type { ISessionInfo } from '@/types/timeline';
+import type { ISessionWatcher } from '@/lib/providers/types';
 import { getShellPath } from '@/lib/preflight';
-import { isLinux } from '@/lib/platform';
+import {
+  getChildPids,
+  getProcessArgs,
+  getProcessCwd,
+  isProcessRunning,
+} from '@/lib/process-utils';
 
 const execFile = promisify(execFileCb);
 
@@ -27,6 +33,14 @@ interface IPidFileData {
 
 const MAX_SANITIZED_LENGTH = 200;
 
+const simpleHash = (str: string): string => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36);
+};
+
 export const toClaudeProjectName = (dirPath: string): string => {
   const sanitized = dirPath.replace(/[^a-zA-Z0-9]/g, '-');
   if (sanitized.length <= MAX_SANITIZED_LENGTH) {
@@ -36,61 +50,16 @@ export const toClaudeProjectName = (dirPath: string): string => {
   return `${sanitized.slice(0, MAX_SANITIZED_LENGTH)}-${hash}`;
 };
 
-const simpleHash = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
-  }
-  return Math.abs(hash).toString(36);
-};
-
-export const isProcessRunning = (pid: number): Promise<boolean> =>
-  new Promise((resolve) => {
-    execFileCb('ps', ['-p', String(pid)], (err) => {
-      resolve(!err);
-    });
-  });
-
-export const getChildPids = async (parentPid: number): Promise<number[]> => {
-  try {
-    const { stdout } = await execFile('pgrep', ['-P', String(parentPid)]);
-    return stdout.trim().split('\n').map((s) => parseInt(s, 10)).filter((n) => !Number.isNaN(n));
-  } catch {
-    return [];
-  }
-};
-
-const getProcessCwd = async (pid: number): Promise<string | null> => {
-  if (isLinux) {
-    try {
-      return await fs.readlink(`/proc/${pid}/cwd`);
-    } catch {
-      return null;
-    }
-  }
-  try {
-    const { stdout } = await execFile('lsof', ['-a', '-p', String(pid), '-d', 'cwd', '-Fn']);
-    const line = stdout.split('\n').find((l) => l.startsWith('n/'));
-    return line ? line.slice(1) : null;
-  } catch {
-    return null;
-  }
-};
-
 const getClaudeSessionFromArgs = async (
   childPids: number[],
 ): Promise<{ pid: number; sessionId: string; cwd: string | null } | null> => {
   for (const pid of childPids) {
-    try {
-      const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'args=']);
-      const args = stdout.trim();
-      const match = args.match(/claude\s+--resume\s+([0-9a-f-]{36})/);
-      if (match) {
-        const cwd = await getProcessCwd(pid);
-        return { pid, sessionId: match[1], cwd };
-      }
-    } catch {
-      continue;
+    const args = await getProcessArgs(pid);
+    if (!args) continue;
+    const match = args.match(/claude\s+--resume\s+([0-9a-f-]{36})/);
+    if (match) {
+      const cwd = await getProcessCwd(pid);
+      return { pid, sessionId: match[1], cwd };
     }
   }
   return null;
@@ -137,12 +106,8 @@ const isClaudeInstalled = async (): Promise<boolean> => {
 export const isClaudeRunning = async (panePid: number, preloadedChildPids?: number[]): Promise<boolean> => {
   const childPids = preloadedChildPids ?? await getChildPids(panePid);
   for (const pid of childPids) {
-    try {
-      const { stdout } = await execFile('ps', ['-p', String(pid), '-o', 'args=']);
-      if (stdout.trim().includes('claude')) return true;
-    } catch {
-      continue;
-    }
+    const args = await getProcessArgs(pid);
+    if (args?.includes('claude')) return true;
   }
   return false;
 };
@@ -177,11 +142,8 @@ export const detectActiveSession = async (panePid: number, preloadedChildPids?: 
       if (!data) continue;
       if (!childPidSet.has(data.pid)) continue;
 
-      let processArgs = '';
-      try {
-        const { stdout } = await execFile('ps', ['-p', String(data.pid), '-o', 'args=']);
-        processArgs = stdout.trim();
-      } catch {
+      const processArgs = await getProcessArgs(data.pid);
+      if (processArgs === null) {
         try { await fs.unlink(path.join(SESSIONS_DIR, file)); } catch {}
         continue;
       }
@@ -241,10 +203,6 @@ export const detectActiveSession = async (panePid: number, preloadedChildPids?: 
 
   return { status: 'not-running', sessionId: null, jsonlPath: null, pid: null, startedAt: null, cwd: null };
 };
-
-export interface ISessionWatcher {
-  stop: () => void;
-}
 
 export const watchSessionsDir = (
   panePid: number,

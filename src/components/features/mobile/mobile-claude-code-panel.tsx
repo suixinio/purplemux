@@ -72,7 +72,7 @@ const MobileClaudeCodePanel = ({
   const claudeInstalled = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeInstalled ?? true : true);
   const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive');
   const compactingSince = useTabStore((s) => tabId ? s.tabs[tabId]?.compactingSince ?? null : null);
-  const tabClaudeSummary = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeSummary ?? null : null);
+  const tabClaudeSummary = useTabStore((s) => tabId ? s.tabs[tabId]?.agentSummary ?? null : null);
   const tabLastUserMessage = useTabStore((s) => tabId ? s.tabs[tabId]?.lastUserMessage ?? null : null);
 
   const handleResumeStarted = useCallback(() => {

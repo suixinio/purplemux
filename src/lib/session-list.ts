@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import { createReadStream } from 'fs';
 import path from 'path';
 import readline from 'readline';
-import { toClaudeProjectName } from '@/lib/session-detection';
+import { toClaudeProjectName } from '@/lib/providers/claude/session-detection';
 import { getSessionCwd } from '@/lib/tmux';
 import { createLogger } from '@/lib/logger';
 import { createMetaCache } from '@/lib/session-meta-cache';

@@ -1,10 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
-import { createLogger } from '@/lib/logger';
 import { resolveLayoutDir } from '@/lib/layout-store';
 import type { IWorkspace } from '@/types/terminal';
-
-const log = createLogger('claude-prompt');
 
 export const getClaudePromptPath = (workspaceId: string): string =>
   path.join(resolveLayoutDir(workspaceId), 'claude-prompt.md');
@@ -62,21 +59,15 @@ purplemux api-guide
 `;
 };
 
-export const writeClaudePromptFile = async (ws: IWorkspace): Promise<string> => {
+export const writeClaudePromptFile = async (ws: IWorkspace): Promise<void> => {
   const filePath = getClaudePromptPath(ws.id);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   const body = buildBody(ws);
   try {
     const existing = await fs.readFile(filePath, 'utf-8');
-    if (existing === body) return filePath;
+    if (existing === body) return;
   } catch {
     // missing — write below
   }
   await fs.writeFile(filePath, body, 'utf-8');
-  return filePath;
-};
-
-export const writeAllClaudePromptFiles = async (workspaces: IWorkspace[]): Promise<void> => {
-  await Promise.all(workspaces.map(writeClaudePromptFile));
-  log.debug(`wrote ${workspaces.length} claude prompt files`);
 };

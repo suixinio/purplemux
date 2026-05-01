@@ -13,6 +13,7 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
+import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ClaudeCodePanel from '@/components/features/workspace/claude-code-panel';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
@@ -197,7 +198,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
   const claudeProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeProcess ?? null : null);
-  const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.claudeSessionId ?? null : null);
+  const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'session-list');
   const claudeInputVisible = sessionView === 'timeline';
 
@@ -675,16 +676,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     tabId: activeTabId ?? undefined,
   });
 
-  const buildClaudeCommand = useCallback((sessionId: string | null): string => {
-    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
-    const settings = '--settings ~/.purplemux/hooks.json';
-    const prompt = layoutWsId ? `--append-system-prompt-file ~/.purplemux/workspaces/${layoutWsId}/claude-prompt.md` : '';
-    const flags = [settings, prompt].filter(Boolean).join(' ');
-    const base = sessionId
-      ? `claude --resume ${sessionId} ${flags}`
-      : `claude ${flags}`;
-    return dangerous ? `${base} --dangerously-skip-permissions` : base;
-  }, [layoutWsId]);
+  const buildClaudeCommand = useCallback((sessionId: string | null): string =>
+    buildClaudeLaunchCommand({
+      workspaceId: layoutWsId,
+      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+      resumeSessionId: sessionId,
+    }), [layoutWsId]);
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;

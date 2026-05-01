@@ -11,6 +11,13 @@ export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-f
 
 export type TPanelType = 'terminal' | 'claude-code' | 'web-browser' | 'diff';
 
+export interface IAgentState {
+  providerId: string;
+  sessionId: string | null;
+  jsonlPath: string | null;
+  summary: string | null;
+}
+
 export interface ITab {
   id: string;
   sessionName: string;
@@ -19,8 +26,12 @@ export interface ITab {
   title?: string;
   cwd?: string;
   panelType?: TPanelType;
+  agentState?: IAgentState;
+  /** @deprecated use agentState; kept for disk back-compat */
   claudeSessionId?: string | null;
+  /** @deprecated use agentState; kept for disk back-compat */
   claudeJsonlPath?: string | null;
+  /** @deprecated use agentState; kept for disk back-compat */
   claudeSummary?: string | null;
   lastUserMessage?: string | null;
   lastCommand?: string | null;

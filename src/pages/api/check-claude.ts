@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { getSessionPanePid, hasSession } from '@/lib/tmux';
-import { getChildPids } from '@/lib/session-detection';
+import { getChildPids } from '@/lib/process-utils';
 import { detectAnyActiveSession, isAnyAgentRunning } from '@/lib/providers';
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {

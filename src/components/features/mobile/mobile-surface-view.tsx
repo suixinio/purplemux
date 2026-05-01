@@ -22,6 +22,7 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
+import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 
 
 interface ITermActions {
@@ -368,14 +369,11 @@ const MobileSurfaceView = ({
     setIsCreating(false);
   }, [paneId, onCreateTab]);
 
-  const buildClaudeCommand = useCallback((): string => {
-    const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
-    const settings = '--settings ~/.purplemux/hooks.json';
-    const prompt = layoutWsId ? `--append-system-prompt-file ~/.purplemux/workspaces/${layoutWsId}/claude-prompt.md` : '';
-    const flags = [settings, prompt].filter(Boolean).join(' ');
-    const base = `claude ${flags}`;
-    return dangerous ? `${base} --dangerously-skip-permissions` : base;
-  }, [layoutWsId]);
+  const buildClaudeCommand = useCallback((): string =>
+    buildClaudeLaunchCommand({
+      workspaceId: layoutWsId,
+      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+    }), [layoutWsId]);
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;

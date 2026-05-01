@@ -19,6 +19,7 @@ import type { TCliState } from '@/types/timeline';
 import useConfigStore from '@/hooks/use-config-store';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
 import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
+import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 
 const MobileTerminalPage = () => {
   const t = useTranslations('terminal');
@@ -165,11 +166,10 @@ const MobileTerminalPage = () => {
     if (!currentPane) return;
     let cmd: string | undefined;
     if (options?.command === 'claude-new') {
-      const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
-      const settings = '--settings ~/.purplemux/hooks.json';
-      const prompt = activeWorkspaceId ? `--append-system-prompt-file ~/.purplemux/workspaces/${activeWorkspaceId}/claude-prompt.md` : '';
-      const flags = [settings, prompt].filter(Boolean).join(' ');
-      cmd = dangerous ? `claude ${flags} --dangerously-skip-permissions` : `claude ${flags}`;
+      cmd = buildClaudeLaunchCommand({
+        workspaceId: activeWorkspaceId,
+        dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+      });
     }
     const newTab = await layout.createTabInPane(currentPane.id, panelType, cmd);
     if (newTab) {

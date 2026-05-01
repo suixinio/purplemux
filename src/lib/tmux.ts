@@ -7,6 +7,7 @@ import { PRISTINE_ENV } from '@/lib/pristine-env';
 import { buildShellLaunchCommand } from '@/lib/shell-env';
 import { createLogger } from '@/lib/logger';
 import { isLinux } from '@/lib/platform';
+import { getProcessArgs } from '@/lib/process-utils';
 
 const log = createLogger('terminal');
 
@@ -561,11 +562,7 @@ export const getLastCommand = async (sessionName: string): Promise<string | null
     const childPid = pgrepOut.trim();
     if (!childPid) return null;
 
-    const { stdout: psOut } = await execFile(
-      'ps', ['-o', 'args=', '-p', childPid],
-      { timeout: CMD_TIMEOUT },
-    );
-    const args = psOut.trim();
+    const args = await getProcessArgs(childPid, { timeoutMs: CMD_TIMEOUT });
     if (!args) return null;
 
     return cleanCommandLine(args);

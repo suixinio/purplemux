@@ -11,6 +11,7 @@ import useConfigStore from '@/hooks/use-config-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useIsMac from '@/hooks/use-is-mac';
+import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 
 interface IPaneNewTabMenuProps {
   paneId: string;
@@ -81,11 +82,10 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
   const handleSelect = (item: typeof menuItems[number]) => {
     setOpen(false);
     if ('startClaude' in item && item.startClaude) {
-      const dangerous = useConfigStore.getState().dangerouslySkipPermissions;
-      const settings = '--settings ~/.purplemux/hooks.json';
-      const prompt = wsId ? `--append-system-prompt-file ~/.purplemux/workspaces/${wsId}/claude-prompt.md` : '';
-      const flags = [settings, prompt].filter(Boolean).join(' ');
-      const cmd = dangerous ? `claude ${flags} --dangerously-skip-permissions` : `claude ${flags}`;
+      const cmd = buildClaudeLaunchCommand({
+        workspaceId: wsId,
+        dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+      });
       onCreateTab(item.type, { command: cmd });
     } else {
       onCreateTab(item.type);
