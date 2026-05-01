@@ -5,6 +5,7 @@ import { AlertCircle, ChevronDown, ChevronUp, FileEdit, FilePlus, FileX, ShieldA
 import Spinner from '@/components/ui/spinner';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import useIsMobile from '@/hooks/use-is-mobile';
 import useTabStore from '@/hooks/use-tab-store';
 import {
   notifyCodexApprovalNotApplied,
@@ -201,6 +202,7 @@ const HeaderBadgeKey: Record<IPermissionRequest['type'], string> = {
 const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionPromptCardProps) => {
   const t = useTranslations('terminal');
   const i18n = useApprovalI18n();
+  const isMobile = useIsMobile();
   const cliState = useTabStore((s) => s.tabs[tabId]?.cliState);
   const permissionRequest = useTabStore((s) => s.tabs[tabId]?.permissionRequest ?? null);
   const lastEventSeq = useTabStore((s) => s.tabs[tabId]?.lastEvent?.seq);
@@ -310,6 +312,7 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
   const hasRequest = permissionRequest !== null;
   const requestKind = permissionRequest?.type ?? 'RequestPermissions';
   const badgeLabel = t(HeaderBadgeKey[requestKind]);
+  const buttonSize = isMobile ? 'min-h-12' : 'min-h-11';
 
   return (
     <div
@@ -319,6 +322,7 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
       aria-label={t('codexPermissionTitle')}
       className={cn(
         'flex w-full flex-col gap-3 border-l-4 border-l-ui-blue bg-card px-4 py-3',
+        'animate-in fade-in-0 slide-in-from-top-2 duration-200 ease-out motion-reduce:animate-none',
         introPulse && 'animate-pulse motion-reduce:animate-none',
         className,
       )}
@@ -366,7 +370,7 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
           type="button"
           onClick={() => void sendResponse('y')}
           disabled={isSending}
-          className="min-h-11 flex-1 gap-2"
+          className={cn('flex-1 gap-2', buttonSize)}
         >
           {isSending ? (
             <>
@@ -387,7 +391,7 @@ const PermissionPromptCard = ({ tabId, sessionName, className }: IPermissionProm
           variant="outline"
           onClick={() => void sendResponse('n')}
           disabled={isSending}
-          className="min-h-11 flex-1 gap-2"
+          className={cn('flex-1 gap-2', buttonSize)}
         >
           {isSending ? (
             <>
