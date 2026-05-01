@@ -2,7 +2,7 @@
 page: codex-jsonl-parser
 title: Codex JSONL 파서
 route: (서버 내부 — timeline-server)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STATUS.md
@@ -102,3 +102,4 @@ Claude 파서(`session-parser.ts`, 1092줄)와 **동일 수준 — 자동 테스
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

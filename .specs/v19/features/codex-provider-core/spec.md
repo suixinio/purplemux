@@ -2,7 +2,7 @@
 page: codex-provider-core
 title: Codex Provider 코어 모듈
 route: (서버 내부 — provider 슬롯)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STATUS.md
@@ -105,3 +105,4 @@ Codex는 신규 provider라 디스크 호환 데이터가 없음 → ITab에 `co
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

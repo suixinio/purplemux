@@ -2,7 +2,7 @@
 page: codex-timeline-integration
 title: Codex 타임라인 통합 (8개 신규 엔트리 + 컴포넌트 + Provider 분기)
 route: (Codex/Claude 패널 timeline-view)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STYLE.md
@@ -132,3 +132,4 @@ Codex jsonl 파서 출력을 timeline-view에 그릴 수 있도록 `ITimelineEnt
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

@@ -2,7 +2,7 @@
 page: codex-permission-prompt
 title: Codex 권한 응답 UI
 route: (Codex 패널 인라인 + permission-prompt-item)
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STYLE.md
@@ -89,3 +89,4 @@ Phase 2 매핑: **"Yes" → `y`, "No" → `n`** (default keymap 가정).
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

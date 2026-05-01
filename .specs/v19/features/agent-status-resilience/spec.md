@@ -2,7 +2,7 @@
 page: agent-status-resilience
 title: Agent 상태 견고성 강화 (ping-pong 방지 + Store 일반화)
 route: (서버 내부 + 클라이언트 스토어)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STATUS.md
@@ -107,3 +107,4 @@ poll 사이클마다 `isAgentRunning` false && cliState ≠ 'inactive'/'unknown'
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

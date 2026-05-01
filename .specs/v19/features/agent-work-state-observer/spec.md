@@ -2,7 +2,7 @@
 page: agent-work-state-observer
 title: Agent Work State Observer 정식 구독
 route: (서버 내부 — provider observer 슬롯)
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/STATUS.md
@@ -94,3 +94,4 @@ Phase 1~3에서는 hook 핸들러가 `translateCodexHookEvent` helper를 통해 
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

@@ -2,7 +2,7 @@
 page: codex-session-list
 title: Codex 세션 목록
 route: (Codex 세션 목록 sheet)
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/DATA-DIR.md
@@ -76,3 +76,4 @@ assignee: ''
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

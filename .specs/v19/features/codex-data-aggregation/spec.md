@@ -2,7 +2,7 @@
 page: codex-data-aggregation
 title: Codex 세션 이력 + 통계 통합
 route: (Notification Sheet + Stats 페이지)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/DATA-DIR.md
@@ -110,3 +110,4 @@ export const aggregateStats = async (period) => {
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

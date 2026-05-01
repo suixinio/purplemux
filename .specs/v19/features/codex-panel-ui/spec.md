@@ -2,7 +2,7 @@
 page: codex-panel-ui
 title: Codex 패널 + 메뉴/단축키 + Agent 전환 잠금
 route: (탭 콘텐츠 영역 + pane-new-tab-menu)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STYLE.md
@@ -119,3 +119,4 @@ const switchMode = (target: TPanelType) => {
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

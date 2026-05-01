@@ -2,7 +2,7 @@
 page: codex-hook-pipeline
 title: Codex Hook 등록 및 페이로드 어댑터
 route: (서버 내부 + POST /api/status/hook)
-status: DRAFT
+status: DETAILED
 complexity: High
 depends_on:
   - docs/STATUS.md
@@ -129,3 +129,4 @@ if (eventName === 'session-start') {
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |

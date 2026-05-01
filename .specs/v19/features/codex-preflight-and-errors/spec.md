@@ -2,7 +2,7 @@
 page: codex-preflight-and-errors
 title: Codex Preflight 및 에러 표면화 정책
 route: (Preflight 페이지 + 토스트 + 패널 인라인)
-status: DRAFT
+status: DETAILED
 complexity: Medium
 depends_on:
   - docs/DATA-DIR.md
@@ -71,3 +71,4 @@ if (panelType === 'codex-cli' && !preflight.codex.installed) {
 | 날짜       | 변경 내용 | 상태  |
 | ---------- | --------- | ----- |
 | 2026-05-01 | 초안 작성 | DRAFT |
+| 2026-05-01 | 상세 문서 작성 (ui/flow/api) | DETAILED |
