@@ -5,6 +5,7 @@ import type { IRuntimePreflightResult } from '@/types/preflight';
 import { buildShellEnv, defaultShell as resolveDefaultShell } from '@/lib/shell-env';
 import { PRISTINE_ENV } from '@/lib/pristine-env';
 import { claudeProvider } from '@/lib/providers/claude';
+import { runCodexPreflight, invalidateCodexPreflight } from '@/lib/providers/codex/preflight';
 import { parseSemanticVersion } from '@/lib/process-utils';
 
 const execFile = promisify(execFileCb);
@@ -59,6 +60,7 @@ interface IPreflightResult {
   tmux: IToolStatus & { compatible: boolean };
   git: IToolStatus;
   claude: IToolStatus & { binaryPath: string | null; loggedIn: boolean };
+  codex: IToolStatus & { binaryPath: string | null };
   brew?: IToolStatus;
   clt?: { installed: boolean };
 }
@@ -91,10 +93,11 @@ const checkClt = async (): Promise<{ installed: boolean }> => {
 
 export const getPreflightStatus = async (): Promise<IPreflightResult> => {
   shellPathCache = await resolveShellPathAsync();
-  const [tmux, git, claude] = await Promise.all([
+  const [tmux, git, claude, codex] = await Promise.all([
     checkTool('tmux', ['-V'], parseSemanticVersion),
     checkTool('git', ['--version'], parseSemanticVersion),
     claudeProvider.preflight(),
+    runCodexPreflight(),
   ]);
 
   const coreReady = isTmuxCompatible(tmux) && git.installed && claude.installed;
@@ -103,6 +106,7 @@ export const getPreflightStatus = async (): Promise<IPreflightResult> => {
     tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },
     git,
     claude,
+    codex,
   };
 
   if (!coreReady) {
@@ -149,16 +153,18 @@ export const getCachedPreflightStatus = async (): Promise<IPreflightResult> => {
 
 export const getRuntimePreflightStatus = async (): Promise<IRuntimePreflightResult> => {
   shellPathCache = await resolveShellPathAsync();
-  const [tmux, git, claudeFull] = await Promise.all([
+  const [tmux, git, claudeFull, codex] = await Promise.all([
     checkTool('tmux', ['-V'], parseSemanticVersion),
     checkTool('git', ['--version'], parseSemanticVersion),
     claudeProvider.preflight(),
+    runCodexPreflight(),
   ]);
 
   return {
     tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },
     git,
     claude: { installed: claudeFull.installed, version: claudeFull.version },
+    codex: { installed: codex.installed, version: codex.version },
   };
 };
 
@@ -185,4 +191,5 @@ export const getCachedRuntimePreflight = async (): Promise<IRuntimePreflightResu
 export const invalidateRuntimeCache = (): void => {
   runtimeCache = null;
   inflightRequest = null;
+  invalidateCodexPreflight();
 };

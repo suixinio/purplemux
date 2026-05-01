@@ -11,5 +11,13 @@
   "claudePathMissing": "Claude CLI (PATH 설정 필요)",
   "recheck": "다시 확인",
   "allGood": "모든 도구가 설치되어 있습니다!",
-  "redirecting": "이동 중..."
+  "redirecting": "이동 중...",
+  "codexLabel": "Codex",
+  "codexOptional": "선택 사항",
+  "codexInstalled": "설치됨",
+  "codexNotInstalledLabel": "미설치",
+  "codexInstallGuide": "설치 가이드",
+  "codexInstallGuideTitle": "Codex CLI 설치 방법",
+  "codexInstallNpm": "npm i -g @openai/codex",
+  "codexInstallBrew": "brew install --cask codex"
 }

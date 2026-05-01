@@ -5,6 +5,7 @@ import { createLogger } from '@/lib/logger';
 import { STATUSLINE_SCRIPT_PATH, STATUSLINE_SCRIPT_CONTENT } from '@/lib/statusline-script';
 
 const log = createLogger('hooks');
+const codexLog = createLogger('codex-hook');
 
 const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const HOOKS_FILE = path.join(BASE_DIR, 'hooks.json');
@@ -115,7 +116,7 @@ export const ensureHookSettings = async (port: number): Promise<IEnsureHookSetti
     await writeManagedScript(CODEX_HOOK_SCRIPT, CODEX_HOOK_SCRIPT_CONTENT, 0o700);
   } catch (err) {
     codexHookInstallFailed = true;
-    log.error({ err }, 'codex-hook write failed');
+    codexLog.error({ err }, 'codex-hook script write failed');
   }
 
   const settings = buildHookSettings();

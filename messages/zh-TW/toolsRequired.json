@@ -11,5 +11,13 @@
   "claudePathMissing": "Claude CLI (PATH not configured)",
   "recheck": "Recheck",
   "allGood": "All tools are available!",
-  "redirecting": "Redirecting..."
+  "redirecting": "Redirecting...",
+  "codexLabel": "Codex",
+  "codexOptional": "選用",
+  "codexInstalled": "已安裝",
+  "codexNotInstalledLabel": "未安裝",
+  "codexInstallGuide": "安裝指南",
+  "codexInstallGuideTitle": "如何安裝 Codex CLI",
+  "codexInstallNpm": "npm i -g @openai/codex",
+  "codexInstallBrew": "brew install --cask codex"
 }

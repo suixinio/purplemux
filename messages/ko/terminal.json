@@ -84,5 +84,15 @@
   "copyPaneCaptureFailed": "터미널 내용을 불러올 수 없습니다",
   "copyPaneCopyAll": "전체 복사",
   "copyPaneSuccess": "클립보드에 복사되었습니다",
-  "copyPaneCopyFailed": "복사에 실패했습니다"
+  "copyPaneCopyFailed": "복사에 실패했습니다",
+  "codexNotInstalled": "Codex CLI를 설치하려면: npm i -g @openai/codex 또는 brew install --cask codex",
+  "codexConfigParseFailed": "~/.codex/config.toml 파싱 실패. purplemux hook만 적용됩니다.",
+  "codexLaunchFailed": "Codex 실행 실패. 터미널을 확인해 주세요.",
+  "codexResumeFailed": "Codex 세션 재개 실패.",
+  "codexApprovalSendFailed": "권한 응답 전송 실패. 다시 시도해 주세요.",
+  "codexApprovalNotApplied": "응답이 codex에 닿지 않았습니다. keymap을 확인하세요.",
+  "codexCopyCommand": "명령어 복사",
+  "codexCopyConfigPath": "config.toml 경로 복사",
+  "codexCopied": "복사됨",
+  "codexRetry": "재시도"
 }

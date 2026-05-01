@@ -84,5 +84,15 @@
   "copyPaneCaptureFailed": "ターミナルの内容を取得できませんでした",
   "copyPaneCopyAll": "すべてコピー",
   "copyPaneSuccess": "クリップボードにコピーしました",
-  "copyPaneCopyFailed": "コピーに失敗しました"
+  "copyPaneCopyFailed": "コピーに失敗しました",
+  "codexNotInstalled": "Install Codex CLI: npm i -g @openai/codex or brew install --cask codex",
+  "codexConfigParseFailed": "Failed to parse ~/.codex/config.toml. Only purplemux hooks applied.",
+  "codexLaunchFailed": "Codex launch failed. Check the terminal.",
+  "codexResumeFailed": "Codex resume failed.",
+  "codexApprovalSendFailed": "Failed to send approval response. Please try again.",
+  "codexApprovalNotApplied": "Response did not reach codex. Check your keymap.",
+  "codexCopyCommand": "Copy command",
+  "codexCopyConfigPath": "Copy config.toml path",
+  "codexCopied": "Copied",
+  "codexRetry": "Retry"
 }

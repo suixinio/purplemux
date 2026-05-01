@@ -3,10 +3,12 @@ import { useRouter } from 'next/router';
 import { useTranslations } from 'next-intl';
 import Head from 'next/head';
 import type { GetServerSideProps } from 'next';
-import { AlertTriangle, Check, Download, Loader2, RefreshCcw, X } from 'lucide-react';
+import { AlertTriangle, Check, Circle, Download, Loader2, RefreshCcw, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AppLogo from '@/components/layout/app-logo';
 import InstallDialog from '@/components/features/login/install-dialog';
+import CodexInstallGuideDialog from '@/components/features/login/codex-install-guide-dialog';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import { useRuntimePreflight } from '@/hooks/use-runtime-preflight';
 import { isRuntimeOk } from '@/types/preflight';
 import type { IRuntimePreflightResult } from '@/types/preflight';
@@ -38,6 +40,7 @@ const ToolsRequiredPage = () => {
   const from = (router.query.from as string) || '/';
   const { status, checking, recheck } = useRuntimePreflight();
   const [installTarget, setInstallTarget] = useState<{ command: string; label: string } | null>(null);
+  const [codexGuideOpen, setCodexGuideOpen] = useState(false);
 
   useEffect(() => {
     if (status && isRuntimeOk(status)) {
@@ -97,6 +100,32 @@ const ToolsRequiredPage = () => {
                     )}
                   </div>
                 ))}
+                {status && (
+                  <div className="flex items-center gap-2 text-sm">
+                    {status.codex.installed ? (
+                      <Check className="h-4 w-4 shrink-0 text-positive" />
+                    ) : (
+                      <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    )}
+                    <OpenAIIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="text-muted-foreground">{t('codexLabel')}</span>
+                    {status.codex.installed && status.codex.version && (
+                      <span className="text-xs text-muted-foreground">({status.codex.version})</span>
+                    )}
+                    {!status.codex.installed && (
+                      <>
+                        <span className="text-xs text-muted-foreground">({t('codexOptional')})</span>
+                        <button
+                          type="button"
+                          onClick={() => setCodexGuideOpen(true)}
+                          className="ml-auto text-xs text-primary underline-offset-2 hover:underline focus:outline-none focus-visible:underline"
+                        >
+                          {t('codexInstallGuide')}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 {nextInstall && (
@@ -131,6 +160,8 @@ const ToolsRequiredPage = () => {
               label={installTarget.label}
             />
           )}
+
+          <CodexInstallGuideDialog open={codexGuideOpen} onOpenChange={setCodexGuideOpen} />
         </div>
       </div>
     </>

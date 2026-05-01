@@ -4,6 +4,7 @@ import { getWorkspaces } from '@/lib/workspace-store';
 import { getProviderByPanelType, getProviderByProcessName } from '@/lib/providers';
 import type { IAgentProvider } from '@/lib/providers';
 import { getStatusManager } from '@/lib/status-manager';
+import { runCodexPreflight } from '@/lib/providers/codex/preflight';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('auto-resume');
@@ -22,6 +23,7 @@ interface IAutoResumeTarget {
 const findAutoResumeTargets = async (): Promise<IAutoResumeTarget[]> => {
   const { workspaces } = await getWorkspaces();
   const targets: IAutoResumeTarget[] = [];
+  const codexPreflight = await runCodexPreflight();
 
   for (const ws of workspaces) {
     const layout = await readLayoutFile(resolveLayoutFile(ws.id));
@@ -31,6 +33,10 @@ const findAutoResumeTargets = async (): Promise<IAutoResumeTarget[]> => {
     for (const tab of tabs) {
       const provider = getProviderByPanelType(tab.panelType);
       if (!provider) continue;
+      if (provider.id === 'codex' && !codexPreflight.installed) {
+        log.info(`Skip resume for codex tab ${tab.id}: codex not installed`);
+        continue;
+      }
       const sessionId = provider.readSessionId(tab);
       if (!sessionId) continue;
       targets.push({

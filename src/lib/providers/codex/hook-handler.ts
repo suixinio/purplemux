@@ -8,7 +8,7 @@ import {
 } from '@/lib/providers/codex/work-state-observer';
 import type { ISessionInfo } from '@/types/timeline';
 
-const log = createLogger('codex');
+const log = createLogger('codex-runtime');
 
 const SUMMARY_LIMIT = 80;
 

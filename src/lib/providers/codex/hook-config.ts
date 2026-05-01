@@ -6,7 +6,7 @@ import { CODEX_HOOK_SCRIPT_PATH } from '@/lib/hook-settings';
 import { enqueueSystemToast } from '@/lib/sync-server';
 import { createLogger } from '@/lib/logger';
 
-const log = createLogger('codex');
+const log = createLogger('codex-config');
 
 const TOAST_KEY_CONFIG_PARSE = 'codexConfigParseFailed';
 const g = globalThis as unknown as { __ptCodexConfigToastShown?: boolean };
@@ -136,11 +136,11 @@ export const buildCodexHookFlags = async (): Promise<ICodexHookFlagsResult> => {
       type: 'system-toast',
       key: TOAST_KEY_CONFIG_PARSE,
       variant: 'info',
-      message: 'config.toml 파싱 실패, purplemux hook만 적용됨',
+      message: '~/.codex/config.toml 파싱 실패. purplemux hook만 적용됩니다.',
       durationMs: 6000,
       action: {
         kind: 'copy',
-        label: 'config.toml 열기',
+        label: 'config.toml 경로 복사',
         text: USER_CONFIG_PATH,
         successMessage: 'config.toml 경로가 복사되었습니다',
       },
