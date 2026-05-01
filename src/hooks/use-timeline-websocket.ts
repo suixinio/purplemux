@@ -27,6 +27,7 @@ interface IResumeErrorPayload {
 interface IUseTimelineWebSocketOptions {
   sessionName: string;
   claudeSessionId?: string | null;
+  panelType?: 'claude-code' | 'codex-cli';
   enabled: boolean;
   onInit: (entries: ITimelineEntry[], totalEntries: number, sessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMore?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean, sessionStats?: ISessionStats | null) => void;
   onAppend: (entries: ITimelineEntry[]) => void;
@@ -49,6 +50,7 @@ interface IUseTimelineWebSocketReturn {
 const useTimelineWebSocket = ({
   sessionName,
   claudeSessionId,
+  panelType,
   enabled,
   onInit,
   onAppend,
@@ -100,6 +102,7 @@ const useTimelineWebSocket = ({
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const params = new URLSearchParams({ session: sessionName });
       if (claudeSessionId) params.set('claudeSessionId', claudeSessionId);
+      if (panelType) params.set('panelType', panelType);
       const ws = new WebSocket(
         `${protocol}//${location.host}/api/timeline?${params}`,
       );
@@ -173,7 +176,7 @@ const useTimelineWebSocket = ({
         console.log('[timeline-ws] connection error');
       };
     },
-    [sessionName, claudeSessionId, clearTimers],
+    [sessionName, claudeSessionId, panelType, clearTimers],
   );
 
   useEffect(() => {

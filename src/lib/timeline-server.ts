@@ -4,7 +4,10 @@ import { watch, type FSWatcher } from 'fs';
 import { existsSync, mkdirSync } from 'fs';
 import { type ISessionWatcher } from '@/lib/providers/types';
 import { readTailEntries, parseIncremental, parseJsonlContent } from './session-parser';
-import { open as fsOpen } from 'fs/promises';
+import { CodexParser, createCodexParser, parseCodexContent } from './session-parser-codex';
+import { CODEX_PROVIDER_ID } from '@/lib/providers/codex';
+import { isCodexJsonlPath } from './path-validation';
+import { open as fsOpen, stat as fsStat, readFile as fsReadFile } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPaneTitle } from './tmux';
@@ -69,6 +72,7 @@ interface IFileWatcher {
   processing: boolean;
   pendingChange: boolean;
   initOffsets: Map<WebSocket, number>;
+  codexParser: CodexParser | null;
 }
 
 interface IJsonlWatcher {
@@ -169,9 +173,50 @@ const readBoundedEntries = async (
   try {
     const buf = Buffer.alloc(readSize);
     await handle.read(buf, 0, readSize, from);
-    return parseJsonlContent(buf.toString('utf-8'));
+    const content = buf.toString('utf-8');
+    return isCodexJsonlPath(filePath) ? parseCodexContent(content) : parseJsonlContent(content);
   } finally {
     await handle.close();
+  }
+};
+
+const readInitForCodex = async (
+  parser: CodexParser,
+  isNewWatcher: boolean,
+): Promise<{
+  entries: ITimelineEntry[];
+  fileSize: number;
+  startByteOffset: number;
+  hasMore: boolean;
+  errorCount: number;
+  summary?: string;
+  customTitle?: string;
+}> => {
+  if (isNewWatcher) {
+    const r = await parser.parseAll();
+    return {
+      entries: r.entries,
+      fileSize: r.lastOffset,
+      startByteOffset: 0,
+      hasMore: false,
+      errorCount: r.errorCount,
+      summary: r.summary,
+    };
+  }
+  try {
+    const [stat, content] = await Promise.all([
+      fsStat(parser.path),
+      fsReadFile(parser.path, 'utf-8'),
+    ]);
+    return {
+      entries: parseCodexContent(content),
+      fileSize: stat.size,
+      startByteOffset: 0,
+      hasMore: false,
+      errorCount: 0,
+    };
+  } catch {
+    return { entries: [], fileSize: 0, startByteOffset: 0, hasMore: false, errorCount: 0 };
   }
 };
 
@@ -183,10 +228,11 @@ const processFileChange = async (fw: IFileWatcher) => {
   fw.processing = true;
   try {
     const prevOffset = fw.offset;
-    const { newEntries, newOffset, pendingBuffer } = await parseIncremental(
-      fw.jsonlPath, fw.offset, fw.pendingBuffer,
-    );
+    const { newEntries, newOffset, pendingBuffer } = fw.codexParser
+      ? await fw.codexParser.parseIncremental()
+      : await parseIncremental(fw.jsonlPath, fw.offset, fw.pendingBuffer);
     fw.pendingBuffer = pendingBuffer;
+    if (fw.codexParser) fw.offset = newOffset;
     if (newEntries.length > 0) {
       fw.offset = newOffset;
 
@@ -275,6 +321,7 @@ const removeFileWatcher = (jsonlPath: string) => {
   if (!fw) return;
   if (fw.watcher) fw.watcher.close();
   if (fw.debounceTimer) clearTimeout(fw.debounceTimer);
+  fw.codexParser?.dispose();
   fileWatchers.delete(jsonlPath);
 };
 
@@ -351,6 +398,7 @@ const subscribeToFile = async (
       sendJson(ws, { type: 'timeline:error', code: 'max-watchers', message: 'Too many active watchers' });
       return;
     }
+    const isCodex = provider.id === CODEX_PROVIDER_ID || isCodexJsonlPath(jsonlPath);
     fw = {
       watcher: null,
       jsonlPath,
@@ -365,13 +413,16 @@ const subscribeToFile = async (
       processing: false,
       pendingChange: false,
       initOffsets: new Map(),
+      codexParser: isCodex ? createCodexParser(jsonlPath) : null,
     };
     fileWatchers.set(jsonlPath, fw);
   }
 
   fw.connections.add(ws);
 
-  const result = await readTailEntries(jsonlPath, MAX_INIT_ENTRIES);
+  const result = fw.codexParser
+    ? await readInitForCodex(fw.codexParser, isNewWatcher)
+    : await readTailEntries(jsonlPath, MAX_INIT_ENTRIES);
 
   if (result.errorCount > 0) {
     sendJson(ws, {

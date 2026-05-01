@@ -21,6 +21,6 @@
 | codex-permission-prompt | Phase 2 | P0 | ✅ | ✅ 3/true | 2026-05-01 20:43 |
 | codex-session-list | Phase 2 | P0 | ✅ | ✅ 3/true | 2026-05-01 21:15 |
 | codex-jsonl-parser | Phase 3 | P0 | ✅ | ✅ 3/false | 2026-05-01 21:44 |
-| codex-timeline-integration | Phase 3 | P0 | ⬜ | ⬜ | |
+| codex-timeline-integration | Phase 3 | P0 | ✅ | ⬜ | 2026-05-01 21:58 |
 | agent-work-state-observer | Phase 4 | P0 | ⬜ | ⬜ | |
 | codex-data-aggregation | Phase 4 | P0 | ⬜ | ⬜ | |

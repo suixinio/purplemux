@@ -6,9 +6,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
+import useTimeline from '@/hooks/use-timeline';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
 import PermissionPromptCard from '@/components/features/timeline/permission-prompt-card';
+import TimelineView from '@/components/features/timeline/timeline-view';
 
 interface ICodexPanelProps {
   tabId: string;
@@ -17,6 +19,7 @@ interface ICodexPanelProps {
   onClose?: () => void;
   onNewSession?: () => void;
   onRestart?: () => void;
+  scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
 const CodexPanel = ({
@@ -26,16 +29,39 @@ const CodexPanel = ({
   onClose: _onClose,
   onNewSession,
   onRestart,
+  scrollToBottomRef,
 }: ICodexPanelProps) => {
   const t = useTranslations('terminal');
   const agentProcess = useTabStore((s) => s.tabs[tabId]?.agentProcess ?? null);
   const agentInstalled = useTabStore((s) => s.tabs[tabId]?.agentInstalled ?? true);
   const cliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
+  const compactingSince = useTabStore((s) => s.tabs[tabId]?.compactingSince ?? null);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
+  const codexSessionId = useTabStore((s) => s.tabs[tabId]?.agentSessionId ?? null);
 
   const handleStart = useCallback(() => {
     onNewSession?.();
   }, [onNewSession]);
+
+  const {
+    entries,
+    tasks,
+    sessionId,
+    initMeta,
+    sessionStats,
+    wsStatus,
+    isLoading: isTimelineLoading,
+    error: timelineError,
+    loadMore: loadMoreTimeline,
+    hasMore: timelineHasMore,
+    retrySession,
+  } = useTimeline({
+    sessionName,
+    claudeSessionId: codexSessionId,
+    panelType: 'codex-cli',
+    enabled: !!sessionName,
+    getCliState: () => useTabStore.getState().tabs[tabId]?.cliState,
+  });
 
   if (!agentInstalled) {
     return (
@@ -93,20 +119,38 @@ const CodexPanel = ({
         <span className="text-sm font-medium text-foreground">Codex</span>
         <CodexStatusDot cliState={cliState} className="ml-auto" />
       </div>
-      {cliState === 'needs-input' ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+      {cliState === 'needs-input' && (
+        <div className="shrink-0 border-b border-border/40 p-3">
           <PermissionPromptCard tabId={tabId} sessionName={sessionName} />
         </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
-          {cliState === 'busy' ? (
-            <Spinner className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <OpenAIIcon size={28} className="text-muted-foreground/60" />
-          )}
-          <p className="text-sm">{t('codexTimelinePlaceholder')}</p>
-        </div>
       )}
+      <div className="min-h-0 flex-1">
+        {cliState === 'busy' && entries.length === 0 && !isTimelineLoading ? (
+          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
+            <Spinner className="h-4 w-4" />
+            <p className="text-xs">{t('codexTimelinePlaceholder')}</p>
+          </div>
+        ) : (
+          <TimelineView
+            entries={entries}
+            tasks={tasks}
+            sessionId={sessionId}
+            sessionName={sessionName}
+            tabId={tabId}
+            initMeta={initMeta}
+            sessionStats={sessionStats}
+            cliState={cliState}
+            compactingSince={compactingSince}
+            wsStatus={wsStatus}
+            isLoading={isTimelineLoading}
+            error={timelineError}
+            onRetry={retrySession}
+            onLoadMore={loadMoreTimeline}
+            hasMore={timelineHasMore}
+            scrollToBottomRef={scrollToBottomRef}
+          />
+        )}
+      </div>
     </div>
   );
 };

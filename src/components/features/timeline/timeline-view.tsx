@@ -25,6 +25,14 @@ import TaskChecklist from '@/components/features/timeline/task-checklist';
 import TaskProgressItem from '@/components/features/timeline/task-progress-item';
 import ScrollToBottomButton from '@/components/features/timeline/scroll-to-bottom-button';
 import PermissionPromptItem from '@/components/features/timeline/permission-prompt-item';
+import ApprovalRequestItem from '@/components/features/timeline/approval-request-item';
+import ExecCommandStreamItem from '@/components/features/timeline/exec-command-stream-item';
+import WebSearchItem from '@/components/features/timeline/web-search-item';
+import McpToolCallItem from '@/components/features/timeline/mcp-tool-call-item';
+import PatchApplyItem from '@/components/features/timeline/patch-apply-item';
+import ContextCompactedItem from '@/components/features/timeline/context-compacted-item';
+import ReasoningSummaryItem from '@/components/features/timeline/reasoning-summary-item';
+import ErrorNoticeItem from '@/components/features/timeline/error-notice-item';
 
 interface ITimelineViewProps {
   entries: ITimelineEntry[];
@@ -150,6 +158,22 @@ const TimelineEntryRenderer = ({ entry, sessionName }: { entry: ITimelineEntry; 
       return <InterruptItem />;
     case 'session-exit':
       return <SessionExitItem />;
+    case 'approval-request':
+      return <ApprovalRequestItem entry={entry} />;
+    case 'exec-command-stream':
+      return <ExecCommandStreamItem entry={entry} />;
+    case 'web-search':
+      return <WebSearchItem entry={entry} />;
+    case 'mcp-tool-call':
+      return <McpToolCallItem entry={entry} />;
+    case 'patch-apply':
+      return <PatchApplyItem entry={entry} />;
+    case 'context-compacted':
+      return <ContextCompactedItem entry={entry} />;
+    case 'reasoning-summary':
+      return <ReasoningSummaryItem entry={entry} />;
+    case 'error-notice':
+      return <ErrorNoticeItem entry={entry} />;
     default:
       return null;
   }
