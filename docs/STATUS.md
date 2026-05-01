@@ -8,17 +8,17 @@ System that detects the in-progress state of the Claude CLI on the server, broad
 
 ## State Definitions
 
-### Claude Process State (`claudeProcess: boolean | null`)
+### Agent Process State (`agentProcess: boolean | null`)
 
-Determines whether the Claude CLI process is running inside a tmux pane. Managed independently from `cliState` and detected from two paths (terminal WS and timeline WS).
+Determines whether the agent CLI process (Claude, Codex, …) is running inside a tmux pane. Managed independently from `cliState` and detected from two paths (terminal WS and timeline WS).
 
 | Value | Meaning |
 | --- | --- |
 | `null` | Not yet detected (initial value) |
-| `true` | Claude process is running |
-| `false` | No Claude process |
+| `true` | Agent process is running |
+| `false` | No agent process |
 
-A separate `claudeInstalled: boolean` field (default `true`) gates the entire UI; if `false`, a "Claude not installed" screen is shown.
+A separate `agentInstalled: boolean` field (default `true`) gates the entire UI; if `false`, a "Claude not installed" screen is shown.
 
 Two detection paths:
 
@@ -27,9 +27,9 @@ Two detection paths:
 | Terminal WS `onTitleChange` | tmux title change | `/api/check-claude` → `isClaudeRunning()` | `true` / `false` |
 | Timeline WS | Session file change | `detectActiveSession()` | `true` / `false` |
 
-Both paths write to the same `claudeProcess` field; the `claudeProcessCheckedAt` server timestamp prevents stale updates.
+Both paths write to the same `agentProcess` field; the `agentProcessCheckedAt` server timestamp prevents stale updates.
 
-The server-side `detectActiveSession` still uses its own `TSessionDetectionStatus` type internally; the client-facing mapping is: `running`/`starting` → `true`, `not-running` → `false`, `not-installed` → `claudeInstalled = false`.
+The server-side `detectActiveSession` still uses its own `TSessionDetectionStatus` type internally; the client-facing mapping is: `running`/`starting` → `true`, `not-running` → `false`, `not-installed` → `agentInstalled = false`.
 
 ### CLI Work State (`TCliState`)
 
@@ -113,15 +113,15 @@ Stored directly in the tab state (not derived). Decides which screen the Claude 
 
 | State | Meaning | Enter condition | Exit condition |
 | --- | --- | --- | --- |
-| `session-list` | Browsing past sessions | Default. Also entered when `claudeProcess` transitions `true → false` while in `timeline` | User clicks new/resume → `check` |
-| `check` | Terminal preparation + Claude start | User action (new conversation, resume, mode switch) | `claudeProcess` becomes `true` → auto-transition to `timeline` |
-| `timeline` | Active conversation | Auto from `check` when `claudeProcess = true`. Also set directly on initial load if `claudeProcess = true` | `claudeProcess` transitions `true → false` → auto-transition to `session-list` |
+| `session-list` | Browsing past sessions | Default. Also entered when `agentProcess` transitions `true → false` while in `timeline` | User clicks new/resume → `check` |
+| `check` | Terminal preparation + agent start | User action (new conversation, resume, mode switch) | `agentProcess` becomes `true` → auto-transition to `timeline` |
+| `timeline` | Active conversation | Auto from `check` when `agentProcess = true`. Also set directly on initial load if `agentProcess = true` | `agentProcess` transitions `true → false` → auto-transition to `session-list` |
 
-The auto-transitions are handled inside `setClaudeProcess`: when `claudeProcess` becomes `true` and `sessionView` is `'check'` or `'session-list'`, it flips to `'timeline'`; when `claudeProcess` transitions **`true → false`** (Claude was confirmed running and then exited) and `sessionView === 'timeline'`, it flips to `'session-list'`. A `null → false` transition does **not** flip, so a freshly opened resume tab stays on `'check'` during initial shell detection until the actual Claude process comes up. Additionally, `useTimeline` no longer infers `claudeProcess = true` from `timeline:init` alone (JSONL existence ≠ process running) — the store's `claudeProcess` is driven by `timeline:session-changed` (`reason='session-waiting'`, only sent when the server confirms a running Claude) and by the terminal `onTitleChange` → `/api/check-claude` path.
+The auto-transitions are handled inside `setAgentProcess`: when `agentProcess` becomes `true` and `sessionView` is `'check'` or `'session-list'`, it flips to `'timeline'`; when `agentProcess` transitions **`true → false`** (agent was confirmed running and then exited) and `sessionView === 'timeline'`, it flips to `'session-list'`. A `null → false` transition does **not** flip, so a freshly opened resume tab stays on `'check'` during initial shell detection until the actual agent process comes up. Additionally, `useTimeline` no longer infers `agentProcess = true` from `timeline:init` alone (JSONL existence ≠ process running) — the store's `agentProcess` is driven by `timeline:session-changed` (`reason='session-waiting'`, only sent when the server confirms a running agent) and by the terminal `onTitleChange` → `/api/check-claude` path.
 
 Gates (checked before the view switch):
-- `claudeInstalled === false` → not-installed screen
-- `claudeProcess === null && view !== 'check'` → loading spinner
+- `agentInstalled === false` → not-installed screen
+- `agentProcess === null && view !== 'check'` → loading spinner
 
 ---
 
@@ -134,9 +134,9 @@ A Zustand store that manages all tab state as `Record<tabId, ITabState>`.
 | Field | Type | Source | Purpose |
 | --- | --- | --- | --- |
 | `terminalConnected` | `boolean` | Terminal WS | Whether input is allowed |
-| `claudeProcess` | `boolean \| null` | Terminal/Timeline WS | Process presence (`null` = not yet detected) |
-| `claudeProcessCheckedAt` | `number` | Server timestamp | Prevent stale updates |
-| `claudeInstalled` | `boolean` | Timeline WS | Gate for "not installed" screen |
+| `agentProcess` | `boolean \| null` | Terminal/Timeline WS | Process presence (`null` = not yet detected) |
+| `agentProcessCheckedAt` | `number` | Server timestamp | Prevent stale updates |
+| `agentInstalled` | `boolean` | Timeline WS | Gate for "not installed" screen |
 | `sessionView` | `TSessionView` | User action / auto-transition | Which screen to show |
 | `cliState` | `TCliState` | Server WS (`status:update` / hook derivation) | Work state, tab indicator |
 | `lastEvent` | `ILastEvent \| null` | Server WS (`status:hook-event`) | Track event order, trigger PermissionPrompt re-fetch |
@@ -309,7 +309,17 @@ JSONL watcher is also started in the `unknown` state — it does not change `cli
 
 ### Busy Stuck Safety Net
 
-If a `busy` state lasts longer than `BUSY_STUCK_MS` (**10 minutes**) and the Claude process has died, silently recover to `idle`. Performed inside the metadata poll loop. Designed to handle dropped `stop` hooks (e.g. SIGKILL).
+If a `busy` state lasts longer than `BUSY_STUCK_MS` (**10 minutes**) and the agent process has died, silently recover to `idle`. Performed inside the metadata poll loop. Designed to handle dropped `stop` hooks (e.g. SIGKILL).
+
+### Agent-Gone Inactive Guard (F1/F2)
+
+For agent tabs in any active state (`busy` / `idle` / `needs-input` / `ready-for-review`), the metadata poll silently transitions to `inactive` only when **all** of the following hold:
+
+1. The agent process is not running for the pane (`provider.isAgentRunning(panePid)` returns `false`).
+2. **F1 — recent-launch grace fails**: `lastResumeOrStartedAt` is undefined or older than 5 seconds. The stamp is refreshed by auto-resume `sendKeysSeparated`, the synthetic and real `session-start` hooks, and any other path that calls `StatusManager.markAgentLaunch`. This blocks the brief boot window where the Rust binary (e.g. Codex) has spawned but the process tree has not yet caught up.
+3. **F2 — pane title is shell-style**: the title looks like `<cmd>|<path>` (i.e. tmux's `set-titles-string` default) or is empty. Agent CLIs override this to their own format, so a non-shell title is treated as "agent still owns the pane" and skips the transition. This blocks the false negative when an agent forks a transient child mid-poll.
+
+Together these guards keep the `cliState` stable through the boot/fork windows that previously caused indicator ping-pong, while still recognizing a clean exit (`/quit`, `/exit`) within one poll cycle.
 
 ---
 
@@ -421,7 +431,7 @@ tmux title change → onTitleChange
   ├─ formatTabTitle → updates tab display name
   └─ fetch /api/check-claude
       └─ isClaudeRunning(panePid)
-          └─ setClaudeProcess(tabId, true | false)
+          └─ setAgentProcess(tabId, true | false)
               (auto-transitions: check→timeline on true, timeline→session-list on false)
 ```
 
@@ -429,12 +439,12 @@ tmux title change → onTitleChange
 
 ```
 Timeline WS connects → server runs detectActiveSession
-  ├─ session-changed → reflected in claudeProcess
+  ├─ session-changed → reflected in agentProcess
   ├─ timeline:init → entries received, isTimelineLoading = false
   └─ timeline:append → entries appended
       └─ useTimeline.onSync callback
-          ├─ setClaudeProcess(tabId, true | false)
-          ├─ setClaudeInstalled(tabId, false) (if not-installed)
+          ├─ setAgentProcess(tabId, true | false)
+          ├─ setAgentInstalled(tabId, false) (if not-installed)
           └─ setTimelineLoading(tabId, loading)
 ```
 

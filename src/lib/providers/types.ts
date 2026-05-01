@@ -70,7 +70,7 @@ export interface IAgentProvider {
   readonly displayName: string;
   readonly panelType: TPanelType;
 
-  matchesProcess(commandName: string): boolean;
+  matchesProcess(commandName: string, args?: string[]): boolean;
   isValidSessionId(id: unknown): id is string;
 
   detectActiveSession(panePid: number, childPids?: number[]): Promise<ISessionInfo>;

@@ -596,6 +596,7 @@ const handleResumeMessage = async (
     const parsed = parseSessionName(tmuxSession);
     const resumeCmd = await conn.provider.buildResumeCommand(sessionId, { workspaceId: parsed?.wsId });
     await sendKeys(tmuxSession, resumeCmd);
+    if (parsed) getStatusManager().markAgentLaunch(parsed.tabId);
 
     await updateTabAgentSessionId(conn.sessionName, conn.provider, sessionId).catch(() => {});
 

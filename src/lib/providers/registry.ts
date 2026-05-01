@@ -18,9 +18,12 @@ export const getProviderByPanelType = (panelType: string | undefined): IAgentPro
   return null;
 };
 
-export const getProviderByProcessName = (commandName: string): IAgentProvider | null => {
+export const getProviderByProcessName = (
+  commandName: string,
+  args?: string[],
+): IAgentProvider | null => {
   for (const provider of providers.values()) {
-    if (provider.matchesProcess(commandName)) return provider;
+    if (provider.matchesProcess(commandName, args)) return provider;
   }
   return null;
 };

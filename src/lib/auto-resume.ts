@@ -1,8 +1,9 @@
 import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-store';
-import { hasSession, createSession, getPaneCurrentCommand, sendKeys } from '@/lib/tmux';
+import { hasSession, createSession, getPaneCurrentCommand, sendKeysSeparated } from '@/lib/tmux';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { getProviderByPanelType, getProviderByProcessName } from '@/lib/providers';
 import type { IAgentProvider } from '@/lib/providers';
+import { getStatusManager } from '@/lib/status-manager';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('auto-resume');
@@ -70,7 +71,8 @@ const sendResumeKeys = async (target: IAutoResumeTarget): Promise<boolean> => {
       workspaceId: target.workspaceId,
     });
     log.debug(`Sending resume: ${target.tmuxSession} → ${target.sessionId}`);
-    await sendKeys(target.tmuxSession, resumeCmd);
+    await sendKeysSeparated(target.tmuxSession, resumeCmd);
+    getStatusManager().markAgentLaunch(target.tabId);
 
     return true;
   } catch (err) {

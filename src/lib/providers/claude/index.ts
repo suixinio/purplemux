@@ -69,7 +69,12 @@ export const claudeProvider: IAgentProvider = {
   displayName: 'Claude Code',
   panelType: 'claude-code',
 
-  matchesProcess: (commandName) => commandName === 'claude' || commandName === 'node',
+  matchesProcess: (commandName, args) => {
+    if (commandName === 'claude') return true;
+    if (commandName !== 'node') return false;
+    if (!args) return true;
+    return args.some((a) => a.endsWith('claude.js') || a.endsWith('claude'));
+  },
   isValidSessionId: isValidClaudeSessionId,
 
   detectActiveSession: (panePid, childPids) => detectClaudeSession(panePid, childPids),

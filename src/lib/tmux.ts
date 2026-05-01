@@ -337,6 +337,28 @@ export const sendKeys = async (
   );
 };
 
+// Send text and Enter as two separate tmux invocations split by 50ms.
+// Codex (and possibly other TUIs) interprets a single send-keys "cmd Enter"
+// burst as a paste containing a literal newline. Splitting forces the agent
+// to commit text first, then receive Enter as a discrete keypress.
+export const sendKeysSeparated = async (
+  sessionName: string,
+  text: string,
+): Promise<void> => {
+  await exitCopyMode(sessionName);
+  await execFile(
+    'tmux',
+    ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, text],
+    { timeout: CMD_TIMEOUT },
+  );
+  await sleep(50);
+  await execFile(
+    'tmux',
+    ['-L', TMUX_SOCKET, 'send-keys', '-t', sessionName, 'Enter'],
+    { timeout: CMD_TIMEOUT },
+  );
+};
+
 export const sendRawKeys = async (
   sessionName: string,
   keys: string,

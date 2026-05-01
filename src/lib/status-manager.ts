@@ -66,6 +66,12 @@ const POLL_INTERVAL_LARGE = 60_000;
 const TAB_COUNT_MEDIUM = 11;
 const TAB_COUNT_LARGE = 21;
 const BUSY_STUCK_MS = 10 * 60 * 1000;
+const AGENT_LAUNCH_GRACE_MS = 5_000;
+const AGENT_GUARDED_STATES: Set<TCliState> = new Set(['busy', 'idle', 'needs-input', 'ready-for-review']);
+// tmux set-titles emits "<cmd>|<path>" once a shell takes over the pane.
+// An agent CLI normally writes its own title (no pipe), so this regex
+// distinguishes "agent gone" from "agent rewrote title" without a process call.
+const SHELL_TITLE_RE = /^[^|]+\|[^|]+$/;
 const JSONL_TAIL_SIZE = 8192;
 const JSONL_EXTENDED_TAIL_SIZE = 131_072;
 const STALE_MS_INTERRUPTED = 20_000;
@@ -644,18 +650,42 @@ class StatusManager {
           }
         }
 
+        let agentRunningCache: boolean | null = null;
+        const checkAgentRunning = async (): Promise<boolean> => {
+          if (agentRunningCache !== null) return agentRunningCache;
+          if (!paneInfo?.pid || !provider) {
+            agentRunningCache = false;
+            return false;
+          }
+          const childPids = await getChildPids(paneInfo.pid);
+          agentRunningCache = await provider.isAgentRunning(paneInfo.pid, childPids);
+          return agentRunningCache;
+        };
+
         if (existing.cliState === 'busy' && existing.lastEvent
             && now - existing.lastEvent.at > BUSY_STUCK_MS) {
-          const childPids = paneInfo?.pid ? await getChildPids(paneInfo.pid) : [];
-          const agentRunning = paneInfo?.pid && provider
-            ? await provider.isAgentRunning(paneInfo.pid, childPids)
-            : false;
-          if (!agentRunning) {
+          if (!(await checkAgentRunning())) {
             log.info({ tabId: tab.id }, 'busy stuck — agent process gone, forcing idle');
             this.applyCliState(tab.id, existing, 'idle', { silent: true });
             this.persistToLayout(existing);
             this.broadcastUpdate(tab.id, existing);
             continue;
+          }
+        }
+
+        if (provider && AGENT_GUARDED_STATES.has(existing.cliState)) {
+          const stamp = existing.lastResumeOrStartedAt;
+          const inGrace = stamp !== undefined && now - stamp < AGENT_LAUNCH_GRACE_MS;
+          if (!inGrace) {
+            const title = existing.paneTitle ?? '';
+            const titleShellStyle = !!title && SHELL_TITLE_RE.test(title);
+            if ((!title || titleShellStyle) && !(await checkAgentRunning())) {
+              log.info({ tabId: tab.id, prevState: existing.cliState }, 'agent process gone — transitioning to inactive');
+              this.applyCliState(tab.id, existing, 'inactive', { silent: true });
+              this.persistToLayout(existing);
+              this.broadcastUpdate(tab.id, existing);
+              continue;
+            }
           }
         }
 
@@ -878,6 +908,7 @@ class StatusManager {
     const seq = (entry.eventSeq ?? 0) + 1;
     entry.eventSeq = seq;
     entry.lastEvent = { name: eventName, at: now, seq };
+    if (eventName === 'session-start') entry.lastResumeOrStartedAt = now;
     this.broadcast({ type: 'status:hook-event', tabId, event: entry.lastEvent });
 
     const prevState = entry.cliState;
@@ -989,6 +1020,12 @@ class StatusManager {
   registerTab(tabId: string, entry: ITabStatusEntry): void {
     this.tabs.set(tabId, entry);
     this.broadcastUpdate(tabId, entry);
+  }
+
+  markAgentLaunch(tabId: string): void {
+    const entry = this.tabs.get(tabId);
+    if (!entry) return;
+    entry.lastResumeOrStartedAt = Date.now();
   }
 
   addClient(ws: WebSocket): void {

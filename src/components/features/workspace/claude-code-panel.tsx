@@ -48,8 +48,8 @@ const ClaudeCodePanel = ({
   const t = useTranslations('terminal');
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
 
-  const claudeProcess = useTabStore((s) => s.tabs[tabId]?.claudeProcess ?? null);
-  const claudeInstalled = useTabStore((s) => s.tabs[tabId]?.claudeInstalled ?? true);
+  const agentProcess = useTabStore((s) => s.tabs[tabId]?.agentProcess ?? null);
+  const agentInstalled = useTabStore((s) => s.tabs[tabId]?.agentInstalled ?? true);
   const storeCliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
   const compactingSince = useTabStore((s) => s.tabs[tabId]?.compactingSince ?? null);
   const view = useTabStore((s) => selectSessionView(s.tabs, tabId));
@@ -89,7 +89,7 @@ const ClaudeCodePanel = ({
     sessionSummary,
     initMeta,
     sessionStats,
-    claudeProcess: claudeProcessFromTimeline,
+    agentProcess: agentProcessFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -110,11 +110,11 @@ const ClaudeCodePanel = ({
     },
     onSync: (state) => {
       const checkedAt = Date.now();
-      if (state.claudeProcess !== null) {
-        useTabStore.getState().setClaudeProcess(tabId, state.claudeProcess, checkedAt);
+      if (state.agentProcess !== null) {
+        useTabStore.getState().setAgentProcess(tabId, state.agentProcess, checkedAt);
       }
-      if (!state.claudeInstalled) {
-        useTabStore.getState().setClaudeInstalled(tabId, false);
+      if (!state.agentInstalled) {
+        useTabStore.getState().setAgentInstalled(tabId, false);
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     },
@@ -131,7 +131,7 @@ const ClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && claudeProcess !== true,
+    enabled: !!sessionName && agentProcess !== true,
     cwd,
   });
 
@@ -144,14 +144,14 @@ const ClaudeCodePanel = ({
     };
   }, [addPendingMessageRef, removePendingMessageRef, addPendingUserMessage, removePendingUserMessage]);
 
-  const prevClaudeProcessRef = useRef(claudeProcess);
+  const prevAgentProcessRef = useRef(agentProcess);
   useEffect(() => {
-    const prev = prevClaudeProcessRef.current;
-    prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== true && claudeProcess === true && claudeProcessFromTimeline !== true) {
+    const prev = prevAgentProcessRef.current;
+    prevAgentProcessRef.current = agentProcess;
+    if (prev !== true && agentProcess === true && agentProcessFromTimeline !== true) {
       retrySession();
     }
-  }, [claudeProcess, claudeProcessFromTimeline, retrySession]);
+  }, [agentProcess, agentProcessFromTimeline, retrySession]);
 
   useEffect(() => {
     if (storeCliState !== 'unknown') return;
@@ -167,7 +167,7 @@ const ClaudeCodePanel = ({
 
   const startingPromptOptions = useStartingPrompt(view === 'check', sessionName);
 
-  const isHeaderLoading = claudeProcess === null || (entries.length === 0 && isTimelineLoading);
+  const isHeaderLoading = agentProcess === null || (entries.length === 0 && isTimelineLoading);
   const freshMeta = useSessionMetaCompute(entries, sessionSummary, initMeta, sessionStats, tabClaudeSummary, tabLastUserMessage);
 
   useEffect(() => {
@@ -185,7 +185,7 @@ const ClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (!claudeInstalled) {
+  if (!agentInstalled) {
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center gap-3 text-muted-foreground', className)}>
         <span className="text-sm font-medium">{t('installClaude')}</span>
@@ -241,7 +241,7 @@ const ClaudeCodePanel = ({
   }
 
   if (view === 'session-list') {
-    if (claudeProcess === null || (isSessionListLoading && sessions.length === 0)) {
+    if (agentProcess === null || (isSessionListLoading && sessions.length === 0)) {
       return (
         <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
           <Spinner className="h-4 w-4 text-muted-foreground" />

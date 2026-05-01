@@ -1,0 +1,26 @@
+# v19 작업 진행 상황
+
+`.specs/v19/PRD.md`의 작업 단위 표를 기준으로 Phase / Priority 순으로 정렬한 feature 진행표.
+
+## 정렬 규칙
+
+1. Phase 오름차순 (Phase 1 → Phase 4)
+2. 같은 Phase 안에서는 Priority 오름차순 (P0 → P3)
+3. PRD에 없는 공통/인프라 feature는 Phase 0, P0으로 맨 위에 배치 (현재 해당 없음)
+
+## 진행표
+
+| feature | phase | priority | build | verify | updated |
+|---|---|---|---|---|---|
+| agent-status-resilience | Phase 1 | P0 | ✅ | ⬜ | 2026-05-01 17:42 |
+| codex-hook-pipeline | Phase 1 | P0 | ⬜ | ⬜ | |
+| codex-preflight-and-errors | Phase 1 | P0 | ⬜ | ⬜ | |
+| codex-provider-core | Phase 1 | P0 | ⬜ | ⬜ | |
+| codex-tui-ready-detection | Phase 1 | P0 | ⬜ | ⬜ | |
+| codex-panel-ui | Phase 2 | P0 | ⬜ | ⬜ | |
+| codex-permission-prompt | Phase 2 | P0 | ⬜ | ⬜ | |
+| codex-session-list | Phase 2 | P0 | ⬜ | ⬜ | |
+| codex-jsonl-parser | Phase 3 | P0 | ⬜ | ⬜ | |
+| codex-timeline-integration | Phase 3 | P0 | ⬜ | ⬜ | |
+| agent-work-state-observer | Phase 4 | P0 | ⬜ | ⬜ | |
+| codex-data-aggregation | Phase 4 | P0 | ⬜ | ⬜ | |

@@ -14,9 +14,9 @@ export interface ISessionMetaCache {
 
 export interface ITabState {
   terminalConnected: boolean;
-  claudeProcess: boolean | null;
-  claudeProcessCheckedAt: number;
-  claudeInstalled: boolean;
+  agentProcess: boolean | null;
+  agentProcessCheckedAt: number;
+  agentInstalled: boolean;
   sessionView: TSessionView;
   cliState: TCliState;
   isTimelineLoading: boolean;
@@ -46,9 +46,9 @@ const SYNC_GRACE_MS = 30_000;
 
 const DEFAULT_TAB_STATE: ITabState = {
   terminalConnected: false,
-  claudeProcess: null,
-  claudeProcessCheckedAt: 0,
-  claudeInstalled: true,
+  agentProcess: null,
+  agentProcessCheckedAt: 0,
+  agentInstalled: true,
   sessionView: 'session-list',
   cliState: 'inactive',
   isTimelineLoading: true,
@@ -64,8 +64,8 @@ interface ITabStore {
   removeTab: (tabId: string) => void;
 
   setTerminalConnected: (tabId: string, connected: boolean) => void;
-  setClaudeProcess: (tabId: string, process: boolean | null, checkedAt: number) => void;
-  setClaudeInstalled: (tabId: string, installed: boolean) => void;
+  setAgentProcess: (tabId: string, process: boolean | null, checkedAt: number) => void;
+  setAgentInstalled: (tabId: string, installed: boolean) => void;
   setSessionView: (tabId: string, view: TSessionView) => void;
   setTimelineLoading: (tabId: string, loading: boolean) => void;
   setSessionMetaCache: (tabId: string, cache: ISessionMetaCache) => void;
@@ -120,26 +120,26 @@ const useTabStore = create<ITabStore>((set) => ({
       return { tabs: updateTab(state.tabs, tabId, { terminalConnected: connected }) };
     }),
 
-  setClaudeProcess: (tabId, process, checkedAt) =>
+  setAgentProcess: (tabId, process, checkedAt) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.claudeProcessCheckedAt > checkedAt) return state;
-      if (prev.claudeProcess === process) return state;
-      const patch: Partial<ITabState> = { claudeProcess: process, claudeProcessCheckedAt: checkedAt };
+      if (!prev || prev.agentProcessCheckedAt > checkedAt) return state;
+      if (prev.agentProcess === process) return state;
+      const patch: Partial<ITabState> = { agentProcess: process, agentProcessCheckedAt: checkedAt };
       if (process === true && (prev.sessionView === 'check' || prev.sessionView === 'session-list')) {
         patch.sessionView = 'timeline';
       }
-      if (process === false && prev.claudeProcess === true && prev.sessionView === 'timeline') {
+      if (process === false && prev.agentProcess === true && prev.sessionView === 'timeline') {
         patch.sessionView = 'session-list';
       }
       return { tabs: updateTab(state.tabs, tabId, patch) };
     }),
 
-  setClaudeInstalled: (tabId, installed) =>
+  setAgentInstalled: (tabId, installed) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.claudeInstalled === installed) return state;
-      return { tabs: updateTab(state.tabs, tabId, { claudeInstalled: installed }) };
+      if (!prev || prev.agentInstalled === installed) return state;
+      return { tabs: updateTab(state.tabs, tabId, { agentInstalled: installed }) };
     }),
 
   setSessionView: (tabId, view) =>

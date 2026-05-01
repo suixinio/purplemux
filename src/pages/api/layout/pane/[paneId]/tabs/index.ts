@@ -57,6 +57,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         try {
           const resumeCmd = await provider.buildResumeCommand(resumeSessionId, { workspaceId: wsId });
           await sendKeys(tab.sessionName, resumeCmd);
+          getStatusManager().markAgentLaunch(tab.id);
         } catch (err) {
           log.warn(`resume sendKeys failed: ${err instanceof Error ? err.message : err}`);
         }

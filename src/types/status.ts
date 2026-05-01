@@ -42,6 +42,11 @@ export interface ITabStatusEntry {
   lastEvent?: ILastEvent | null;
   eventSeq?: number;
   lastInterruptTs?: number;
+  // Wall-clock timestamp of the most recent agent launch/resume signal
+  // (auto-resume sendKeys, session-start hook, synthetic interrupt).
+  // Drives the F1 grace window that suppresses spurious inactive transitions
+  // during the agent's boot-up. Runtime only — not persisted to layout.
+  lastResumeOrStartedAt?: number;
 }
 
 export type TTabDisplayStatus = 'busy' | 'ready-for-review' | 'needs-input' | 'idle' | 'unknown';

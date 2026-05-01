@@ -68,8 +68,8 @@ const MobileClaudeCodePanel = ({
   const [metaSheetOpen, setMetaSheetOpen] = useState(false);
   const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
 
-  const claudeProcess = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeProcess ?? null : null);
-  const claudeInstalled = useTabStore((s) => tabId ? s.tabs[tabId]?.claudeInstalled ?? true : true);
+  const agentProcess = useTabStore((s) => tabId ? s.tabs[tabId]?.agentProcess ?? null : null);
+  const agentInstalled = useTabStore((s) => tabId ? s.tabs[tabId]?.agentInstalled ?? true : true);
   const storeCliState = useTabStore((s) => tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive');
   const compactingSince = useTabStore((s) => tabId ? s.tabs[tabId]?.compactingSince ?? null : null);
   const tabClaudeSummary = useTabStore((s) => tabId ? s.tabs[tabId]?.agentSummary ?? null : null);
@@ -104,7 +104,7 @@ const MobileClaudeCodePanel = ({
     sessionSummary,
     initMeta,
     sessionStats,
-    claudeProcess: claudeProcessFromTimeline,
+    agentProcess: agentProcessFromTimeline,
     wsStatus,
     isLoading: isTimelineLoading,
     error: timelineError,
@@ -125,18 +125,18 @@ const MobileClaudeCodePanel = ({
     },
     onSync: tabId ? (state) => {
       const checkedAt = Date.now();
-      if (state.claudeProcess !== null) {
-        useTabStore.getState().setClaudeProcess(tabId, state.claudeProcess, checkedAt);
+      if (state.agentProcess !== null) {
+        useTabStore.getState().setAgentProcess(tabId, state.agentProcess, checkedAt);
       }
-      if (!state.claudeInstalled) {
-        useTabStore.getState().setClaudeInstalled(tabId, false);
+      if (!state.agentInstalled) {
+        useTabStore.getState().setAgentInstalled(tabId, false);
       }
       useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
     } : undefined,
     getCliState: tabId ? () => useTabStore.getState().tabs[tabId]?.cliState : undefined,
   });
 
-  const effectiveClaudeProcess = tabId ? claudeProcess : claudeProcessFromTimeline;
+  const effectiveAgentProcess = tabId ? agentProcess : agentProcessFromTimeline;
 
   const {
     sessions,
@@ -148,18 +148,18 @@ const MobileClaudeCodePanel = ({
     loadMore: loadMoreSessions,
   } = useSessionList({
     tmuxSession: sessionName,
-    enabled: !!sessionName && effectiveClaudeProcess !== true,
+    enabled: !!sessionName && effectiveAgentProcess !== true,
     cwd,
   });
 
-  const prevClaudeProcessRef = useRef(claudeProcess);
+  const prevAgentProcessRef = useRef(agentProcess);
   useEffect(() => {
-    const prev = prevClaudeProcessRef.current;
-    prevClaudeProcessRef.current = claudeProcess;
-    if (prev !== true && claudeProcess === true && claudeProcessFromTimeline !== true) {
+    const prev = prevAgentProcessRef.current;
+    prevAgentProcessRef.current = agentProcess;
+    if (prev !== true && agentProcess === true && agentProcessFromTimeline !== true) {
       retrySession();
     }
-  }, [claudeProcess, claudeProcessFromTimeline, retrySession]);
+  }, [agentProcess, agentProcessFromTimeline, retrySession]);
 
   const view = useTabStore((s) => tabId ? selectSessionView(s.tabs, tabId) : 'session-list' as const);
 
@@ -203,7 +203,7 @@ const MobileClaudeCodePanel = ({
     [resumingSessionId, sendResume, sessionName],
   );
 
-  if (!claudeInstalled) {
+  if (!agentInstalled) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 bg-muted text-muted-foreground">
         <span className="text-sm font-medium">{t('installClaude')}</span>
@@ -220,7 +220,7 @@ const MobileClaudeCodePanel = ({
     );
   }
 
-  if (claudeProcess === null && view !== 'check') {
+  if (agentProcess === null && view !== 'check') {
     return (
       <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
         <Spinner className="h-4 w-4 text-muted-foreground" />
