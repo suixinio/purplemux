@@ -27,29 +27,29 @@ interface ICodexSessionListSheetProps {
 
 const formatRelativeTime = (
   ms: number,
-  t: ReturnType<typeof useTranslations>,
+  tTime: ReturnType<typeof useTranslations>,
 ): string => {
   const now = dayjs();
   const target = dayjs(ms);
   const diffMinutes = now.diff(target, 'minute');
 
-  if (diffMinutes < 1) return t('justNow');
-  if (diffMinutes < 60) return t('minutesAgo', { count: diffMinutes });
+  if (diffMinutes < 1) return tTime('justNow');
+  if (diffMinutes < 60) return tTime('minutesAgo', { count: diffMinutes });
 
   const diffHours = now.diff(target, 'hour');
-  if (diffHours < 24) return t('hoursAgo', { count: diffHours });
+  if (diffHours < 24) return tTime('hoursAgo', { count: diffHours });
 
   const diffDays = now.diff(target, 'day');
-  if (diffDays === 1) return t('yesterday');
-  if (diffDays < 7) return t('daysAgo', { count: diffDays });
+  if (diffDays === 1) return tTime('yesterday');
+  if (diffDays < 7) return tTime('daysAgo', { count: diffDays });
 
   const diffWeeks = now.diff(target, 'week');
-  if (diffWeeks < 4) return t('weeksAgo', { count: diffWeeks });
+  if (diffWeeks < 4) return tTime('weeksAgo', { count: diffWeeks });
 
   const diffMonths = now.diff(target, 'month');
-  if (diffMonths < 12) return t('monthsAgo', { count: diffMonths });
+  if (diffMonths < 12) return tTime('monthsAgo', { count: diffMonths });
 
-  return t('yearsAgo', { count: now.diff(target, 'year') });
+  return tTime('yearsAgo', { count: now.diff(target, 'year') });
 };
 
 const formatTokens = (tokens: number | null): string | null => {
@@ -72,7 +72,7 @@ interface ICodexSessionItemProps {
   tokensSuffix: string;
   modelLabel: string;
   unknownModelLabel: string;
-  t: ReturnType<typeof useTranslations>;
+  tTime: ReturnType<typeof useTranslations>;
 }
 
 const CodexSessionItem = memo(({
@@ -83,9 +83,9 @@ const CodexSessionItem = memo(({
   tokensSuffix,
   modelLabel,
   unknownModelLabel,
-  t,
+  tTime,
 }: ICodexSessionItemProps) => {
-  const relative = formatRelativeTime(session.startedAt, t);
+  const relative = formatRelativeTime(session.startedAt, tTime);
   const cwdShort = lastSegment(session.cwd);
   const tokensFormatted = formatTokens(session.totalTokens);
   const message = session.firstUserMessage?.trim() || noMessageLabel;
@@ -175,7 +175,7 @@ interface IEmptyStateProps {
 
 const EmptyState = ({ title, newConversationLabel, onNewConversation }: IEmptyStateProps) => (
   <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-    <OpenAIIcon size={36} className="text-muted-foreground/50" />
+    <OpenAIIcon size={48} className="text-muted-foreground/50" />
     <p className="text-sm text-muted-foreground">{title}</p>
     <Button autoFocus size="sm" onClick={onNewConversation} className="gap-1.5">
       <Plus className="h-3.5 w-3.5" />
@@ -192,7 +192,7 @@ interface IErrorStateProps {
 
 const ErrorState = ({ title, retryLabel, onRetry }: IErrorStateProps) => (
   <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-    <AlertCircle size={28} className="text-ui-red" />
+    <AlertCircle size={32} className="text-ui-red" />
     <p className="text-sm text-muted-foreground">{title}</p>
     <Button autoFocus variant="outline" size="sm" onClick={onRetry}>
       {retryLabel}
@@ -255,7 +255,7 @@ const CodexSessionListSheet = ({
         {!isMobile && <div className="h-titlebar shrink-0" />}
         <SheetHeader className="shrink-0 border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <OpenAIIcon size={18} className="text-foreground" />
+            <OpenAIIcon size={20} className="text-foreground" />
             <SheetTitle className="text-base font-medium">{t('codexSessionList')}</SheetTitle>
           </div>
           <SheetDescription className="text-xs">
@@ -293,7 +293,7 @@ const CodexSessionListSheet = ({
                       tokensSuffix={t('codexSessionsTokens')}
                       modelLabel={t('codexSessionsModelLabel')}
                       unknownModelLabel={t('codexSessionsUnknownModel')}
-                      t={t}
+                      tTime={tSession}
                     />
                   ))}
                 </div>
