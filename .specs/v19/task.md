@@ -16,7 +16,7 @@
 | codex-hook-pipeline | Phase 1 | P0 | ✅ | ✅ 2/true | 2026-05-01 18:12 |
 | codex-preflight-and-errors | Phase 1 | P0 | ✅ | ✅ 3/true | 2026-05-01 18:48 |
 | codex-provider-core | Phase 1 | P0 | ✅ | ✅ 1/true | 2026-05-01 19:17 |
-| codex-tui-ready-detection | Phase 1 | P0 | ✅ | ⬜ | 2026-05-01 19:26 |
+| codex-tui-ready-detection | Phase 1 | P0 | ✅ | ✅ 1/true | 2026-05-01 19:29 |
 | codex-panel-ui | Phase 2 | P0 | ⬜ | ⬜ | |
 | codex-permission-prompt | Phase 2 | P0 | ⬜ | ⬜ | |
 | codex-session-list | Phase 2 | P0 | ⬜ | ⬜ | |
