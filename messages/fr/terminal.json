@@ -102,5 +102,14 @@
   "codexBootFailed": "Codex failed to start",
   "codexBootFailedHint": "Check the terminal for details",
   "codexBootRestart": "Restart",
-  "codexBootShowTerminal": "Show terminal"
+  "codexBootShowTerminal": "Show terminal",
+  "codexNewConversation": "Codex New Chat",
+  "codexSessionList": "Codex Sessions",
+  "codexInactiveMessage": "Codex session is not running",
+  "codexStartSession": "Start Codex",
+  "codexResumeLastSession": "Resume",
+  "codexLastSessionLabel": "Last session:",
+  "codexConnecting": "Codex connecting...",
+  "codexTimelinePlaceholder": "Timeline integration coming soon",
+  "switchAgentBlocked": "{name} is running. Exit with /quit or Ctrl+D in the terminal first"
 }

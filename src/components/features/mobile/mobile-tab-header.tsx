@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { X, Plus, GitCompareArrows, Copy } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import TabStatusIndicator from '@/components/features/workspace/tab-status-indicator';
+import { tryAgentSwitch } from '@/lib/agent-switch-lock';
 import CopyPaneDrawer from '@/components/features/workspace/copy-pane-drawer';
 import useTabStore from '@/hooks/use-tab-store';
 import ProcessIcon from '@/components/icons/process-icon';
@@ -23,6 +25,7 @@ import type { TPanelType } from '@/types/terminal';
 const PANEL_MODES = [
   { type: 'terminal' as const, label: 'TERMINAL' },
   { type: 'claude-code' as const, label: 'CLAUDE' },
+  { type: 'codex-cli' as const, label: 'CODEX' },
   { type: 'diff' as const, label: 'DIFF' },
 ] as const;
 
@@ -63,6 +66,8 @@ const MobileTabHeader = ({
         <TabStatusIndicator tabId={tabId} panelType={panelType} />
         {panelType === 'claude-code' ? (
           <ClaudeCodeIcon size={16} />
+        ) : panelType === 'codex-cli' ? (
+          <OpenAIIcon size={16} className="shrink-0 text-foreground" aria-label="Codex" />
         ) : panelType === 'diff' ? (
           <GitCompareArrows className="h-4 w-4 shrink-0 text-muted-foreground" />
         ) : (
@@ -85,7 +90,11 @@ const MobileTabHeader = ({
                   ? 'bg-accent text-foreground'
                   : 'text-muted-foreground/60 hover:text-muted-foreground',
               )}
-              onClick={() => onSwitchPanelType(mode.type)}
+              onClick={() => {
+                if (panelType === mode.type) return;
+                if (!tryAgentSwitch({ current: panelType, target: mode.type, cliState: tabEntry?.cliState })) return;
+                onSwitchPanelType(mode.type);
+              }}
             >
               {mode.label}
             </button>

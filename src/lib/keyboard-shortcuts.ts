@@ -224,6 +224,13 @@ export const ACTIONS = {
     defaultKey: `${mod}+shift+c`,
     display: { mac: '⌘⇧C', other: 'Ctrl+Shift+C' },
   },
+  'view.mode_codex': {
+    id: 'view.mode_codex',
+    label: 'Switch to Codex mode',
+    category: 'view',
+    defaultKey: `${mod}+shift+x`,
+    display: { mac: '⌘⇧X', other: 'Ctrl+Shift+X' },
+  },
   'view.mode_diff': {
     id: 'view.mode_diff',
     label: 'Switch to Diff mode',

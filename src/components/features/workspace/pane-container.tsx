@@ -14,8 +14,10 @@ import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
+import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ClaudeCodePanel from '@/components/features/workspace/claude-code-panel';
+import CodexPanel from '@/components/features/workspace/codex-panel';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
 import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/workspace/connection-status';
@@ -98,6 +100,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
   const isClaudeCode = activePanelType === 'claude-code';
+  const isCodex = activePanelType === 'codex-cli';
+  const isAgentPanel = isClaudeCode || isCodex;
   const isWebBrowser = activePanelType === 'web-browser';
   const isDiff = activePanelType === 'diff';
 
@@ -312,7 +316,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const { terminalRef, write, clear, reset, fit, focus, isReady, getBufferText } = useTerminal({
     theme: terminalTheme.colors,
-    fontSize: (TERMINAL_FONT_SIZES[configFontSize] ?? TERMINAL_FONT_SIZES.normal)[isClaudeCode ? 'claudeCode' : 'normal'],
+    fontSize: (TERMINAL_FONT_SIZES[configFontSize] ?? TERMINAL_FONT_SIZES.normal)[isAgentPanel ? 'claudeCode' : 'normal'],
     onInput: (data) => {
       wsActionsRef.current.sendStdin(data);
     },
@@ -520,7 +524,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       wsActionsRef.current.sendResize(cols, rows);
       const targetTerminal = clickedTerminalRef.current;
       clickedTerminalRef.current = false;
-      if (targetTerminal || !isClaudeCode || !claudeInputVisible) {
+      if (targetTerminal || !isAgentPanel || !claudeInputVisible) {
         focus();
       } else {
         deferredFocusInput(() => focusInputRef.current?.());
@@ -696,6 +700,25 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
+  const buildCodexCommand = useCallback((): string =>
+    buildCodexLaunchCommand({
+      workspaceId: layoutWsId,
+      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+    }), [layoutWsId]);
+
+  const handleNewCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${buildCodexCommand()}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+
+  const handleRestartCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    pendingRestartRef.current = buildCodexCommand();
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin('/quit\r');
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+
   const handleSwitchToClaudeMode = useCallback(async () => {
     if (!activeTabId) return;
     setShowClaudeModePrompt(false);
@@ -747,7 +770,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         ? { timeline: 100, 'terminal-area': 0 }
         : { timeline: 100 - ratio, 'terminal-area': ratio },
     );
-    if (isClaudeCode && activeTabId) {
+    if (isAgentPanel && activeTabId) {
       updateTabTerminalLayout(paneId, activeTabId, { terminalCollapsed: next });
     }
     setTimeout(() => {
@@ -757,12 +780,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const { cols, rows } = fit();
       wsActionsRef.current.sendResize(cols, rows);
     }, 150);
-  }, [isTerminalCollapsed, isReady, status, fit, isClaudeCode, activeTabId, paneId, activeTab?.terminalRatio, updateTabTerminalLayout]);
+  }, [isTerminalCollapsed, isReady, status, fit, isAgentPanel, activeTabId, paneId, activeTab?.terminalRatio, updateTabTerminalLayout]);
 
   useEffect(() => {
     if (!splitGroupRef.current) return;
     suppressTerminalSaveRef.current = true;
-    if (isClaudeCode) {
+    if (isAgentPanel) {
       const ratio = activeTab?.terminalRatio ?? 30;
       setIsTerminalCollapsed(effectiveTerminalCollapsed);
       splitGroupRef.current.setLayout(
@@ -789,7 +812,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       }
     }, 150);
     return () => clearTimeout(timer);
-  }, [isClaudeCode, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAgentPanel, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isFocused && isClaudeCode && claudeInputVisible) {
@@ -870,7 +893,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         <Group
           groupRef={splitGroupRef}
           orientation="vertical"
-          defaultLayout={isClaudeCode
+          defaultLayout={isAgentPanel
             ? (() => {
                 const ratio = activeTab?.terminalRatio ?? 30;
                 return effectiveTerminalCollapsed
@@ -881,7 +904,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           }
           onLayoutChanged={(layout) => {
             if (suppressTerminalSaveRef.current) return;
-            if (!isClaudeCode || !activeTabId) return;
+            if (!isAgentPanel || !activeTabId) return;
             const area = layout['terminal-area'];
             if (area === undefined) return;
             const collapsed = area <= 0;
@@ -906,7 +929,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             minSize={0}
             collapsible
             collapsedSize={0}
-            disabled={!isClaudeCode}
+            disabled={!isAgentPanel}
           >
             <div
               className={cn('flex h-full flex-col bg-card', isTerminalCollapsed && 'pb-3')}
@@ -958,20 +981,30 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onSelect={handleSelectQuickPrompt}
                 />
               )}
+              {isCodex && activeTab && !showInitialLoading && activeTabId && (
+                <CodexPanel
+                  key={activeTab.sessionName}
+                  tabId={activeTabId}
+                  sessionName={activeTab.sessionName}
+                  onClose={() => handleSwitchPanelType('terminal')}
+                  onNewSession={handleNewCodexSession}
+                  onRestart={handleRestartCodexSession}
+                />
+              )}
             </div>
           </Panel>
 
           <Separator
             className={cn(
               'group flex items-center justify-center overflow-hidden bg-card',
-              isClaudeCode && !isTerminalCollapsed ? 'h-3' : 'h-0',
+              isAgentPanel && !isTerminalCollapsed ? 'h-3' : 'h-0',
             )}
-            disabled={!isClaudeCode || isTerminalCollapsed}
+            disabled={!isAgentPanel || isTerminalCollapsed}
           >
             <div className="h-px w-16 rounded-full bg-border transition-colors group-hover:bg-muted-foreground group-data-[resize-handle-active]:bg-muted-foreground" />
           </Separator>
 
-          {isClaudeCode && (
+          {isAgentPanel && (
             <button
               className="flex h-6 w-full shrink-0 cursor-pointer items-center gap-1.5 border-t border-border bg-black/3 px-2 text-muted-foreground transition-colors hover:bg-black/5 dark:bg-white/3 dark:hover:bg-white/5"
               onClick={handleToggleTerminal}
@@ -993,11 +1026,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             <div className="flex h-full flex-col" onMouseDown={() => { clickedTerminalRef.current = true; }}>
               <TerminalContainer
                 ref={terminalRef}
-                minHeight={isClaudeCode ? 256 : undefined}
+                minHeight={isAgentPanel ? 256 : undefined}
                 className={cn(
                   'min-h-0 flex-1',
                   ready ? 'opacity-100' : 'opacity-0',
-                  isClaudeCode && 'py-0 pl-2 pr-0.5',
+                  isAgentPanel && 'py-0 pl-2 pr-0.5',
                 )}
               />
             </div>

@@ -8,9 +8,11 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { TLayoutNode, TPanelType } from '@/types/terminal';
 import { collectPanes } from '@/hooks/use-layout';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import useTabStore from '@/hooks/use-tab-store';
 import useConfigStore from '@/hooks/use-config-store';
 import useIsMac from '@/hooks/use-is-mac';
 import useShortcutHints from '@/hooks/use-shortcut-hints';
+import { tryAgentSwitch } from '@/lib/agent-switch-lock';
 import ShortcutKey from '@/components/shortcut-key';
 import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
@@ -94,6 +96,8 @@ const ContentHeader = ({
     if (isToggling || !focusedPane || !activeTab) return;
     const next = value as TPanelType;
     if (next === activePanelType) return;
+    const cliState = useTabStore.getState().tabs[activeTab.id]?.cliState;
+    if (!tryAgentSwitch({ current: activePanelType, target: next, cliState })) return;
     setIsToggling(true);
     onUpdateTabPanelType(focusedPane.id, activeTab.id, next);
     setTimeout(() => setIsToggling(false), 150);
@@ -119,6 +123,7 @@ const ContentHeader = ({
             {([
               { value: 'terminal', label: 'TERMINAL', mac: '⌘⇧T', other: '^⇧T' },
               { value: 'claude-code', label: 'CLAUDE', mac: '⌘⇧C', other: '^⇧C' },
+              { value: 'codex-cli', label: 'CODEX', mac: '⌘⇧X', other: '^⇧X' },
               { value: 'diff', label: 'DIFF', mac: '⌘⇧F', other: '^⇧F' },
             ] as const).map((item) => (
               <div key={item.value} className="relative">

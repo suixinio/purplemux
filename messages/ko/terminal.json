@@ -102,5 +102,14 @@
   "codexBootFailed": "Codex 시작에 실패했습니다",
   "codexBootFailedHint": "터미널에서 직접 확인해 보세요",
   "codexBootRestart": "다시 시작",
-  "codexBootShowTerminal": "터미널 보기"
+  "codexBootShowTerminal": "터미널 보기",
+  "codexNewConversation": "Codex 새 대화",
+  "codexSessionList": "Codex 세션 목록",
+  "codexInactiveMessage": "Codex 세션이 시작되지 않았습니다",
+  "codexStartSession": "Codex 시작",
+  "codexResumeLastSession": "이어서 시작",
+  "codexLastSessionLabel": "마지막 사용 세션:",
+  "codexConnecting": "Codex 연결 중...",
+  "codexTimelinePlaceholder": "타임라인 통합 준비 중",
+  "switchAgentBlocked": "{name}이(가) 실행 중입니다. 터미널에서 /quit 또는 Ctrl+D로 종료 후 다시 시도하세요"
 }

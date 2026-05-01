@@ -13,6 +13,7 @@ import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ConnectionStatus from '@/components/features/workspace/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
+import MobileCodexPanel from '@/components/features/mobile/mobile-codex-panel';
 import MobileTerminalToolbar from '@/components/features/mobile/mobile-terminal-toolbar';
 import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
@@ -23,6 +24,7 @@ import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
+import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
 
 
 interface ITermActions {
@@ -84,6 +86,8 @@ const MobileSurfaceView = ({
   const tt = useTranslations('terminal');
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const isClaudeCode = panelType === 'claude-code';
+  const isCodex = panelType === 'codex-cli';
+  const isAgentPanel = isClaudeCode || isCodex;
   const isWebBrowser = panelType === 'web-browser';
   const isDiff = panelType === 'diff';
 
@@ -168,7 +172,7 @@ const MobileSurfaceView = ({
 
   const { terminalRef, write, clear, reset, fit, focus, isReady, getBufferText } = useTerminal({
     theme: terminalTheme.colors,
-    fontSize: isClaudeCode ? undefined : MOBILE_FONT_SIZE,
+    fontSize: isAgentPanel ? undefined : MOBILE_FONT_SIZE,
     onInput: (data) => wsActionsRef.current.sendStdin(data),
     onResize: (cols, rows) => {
       wsActionsRef.current.sendResize(cols, rows);
@@ -342,7 +346,7 @@ const MobileSurfaceView = ({
   }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isClaudeCode) {
+    if (isAgentPanel) {
       waitingForResizeRef.current = false;
       if (showTimerRef.current) clearTimeout(showTimerRef.current);
       fetchAndUpdateCwd();
@@ -361,7 +365,7 @@ const MobileSurfaceView = ({
       };
     }
     queueMicrotask(() => setShowTerminal(true));
-  }, [isClaudeCode]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isAgentPanel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCreateTab = useCallback(async () => {
     setIsCreating(true);
@@ -387,6 +391,25 @@ const MobileSurfaceView = ({
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
+
+  const buildCodexCommand = useCallback((): string =>
+    buildCodexLaunchCommand({
+      workspaceId: layoutWsId,
+      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+    }), [layoutWsId]);
+
+  const handleNewCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${buildCodexCommand()}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+
+  const handleRestartCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    pendingRestartRef.current = buildCodexCommand();
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin('/quit\r');
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
@@ -491,19 +514,27 @@ const MobileSurfaceView = ({
         />
       )}
 
+      {isCodex && activeTab && (
+        <MobileCodexPanel
+          tabId={activeTabId ?? undefined}
+          onNewSession={handleNewCodexSession}
+          onRestart={handleRestartCodexSession}
+        />
+      )}
+
       {!isWebBrowser && !isDiff && (
         <TerminalContainer
           ref={terminalRef}
           className={cn(
-            !isClaudeCode && 'transition-opacity duration-150',
-            isClaudeCode ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
-            !isClaudeCode && ready && showTerminal ? 'opacity-100' : '',
-            !isClaudeCode && (!ready || !showTerminal) ? 'opacity-0' : '',
+            !isAgentPanel && 'transition-opacity duration-150',
+            isAgentPanel ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
+            !isAgentPanel && ready && showTerminal ? 'opacity-100' : '',
+            !isAgentPanel && (!ready || !showTerminal) ? 'opacity-0' : '',
           )}
         />
       )}
 
-      {!isClaudeCode && !isWebBrowser && !isDiff && status === 'connected' && (
+      {!isAgentPanel && !isWebBrowser && !isDiff && status === 'connected' && (
         <MobileTerminalToolbar sendStdin={sendWebStdin} terminalConnected={status === 'connected'} />
       )}
 
@@ -561,7 +592,7 @@ const MobileSurfaceView = ({
         </div>
       )}
 
-      {!noTabs && !isWebBrowser && !isDiff && !(isClaudeCode && sessionView === 'check') && (
+      {!noTabs && !isWebBrowser && !isDiff && !(isAgentPanel && sessionView === 'check') && (
         <ConnectionStatus
           status={status}
           retryCount={retryCount}

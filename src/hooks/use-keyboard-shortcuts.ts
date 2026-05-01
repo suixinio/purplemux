@@ -4,6 +4,8 @@ import type { TDirection } from '@/hooks/use-layout';
 import { findResizeTarget } from '@/lib/layout-tree';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useBoundHotkey from '@/hooks/use-bound-hotkey';
+import useTabStore from '@/hooks/use-tab-store';
+import { tryAgentSwitch } from '@/lib/agent-switch-lock';
 import type { ILayoutData, IPaneNode, ITab, TPanelType } from '@/types/terminal';
 
 const RESIZE_STEP_PERCENT = 5;
@@ -146,11 +148,14 @@ const useKeyboardShortcuts = ({
     if (!tab) return;
     const current = tab.panelType ?? 'terminal';
     if (current === panelType) return;
+    const cliState = useTabStore.getState().tabs[pane.activeTabId]?.cliState;
+    if (!tryAgentSwitch({ current, target: panelType, cliState })) return;
     useLayoutStore.getState().updateTabPanelType(pane.id, pane.activeTabId, panelType);
   }, []);
 
   useBoundHotkey('view.mode_terminal', () => switchMode('terminal'), enabled);
   useBoundHotkey('view.mode_claude', () => switchMode('claude-code'), enabled);
+  useBoundHotkey('view.mode_codex', () => switchMode('codex-cli'), enabled);
   useBoundHotkey('view.mode_diff', () => switchMode('diff'), enabled);
 };
 

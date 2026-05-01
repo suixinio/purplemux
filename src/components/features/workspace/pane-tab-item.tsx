@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { X, Globe, GitCompareArrows } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
 import type { ITab } from '@/types/terminal';
@@ -112,6 +113,8 @@ const PaneTabItem = ({
           <TabStatusIndicator tabId={tab.id} panelType={tab.panelType} />
           {tab.panelType === 'claude-code' ? (
             <ClaudeCodeIcon className="h-3.5 w-3.5" />
+          ) : tab.panelType === 'codex-cli' ? (
+            <OpenAIIcon className="h-3.5 w-3.5 shrink-0 text-foreground" aria-label="Codex" />
           ) : tab.panelType === 'web-browser' ? (
             <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'diff' ? (

@@ -3,6 +3,7 @@ import { Terminal, GitCompareArrows } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import {
   Dialog,
   DialogContent,
@@ -23,16 +24,19 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   const MENU_ITEMS = [
-    { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeNewConversation'), startClaude: true },
+    { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeNewConversation'), startAgent: 'claude' as const },
     { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeSessionList') },
+    { key: 'codex-new', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: tt('codexNewConversation'), startAgent: 'codex' as const },
     { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-5 w-5 text-muted-foreground" />, label: 'Terminal' },
     { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-5 w-5 text-muted-foreground" />, label: 'Diff' },
   ] as const;
 
   const handleSelect = async (item: (typeof MENU_ITEMS)[number]) => {
     setCreatingKey(item.key);
-    if ('startClaude' in item && item.startClaude) {
+    if ('startAgent' in item && item.startAgent === 'claude') {
       await onCreateTab(item.type, { command: 'claude-new' });
+    } else if ('startAgent' in item && item.startAgent === 'codex') {
+      await onCreateTab(item.type, { command: 'codex-new' });
     } else {
       await onCreateTab(item.type);
     }

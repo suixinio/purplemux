@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Plus, Terminal, Globe, GitCompareArrows } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -12,6 +13,7 @@ import { useLayoutStore } from '@/hooks/use-layout';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useIsMac from '@/hooks/use-is-mac';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
+import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
 
 interface IPaneNewTabMenuProps {
   paneId: string;
@@ -24,6 +26,7 @@ const defaultKeyForPanelType = (panelType?: TPanelType): string => {
   switch (panelType) {
     case 'terminal': return 'terminal';
     case 'web-browser': return 'web-browser';
+    case 'codex-cli': return 'codex-new';
     case 'diff':
     case 'claude-code':
     default: return 'claude-new';
@@ -40,8 +43,9 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const menuItems = useMemo(() => {
     const all = [
-      { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeNewConversation'), startClaude: true },
+      { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeNewConversation'), startAgent: 'claude' as const, shortcut: '⌘⇧C' },
       { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeSessionList') },
+      { key: 'codex-new', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: t('codexNewConversation'), startAgent: 'codex' as const, shortcut: '⌘⇧X' },
       { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
       { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Diff' },
       { key: 'web-browser', type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
@@ -81,15 +85,23 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const handleSelect = (item: typeof menuItems[number]) => {
     setOpen(false);
-    if ('startClaude' in item && item.startClaude) {
+    if ('startAgent' in item && item.startAgent === 'claude') {
       const cmd = buildClaudeLaunchCommand({
         workspaceId: wsId,
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
       });
       onCreateTab(item.type, { command: cmd });
-    } else {
-      onCreateTab(item.type);
+      return;
     }
+    if ('startAgent' in item && item.startAgent === 'codex') {
+      const cmd = buildCodexLaunchCommand({
+        workspaceId: wsId,
+        dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+      });
+      onCreateTab(item.type, { command: cmd });
+      return;
+    }
+    onCreateTab(item.type);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -143,7 +155,12 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
               onClick={() => handleSelect(item)}
             >
               {item.icon}
-              {item.label}
+              <span className="flex-1 text-left">{item.label}</span>
+              {'shortcut' in item && item.shortcut && (
+                <span className="shrink-0 text-[10px] tracking-wide text-muted-foreground">
+                  {item.shortcut}
+                </span>
+              )}
             </button>
           ))}
         </PopoverContent>

@@ -102,5 +102,14 @@
   "codexBootFailed": "Codex failed to start",
   "codexBootFailedHint": "Check the terminal for details",
   "codexBootRestart": "Restart",
-  "codexBootShowTerminal": "Show terminal"
+  "codexBootShowTerminal": "Show terminal",
+  "codexNewConversation": "Codex 新しいチャット",
+  "codexSessionList": "Codex セッション",
+  "codexInactiveMessage": "Codex セッションが開始されていません",
+  "codexStartSession": "Codex を開始",
+  "codexResumeLastSession": "続きから",
+  "codexLastSessionLabel": "最後のセッション:",
+  "codexConnecting": "Codex 接続中...",
+  "codexTimelinePlaceholder": "タイムライン統合準備中",
+  "switchAgentBlocked": "{name} が実行中です。ターミナルで /quit または Ctrl+D で終了してから再度お試しください"
 }
