@@ -18,6 +18,7 @@ const ActivitySection = dynamic(() => import('@/components/features/stats/activi
 const ProjectSection = dynamic(() => import('@/components/features/stats/project-section'));
 const SessionSection = dynamic(() => import('@/components/features/stats/session-section'));
 const UptimeSection = dynamic(() => import('@/components/features/stats/uptime-section'));
+const AggregatedSection = dynamic(() => import('@/components/features/stats/aggregated-section'));
 
 const SectionError = ({ onRetry, message }: { onRetry: () => void; message: string }) => {
   const t = useTranslations('common');
@@ -59,6 +60,9 @@ const StatsPage = () => {
     sessionsError,
     uptime,
     uptimeLoading,
+    aggregated,
+    aggregatedLoading,
+    aggregatedError,
     refetch,
     initializing,
     fileCount,
@@ -112,6 +116,16 @@ const StatsPage = () => {
               ) : null}
             </SectionErrorBoundary>
           </section>
+
+          <SectionErrorBoundary sectionName={t('aggregatedTitle')}>
+            {aggregatedLoading ? (
+              <SectionSkeleton cardCount={2} hasChart />
+            ) : aggregatedError ? (
+              <SectionError onRetry={refetch} message={t('dataLoadError')} />
+            ) : aggregated ? (
+              <AggregatedSection data={aggregated} />
+            ) : null}
+          </SectionErrorBoundary>
 
           <SectionErrorBoundary sectionName={t('token')}>
             {overviewLoading ? (

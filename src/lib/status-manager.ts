@@ -815,14 +815,15 @@ class StatusManager {
       ? completedAt - startedAt
       : (stats?.turnDurationMs ?? (completedAt - startedAt));
 
+    const providerId = entry.agentProviderId === 'codex' ? 'codex' : 'claude';
     const historyEntry: ISessionHistoryEntry = {
       id: nanoid(),
       workspaceId: entry.workspaceId,
       workspaceName: ws?.name ?? entry.workspaceId,
       workspaceDir: ws?.directories[0] ?? null,
       tabId,
-      // Field name kept `claudeSessionId` for session-history back-compat (persisted on disk).
-      claudeSessionId: entry.agentSessionId ?? null,
+      providerId,
+      agentSessionId: entry.agentSessionId ?? null,
       prompt: stats?.lastUserText ?? entry.lastUserMessage,
       result: stats?.lastAssistantText ?? null,
       startedAt,

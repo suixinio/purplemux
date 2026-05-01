@@ -85,5 +85,20 @@
   "periodToday": "Hoy",
   "period7d": "7 días",
   "period30d": "30 días",
-  "periodAll": "Todo"
+  "periodAll": "Todo",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "{count} sesiones",
+  "aggregatedProviderEmpty": "Sin uso en este periodo",
+  "aggregatedProviderError": "Error al cargar",
+  "aggregatedChartTitle": "Tokens diarios por proveedor",
+  "aggregatedChartA11y": "Gráfico apilado de uso diario de tokens, Claude y Codex",
+  "aggregatedEmpty": "Sin sesiones en este periodo",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "Ventana de contexto",
+  "aggregatedCachedInput": "Entrada cacheada",
+  "aggregatedReasoningOutput": "Salida de Reasoning"
 }

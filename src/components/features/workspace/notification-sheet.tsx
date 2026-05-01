@@ -34,8 +34,10 @@ import { navigateToTab, navigateToTabOrCreate, useLayoutStore } from '@/hooks/us
 import { findPane } from '@/lib/layout-tree';
 import type { ITabState } from '@/hooks/use-tab-store';
 import type { ICurrentAction } from '@/types/status';
-import type { ISessionHistoryEntry } from '@/types/session-history';
+import type { ISessionHistoryEntry, TSessionHistoryProvider } from '@/types/session-history';
 import { stripMarkdown } from '@/lib/strip-markdown';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 
 const ACTION_ICONS: Record<string, typeof FileText> = {
   Read: FileText,
@@ -56,16 +58,25 @@ const ITEM_MOTION = {
 };
 
 
-const useActiveTab = (): { id: string | null; claudeSessionId: string | null } => {
+interface IActiveTabInfo {
+  id: string | null;
+  agentSessionId: string | null;
+  providerId: TSessionHistoryProvider | null;
+}
+
+const useActiveTab = (): IActiveTabInfo => {
   const router = useRouter();
   const isTerminalPage = router.pathname === '/';
-  return useLayoutStore(useShallow((s) => {
-    if (!isTerminalPage) return { id: null, claudeSessionId: null };
-    if (!s.layout?.activePaneId) return { id: null, claudeSessionId: null };
+  return useLayoutStore(useShallow((s): IActiveTabInfo => {
+    if (!isTerminalPage) return { id: null, agentSessionId: null, providerId: null };
+    if (!s.layout?.activePaneId) return { id: null, agentSessionId: null, providerId: null };
     const pane = findPane(s.layout.root, s.layout.activePaneId);
-    if (!pane?.activeTabId) return { id: null, claudeSessionId: null };
+    if (!pane?.activeTabId) return { id: null, agentSessionId: null, providerId: null };
     const tab = pane.tabs.find((t) => t.id === pane.activeTabId);
-    return { id: pane.activeTabId, claudeSessionId: tab?.claudeSessionId ?? null };
+    if (!tab) return { id: pane.activeTabId, agentSessionId: null, providerId: null };
+    const providerId: TSessionHistoryProvider = tab.agentState?.providerId === 'codex' ? 'codex' : 'claude';
+    const agentSessionId = tab.agentState?.sessionId ?? tab.claudeSessionId ?? null;
+    return { id: pane.activeTabId, agentSessionId, providerId };
   }));
 };
 
@@ -92,7 +103,8 @@ interface INotificationItem {
   readyForReviewAt?: number | null;
   busySince?: number | null;
   dismissedAt?: number | null;
-  claudeSessionId?: string | null;
+  agentSessionId?: string | null;
+  providerId: TSessionHistoryProvider;
 }
 
 interface INotificationSheetProps {
@@ -120,7 +132,8 @@ const collectItems = (
       readyForReviewAt: tab.readyForReviewAt,
       busySince: tab.busySince,
       dismissedAt: tab.dismissedAt,
-      claudeSessionId: tab.agentSessionId,
+      agentSessionId: tab.agentSessionId,
+      providerId: tab.agentProviderId === 'codex' ? 'codex' : 'claude',
     });
   }
 
@@ -134,7 +147,9 @@ const collectItems = (
 };
 
 interface ISessionHistoryGroup {
-  sessionId: string;
+  groupKey: string;
+  agentSessionId: string | null;
+  providerId: TSessionHistoryProvider;
   tabId: string;
   workspaceName: string;
   latestEntry: ISessionHistoryEntry;
@@ -145,26 +160,41 @@ const groupHistoryBySession = (entries: ISessionHistoryEntry[]): ISessionHistory
   const sessionMap = new Map<string, ISessionHistoryEntry[]>();
 
   for (const entry of entries) {
-    const key = entry.claudeSessionId ?? entry.id;
+    const key = `${entry.providerId}:${entry.agentSessionId ?? entry.id}`;
     const existing = sessionMap.get(key);
     if (existing) existing.push(entry);
     else sessionMap.set(key, [entry]);
   }
 
   const groups: ISessionHistoryGroup[] = [];
-  for (const [sessionId, sessionEntries] of sessionMap) {
+  for (const [groupKey, sessionEntries] of sessionMap) {
     sessionEntries.sort((a, b) => b.completedAt - a.completedAt);
+    const head = sessionEntries[0];
     groups.push({
-      sessionId,
-      tabId: sessionEntries[0].tabId,
-      workspaceName: sessionEntries[0].workspaceName,
-      latestEntry: sessionEntries[0],
+      groupKey,
+      agentSessionId: head.agentSessionId,
+      providerId: head.providerId,
+      tabId: head.tabId,
+      workspaceName: head.workspaceName,
+      latestEntry: head,
       olderEntries: sessionEntries.slice(1),
     });
   }
 
   groups.sort((a, b) => b.latestEntry.completedAt - a.latestEntry.completedAt);
   return groups;
+};
+
+const ProviderBadge = ({ providerId }: { providerId: TSessionHistoryProvider }) => {
+  const Icon = providerId === 'codex' ? OpenAIIcon : ClaudeCodeIcon;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground/60"
+      aria-label={providerId === 'codex' ? 'Codex' : 'Claude'}
+    >
+      <Icon className="size-3" />
+    </span>
+  );
 };
 
 type TDateGroup = 'today' | 'yesterday' | 'thisWeek' | 'older';
@@ -283,8 +313,9 @@ const SessionHistoryItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-muted-foreground">
-            {entry.workspaceName}
+          <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+            <ProviderBadge providerId={entry.providerId} />
+            <span className="truncate">{entry.workspaceName}</span>
           </span>
           <span className="shrink-0 text-xs text-muted-foreground/60">
             {formatNotificationTime(entry.completedAt)}
@@ -361,8 +392,9 @@ const NotificationItem = ({
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-xs text-muted-foreground">
-            {item.workspaceName}
+          <span className="flex min-w-0 items-center gap-1 truncate text-xs text-muted-foreground">
+            <ProviderBadge providerId={item.providerId} />
+            <span className="truncate">{item.workspaceName}</span>
           </span>
           {(item.dismissedAt || item.readyForReviewAt || item.busySince) && (
             <span className="shrink-0 text-xs text-muted-foreground/60">
@@ -408,12 +440,16 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const t = useTranslations('notification');
   const tabs = useTabStore((s) => s.tabs);
   const workspaces = useWorkspaceStore((s) => s.workspaces);
-  const { id: activeTabId, claudeSessionId: activeClaudeSessionId } = useActiveTab();
+  const { id: activeTabId, agentSessionId: activeAgentSessionId, providerId: activeProviderId } = useActiveTab();
   const historyEntries = useSessionHistoryStore((s) => s.entries);
+  const liveSessionKey = (providerId: TSessionHistoryProvider, agentSessionId: string | null): string =>
+    `${providerId}:${agentSessionId ?? ''}`;
   const sessionTabMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const [tabId, tab] of Object.entries(tabs)) {
-      if (tab.agentSessionId) map.set(tab.agentSessionId, tabId);
+      if (!tab.agentSessionId) continue;
+      const provider: TSessionHistoryProvider = tab.agentProviderId === 'codex' ? 'codex' : 'claude';
+      map.set(liveSessionKey(provider, tab.agentSessionId), tabId);
     }
     return map;
   }, [tabs]);
@@ -422,39 +458,48 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
   const busyItems = useMemo(() => collectItems(tabs, workspaces, 'busy'), [tabs, workspaces]);
   const needsInputItems = useMemo(() => collectItems(tabs, workspaces, 'needs-input'), [tabs, workspaces]);
   const reviewItems = useMemo(() => collectItems(tabs, workspaces, 'ready-for-review'), [tabs, workspaces]);
-  const liveSessionIds = useMemo(() => {
-    const ids = new Set<string>();
+  const liveSessionKeys = useMemo(() => {
+    const keys = new Set<string>();
     for (const [, tab] of Object.entries(tabs)) {
       if ((tab.cliState === 'busy' || tab.cliState === 'needs-input' || tab.cliState === 'ready-for-review') && tab.agentSessionId) {
-        ids.add(tab.agentSessionId);
+        const provider: TSessionHistoryProvider = tab.agentProviderId === 'codex' ? 'codex' : 'claude';
+        keys.add(liveSessionKey(provider, tab.agentSessionId));
       }
     }
-    return ids;
+    return keys;
   }, [tabs]);
-  const reviewSessionIds = useMemo(() => {
-    const ids = new Set<string>();
+  const reviewSessionKeys = useMemo(() => {
+    const keys = new Set<string>();
     for (const [, tab] of Object.entries(tabs)) {
-      if (tab.cliState === 'ready-for-review' && tab.agentSessionId) ids.add(tab.agentSessionId);
+      if (tab.cliState === 'ready-for-review' && tab.agentSessionId) {
+        const provider: TSessionHistoryProvider = tab.agentProviderId === 'codex' ? 'codex' : 'claude';
+        keys.add(liveSessionKey(provider, tab.agentSessionId));
+      }
     }
-    return ids;
+    return keys;
   }, [tabs]);
   const reviewHistoryMap = useMemo(() => {
     const map = new Map<string, ISessionHistoryEntry>();
     for (const entry of historyEntries) {
-      if (!entry.claudeSessionId || !reviewSessionIds.has(entry.claudeSessionId)) continue;
-      const existing = map.get(entry.claudeSessionId);
+      if (!entry.agentSessionId) continue;
+      const key = liveSessionKey(entry.providerId, entry.agentSessionId);
+      if (!reviewSessionKeys.has(key)) continue;
+      const existing = map.get(key);
       if (!existing || entry.completedAt > existing.completedAt) {
-        map.set(entry.claudeSessionId, entry);
+        map.set(key, entry);
       }
     }
     return map;
-  }, [historyEntries, reviewSessionIds]);
+  }, [historyEntries, reviewSessionKeys]);
   const sessionGroups = useMemo(() => {
-    const filtered = liveSessionIds.size > 0
-      ? historyEntries.filter((e) => !e.claudeSessionId || !liveSessionIds.has(e.claudeSessionId))
+    const filtered = liveSessionKeys.size > 0
+      ? historyEntries.filter((e) => {
+          if (!e.agentSessionId) return true;
+          return !liveSessionKeys.has(liveSessionKey(e.providerId, e.agentSessionId));
+        })
       : historyEntries;
     return groupHistoryBySession(filtered);
-  }, [historyEntries, liveSessionIds]);
+  }, [historyEntries, liveSessionKeys]);
   const dateGroups = useMemo(() => groupSessionsByDate(sessionGroups), [sessionGroups]);
 
   const toggleExpanded = useCallback((sessionId: string) => {
@@ -478,7 +523,14 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
     if (resolvedTabId) {
       navigateToTab(entry.workspaceId, resolvedTabId);
     } else {
-      navigateToTabOrCreate(entry.workspaceId, entry.tabId, entry.claudeSessionId, entry.workspaceName, entry.workspaceDir);
+      navigateToTabOrCreate(
+        entry.workspaceId,
+        entry.tabId,
+        entry.agentSessionId,
+        entry.workspaceName,
+        entry.workspaceDir,
+        entry.providerId,
+      );
     }
   }, [onNavigated]);
 
@@ -532,7 +584,9 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
               <div className="flex flex-col gap-2">
                 <AnimatePresence mode="popLayout" initial={false}>
                   {reviewItems.map((item) => {
-                    const entry = item.claudeSessionId ? reviewHistoryMap.get(item.claudeSessionId) : undefined;
+                    const entry = item.agentSessionId
+                      ? reviewHistoryMap.get(liveSessionKey(item.providerId, item.agentSessionId))
+                      : undefined;
                     const isActive = item.tabId === activeTabId;
                     if (!entry) {
                       return (
@@ -583,12 +637,19 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                   <div className="flex flex-col gap-2">
                     <AnimatePresence mode="popLayout" initial={false}>
                       {sessions.map((group) => {
-                        const isExpanded = expandedTabs.has(group.sessionId);
+                        const isExpanded = expandedTabs.has(group.groupKey);
                         const hasOlder = group.olderEntries.length > 0;
-                        const isActive = activeClaudeSessionId !== null && group.sessionId === activeClaudeSessionId && !liveSessionIds.has(group.sessionId);
-                        const resolvedTabId = sessionTabMap.get(group.sessionId) ?? null;
+                        const sessionKey = group.agentSessionId
+                          ? liveSessionKey(group.providerId, group.agentSessionId)
+                          : null;
+                        const isActive =
+                          activeAgentSessionId !== null &&
+                          group.agentSessionId === activeAgentSessionId &&
+                          group.providerId === activeProviderId &&
+                          (sessionKey === null || !liveSessionKeys.has(sessionKey));
+                        const resolvedTabId = sessionKey ? sessionTabMap.get(sessionKey) ?? null : null;
                         return (
-                          <motion.div key={group.sessionId} {...ITEM_MOTION}>
+                          <motion.div key={group.groupKey} {...ITEM_MOTION}>
                             <SessionHistoryItem
                               entry={group.latestEntry}
                               isActiveSession={isActive}
@@ -598,7 +659,7 @@ export const NotificationPanel = ({ onNavigated, className }: { onNavigated?: ()
                               <button
                                 type="button"
                                 className="mt-1 flex w-full items-center gap-1 py-0.5 pl-9 text-xs text-muted-foreground/50 hover:text-muted-foreground transition-colors"
-                                onClick={() => toggleExpanded(group.sessionId)}
+                                onClick={() => toggleExpanded(group.groupKey)}
                               >
                                 <ChevronRight className={cn('h-3 w-3 transition-transform', isExpanded && 'rotate-90')} />
                                 {isExpanded ? t('showLess') : t('showMore', { count: group.olderEntries.length })}

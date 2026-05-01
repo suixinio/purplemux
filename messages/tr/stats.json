@@ -12,7 +12,6 @@
   "activityPattern": "Etkinlik Örüntüsü",
   "project": "Projeler",
   "session": "Oturumlar",
-
   "tokenLabel": "Token",
   "inputLabel": "Giriş",
   "outputLabel": "Çıkış",
@@ -22,9 +21,7 @@
   "modelTokens": "Modele Göre Token",
   "dailyTokenTrend": "Günlük Token Eğilimi",
   "total": "Toplam",
-
   "errorLoadFailed": "Veriler yüklenemedi",
-
   "today": "Bugün",
   "generating": "Oluşturuluyor...",
   "sessionCount": "{count} oturum",
@@ -37,7 +34,6 @@
   "collapse": "Daralt",
   "showMore": "Daha fazla göster",
   "noActivity": "Etkinlik yok",
-
   "messages": "Mesajlar",
   "sessions": "Oturumlar",
   "toolCalls": "Araç Çağrıları",
@@ -50,20 +46,17 @@
   "more": "Çok",
   "hourSuffix": "sa",
   "messageCount": "{count} mesaj",
-
   "totalSessions": "Toplam Oturum",
   "totalCost": "Toplam Maliyet",
   "todayCost": "Bugünün Maliyeti",
   "thisMonthCost": "Bu Ayın Maliyeti",
   "dailyActivityTrend": "Günlük Etkinlik Eğilimi",
   "vsPreviousPeriod": "önceki döneme göre",
-
   "projectAnalysis": "Proje Analizi",
   "projectTokenUsageTop": "Projeye Göre Token Kullanımı (İLK {count})",
   "noProjectData": "Proje verisi yok",
   "sessionCountLabel": "{count} oturum",
   "messageCountLabel": "{count} mesaj",
-
   "longestStreak": "En Uzun Seri",
   "currentStreak": "Mevcut Seri",
   "streakCount": "Toplam Seri",
@@ -78,7 +71,6 @@
   "accumulated": "Toplam {duration}",
   "noRecentActivity": "Son 7 günde Claude kullanımı yok",
   "currentlyRunning": "Şu anda çalışıyor — {duration} seri",
-
   "avgSessionLength": "Ortalama Oturum Süresi",
   "longestSession": "En Uzun Oturum",
   "totalToolCalls": "Toplam Araç Çağrısı",
@@ -90,9 +82,23 @@
   "goalAchievement": "Hedef Başarısı",
   "topCommands": "En Çok Kullanılan 10 Komut",
   "inputLengthDist": "Giriş Uzunluğu Dağılımı",
-
   "periodToday": "Bugün",
   "period7d": "7 Gün",
   "period30d": "30 Gün",
-  "periodAll": "Tümü"
+  "periodAll": "Tümü",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "{count} oturum",
+  "aggregatedProviderEmpty": "Bu dönemde kullanım yok",
+  "aggregatedProviderError": "Yüklenemedi",
+  "aggregatedChartTitle": "Sağlayıcıya göre günlük token",
+  "aggregatedChartA11y": "Claude ve Codex yığınlanmış günlük token kullanım grafiği",
+  "aggregatedEmpty": "Bu dönemde oturum yok",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "Bağlam penceresi",
+  "aggregatedCachedInput": "Önbellekli giriş",
+  "aggregatedReasoningOutput": "Reasoning çıktı"
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useReducer } from 'react';
 import { useRouter } from 'next/router';
-import type { TPeriod, IOverviewResponse, IProjectsResponse, ISessionsResponse, IFacetsResponse, IHistoryResponse, IUptimeResponse } from '@/types/stats';
+import type { TPeriod, IOverviewResponse, IProjectsResponse, ISessionsResponse, IFacetsResponse, IHistoryResponse, IUptimeResponse, IAggregatedStatsResponse } from '@/types/stats';
 
 interface IStatsState {
   overview: IOverviewResponse | null;
@@ -10,6 +10,7 @@ interface IStatsState {
   facets: IFacetsResponse | null;
   history: IHistoryResponse | null;
   uptime: IUptimeResponse | null;
+  aggregated: IAggregatedStatsResponse | null;
   overviewLoading: boolean;
   allOverviewLoading: boolean;
   projectsLoading: boolean;
@@ -17,6 +18,7 @@ interface IStatsState {
   facetsLoading: boolean;
   historyLoading: boolean;
   uptimeLoading: boolean;
+  aggregatedLoading: boolean;
   overviewError: string | null;
   allOverviewError: string | null;
   projectsError: string | null;
@@ -24,6 +26,7 @@ interface IStatsState {
   facetsError: string | null;
   historyError: string | null;
   uptimeError: string | null;
+  aggregatedError: string | null;
 }
 
 type TStatsAction =
@@ -41,7 +44,9 @@ type TStatsAction =
   | { type: 'HISTORY_OK'; data: IHistoryResponse }
   | { type: 'HISTORY_ERR'; error: string }
   | { type: 'UPTIME_OK'; data: IUptimeResponse }
-  | { type: 'UPTIME_ERR'; error: string };
+  | { type: 'UPTIME_ERR'; error: string }
+  | { type: 'AGGREGATED_OK'; data: IAggregatedStatsResponse }
+  | { type: 'AGGREGATED_ERR'; error: string };
 
 const initialState: IStatsState = {
   overview: null,
@@ -51,6 +56,7 @@ const initialState: IStatsState = {
   facets: null,
   history: null,
   uptime: null,
+  aggregated: null,
   overviewLoading: true,
   allOverviewLoading: true,
   projectsLoading: true,
@@ -58,6 +64,7 @@ const initialState: IStatsState = {
   facetsLoading: true,
   historyLoading: true,
   uptimeLoading: true,
+  aggregatedLoading: true,
   overviewError: null,
   allOverviewError: null,
   projectsError: null,
@@ -65,6 +72,7 @@ const initialState: IStatsState = {
   facetsError: null,
   historyError: null,
   uptimeError: null,
+  aggregatedError: null,
 };
 
 const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
@@ -79,6 +87,7 @@ const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
         facetsLoading: true,
         historyLoading: true,
         uptimeLoading: true,
+        aggregatedLoading: true,
         overviewError: null,
         allOverviewError: null,
         projectsError: null,
@@ -86,6 +95,7 @@ const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
         facetsError: null,
         historyError: null,
         uptimeError: null,
+        aggregatedError: null,
       };
     case 'OVERVIEW_OK':
       return { ...state, overview: action.data, overviewLoading: false };
@@ -115,6 +125,10 @@ const reducer = (state: IStatsState, action: TStatsAction): IStatsState => {
       return { ...state, uptime: action.data, uptimeLoading: false };
     case 'UPTIME_ERR':
       return { ...state, uptimeError: action.error, uptimeLoading: false };
+    case 'AGGREGATED_OK':
+      return { ...state, aggregated: action.data, aggregatedLoading: false };
+    case 'AGGREGATED_ERR':
+      return { ...state, aggregatedError: action.error, aggregatedLoading: false };
   }
 };
 
@@ -205,6 +219,10 @@ const useStats = (): IUseStatsReturn => {
     fetchJson<IUptimeResponse>('/api/stats/uptime', signal)
       .then((data) => dispatch({ type: 'UPTIME_OK', data }))
       .catch((e) => { if (!signal.aborted) dispatch({ type: 'UPTIME_ERR', error: e.message }); });
+
+    fetchJson<IAggregatedStatsResponse>(`/api/stats/aggregated${q}`, signal)
+      .then((data) => dispatch({ type: 'AGGREGATED_OK', data }))
+      .catch((e) => { if (!signal.aborted) dispatch({ type: 'AGGREGATED_ERR', error: e.message }); });
 
     return () => controller.abort();
   }, [period, fetchKey]);

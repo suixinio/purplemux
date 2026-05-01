@@ -85,5 +85,20 @@
   "periodToday": "今日",
   "period7d": "7日間",
   "period30d": "30日間",
-  "periodAll": "全期間"
+  "periodAll": "全期間",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "{count}セッション",
+  "aggregatedProviderEmpty": "この期間に利用なし",
+  "aggregatedProviderError": "読み込み失敗",
+  "aggregatedChartTitle": "プロバイダ別 日次トークン",
+  "aggregatedChartA11y": "ClaudeとCodexの日次トークン使用量積み上げチャート",
+  "aggregatedEmpty": "この期間にセッションがありません",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "コンテキストウィンドウ",
+  "aggregatedCachedInput": "キャッシュ入力",
+  "aggregatedReasoningOutput": "Reasoning出力"
 }

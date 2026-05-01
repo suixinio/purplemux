@@ -12,7 +12,6 @@
   "activityPattern": "Modèle d'activité",
   "project": "Projets",
   "session": "Sessions",
-
   "tokenLabel": "Tokens",
   "inputLabel": "Entrée",
   "outputLabel": "Sortie",
@@ -22,9 +21,7 @@
   "modelTokens": "Tokens par modèle",
   "dailyTokenTrend": "Tendance quotidienne des tokens",
   "total": "Total",
-
   "errorLoadFailed": "Impossible de charger les données",
-
   "today": "Aujourd'hui",
   "generating": "Génération...",
   "sessionCount": "{count} sessions",
@@ -37,7 +34,6 @@
   "collapse": "Réduire",
   "showMore": "Voir plus",
   "noActivity": "Aucune activité",
-
   "messages": "Messages",
   "sessions": "Sessions",
   "toolCalls": "Appels d'outils",
@@ -50,20 +46,17 @@
   "more": "Plus",
   "hourSuffix": "h",
   "messageCount": "{count} messages",
-
   "totalSessions": "Total des sessions",
   "totalCost": "Coût total",
   "todayCost": "Coût du jour",
   "thisMonthCost": "Coût du mois",
   "dailyActivityTrend": "Tendance d'activité quotidienne",
   "vsPreviousPeriod": "vs période précédente",
-
   "projectAnalysis": "Analyse par projet",
   "projectTokenUsageTop": "Utilisation des tokens par projet (TOP {count})",
   "noProjectData": "Aucune donnée de projet",
   "sessionCountLabel": "{count} sessions",
   "messageCountLabel": "{count} messages",
-
   "longestStreak": "Plus longue série",
   "currentStreak": "Série en cours",
   "streakCount": "Total des séries",
@@ -78,7 +71,6 @@
   "accumulated": "Total {duration}",
   "noRecentActivity": "Aucune utilisation de Claude au cours des 7 derniers jours",
   "currentlyRunning": "En cours d'exécution — série de {duration}",
-
   "avgSessionLength": "Durée moyenne de session",
   "longestSession": "Session la plus longue",
   "totalToolCalls": "Total des appels d'outils",
@@ -90,9 +82,23 @@
   "goalAchievement": "Atteinte des objectifs",
   "topCommands": "Top 10 des commandes",
   "inputLengthDist": "Distribution de la longueur des saisies",
-
   "periodToday": "Aujourd'hui",
   "period7d": "7 jours",
   "period30d": "30 jours",
-  "periodAll": "Tout"
+  "periodAll": "Tout",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "{count} sessions",
+  "aggregatedProviderEmpty": "Aucune utilisation sur cette période",
+  "aggregatedProviderError": "Échec du chargement",
+  "aggregatedChartTitle": "Tokens quotidiens par fournisseur",
+  "aggregatedChartA11y": "Graphique empilé d'utilisation quotidienne de tokens, Claude et Codex",
+  "aggregatedEmpty": "Aucune session sur cette période",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "Fenêtre de contexte",
+  "aggregatedCachedInput": "Entrée en cache",
+  "aggregatedReasoningOutput": "Sortie Reasoning"
 }

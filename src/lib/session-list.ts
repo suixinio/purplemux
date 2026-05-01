@@ -126,8 +126,8 @@ export const parseSessionMeta = async (jsonlPath: string): Promise<ISessionMeta 
     const stat = await fs.stat(jsonlPath);
     const sessionId = path.basename(jsonlPath, '.jsonl');
 
-    const cached = metaCache.get(sessionId);
-    if (cached && !metaCache.isStale(sessionId, stat.mtimeMs)) {
+    const cached = metaCache.get('claude', sessionId);
+    if (cached && !metaCache.isStale('claude', sessionId, stat.mtimeMs)) {
       return cached;
     }
 
@@ -144,7 +144,7 @@ export const parseSessionMeta = async (jsonlPath: string): Promise<ISessionMeta 
       turnCount,
     };
 
-    metaCache.set(sessionId, meta, stat.mtimeMs);
+    metaCache.set('claude', sessionId, meta, stat.mtimeMs);
     return meta;
   } catch (err) {
     log.warn({ err }, `failed to parse session meta: ${jsonlPath}`);

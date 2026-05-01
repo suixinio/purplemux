@@ -13,6 +13,7 @@ const SESSION_HISTORY_FILE = path.join(BASE_DIR, 'session-history.json');
 const g = globalThis as unknown as {
   __purplemuxSessionHistoryLock?: Promise<void>;
   __purplemuxSessionHistoryContentCache?: string;
+  __ptSessionHistoryLegacyLogged?: boolean;
 };
 if (!g.__purplemuxSessionHistoryLock) g.__purplemuxSessionHistoryLock = Promise.resolve();
 
@@ -33,6 +34,43 @@ const withLock = async <T>(fn: () => Promise<T>): Promise<T> => {
 
 const emptyData = (): ISessionHistoryData => ({ version: 1, entries: [] });
 
+const migrateLegacyEntry = (raw: unknown): ISessionHistoryEntry | null => {
+  if (!raw || typeof raw !== 'object') return null;
+  const e = raw as Record<string, unknown> & Partial<ISessionHistoryEntry>;
+
+  if (typeof e.id !== 'string' || typeof e.tabId !== 'string') return null;
+
+  const providerId = e.providerId === 'codex' ? 'codex' : 'claude';
+  const agentSessionId =
+    typeof e.agentSessionId === 'string' || e.agentSessionId === null
+      ? (e.agentSessionId as string | null)
+      : (typeof e.claudeSessionId === 'string' ? e.claudeSessionId : null);
+
+  if (e.agentSessionId === undefined && e.claudeSessionId !== undefined && !g.__ptSessionHistoryLegacyLogged) {
+    g.__ptSessionHistoryLegacyLogged = true;
+    log.info('Migrating legacy session-history entries (claudeSessionId → agentSessionId)');
+  }
+
+  return {
+    id: e.id,
+    workspaceId: String(e.workspaceId ?? ''),
+    workspaceName: String(e.workspaceName ?? ''),
+    workspaceDir: typeof e.workspaceDir === 'string' || e.workspaceDir === null ? (e.workspaceDir as string | null) : null,
+    tabId: e.tabId,
+    providerId,
+    agentSessionId,
+    prompt: typeof e.prompt === 'string' || e.prompt === null ? (e.prompt as string | null) : null,
+    result: typeof e.result === 'string' || e.result === null ? (e.result as string | null) : null,
+    startedAt: Number(e.startedAt ?? 0),
+    completedAt: Number(e.completedAt ?? 0),
+    duration: Number(e.duration ?? 0),
+    dismissedAt: typeof e.dismissedAt === 'number' || e.dismissedAt === null ? (e.dismissedAt as number | null) : null,
+    toolUsage: (e.toolUsage as Record<string, number>) ?? {},
+    touchedFiles: Array.isArray(e.touchedFiles) ? (e.touchedFiles as string[]) : [],
+    ...(e.cancelled ? { cancelled: true } : {}),
+  };
+};
+
 const readSessionHistory = async (): Promise<ISessionHistoryData> => {
   let raw: string;
   try {
@@ -40,8 +78,10 @@ const readSessionHistory = async (): Promise<ISessionHistoryData> => {
   } catch {
     return emptyData();
   }
+
+  let parsed: { version?: number; entries?: unknown[] };
   try {
-    return JSON.parse(raw) as ISessionHistoryData;
+    parsed = JSON.parse(raw);
   } catch {
     log.warn('Failed to parse session-history.json, starting empty');
     try {
@@ -49,15 +89,30 @@ const readSessionHistory = async (): Promise<ISessionHistoryData> => {
     } catch {}
     return emptyData();
   }
+
+  const entries: ISessionHistoryEntry[] = [];
+  for (const entry of parsed.entries ?? []) {
+    const migrated = migrateLegacyEntry(entry);
+    if (migrated) entries.push(migrated);
+  }
+  return { version: 1, entries };
 };
 
+const stripDeprecatedFields = (entries: ISessionHistoryEntry[]): ISessionHistoryEntry[] =>
+  entries.map((entry) => {
+    const { claudeSessionId: _claudeSessionId, ...rest } = entry;
+    void _claudeSessionId;
+    return rest;
+  });
+
 const writeSessionHistory = async (data: ISessionHistoryData): Promise<void> => {
-  const contentKey = JSON.stringify(data.entries);
+  const cleaned: ISessionHistoryData = { version: data.version, entries: stripDeprecatedFields(data.entries) };
+  const contentKey = JSON.stringify(cleaned.entries);
   if (g.__purplemuxSessionHistoryContentCache === contentKey) return;
 
   const tmpFile = SESSION_HISTORY_FILE + '.tmp';
   try {
-    await fs.writeFile(tmpFile, JSON.stringify(data, null, 2), { mode: 0o600 });
+    await fs.writeFile(tmpFile, JSON.stringify(cleaned, null, 2), { mode: 0o600 });
     await fs.rename(tmpFile, SESSION_HISTORY_FILE);
   } catch (err) {
     await fs.unlink(tmpFile).catch(() => {});

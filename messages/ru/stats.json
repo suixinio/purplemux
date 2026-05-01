@@ -12,7 +12,6 @@
   "activityPattern": "Паттерн активности",
   "project": "Проекты",
   "session": "Сессии",
-
   "tokenLabel": "Токены",
   "inputLabel": "Входящие",
   "outputLabel": "Исходящие",
@@ -22,9 +21,7 @@
   "modelTokens": "Токены по моделям",
   "dailyTokenTrend": "Ежедневный тренд токенов",
   "total": "Всего",
-
   "errorLoadFailed": "Не удалось загрузить данные",
-
   "today": "Сегодня",
   "generating": "Генерация...",
   "sessionCount": "{count} сессий",
@@ -37,7 +34,6 @@
   "collapse": "Свернуть",
   "showMore": "Показать ещё",
   "noActivity": "Нет активности",
-
   "messages": "Сообщения",
   "sessions": "Сессии",
   "toolCalls": "Вызовы инструментов",
@@ -50,20 +46,17 @@
   "more": "Больше",
   "hourSuffix": "ч",
   "messageCount": "{count} сообщений",
-
   "totalSessions": "Всего сессий",
   "totalCost": "Общая стоимость",
   "todayCost": "Стоимость за сегодня",
   "thisMonthCost": "Стоимость за месяц",
   "dailyActivityTrend": "Тренд ежедневной активности",
   "vsPreviousPeriod": "по сравнению с предыдущим периодом",
-
   "projectAnalysis": "Анализ проектов",
   "projectTokenUsageTop": "Использование токенов по проектам (ТОП {count})",
   "noProjectData": "Нет данных по проектам",
   "sessionCountLabel": "{count} сессий",
   "messageCountLabel": "{count} сообщений",
-
   "longestStreak": "Максимальная серия",
   "currentStreak": "Текущая серия",
   "streakCount": "Всего серий",
@@ -78,7 +71,6 @@
   "accumulated": "Итого {duration}",
   "noRecentActivity": "Нет использования Claude за последние 7 дней",
   "currentlyRunning": "Сейчас работает — серия {duration}",
-
   "avgSessionLength": "Средняя длина сессии",
   "longestSession": "Самая длинная сессия",
   "totalToolCalls": "Всего вызовов инструментов",
@@ -90,9 +82,23 @@
   "goalAchievement": "Достижение целей",
   "topCommands": "Топ-10 команд",
   "inputLengthDist": "Распределение длины ввода",
-
   "periodToday": "Сегодня",
   "period7d": "7 дней",
   "period30d": "30 дней",
-  "periodAll": "Всё"
+  "periodAll": "Всё",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "сессий: {count}",
+  "aggregatedProviderEmpty": "Нет использования за этот период",
+  "aggregatedProviderError": "Ошибка загрузки",
+  "aggregatedChartTitle": "Ежедневные токены по провайдерам",
+  "aggregatedChartA11y": "Стек ежедневного использования токенов, Claude и Codex",
+  "aggregatedEmpty": "Нет сессий за этот период",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "Окно контекста",
+  "aggregatedCachedInput": "Кэш входных токенов",
+  "aggregatedReasoningOutput": "Reasoning выход"
 }

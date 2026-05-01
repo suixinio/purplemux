@@ -168,6 +168,49 @@ export interface IUptimeResponse {
   maxConcurrent: number;
 }
 
+// --- Aggregated (Claude + Codex) ---
+
+export interface IAggregatedDailyEntry {
+  date: string;
+  claudeTokens: number;
+  codexTokens: number;
+  claudeSessions: number;
+  codexSessions: number;
+}
+
+export interface IAggregatedTotals {
+  claude: { tokens: number; sessions: number };
+  codex: { tokens: number; sessions: number };
+}
+
+export interface IAggregatedRateLimitsBucket {
+  usedPercent: number;
+  windowMinutes?: number;
+  resetsInSeconds?: number;
+}
+
+export interface IAggregatedRateLimits {
+  primary?: IAggregatedRateLimitsBucket;
+  secondary?: IAggregatedRateLimitsBucket;
+}
+
+export interface IAggregatedCodexExtras {
+  rateLimits: IAggregatedRateLimits | null;
+  modelContextWindow: number | null;
+  cachedInputTokens: number | null;
+  reasoningOutputTokens: number | null;
+  capturedAt: number;
+}
+
+export interface IAggregatedStatsResponse {
+  period: TPeriod;
+  daily: IAggregatedDailyEntry[];
+  totals: IAggregatedTotals;
+  codexExtras: IAggregatedCodexExtras | null;
+  errors: { provider: 'claude' | 'codex'; message: string }[];
+  computedAt: string;
+}
+
 // --- Daily Report ---
 
 export interface IDailyReportDay {

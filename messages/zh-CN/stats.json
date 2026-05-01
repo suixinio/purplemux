@@ -85,5 +85,20 @@
   "periodToday": "今天",
   "period7d": "7天",
   "period30d": "30天",
-  "periodAll": "全部"
+  "periodAll": "全部",
+  "aggregatedTitle": "Claude + Codex",
+  "aggregatedClaudeLabel": "Claude",
+  "aggregatedCodexLabel": "Codex",
+  "aggregatedSessionCount": "{count} 个会话",
+  "aggregatedProviderEmpty": "此期间无使用记录",
+  "aggregatedProviderError": "加载失败",
+  "aggregatedChartTitle": "按供应商统计的每日 Token",
+  "aggregatedChartA11y": "Claude 和 Codex 每日 Token 使用量堆叠图",
+  "aggregatedEmpty": "此期间没有会话",
+  "aggregatedCodexExtrasTitle": "Codex Rate Limits",
+  "aggregatedRateLimitPrimary": "Primary",
+  "aggregatedRateLimitSecondary": "Secondary",
+  "aggregatedContextWindow": "上下文窗口",
+  "aggregatedCachedInput": "缓存输入",
+  "aggregatedReasoningOutput": "Reasoning 输出"
 }

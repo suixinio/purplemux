@@ -1,10 +1,15 @@
+export type TSessionHistoryProvider = 'claude' | 'codex';
+
 export interface ISessionHistoryEntry {
   id: string;
   workspaceId: string;
   workspaceName: string;
   workspaceDir: string | null;
   tabId: string;
-  claudeSessionId: string | null;
+  providerId: TSessionHistoryProvider;
+  agentSessionId: string | null;
+  /** @deprecated read-only back-compat for legacy entries on disk; new writes must use agentSessionId. */
+  claudeSessionId?: string | null;
   prompt: string | null;
   result: string | null;
   startedAt: number;
