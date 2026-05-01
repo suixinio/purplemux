@@ -5,12 +5,20 @@ const log = createLogger('sync');
 
 export type TSystemToastVariant = 'info' | 'success' | 'warning' | 'error';
 
+export type TSystemToastAction = {
+  kind: 'copy';
+  label: string;
+  text: string;
+  successMessage?: string;
+};
+
 export interface ISystemToastEvent {
   type: 'system-toast';
   key: string;
   variant: TSystemToastVariant;
   message: string;
   durationMs?: number;
+  action?: TSystemToastAction;
 }
 
 type TSyncEvent =

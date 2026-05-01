@@ -8,15 +8,45 @@ import type { ILayoutData } from '@/types/terminal';
 const RECONNECT_DELAY = 3000;
 
 type TToastVariant = 'info' | 'success' | 'warning' | 'error';
+type TSystemToastAction = { kind: 'copy'; label: string; text: string; successMessage?: string };
 const seenToastKeys = new Set<string>();
-const showSystemToast = (key: string, variant: TToastVariant, message: string, durationMs?: number) => {
+
+const buildToastAction = (action: TSystemToastAction | undefined) => {
+  if (!action) return undefined;
+  if (action.kind !== 'copy') return undefined;
+  return {
+    label: action.label,
+    onClick: async () => {
+      try {
+        await navigator.clipboard.writeText(action.text);
+        if (action.successMessage) toast.success(action.successMessage);
+      } catch {
+        toast.error('클립보드 복사에 실패했습니다');
+      }
+    },
+  };
+};
+
+const showSystemToast = (
+  key: string,
+  variant: TToastVariant,
+  message: string,
+  durationMs?: number,
+  action?: TSystemToastAction,
+) => {
   if (seenToastKeys.has(key)) return;
   seenToastKeys.add(key);
-  const opts = { id: key, duration: durationMs };
+  const opts = { id: key, duration: durationMs, action: buildToastAction(action) };
   if (variant === 'warning') toast.warning(message, opts);
   else if (variant === 'error') toast.error(message, opts);
   else if (variant === 'success') toast.success(message, opts);
   else toast.info(message, opts);
+};
+
+const isSystemToastAction = (v: unknown): v is TSystemToastAction => {
+  if (!v || typeof v !== 'object') return false;
+  const obj = v as Record<string, unknown>;
+  return obj.kind === 'copy' && typeof obj.label === 'string' && typeof obj.text === 'string';
 };
 
 const useSync = () => {
@@ -43,7 +73,9 @@ const useSync = () => {
 
           if (data.type === 'system-toast' && typeof data.key === 'string' && typeof data.message === 'string') {
             const variant = (data.variant as TToastVariant) ?? 'info';
-            showSystemToast(data.key, variant, data.message, typeof data.durationMs === 'number' ? data.durationMs : undefined);
+            const duration = typeof data.durationMs === 'number' ? data.durationMs : undefined;
+            const action = isSystemToastAction(data.action) ? data.action : undefined;
+            showSystemToast(data.key, variant, data.message, duration, action);
           }
 
           if (data.type === 'layout') {

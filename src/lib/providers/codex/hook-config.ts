@@ -138,6 +138,12 @@ export const buildCodexHookFlags = async (): Promise<ICodexHookFlagsResult> => {
       variant: 'info',
       message: 'config.toml 파싱 실패, purplemux hook만 적용됨',
       durationMs: 6000,
+      action: {
+        kind: 'copy',
+        label: 'config.toml 열기',
+        text: USER_CONFIG_PATH,
+        successMessage: 'config.toml 경로가 복사되었습니다',
+      },
     });
   }
 

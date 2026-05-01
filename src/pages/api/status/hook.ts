@@ -25,6 +25,7 @@ const handleClaudeHook = (req: NextApiRequest, res: NextApiResponse) => {
 const handleCodexHook = (req: NextApiRequest, res: NextApiResponse) => {
   const tmuxSession = req.query.tmuxSession;
   if (typeof tmuxSession !== 'string' || !tmuxSession) {
+    log.warn({ event: req.body?.hook_event_name }, 'codex hook missing tmuxSession');
     return res.status(400).json({ error: 'missing tmuxSession' });
   }
   const payload = req.body ?? {};
