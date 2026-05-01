@@ -129,10 +129,7 @@ const CodexSessionItem = memo(({
             {cwdShort}
           </span>
           {tokensFormatted && (
-            <>
-              <span aria-hidden>·</span>
-              <span className="shrink-0 font-mono">{tokensFormatted} {tokensSuffix}</span>
-            </>
+            <span className="ml-auto shrink-0 font-mono">{tokensFormatted} {tokensSuffix}</span>
           )}
         </div>
       </TooltipTrigger>
@@ -281,7 +278,7 @@ const CodexSessionListSheet = ({
           )}
           {!showLoading && !showError && hasSessions && (
             <div className="flex-1 overflow-y-auto px-2 py-2">
-              <TooltipProvider delay={250}>
+              <TooltipProvider delay={100}>
                 <div className="flex flex-col gap-0.5">
                   {sortedSessions.map((session) => (
                     <CodexSessionItem
