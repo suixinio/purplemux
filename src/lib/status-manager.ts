@@ -3,11 +3,9 @@ import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { getChildPids } from '@/lib/process-utils';
-import {
-  detectAnyActiveSession,
-  getProviderByPanelType,
-} from '@/lib/providers';
-import type { IAgentProvider } from '@/lib/providers';
+import { getProviderByPanelType } from '@/lib/providers/registry';
+import { detectAnyActiveSession } from '@/lib/providers/session-scan';
+import type { IAgentProvider } from '@/lib/providers/types';
 import type { IWorkStateObserver, TAgentWorkStateEvent } from '@/lib/providers/types';
 import { cwdToProjectPath } from '@/lib/session-list';
 import { formatTabTitle } from '@/lib/tab-title';

@@ -16,7 +16,7 @@ import {
   createDefaultLayout,
 } from '@/lib/layout-store';
 import type { ICreateLayoutOptions } from '@/lib/layout-store';
-import { listProviders } from '@/lib/providers';
+import { listProviders } from '@/lib/providers/registry';
 import { getVisuallyOrderedWorkspaces } from '@/lib/workspace-order';
 import type { IWorkspace, IWorkspaceGroup, IWorkspacesData, ILayoutData } from '@/types/terminal';
 
