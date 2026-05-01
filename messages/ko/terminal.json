@@ -138,5 +138,15 @@
   "codexLastSessionLabel": "마지막 사용 세션:",
   "codexConnecting": "Codex 연결 중...",
   "codexTimelinePlaceholder": "타임라인 통합 준비 중",
-  "switchAgentBlocked": "{name}이(가) 실행 중입니다. 터미널에서 /quit 또는 Ctrl+D로 종료 후 다시 시도하세요"
+  "switchAgentBlocked": "{name}이(가) 실행 중입니다. 터미널에서 /quit 또는 Ctrl+D로 종료 후 다시 시도하세요",
+  "codexUpdateTitle": "Codex를 업데이트할까요?",
+  "codexUpdateVersion": "{current} -> {latest}",
+  "codexUpdateDescription": "세션을 시작하기 전에 Codex 업데이트가 필요합니다.",
+  "codexUpdateNow": "지금 업데이트",
+  "codexUpdateSkip": "건너뛰기",
+  "codexUpdateSkipVersion": "이 버전 건너뛰기",
+  "codexUpdateRunning": "Codex 업데이트 중...",
+  "codexUpdateRunningHint": "잠시 걸릴 수 있습니다. 업데이트가 끝나면 Codex를 다시 시작합니다.",
+  "codexUpdateSuccess": "업데이트가 완료되었습니다. Codex를 다시 시작합니다...",
+  "codexUpdateRestarting": "Codex 다시 시작 중"
 }

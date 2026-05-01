@@ -9,8 +9,10 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useTimeline from '@/hooks/use-timeline';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
+import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
 import PermissionPromptCard from '@/components/features/timeline/permission-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
 
 interface ICodexPanelProps {
   tabId: string;
@@ -19,6 +21,8 @@ interface ICodexPanelProps {
   onClose?: () => void;
   onNewSession?: () => void;
   onRestart?: () => void;
+  updatePrompt?: ICodexUpdatePromptInfo | null;
+  onUpdatePromptResponse?: (answer: TCodexUpdateAnswer) => void;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
 }
 
@@ -29,6 +33,8 @@ const CodexPanel = ({
   onClose: _onClose,
   onNewSession,
   onRestart,
+  updatePrompt,
+  onUpdatePromptResponse,
   scrollToBottomRef,
 }: ICodexPanelProps) => {
   const t = useTranslations('terminal');
@@ -82,11 +88,15 @@ const CodexPanel = ({
     return (
       <div
         className={cn(
-          'animate-delayed-fade-in flex h-full w-full flex-col items-center justify-center gap-3',
+          'animate-delayed-fade-in flex h-full w-full flex-col items-center justify-center gap-3 px-6',
           className,
         )}
       >
-        <CodexBootProgress onRestart={onRestart} />
+        {updatePrompt && onUpdatePromptResponse ? (
+          <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+        ) : (
+          <CodexBootProgress onRestart={onRestart} />
+        )}
       </div>
     );
   }

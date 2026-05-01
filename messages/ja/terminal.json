@@ -138,5 +138,15 @@
   "codexLastSessionLabel": "最後のセッション:",
   "codexConnecting": "Codex 接続中...",
   "codexTimelinePlaceholder": "タイムライン統合準備中",
-  "switchAgentBlocked": "{name} が実行中です。ターミナルで /quit または Ctrl+D で終了してから再度お試しください"
+  "switchAgentBlocked": "{name} が実行中です。ターミナルで /quit または Ctrl+D で終了してから再度お試しください",
+  "codexUpdateTitle": "Update Codex?",
+  "codexUpdateVersion": "{current} -> {latest}",
+  "codexUpdateDescription": "Codex needs a quick update before starting this session.",
+  "codexUpdateNow": "Update now",
+  "codexUpdateSkip": "Skip",
+  "codexUpdateSkipVersion": "Skip this version",
+  "codexUpdateRunning": "Updating Codex...",
+  "codexUpdateRunningHint": "This can take a few seconds. Codex will restart when the update finishes.",
+  "codexUpdateSuccess": "Update finished. Restarting Codex...",
+  "codexUpdateRestarting": "Restarting Codex"
 }

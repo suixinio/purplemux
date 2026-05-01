@@ -27,6 +27,7 @@ import PaneDisconnectedOverlay from '@/components/features/workspace/pane-discon
 import PaneClaudeModePrompt from '@/components/features/workspace/pane-claude-mode-prompt';
 import PanePathInputOverlay from '@/components/features/workspace/pane-path-input-overlay';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
+import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
@@ -188,6 +189,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
   const pendingClaudeInputRef = useRef<string | null>(null);
+  const codexRelaunchRef = useRef<() => void>(() => {});
   const clickedTerminalRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const pendingFocusRef = useRef<(() => void) | null>(null);
@@ -244,6 +246,17 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     enabled: isClaudeCode && claudeCliState === 'inactive',
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+  });
+  const {
+    updatePrompt: codexUpdatePrompt,
+    onTerminalData: onCodexUpdateData,
+    onRespond: onCodexUpdateResponse,
+  } = useCodexUpdatePromptDetector({
+    enabled: isCodex && sessionView === 'check',
+    scopeKey: activeTabId,
+    getBufferText: () => termActionsRef.current.getBufferText(),
+    sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+    onUpdated: () => codexRelaunchRef.current(),
   });
 
   useEffect(() => {
@@ -425,6 +438,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     onData: (data) => {
       termActionsRef.current.write(data);
       onTrustData();
+      onCodexUpdateData();
     },
     onConnected: () => {
       setHasEverConnected(true);
@@ -712,6 +726,16 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     sendStdin(`${buildCodexCommand()}\r`);
   }, [status, sendStdin, activeTabId, buildCodexCommand]);
 
+  const handleRelaunchCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${buildCodexCommand()}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+
+  useEffect(() => {
+    codexRelaunchRef.current = handleRelaunchCodexSession;
+  }, [handleRelaunchCodexSession]);
+
   const handleRestartCodexSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = buildCodexCommand();
@@ -989,6 +1013,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onClose={() => handleSwitchPanelType('terminal')}
                   onNewSession={handleNewCodexSession}
                   onRestart={handleRestartCodexSession}
+                  updatePrompt={codexUpdatePrompt}
+                  onUpdatePromptResponse={onCodexUpdateResponse}
                 />
               )}
             </div>

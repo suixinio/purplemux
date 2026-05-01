@@ -23,6 +23,7 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
+import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
 
@@ -137,6 +138,7 @@ const MobileSurfaceView = ({
 
   const pendingRestartRef = useRef<string | null>(null);
   const pendingClaudeInputRef = useRef<string | null>(null);
+  const codexRelaunchRef = useRef<() => void>(() => {});
   const lastTitleRef = useRef('');
   const agentProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentProcess ?? null : null);
   const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
@@ -147,6 +149,17 @@ const MobileSurfaceView = ({
     enabled: isClaudeCode && claudeCliState === 'inactive',
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+  });
+  const {
+    updatePrompt: codexUpdatePrompt,
+    onTerminalData: onCodexUpdateData,
+    onRespond: onCodexUpdateResponse,
+  } = useCodexUpdatePromptDetector({
+    enabled: isCodex && sessionView === 'check',
+    scopeKey: activeTabId,
+    getBufferText: () => termActionsRef.current.getBufferText(),
+    sendStdin: (data) => wsActionsRef.current.sendStdin(data),
+    onUpdated: () => codexRelaunchRef.current(),
   });
 
   const handleCliStateChange = useCallback((state: TCliState) => {
@@ -267,6 +280,7 @@ const MobileSurfaceView = ({
     onData: (data) => {
       termActionsRef.current.write(data);
       onTrustData();
+      onCodexUpdateData();
     },
     onConnected: () => {
       setHasEverConnected(true);
@@ -405,6 +419,16 @@ const MobileSurfaceView = ({
     sendStdin(`${buildCodexCommand()}\r`);
   }, [status, sendStdin, activeTabId, buildCodexCommand]);
 
+  const handleRelaunchCodexSession = useCallback(() => {
+    if (status !== 'connected' || !activeTabId) return;
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${buildCodexCommand()}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+
+  useEffect(() => {
+    codexRelaunchRef.current = handleRelaunchCodexSession;
+  }, [handleRelaunchCodexSession]);
+
   const handleRestartCodexSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     pendingRestartRef.current = buildCodexCommand();
@@ -521,6 +545,8 @@ const MobileSurfaceView = ({
           sessionName={activeTab.sessionName}
           onNewSession={handleNewCodexSession}
           onRestart={handleRestartCodexSession}
+          updatePrompt={codexUpdatePrompt}
+          onUpdatePromptResponse={onCodexUpdateResponse}
         />
       )}
 

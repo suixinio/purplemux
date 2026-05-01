@@ -8,17 +8,28 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useTimeline from '@/hooks/use-timeline';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
+import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
 import PermissionPromptCard from '@/components/features/timeline/permission-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
 
 interface IMobileCodexPanelProps {
   tabId?: string;
   sessionName?: string;
   onNewSession?: () => void;
   onRestart?: () => void;
+  updatePrompt?: ICodexUpdatePromptInfo | null;
+  onUpdatePromptResponse?: (answer: TCodexUpdateAnswer) => void;
 }
 
-const MobileCodexPanel = ({ tabId, sessionName, onNewSession, onRestart }: IMobileCodexPanelProps) => {
+const MobileCodexPanel = ({
+  tabId,
+  sessionName,
+  onNewSession,
+  onRestart,
+  updatePrompt,
+  onUpdatePromptResponse,
+}: IMobileCodexPanelProps) => {
   const t = useTranslations('terminal');
   const agentProcess = useTabStore((s) => (tabId ? s.tabs[tabId]?.agentProcess ?? null : null));
   const agentInstalled = useTabStore((s) => (tabId ? s.tabs[tabId]?.agentInstalled ?? true : true));
@@ -63,8 +74,12 @@ const MobileCodexPanel = ({ tabId, sessionName, onNewSession, onRestart }: IMobi
 
   if (view === 'check') {
     return (
-      <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
-        <CodexBootProgress onRestart={onRestart} />
+      <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
+        {updatePrompt && onUpdatePromptResponse ? (
+          <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+        ) : (
+          <CodexBootProgress onRestart={onRestart} />
+        )}
       </div>
     );
   }
