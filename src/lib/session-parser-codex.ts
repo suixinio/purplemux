@@ -231,6 +231,18 @@ const createState = (): ICodexParseState => ({
 
 const SUPPRESSED_FUNCTION_NAMES = new Set(['exec_command', 'shell', 'bash']);
 
+const setInFlight = (state: ICodexParseState, callId: string, entry: TInFlightEntry) => {
+  const existing = state.inFlight.get(callId);
+  if (existing) {
+    warnOnce(
+      `callid-reuse-${callId}`,
+      { callId, prevKind: existing.kind, nextKind: entry.kind },
+      'in-flight call_id reused — overwriting prior entry',
+    );
+  }
+  state.inFlight.set(callId, entry);
+};
+
 const buildExecEntry = (
   inFlight: IInFlightExec,
   endTimestamp: number,
@@ -649,7 +661,7 @@ const processEventMsg = (
         truncated: false,
         startedAt: timestamp,
       };
-      state.inFlight.set(callId, inflight);
+      setInFlight(state, callId, inflight);
       return [];
     }
     case 'exec_command_delta':
@@ -704,7 +716,7 @@ const processEventMsg = (
     case 'WebSearchBegin': {
       const callId = safeString(payload.call_id);
       if (!callId) return [];
-      state.inFlight.set(callId, {
+      setInFlight(state, callId, {
         kind: 'web-search',
         callId,
         query: safeString(payload.query) || undefined,
@@ -738,7 +750,7 @@ const processEventMsg = (
     case 'McpToolCallBegin': {
       const callId = safeString(payload.call_id);
       if (!callId) return [];
-      state.inFlight.set(callId, {
+      setInFlight(state, callId, {
         kind: 'mcp',
         callId,
         server: safeString(payload.server),
@@ -775,7 +787,7 @@ const processEventMsg = (
     case 'PatchApplyBegin': {
       const callId = safeString(payload.call_id);
       if (!callId) return [];
-      state.inFlight.set(callId, {
+      setInFlight(state, callId, {
         kind: 'patch',
         callId,
         files: [],
