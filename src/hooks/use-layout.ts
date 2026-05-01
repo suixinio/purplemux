@@ -594,7 +594,7 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
       tabs: pane.tabs.map((t) => {
         if (t.id !== tabId) return t;
         const updated: ITab = { ...t, panelType };
-        if (panelType === 'terminal') {
+        if (panelType === 'terminal' || (panelType === 'codex-cli' && t.panelType !== 'codex-cli')) {
           updated.claudeSessionId = null;
           updated.agentState = undefined;
         }
