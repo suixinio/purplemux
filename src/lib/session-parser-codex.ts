@@ -339,13 +339,15 @@ const processResponseItem = (
           if (text.trim()) summary.push(text);
         }
       }
-      if (summary.length === 0) return [];
+      const hasEncryptedContent =
+        typeof payload.encrypted_content === 'string' && payload.encrypted_content.length > 0;
+      if (summary.length === 0 && !hasEncryptedContent) return [];
       const entry: ITimelineReasoningSummary = {
         id: nanoid(),
         type: 'reasoning-summary',
         timestamp,
         summary,
-        hasEncryptedContent: typeof payload.encrypted_content === 'string' && payload.encrypted_content.length > 0,
+        hasEncryptedContent,
       };
       return [entry];
     }
