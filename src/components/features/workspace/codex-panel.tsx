@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
+import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
 
 interface ICodexPanelProps {
   tabId: string;
@@ -89,7 +90,7 @@ const CodexPanel = ({
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/40 px-3">
         <OpenAIIcon size={16} className="text-foreground" aria-label="Codex" />
         <span className="text-sm font-medium text-foreground">Codex</span>
-        <span className="ml-auto text-[11px] text-muted-foreground">{cliState}</span>
+        <CodexStatusDot cliState={cliState} className="ml-auto" />
       </div>
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-muted-foreground">
         {cliState === 'busy' ? (
