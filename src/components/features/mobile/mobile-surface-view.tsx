@@ -139,6 +139,7 @@ const MobileSurfaceView = ({
   const pendingClaudeInputRef = useRef<string | null>(null);
   const lastTitleRef = useRef('');
   const agentProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentProcess ?? null : null);
+  const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : null);
   const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
 
@@ -498,7 +499,7 @@ const MobileSurfaceView = ({
           tabId={activeTabId ?? undefined}
           wsId={layoutWsId ?? undefined}
           sessionName={activeTab.sessionName}
-          claudeSessionId={activeTab.claudeSessionId}
+          claudeSessionId={claudeSessionId}
           cwd={activeTabCwd}
           sendStdin={sendWebStdin}
           terminalWsConnected={status === 'connected'}

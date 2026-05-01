@@ -3,8 +3,8 @@ import { verifyCliToken } from '@/lib/cli-token';
 import { getStatusManager } from '@/lib/status-manager';
 import { createLogger } from '@/lib/logger';
 import { isRequestAllowed } from '@/lib/access-filter';
-import { claudeHookEvents } from '@/lib/providers/claude/hook-events';
-import { codexHookEvents } from '@/lib/providers/codex/hook-events';
+import { translateClaudeHookEvent } from '@/lib/providers/claude/hook-handler';
+import { processCodexHookPayload } from '@/lib/providers/codex/hook-handler';
 
 const log = createLogger('hooks');
 
@@ -13,7 +13,12 @@ const handleClaudeHook = (req: NextApiRequest, res: NextApiResponse) => {
   if (typeof event === 'string' && event !== 'poll' && typeof session === 'string' && session) {
     const type = typeof notificationType === 'string' && notificationType ? notificationType : undefined;
     log.debug({ event, session, notificationType: type }, `received ${event}${type ? `(${type})` : ''}`);
-    claudeHookEvents.emit('hook', { tmuxSession: session, event, notificationType: type });
+    const workEvent = translateClaudeHookEvent(event, type);
+    if (workEvent) {
+      getStatusManager().handleProviderEvent('claude', session, workEvent);
+    } else {
+      log.debug({ event, session, notificationType: type }, 'unknown claude hook event, ignoring');
+    }
   } else {
     log.debug({ body: req.body }, 'poll trigger');
     getStatusManager().poll().catch((err) => {
@@ -34,7 +39,13 @@ const handleCodexHook = (req: NextApiRequest, res: NextApiResponse) => {
     { tmuxSession, event: payload.hook_event_name, source: payload.source },
     `codex ${payload.hook_event_name ?? 'unknown'}`,
   );
-  codexHookEvents.emit('hook', tmuxSession, payload);
+  const { result, event } = processCodexHookPayload(tmuxSession, payload);
+  if (!result.ok) {
+    log.debug({ tmuxSession, event: payload.hook_event_name, reason: result.reason }, 'codex hook skipped');
+  }
+  if (event) {
+    getStatusManager().handleProviderEvent('codex', tmuxSession, event);
+  }
   return res.status(204).end();
 };
 

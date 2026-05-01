@@ -941,7 +941,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   key={activeTab.sessionName}
                   tabId={activeTabId}
                   sessionName={activeTab.sessionName}
-                  claudeSessionId={activeTab.claudeSessionId}
+                  claudeSessionId={claudeSessionId}
                   cwd={activeTabCwd || activeTab.cwd}
                   onClose={() => handleSwitchPanelType('terminal')}
                   onNewSession={handleNewClaudeSession}
@@ -958,7 +958,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   tabId={activeTabId ?? undefined}
                   wsId={layoutWsId ?? undefined}
                   sessionName={activeTab?.sessionName}
-                  claudeSessionId={activeTab?.claudeSessionId}
+                  claudeSessionId={claudeSessionId}
                   cliState={claudeCliState}
                   sendStdin={sendWebStdin}
                   terminalWsConnected={status === 'connected'}

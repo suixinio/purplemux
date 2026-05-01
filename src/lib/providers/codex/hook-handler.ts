@@ -5,7 +5,7 @@ import {
   parseCodexPermissionRequest,
   translateCodexHookEvent,
   type ICodexHookPayload,
-} from '@/lib/providers/codex/work-state-observer';
+} from '@/lib/providers/codex/hook-payload';
 import type { TAgentWorkStateEvent } from '@/lib/providers/types';
 import type { ISessionInfo } from '@/types/timeline';
 
@@ -17,10 +17,9 @@ export interface IHandleCodexHookResult {
 }
 
 /**
- * Apply codex-specific meta side effects (sessionId, jsonlPath, lastUserMessage,
- * agentSummary, permissionRequest, clearMessages) and return the work-state event
- * that should be emitted to the observer callback. Centralized here so both the
- * codex provider observer and any future caller share one contract.
+ * Applies codex-specific meta side effects (sessionId, jsonlPath, lastUserMessage,
+ * agentSummary, permissionRequest, clearMessages) and returns the standardized
+ * work-state event for StatusManager's central provider-event dispatcher.
  */
 export const processCodexHookPayload = (
   tmuxSession: string,

@@ -1,20 +1,15 @@
 import { EventEmitter } from 'events';
-import type { ICodexHookPayload } from '@/lib/providers/codex/work-state-observer';
 import type { ISessionInfo } from '@/types/timeline';
 
 export type TCodexHookEvent =
-  | { kind: 'hook'; tmuxSession: string; payload: ICodexHookPayload }
   | { kind: 'session-info'; tmuxSession: string; info: ISessionInfo }
   | { kind: 'session-clear'; tmuxSession: string };
 
 interface ICodexHookEvents {
-  on(event: 'hook', listener: (tmuxSession: string, payload: ICodexHookPayload) => void): this;
   on(event: 'session-info', listener: (tmuxSession: string, info: ISessionInfo) => void): this;
   on(event: 'session-clear', listener: (tmuxSession: string) => void): this;
-  emit(event: 'hook', tmuxSession: string, payload: ICodexHookPayload): boolean;
   emit(event: 'session-info', tmuxSession: string, info: ISessionInfo): boolean;
   emit(event: 'session-clear', tmuxSession: string): boolean;
-  off(event: 'hook', listener: (tmuxSession: string, payload: ICodexHookPayload) => void): this;
   off(event: 'session-info', listener: (tmuxSession: string, info: ISessionInfo) => void): this;
   off(event: 'session-clear', listener: (tmuxSession: string) => void): this;
 }

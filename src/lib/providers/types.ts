@@ -18,7 +18,6 @@ export interface ISubscription {
 }
 
 export type ISessionWatcher = ISubscription;
-export type IWorkStateObserver = ISubscription;
 
 export interface IAgentPreflight {
   installed: boolean;
@@ -96,15 +95,4 @@ export interface IAgentProvider {
   preflight(): Promise<IAgentPreflight>;
   writeWorkspacePrompt?(ws: IWorkspace): Promise<void>;
 
-  /**
-   * Watches a tab for agent activity and emits standardized work-state events.
-   * Status-manager subscribes per active tab and feeds events into its state machine.
-   * Optional during migration: providers without this slot keep relying on the
-   * legacy polling + hook flows in status-manager.
-   */
-  attachWorkStateObserver?(
-    tab: ITab,
-    panePid: number,
-    emit: (event: TAgentWorkStateEvent) => void,
-  ): IWorkStateObserver;
 }
