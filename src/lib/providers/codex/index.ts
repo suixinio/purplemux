@@ -11,6 +11,7 @@ import {
   isCodexRunning,
   watchSessionsDir,
 } from '@/lib/providers/codex/session-detection';
+import { attachCodexWorkStateObserver } from '@/lib/providers/codex/observer';
 import type { IAgentPreflight, IAgentProvider } from '@/lib/providers/types';
 import type { IAgentState, ITab } from '@/types/terminal';
 
@@ -141,4 +142,5 @@ export const codexProvider: IAgentProvider = {
   sessionIdFromJsonlPath,
   preflight: codexAgentPreflight,
   writeWorkspacePrompt: writeCodexPromptFile,
+  attachWorkStateObserver: attachCodexWorkStateObserver,
 };

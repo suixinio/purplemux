@@ -241,7 +241,7 @@ Normal tabs go through the shell script above, but **agent tabs / brain sessions
 
 ### Hook API Endpoint
 
-`/api/status/hook` — requires `x-pmux-token` header (same CLI token as `/api/cli/*`). Receives `event` and `session` and calls `StatusManager.updateTabFromHook()`. If `event` is `poll` or `session` is missing, it triggers a full poll.
+`/api/status/hook` — requires `x-pmux-token` header (same CLI token as `/api/cli/*`). Pure forward: emits the raw payload onto the per-provider EventEmitter (`globalThis.__ptClaudeHookEvents` for Claude, `globalThis.__ptCodexHookEvents` for Codex). The provider observer (attached per tab via `IAgentProvider.attachWorkStateObserver`) is the sole listener — it translates the payload, applies any provider-specific meta side effects, and forwards a `TAgentWorkStateEvent` to `StatusManager.handleObserverEvent`, which dispatches into `updateTabFromHook`. If `event` is `poll` or `session` is missing on the Claude path, the endpoint triggers a full poll directly.
 
 ### Processing Flow (`updateTabFromHook`)
 
@@ -379,7 +379,16 @@ Removing the `cliState` decision and the `hasPermissionPrompt` check has reduced
      │
      ▼
 [/api/status/hook] (x-pmux-token required)
-  └─ StatusManager.updateTabFromHook(session, event)
+  └─ globalThis.__pt<Provider>HookEvents.emit('hook', ...)
+     │
+     ▼
+[Provider observer] (attached per tab via attachWorkStateObserver)
+  ├─ filter by tmuxSession
+  ├─ apply provider-specific meta (codex applyCodexHookMeta)
+  └─ translate → emit(TAgentWorkStateEvent)
+     │
+     ▼
+[StatusManager.handleObserverEvent → updateTabFromHook]
      │
      ├─ entry.eventSeq++
      ├─ entry.lastEvent = { name, at, seq }

@@ -11,6 +11,7 @@ import {
 } from '@/lib/claude-command';
 import { writeClaudePromptFile } from '@/lib/claude-prompt';
 import { runClaudePreflight } from '@/lib/providers/claude/preflight';
+import { attachClaudeWorkStateObserver } from '@/lib/providers/claude/work-state-observer';
 import type { IAgentProvider } from '@/lib/providers/types';
 import type { ITab, IAgentState } from '@/types/terminal';
 
@@ -98,4 +99,5 @@ export const claudeProvider: IAgentProvider = {
   sessionIdFromJsonlPath,
   preflight: runClaudePreflight,
   writeWorkspacePrompt: writeClaudePromptFile,
+  attachWorkStateObserver: attachClaudeWorkStateObserver,
 };

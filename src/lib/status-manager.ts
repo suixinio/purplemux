@@ -8,6 +8,7 @@ import {
   getProviderByPanelType,
 } from '@/lib/providers';
 import type { IAgentProvider } from '@/lib/providers';
+import type { IWorkStateObserver, TAgentWorkStateEvent } from '@/lib/providers/types';
 import { cwdToProjectPath } from '@/lib/session-list';
 import { formatTabTitle } from '@/lib/tab-title';
 import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
@@ -376,6 +377,8 @@ class StatusManager {
   private lastRateLimits: IRateLimitsData | null = null;
   private jsonlWatchers = new Map<string, { watcher: FSWatcher; jsonlPath: string; debounceTimer: ReturnType<typeof setTimeout> | null }>();
   private compactStaleTimers = new Map<string, ReturnType<typeof setTimeout>>();
+  private observerCleanups = new Map<string, IWorkStateObserver>();
+  private observerPanelTypes = new Map<string, string>();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -396,6 +399,9 @@ class StatusManager {
     const panesInfo = await getAllPanesInfo();
     for (const tabId of [...this.jsonlWatchers.keys()]) {
       this.stopJsonlWatch(tabId);
+    }
+    for (const tabId of [...this.observerCleanups.keys()]) {
+      this.teardownObserver(tabId);
     }
     this.tabs.clear();
 
@@ -445,6 +451,7 @@ class StatusManager {
         if ((cliState === 'needs-input' || cliState === 'unknown') && detected.jsonlPath) {
           this.startJsonlWatch(tab.id, detected.jsonlPath);
         }
+        this.scheduleObserverSetup(tab.id);
         if (cliState === 'unknown') {
           this.resolveUnknown(tab.id).catch((err) => log.warn('resolveUnknown failed: %s', err));
         }
@@ -596,6 +603,7 @@ class StatusManager {
           this.tabs.set(tab.id, entry);
           this.persistToLayout(entry);
           this.broadcastUpdate(tab.id, entry);
+          this.scheduleObserverSetup(tab.id);
           if (initialState === 'unknown') {
             this.resolveUnknown(tab.id).catch((err) => log.warn('resolveUnknown failed: %s', err));
           }
@@ -696,6 +704,12 @@ class StatusManager {
             this.updateTabFromHook(existing.tmuxSession, 'session-start');
             continue;
           }
+        }
+
+        if (panelTypeChanged) {
+          this.scheduleObserverSetup(tab.id);
+        } else if (!this.observerCleanups.has(tab.id)) {
+          this.scheduleObserverSetup(tab.id);
         }
 
         if (terminalChanged || processChanged || processRetryNeeded || messageChanged || panelTypeChanged || summaryChanged) {
@@ -910,9 +924,6 @@ class StatusManager {
     return undefined;
   }
 
-  // TODO: integrate IAgentProvider.attachWorkStateObserver — providers will emit
-  // TAgentWorkStateEvent and this entry point will dispatch via that observer
-  // pipeline. See providers/types.ts for the event vocabulary.
   updateTabFromHook(tmuxSession: string, event: string, notificationType?: string): void {
     const tabId = this.findTabIdBySession(tmuxSession);
     if (!tabId) {
@@ -1085,6 +1096,7 @@ class StatusManager {
       });
     }
     this.stopJsonlWatch(tabId);
+    this.teardownObserver(tabId);
     const compactTimer = this.compactStaleTimers.get(tabId);
     if (compactTimer) {
       clearTimeout(compactTimer);
@@ -1114,6 +1126,92 @@ class StatusManager {
   registerTab(tabId: string, entry: ITabStatusEntry): void {
     this.tabs.set(tabId, entry);
     this.broadcastUpdate(tabId, entry);
+    this.scheduleObserverSetup(tabId).catch((err) => {
+      log.warn('observer setup failed: %s', err instanceof Error ? err.message : err);
+    });
+  }
+
+  private scheduleObserverSetup(tabId: string): Promise<void> {
+    return this.setupObserver(tabId).catch((err) => {
+      log.warn({ err, tabId }, 'observer setup error');
+    });
+  }
+
+  private async setupObserver(tabId: string): Promise<void> {
+    const entry = this.tabs.get(tabId);
+    if (!entry) return;
+    const provider = getProviderByPanelType(entry.panelType);
+    if (!provider?.attachWorkStateObserver) {
+      this.teardownObserver(tabId);
+      return;
+    }
+
+    const existingPanelType = this.observerPanelTypes.get(tabId);
+    if (this.observerCleanups.has(tabId) && existingPanelType === provider.panelType) return;
+    if (this.observerCleanups.has(tabId)) this.teardownObserver(tabId);
+
+    const panePid = await getSessionPanePid(entry.tmuxSession);
+    if (!panePid) return;
+
+    const stillCurrent = this.tabs.get(tabId);
+    if (!stillCurrent || stillCurrent.panelType !== entry.panelType) return;
+    if (this.observerCleanups.has(tabId)) return;
+
+    const tabShim: ITab = {
+      id: tabId,
+      sessionName: entry.tmuxSession,
+      name: entry.tabName,
+      order: 0,
+      panelType: entry.panelType,
+    };
+
+    try {
+      const observer = provider.attachWorkStateObserver(tabShim, panePid, (event) => {
+        this.handleObserverEvent(tabId, event);
+      });
+      this.observerCleanups.set(tabId, observer);
+      if (provider.panelType) this.observerPanelTypes.set(tabId, provider.panelType);
+    } catch (err) {
+      log.warn({ err, tabId }, 'attachWorkStateObserver threw');
+    }
+  }
+
+  private teardownObserver(tabId: string): void {
+    const observer = this.observerCleanups.get(tabId);
+    if (!observer) return;
+    try { observer.stop(); } catch { /* noop */ }
+    this.observerCleanups.delete(tabId);
+    this.observerPanelTypes.delete(tabId);
+  }
+
+  private handleObserverEvent(tabId: string, event: TAgentWorkStateEvent): void {
+    const entry = this.tabs.get(tabId);
+    if (!entry) return;
+    switch (event.kind) {
+      case 'session-start':
+      case 'prompt-submit':
+      case 'stop':
+      case 'interrupt':
+      case 'pre-compact':
+      case 'post-compact':
+        this.updateTabFromHook(entry.tmuxSession, event.kind);
+        break;
+      case 'notification':
+        this.updateTabFromHook(entry.tmuxSession, 'notification', event.notificationType);
+        break;
+      case 'summary-update':
+        if (entry.agentSummary !== event.summary) {
+          entry.agentSummary = event.summary;
+          this.broadcastUpdate(tabId, entry);
+        }
+        break;
+      case 'last-user-message':
+        if (entry.lastUserMessage !== event.message) {
+          entry.lastUserMessage = event.message;
+          this.broadcastUpdate(tabId, entry);
+        }
+        break;
+    }
   }
 
   markAgentLaunch(tabId: string): void {
@@ -1326,6 +1424,9 @@ class StatusManager {
     this.rateLimitsWatcher?.stop();
     for (const tabId of [...this.jsonlWatchers.keys()]) {
       this.stopJsonlWatch(tabId);
+    }
+    for (const tabId of [...this.observerCleanups.keys()]) {
+      this.teardownObserver(tabId);
     }
     for (const ws of this.clients) {
       if (ws.readyState === WebSocket.OPEN) {

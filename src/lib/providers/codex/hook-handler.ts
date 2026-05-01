@@ -1,5 +1,4 @@
 import { getStatusManager } from '@/lib/status-manager';
-import { createLogger } from '@/lib/logger';
 import { codexHookEvents } from '@/lib/providers/codex/hook-events';
 import {
   isCodexSessionSource,
@@ -7,9 +6,8 @@ import {
   translateCodexHookEvent,
   type ICodexHookPayload,
 } from '@/lib/providers/codex/work-state-observer';
+import type { TAgentWorkStateEvent } from '@/lib/providers/types';
 import type { ISessionInfo } from '@/types/timeline';
-
-const log = createLogger('codex-runtime');
 
 const SUMMARY_LIMIT = 80;
 
@@ -18,13 +16,17 @@ export interface IHandleCodexHookResult {
   reason?: 'unknown-session' | 'unknown-event';
 }
 
-export const handleCodexHookEvent = (
+/**
+ * Apply codex-specific meta side effects (sessionId, jsonlPath, lastUserMessage,
+ * agentSummary, permissionRequest, clearMessages) and return the work-state event
+ * that should be emitted to the observer callback. Centralized here so both the
+ * codex provider observer and any future caller share one contract.
+ */
+export const processCodexHookPayload = (
   tmuxSession: string,
   payload: ICodexHookPayload,
-): IHandleCodexHookResult => {
+): { result: IHandleCodexHookResult; event: TAgentWorkStateEvent | null } => {
   const statusManager = getStatusManager();
-  const event = translateCodexHookEvent(payload);
-
   const meta: Parameters<typeof statusManager.applyCodexHookMeta>[1] = {
     sessionId: payload.session_id ?? null,
   };
@@ -46,25 +48,7 @@ export const handleCodexHookEvent = (
 
   const applied = statusManager.applyCodexHookMeta(tmuxSession, meta);
   if (!applied) {
-    log.debug({ tmuxSession, event: payload.hook_event_name }, 'codex hook for unknown session');
-    return { ok: false, reason: 'unknown-session' };
-  }
-
-  if (!event) {
-    return { ok: false, reason: 'unknown-event' };
-  }
-
-  if (event.kind === 'session-start') {
-    const source = isCodexSessionSource(payload.source) ? payload.source : 'startup';
-    if (source === 'clear') {
-      statusManager.updateTabFromHook(tmuxSession, 'session-start');
-    } else if (applied.cliState === 'inactive' || applied.cliState === 'unknown') {
-      statusManager.updateTabFromHook(tmuxSession, 'session-start');
-    }
-  } else if (event.kind === 'notification') {
-    statusManager.updateTabFromHook(tmuxSession, 'notification', event.notificationType);
-  } else if (event.kind === 'prompt-submit' || event.kind === 'stop') {
-    statusManager.updateTabFromHook(tmuxSession, event.kind);
+    return { result: { ok: false, reason: 'unknown-session' }, event: null };
   }
 
   if (payload.hook_event_name === 'SessionStart') {
@@ -77,10 +61,19 @@ export const handleCodexHookEvent = (
       cwd: payload.cwd ?? null,
     };
     codexHookEvents.emit('session-info', tmuxSession, info);
-    if (isClear) {
-      codexHookEvents.emit('session-clear', tmuxSession);
-    }
+    if (isClear) codexHookEvents.emit('session-clear', tmuxSession);
   }
 
-  return { ok: true };
+  const event = translateCodexHookEvent(payload);
+  if (!event) return { result: { ok: false, reason: 'unknown-event' }, event: null };
+
+  if (event.kind === 'session-start') {
+    const source = isCodexSessionSource(payload.source) ? payload.source : 'startup';
+    const shouldEmit = source === 'clear'
+      || applied.cliState === 'inactive'
+      || applied.cliState === 'unknown';
+    if (!shouldEmit) return { result: { ok: true }, event: null };
+  }
+
+  return { result: { ok: true }, event };
 };
