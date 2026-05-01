@@ -1,10 +1,11 @@
 import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-store';
-import { hasSession, createSession, getPaneCurrentCommand, sendKeysSeparated } from '@/lib/tmux';
+import { hasSession, createSession, getPaneCurrentCommand, getSessionPanePid, sendKeysSeparated } from '@/lib/tmux';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { getProviderByPanelType, getProviderByProcessName } from '@/lib/providers';
 import type { IAgentProvider } from '@/lib/providers';
 import { getStatusManager } from '@/lib/status-manager';
 import { runCodexPreflight } from '@/lib/providers/codex/preflight';
+import { getChildPids, getProcessArgs } from '@/lib/process-utils';
 import { createLogger } from '@/lib/logger';
 
 const log = createLogger('auto-resume');
@@ -55,6 +56,17 @@ const findAutoResumeTargets = async (): Promise<IAutoResumeTarget[]> => {
 const sleep = (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
+const fetchForegroundArgs = async (tmuxSession: string): Promise<string[] | undefined> => {
+  const panePid = await getSessionPanePid(tmuxSession);
+  if (!panePid) return undefined;
+  const childPids = await getChildPids(panePid);
+  for (const cpid of childPids) {
+    const argsStr = await getProcessArgs(cpid);
+    if (argsStr) return argsStr.split(/\s+/);
+  }
+  return undefined;
+};
+
 const sendResumeKeys = async (target: IAutoResumeTarget): Promise<boolean> => {
   try {
     const command = await getPaneCurrentCommand(target.tmuxSession);
@@ -64,7 +76,8 @@ const sendResumeKeys = async (target: IAutoResumeTarget): Promise<boolean> => {
     }
 
     if (!SAFE_SHELLS.has(command)) {
-      const runningProvider = getProviderByProcessName(command);
+      const args = command === 'node' ? await fetchForegroundArgs(target.tmuxSession) : undefined;
+      const runningProvider = getProviderByProcessName(command, args);
       if (runningProvider && runningProvider.id === target.provider.id) {
         log.debug(`${target.provider.displayName} already running, skip: ${target.tmuxSession}`);
         return true;

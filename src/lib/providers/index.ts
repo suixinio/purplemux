@@ -1,9 +1,11 @@
 import { claudeProvider } from '@/lib/providers/claude';
+import { codexProvider } from '@/lib/providers/codex';
 import { listProviders, registerProvider } from '@/lib/providers/registry';
 import type { IAgentProvider } from '@/lib/providers/types';
 import type { ISessionInfo } from '@/types/timeline';
 
 registerProvider(claudeProvider);
+registerProvider(codexProvider);
 
 export interface IProviderSessionScan {
   provider: IAgentProvider | null;

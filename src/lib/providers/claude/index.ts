@@ -71,9 +71,8 @@ export const claudeProvider: IAgentProvider = {
 
   matchesProcess: (commandName, args) => {
     if (commandName === 'claude') return true;
-    if (commandName !== 'node') return false;
-    if (!args) return true;
-    return args.some((a) => a.endsWith('claude.js') || a.endsWith('claude'));
+    if (commandName === 'node' && args?.some((a) => a.endsWith('claude.js') || a.endsWith('claude'))) return true;
+    return false;
   },
   isValidSessionId: isValidClaudeSessionId,
 
