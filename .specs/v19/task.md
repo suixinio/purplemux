@@ -13,7 +13,7 @@
 | feature | phase | priority | build | verify | updated |
 |---|---|---|---|---|---|
 | agent-status-resilience | Phase 1 | P0 | ✅ | ✅ 1/true | 2026-05-01 17:48 |
-| codex-hook-pipeline | Phase 1 | P0 | ✅ | ⬜ | 2026-05-01 17:57 |
+| codex-hook-pipeline | Phase 1 | P0 | ✅ | ✅ 2/true | 2026-05-01 18:12 |
 | codex-preflight-and-errors | Phase 1 | P0 | ⬜ | ⬜ | |
 | codex-provider-core | Phase 1 | P0 | ⬜ | ⬜ | |
 | codex-tui-ready-detection | Phase 1 | P0 | ⬜ | ⬜ | |
