@@ -35,7 +35,15 @@ export type TTimelineEntryType =
   | 'ask-user-question'
   | 'interrupt'
   | 'session-exit'
-  | 'turn-end';
+  | 'turn-end'
+  | 'reasoning-summary'
+  | 'error-notice'
+  | 'approval-request'
+  | 'exec-command-stream'
+  | 'web-search'
+  | 'mcp-tool-call'
+  | 'patch-apply'
+  | 'context-compacted';
 
 export interface ITimelineUserMessage {
   id: string;
@@ -202,6 +210,104 @@ export interface ITimelineTurnEnd {
   timestamp: number;
 }
 
+export interface ITimelineReasoningSummary {
+  id: string;
+  type: 'reasoning-summary';
+  timestamp: number;
+  summary: string[];
+  hasEncryptedContent: boolean;
+}
+
+export type TErrorSeverity = 'error' | 'warning' | 'stream-error' | 'guardian-warning';
+
+export interface ITimelineErrorNotice {
+  id: string;
+  type: 'error-notice';
+  timestamp: number;
+  severity: TErrorSeverity;
+  message: string;
+  retryStatus?: string;
+  errorCode?: string;
+}
+
+export type TApprovalKind = 'exec' | 'apply-patch' | 'permissions';
+
+export interface ITimelineApprovalRequest {
+  id: string;
+  type: 'approval-request';
+  timestamp: number;
+  approvalKind: TApprovalKind;
+  callId: string;
+  command?: string;
+  cwd?: string;
+  patches?: Array<{ path: string; status?: string }>;
+  permissions?: string[];
+  status: TToolStatus;
+}
+
+export interface ITimelineExecCommandStream {
+  id: string;
+  type: 'exec-command-stream';
+  timestamp: number;
+  callId: string;
+  command: string;
+  parsedCommand?: string;
+  cwd?: string;
+  stdout: string;
+  stderr?: string;
+  exitCode?: number;
+  durationMs?: number;
+  truncated?: boolean;
+  status: TToolStatus;
+}
+
+export interface ITimelineWebSearch {
+  id: string;
+  type: 'web-search';
+  timestamp: number;
+  callId: string;
+  query?: string;
+  resultsSummary?: string;
+  resultCount?: number;
+  status: TToolStatus;
+}
+
+export interface ITimelineMcpToolCall {
+  id: string;
+  type: 'mcp-tool-call';
+  timestamp: number;
+  callId: string;
+  server: string;
+  tool: string;
+  argumentsSummary?: string;
+  resultSummary?: string;
+  status: TToolStatus;
+}
+
+export interface IPatchApplyFile {
+  path: string;
+  status?: string;
+}
+
+export interface ITimelinePatchApply {
+  id: string;
+  type: 'patch-apply';
+  timestamp: number;
+  callId: string;
+  files: IPatchApplyFile[];
+  diff?: string;
+  success?: boolean;
+  status: TToolStatus;
+}
+
+export interface ITimelineContextCompacted {
+  id: string;
+  type: 'context-compacted';
+  timestamp: number;
+  beforeTokens?: number;
+  afterTokens?: number;
+}
+
 export type ITimelineEntry =
   | ITimelineUserMessage
   | ITimelineAssistantMessage
@@ -215,7 +321,15 @@ export type ITimelineEntry =
   | ITimelineAskUserQuestion
   | ITimelineInterrupt
   | ITimelineSessionExit
-  | ITimelineTurnEnd;
+  | ITimelineTurnEnd
+  | ITimelineReasoningSummary
+  | ITimelineErrorNotice
+  | ITimelineApprovalRequest
+  | ITimelineExecCommandStream
+  | ITimelineWebSearch
+  | ITimelineMcpToolCall
+  | ITimelinePatchApply
+  | ITimelineContextCompacted;
 
 export interface IInitMeta {
   createdAt: string | null;
