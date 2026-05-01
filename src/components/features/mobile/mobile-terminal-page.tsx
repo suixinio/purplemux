@@ -163,7 +163,7 @@ const MobileTerminalPage = () => {
     setNewTabDialogOpen(true);
   }, []);
 
-  const handleCreateTab = useCallback(async (panelType?: TPanelType, options?: { command?: string }) => {
+  const handleCreateTab = useCallback(async (panelType?: TPanelType, options?: { command?: string; resumeSessionId?: string }) => {
     if (!currentPane) return;
     let cmd: string | undefined;
     if (options?.command === 'claude-new') {
@@ -177,10 +177,10 @@ const MobileTerminalPage = () => {
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
       });
     }
-    const newTab = await layout.createTabInPane(currentPane.id, panelType, cmd);
+    const newTab = await layout.createTabInPane(currentPane.id, panelType, cmd, options?.resumeSessionId);
     if (newTab) {
       useTabStore.getState().initTab(newTab.id, { panelType, workspaceId: activeWorkspaceId ?? '' });
-      if (options?.command === 'claude-new' || options?.command === 'codex-new') {
+      if (cmd || options?.resumeSessionId) {
         useTabStore.getState().setSessionView(newTab.id, 'check');
       }
     }

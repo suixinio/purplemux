@@ -1,0 +1,232 @@
+import fs from 'fs/promises';
+import { createReadStream } from 'fs';
+import path from 'path';
+import os from 'os';
+import readline from 'readline';
+import { createLogger } from '@/lib/logger';
+
+const log = createLogger('codex-session-list');
+
+const SESSIONS_ROOT = path.join(os.homedir(), '.codex', 'sessions');
+const DEFAULT_DAYS_BACK = 30;
+const MAX_FIRST_MESSAGE_LENGTH = 200;
+const MAX_LINES_FOR_FIRST_MESSAGE = 60;
+const CACHE_TTL_MS = 30_000;
+const META_DEDUP_LOG_KEYS = new Set<string>();
+
+export interface ICodexSessionEntry {
+  sessionId: string;
+  jsonlPath: string;
+  startedAt: number;
+  cwd: string | null;
+  model: string | null;
+  firstUserMessage: string | null;
+  totalTokens: number | null;
+}
+
+interface ICodexCacheEntry {
+  entry: ICodexSessionEntry;
+  mtime: number;
+  cachedAt: number;
+}
+
+const g = globalThis as unknown as { __ptCodexSessionMetaCache?: Map<string, ICodexCacheEntry> };
+if (!g.__ptCodexSessionMetaCache) g.__ptCodexSessionMetaCache = new Map();
+const cache = g.__ptCodexSessionMetaCache;
+
+const truncateMessage = (text: string): string =>
+  text.length <= MAX_FIRST_MESSAGE_LENGTH ? text : text.slice(0, MAX_FIRST_MESSAGE_LENGTH) + '…';
+
+const warnOnce = (key: string, payload: Record<string, unknown>) => {
+  if (META_DEDUP_LOG_KEYS.has(key)) return;
+  META_DEDUP_LOG_KEYS.add(key);
+  log.warn(payload, 'codex session meta failed');
+};
+
+interface ICodexSessionMetaPayload {
+  id?: string;
+  timestamp?: string;
+  cwd?: string;
+  model?: string;
+}
+
+interface ICodexUserMessagePayload {
+  type?: string;
+  message?: string;
+}
+
+const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null> => {
+  const stream = createReadStream(jsonlPath, { encoding: 'utf-8' });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+  let session_id: string | null = null;
+  let startedAtIso: string | null = null;
+  let cwd: string | null = null;
+  let model: string | null = null;
+  let firstUserMessage: string | null = null;
+  let lineCount = 0;
+  let isFirstLine = true;
+  let metaParsed = false;
+
+  try {
+    for await (const line of rl) {
+      lineCount++;
+
+      if (isFirstLine) {
+        isFirstLine = false;
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        let parsed: { type?: string; payload?: ICodexSessionMetaPayload; timestamp?: string };
+        try {
+          parsed = JSON.parse(trimmed);
+        } catch {
+          throw new Error('first-line-parse-failed');
+        }
+        if (parsed.type !== 'session_meta' || !parsed.payload) {
+          throw new Error('first-line-not-session-meta');
+        }
+        const payload = parsed.payload;
+        if (!payload.id) throw new Error('session-meta-missing-id');
+        session_id = payload.id;
+        const startedRaw = payload.timestamp ?? parsed.timestamp;
+        startedAtIso = startedRaw ?? null;
+        cwd = payload.cwd ?? null;
+        model = payload.model ?? null;
+        metaParsed = true;
+        continue;
+      }
+
+      if (firstUserMessage) break;
+      if (lineCount > MAX_LINES_FOR_FIRST_MESSAGE) break;
+
+      if (!line.includes('"user_message"')) continue;
+      try {
+        const parsed = JSON.parse(line) as { type?: string; payload?: ICodexUserMessagePayload };
+        if (parsed.type !== 'event_msg') continue;
+        const payload = parsed.payload;
+        if (!payload || payload.type !== 'user_message') continue;
+        const text = typeof payload.message === 'string' ? payload.message.trim() : '';
+        if (!text) continue;
+        if (text.startsWith('<') && text.includes('environment_context')) continue;
+        if (text.startsWith('<') && text.includes('user_instructions')) continue;
+        firstUserMessage = truncateMessage(text);
+        break;
+      } catch {}
+    }
+  } finally {
+    rl.close();
+    stream.destroy();
+  }
+
+  if (!metaParsed || !session_id) return null;
+
+  const startedAt = startedAtIso ? new Date(startedAtIso).getTime() : 0;
+  if (!Number.isFinite(startedAt) || startedAt <= 0) return null;
+
+  return {
+    sessionId: session_id,
+    jsonlPath,
+    startedAt,
+    cwd,
+    model,
+    firstUserMessage,
+    totalTokens: null,
+  };
+};
+
+const getCachedEntry = async (jsonlPath: string): Promise<ICodexSessionEntry | null> => {
+  let stat;
+  try {
+    stat = await fs.stat(jsonlPath);
+  } catch (err) {
+    warnOnce(`stat:${jsonlPath}`, { jsonlPath, err: err instanceof Error ? err.message : err });
+    return null;
+  }
+
+  const cached = cache.get(jsonlPath);
+  if (cached && cached.mtime === stat.mtimeMs && Date.now() - cached.cachedAt < CACHE_TTL_MS) {
+    return cached.entry;
+  }
+
+  try {
+    const entry = await extractMeta(jsonlPath);
+    if (!entry) return null;
+    cache.set(jsonlPath, { entry, mtime: stat.mtimeMs, cachedAt: Date.now() });
+    return entry;
+  } catch (err) {
+    warnOnce(`parse:${jsonlPath}`, { jsonlPath, err: err instanceof Error ? err.message : err });
+    return null;
+  }
+};
+
+const dayDirPath = (date: Date): string =>
+  path.join(
+    SESSIONS_ROOT,
+    String(date.getFullYear()),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  );
+
+interface IListCodexSessionsOptions {
+  cwd: string;
+  daysBack?: number;
+}
+
+interface IListCodexSessionsResult {
+  sessions: ICodexSessionEntry[];
+  scannedDirs: number;
+  scannedFiles: number;
+}
+
+export const listCodexSessions = async ({
+  cwd,
+  daysBack = DEFAULT_DAYS_BACK,
+}: IListCodexSessionsOptions): Promise<IListCodexSessionsResult> => {
+  const sessions: ICodexSessionEntry[] = [];
+  const today = new Date();
+  let scannedDirs = 0;
+  let scannedFiles = 0;
+
+  const dayPaths: string[] = [];
+  for (let i = 0; i < daysBack; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    dayPaths.push(dayDirPath(date));
+  }
+
+  const dirEntries: { dir: string; files: string[] }[] = [];
+  for (const dir of dayPaths) {
+    let names: string[];
+    try {
+      names = await fs.readdir(dir);
+    } catch {
+      continue;
+    }
+    scannedDirs++;
+    const jsonlFiles = names.filter((n) => n.endsWith('.jsonl'));
+    if (jsonlFiles.length === 0) continue;
+    dirEntries.push({ dir, files: jsonlFiles });
+  }
+
+  const allTasks: Promise<ICodexSessionEntry | null>[] = [];
+  for (const { dir, files } of dirEntries) {
+    for (const file of files) {
+      scannedFiles++;
+      allTasks.push(getCachedEntry(path.join(dir, file)));
+    }
+  }
+
+  const results = await Promise.all(allTasks);
+  for (const entry of results) {
+    if (!entry) continue;
+    if (entry.cwd !== cwd) continue;
+    sessions.push(entry);
+  }
+
+  sessions.sort((a, b) => b.startedAt - a.startedAt);
+  return { sessions, scannedDirs, scannedFiles };
+};
+
+export const clearCodexSessionListCache = (): void => {
+  cache.clear();
+};

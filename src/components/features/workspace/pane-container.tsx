@@ -541,12 +541,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     [paneId, activeTabId, switchTabInPane],
   );
 
-  const handleCreateTab = useCallback(async (panelType?: TPanelType, options?: { command?: string }) => {
+  const handleCreateTab = useCallback(async (panelType?: TPanelType, options?: { command?: string; resumeSessionId?: string }) => {
     setIsCreating(true);
-    const newTab = await createTabInPane(paneId, panelType, options?.command);
+    const newTab = await createTabInPane(paneId, panelType, options?.command, options?.resumeSessionId);
     if (newTab) {
       useTabStore.getState().initTab(newTab.id, { panelType, workspaceId: layoutWsId ?? '' });
-      if (options?.command) {
+      if (options?.command || options?.resumeSessionId) {
         useTabStore.getState().setSessionView(newTab.id, 'check');
       }
       const currentTabId = activeTabIdRef.current;
