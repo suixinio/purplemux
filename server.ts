@@ -14,6 +14,7 @@ import { handleSyncConnection, gracefulSyncShutdown } from './src/lib/sync-serve
 import { handleStatusConnection, gracefulStatusShutdown } from './src/lib/status-server';
 import { getStatusManager } from './src/lib/status-manager';
 import { ensureHookSettings, removePortFile } from './src/lib/hook-settings';
+import { enqueueSystemToast } from './src/lib/sync-server';
 import { getCliToken } from './src/lib/cli-token';
 import { acquireLock, releaseLock, registerLockCleanup } from './src/lib/lock';
 import { scanSessions, applyConfig } from './src/lib/tmux';
@@ -383,7 +384,16 @@ export const start = async (opts?: IStartOptions): Promise<IStartResult> => {
 
   process.env.PORT = String(result.port);
 
-  await ensureHookSettings(result.port);
+  const hookResult = await ensureHookSettings(result.port);
+  if (hookResult.codexHookInstallFailed) {
+    enqueueSystemToast({
+      type: 'system-toast',
+      key: 'codexHookInstallFailed',
+      variant: 'warning',
+      message: 'Codex hook 설치 실패. codex 상태가 정확하지 않을 수 있습니다.',
+      durationMs: 8000,
+    });
+  }
   getCliToken();
   const { workspaces } = await getWorkspaces();
   await writeAllWorkspacePrompts(workspaces);

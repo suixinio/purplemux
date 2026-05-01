@@ -1,10 +1,23 @@
 import { useEffect, useRef } from 'react';
+import { toast } from 'sonner';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { useLayoutStore, collectPanes } from '@/hooks/use-layout';
 import useTabStore from '@/hooks/use-tab-store';
 import type { ILayoutData } from '@/types/terminal';
 
 const RECONNECT_DELAY = 3000;
+
+type TToastVariant = 'info' | 'success' | 'warning' | 'error';
+const seenToastKeys = new Set<string>();
+const showSystemToast = (key: string, variant: TToastVariant, message: string, durationMs?: number) => {
+  if (seenToastKeys.has(key)) return;
+  seenToastKeys.add(key);
+  const opts = { id: key, duration: durationMs };
+  if (variant === 'warning') toast.warning(message, opts);
+  else if (variant === 'error') toast.error(message, opts);
+  else if (variant === 'success') toast.success(message, opts);
+  else toast.info(message, opts);
+};
 
 const useSync = () => {
   const wsRef = useRef<WebSocket | null>(null);
@@ -26,6 +39,11 @@ const useSync = () => {
 
           if (data.type === 'workspace') {
             useWorkspaceStore.getState().syncWorkspaces();
+          }
+
+          if (data.type === 'system-toast' && typeof data.key === 'string' && typeof data.message === 'string') {
+            const variant = (data.variant as TToastVariant) ?? 'info';
+            showSystemToast(data.key, variant, data.message, typeof data.durationMs === 'number' ? data.durationMs : undefined);
           }
 
           if (data.type === 'layout') {

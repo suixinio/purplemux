@@ -959,6 +959,57 @@ class StatusManager {
     }
   }
 
+  applyCodexHookMeta(
+    tmuxSession: string,
+    meta: {
+      sessionId?: string | null;
+      jsonlPath?: string | null;
+      lastUserMessage?: string | null;
+      agentSummary?: string | null;
+      clearMessages?: boolean;
+    },
+  ): { tabId: string; cliState: TCliState } | null {
+    const tabId = this.findTabIdBySession(tmuxSession);
+    if (!tabId) return null;
+    const entry = this.tabs.get(tabId);
+    if (!entry) return null;
+
+    let changed = false;
+
+    if (entry.agentProviderId !== 'codex') {
+      entry.agentProviderId = 'codex';
+      changed = true;
+    }
+    if (meta.sessionId !== undefined && entry.agentSessionId !== meta.sessionId) {
+      entry.agentSessionId = meta.sessionId;
+      changed = true;
+    }
+    if (meta.jsonlPath !== undefined && entry.jsonlPath !== meta.jsonlPath) {
+      entry.jsonlPath = meta.jsonlPath;
+      changed = true;
+    }
+    if (meta.clearMessages) {
+      if (entry.agentSummary !== null) { entry.agentSummary = null; changed = true; }
+      if (entry.lastUserMessage !== null) { entry.lastUserMessage = null; changed = true; }
+      if (entry.lastAssistantMessage !== null) { entry.lastAssistantMessage = null; changed = true; }
+    }
+    if (meta.lastUserMessage !== undefined && entry.lastUserMessage !== meta.lastUserMessage) {
+      entry.lastUserMessage = meta.lastUserMessage;
+      changed = true;
+    }
+    if (meta.agentSummary !== undefined && entry.agentSummary !== meta.agentSummary) {
+      entry.agentSummary = meta.agentSummary;
+      changed = true;
+    }
+
+    if (changed) {
+      this.persistToLayout(entry);
+      this.broadcastUpdate(tabId, entry);
+    }
+
+    return { tabId, cliState: entry.cliState };
+  }
+
   private setCompacting(tabId: string, entry: ITabStatusEntry, since: number | null): void {
     const existingTimer = this.compactStaleTimers.get(tabId);
     if (existingTimer) {

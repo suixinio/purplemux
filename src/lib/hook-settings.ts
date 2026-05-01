@@ -10,8 +10,10 @@ const BASE_DIR = path.join(os.homedir(), '.purplemux');
 const HOOKS_FILE = path.join(BASE_DIR, 'hooks.json');
 const PORT_FILE = path.join(BASE_DIR, 'port');
 const HOOK_SCRIPT = path.join(BASE_DIR, 'status-hook.sh');
+const CODEX_HOOK_SCRIPT = path.join(BASE_DIR, 'codex-hook.sh');
 
 export const HOOK_SETTINGS_PATH = HOOKS_FILE;
+export const CODEX_HOOK_SCRIPT_PATH = CODEX_HOOK_SCRIPT;
 
 const HOOK_SCRIPT_CONTENT = `#!/bin/sh
 EVENT="\${1:-poll}"
@@ -35,6 +37,24 @@ fi
 PAYLOAD="\${PAYLOAD}}"
 
 curl -s -X POST -o /dev/null -H 'Content-Type: application/json' -H "x-pmux-token: \${TOKEN}" -d "$PAYLOAD" "http://localhost:\${PORT}/api/status/hook" 2>/dev/null
+exit 0
+`;
+
+const CODEX_HOOK_SCRIPT_CONTENT = `#!/usr/bin/env bash
+set -u
+PORT_FILE="$HOME/.purplemux/port"
+TOKEN_FILE="$HOME/.purplemux/cli-token"
+[ -f "$PORT_FILE" ] || exit 0
+[ -f "$TOKEN_FILE" ] || exit 0
+PORT=$(cat "$PORT_FILE")
+TOKEN=$(cat "$TOKEN_FILE")
+SESSION=$(tmux display-message -p '#{session_name}' 2>/dev/null) || SESSION=""
+
+curl -sS -X POST -o /dev/null \\
+  -H "x-pmux-token: \${TOKEN}" \\
+  -H "Content-Type: application/json" \\
+  --data-binary @- \\
+  "http://localhost:\${PORT}/api/status/hook?provider=codex&tmuxSession=\${SESSION}" 2>/dev/null || true
 exit 0
 `;
 
@@ -67,45 +87,50 @@ const buildHookSettings = () => ({
   },
 });
 
-export const ensureHookSettings = async (port: number): Promise<void> => {
+const writeManagedScript = async (target: string, body: string, mode: number): Promise<void> => {
+  try {
+    const existing = await fs.readFile(target, 'utf-8');
+    if (existing !== body) {
+      await fs.writeFile(target, body, { mode });
+    }
+  } catch {
+    await fs.writeFile(target, body, { mode });
+  }
+};
+
+export interface IEnsureHookSettingsResult {
+  codexHookInstallFailed: boolean;
+}
+
+export const ensureHookSettings = async (port: number): Promise<IEnsureHookSettingsResult> => {
   await fs.mkdir(BASE_DIR, { recursive: true });
 
-  // Write port file
   await fs.writeFile(PORT_FILE, String(port), { mode: 0o600 });
 
-  // Create hook script
+  await writeManagedScript(HOOK_SCRIPT, HOOK_SCRIPT_CONTENT, 0o755);
+  await writeManagedScript(STATUSLINE_SCRIPT_PATH, STATUSLINE_SCRIPT_CONTENT, 0o755);
+
+  let codexHookInstallFailed = false;
   try {
-    const existing = await fs.readFile(HOOK_SCRIPT, 'utf-8');
-    if (existing !== HOOK_SCRIPT_CONTENT) {
-      await fs.writeFile(HOOK_SCRIPT, HOOK_SCRIPT_CONTENT, { mode: 0o755 });
-    }
-  } catch {
-    await fs.writeFile(HOOK_SCRIPT, HOOK_SCRIPT_CONTENT, { mode: 0o755 });
+    await writeManagedScript(CODEX_HOOK_SCRIPT, CODEX_HOOK_SCRIPT_CONTENT, 0o700);
+  } catch (err) {
+    codexHookInstallFailed = true;
+    log.error({ err }, 'codex-hook write failed');
   }
 
-  // Create statusline script
-  try {
-    const existing = await fs.readFile(STATUSLINE_SCRIPT_PATH, 'utf-8');
-    if (existing !== STATUSLINE_SCRIPT_CONTENT) {
-      await fs.writeFile(STATUSLINE_SCRIPT_PATH, STATUSLINE_SCRIPT_CONTENT, { mode: 0o755 });
-    }
-  } catch {
-    await fs.writeFile(STATUSLINE_SCRIPT_PATH, STATUSLINE_SCRIPT_CONTENT, { mode: 0o755 });
-  }
-
-  // Create hooks.json
   const settings = buildHookSettings();
   const content = JSON.stringify(settings, null, 2) + '\n';
 
   try {
     const existing = await fs.readFile(HOOKS_FILE, 'utf-8');
-    if (existing === content) return;
+    if (existing === content) return { codexHookInstallFailed };
   } catch {
     // file doesn't exist yet
   }
 
   await fs.writeFile(HOOKS_FILE, content, { mode: 0o600 });
   log.debug(`${HOOKS_FILE} created`);
+  return { codexHookInstallFailed };
 };
 
 export const removePortFile = async (): Promise<void> => {
