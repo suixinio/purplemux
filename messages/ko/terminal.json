@@ -95,5 +95,12 @@
   "codexCopyCommand": "명령어 복사",
   "codexCopyConfigPath": "config.toml 경로 복사",
   "codexCopied": "복사됨",
-  "codexRetry": "재시도"
+  "codexRetry": "재시도",
+  "codexBootMain": "Codex 시작 중...",
+  "codexBootAlmostReady": "거의 다 됐어요...",
+  "codexBootSubtitle": "잠시만 기다려 주세요",
+  "codexBootFailed": "Codex 시작에 실패했습니다",
+  "codexBootFailedHint": "터미널에서 직접 확인해 보세요",
+  "codexBootRestart": "다시 시작",
+  "codexBootShowTerminal": "터미널 보기"
 }

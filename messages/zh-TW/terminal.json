@@ -95,5 +95,12 @@
   "codexCopyCommand": "Copy command",
   "codexCopyConfigPath": "Copy config.toml path",
   "codexCopied": "Copied",
-  "codexRetry": "Retry"
+  "codexRetry": "Retry",
+  "codexBootMain": "Starting Codex...",
+  "codexBootAlmostReady": "Almost ready...",
+  "codexBootSubtitle": "Just a moment",
+  "codexBootFailed": "Codex failed to start",
+  "codexBootFailedHint": "Check the terminal for details",
+  "codexBootRestart": "Restart",
+  "codexBootShowTerminal": "Show terminal"
 }

@@ -689,6 +689,14 @@ class StatusManager {
           }
         }
 
+        if (existing.cliState === 'inactive' && existing.panelType === 'codex-cli' && provider) {
+          if (await this.checkCodexTuiReady(existing, checkAgentRunning)) {
+            hookLog.debug({ tabId: tab.id }, 'codex tui ready — synthetic session-start');
+            this.updateTabFromHook(existing.tmuxSession, 'session-start');
+            continue;
+          }
+        }
+
         if (terminalChanged || processChanged || processRetryNeeded || messageChanged || panelTypeChanged || summaryChanged) {
           this.broadcastUpdate(tab.id, existing);
         }
@@ -837,6 +845,30 @@ class StatusManager {
     this.applyCliState(tabId, entry, 'busy');
     this.persistToLayout(entry);
     this.broadcastUpdate(tabId, entry);
+  }
+
+  // Codex의 SessionStart hook은 첫 사용자 메시지 후에야 발사된다(turn.rs:299).
+  // 그 전엔 cliState가 'inactive'에 머물러 WebInputBar가 비활성화되므로
+  // dead state. 3-layer 신호로 composer가 입력 받을 준비됐다고 확신될 때
+  // 합성 session-start를 트리거해 idle로 진입시킨다.
+  private async checkCodexTuiReady(
+    entry: ITabStatusEntry,
+    checkAgentRunning: () => Promise<boolean>,
+  ): Promise<boolean> {
+    if (!(await checkAgentRunning())) return false;
+
+    const title = entry.paneTitle ?? '';
+    if (!title || SHELL_TITLE_RE.test(title)) return false;
+
+    const content = await capturePaneAtWidth(entry.tmuxSession, 80, 24).catch((err) => {
+      log.warn('codex tui ready capture failed: %s', err);
+      return null;
+    });
+    if (!content) return false;
+
+    const hasBox = content.includes('╭') && content.includes('╰');
+    const hasMarker = content.includes('›') || content.includes('!');
+    return hasBox && hasMarker;
   }
 
   async recoverUnknownIfPending(tabId: string): Promise<{ recovered: boolean; reason?: string }> {
