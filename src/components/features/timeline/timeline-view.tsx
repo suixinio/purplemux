@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { Terminal, RefreshCw, OctagonX, LogOut, ChevronsUp, MessageSquareMore } from 'lucide-react';
+import { diffLines } from 'diff';
 import Spinner from '@/components/ui/spinner';
 import { useStickToBottom } from 'use-stick-to-bottom';
 import { Button } from '@/components/ui/button';
@@ -209,6 +210,17 @@ interface IParsedPatchDiff {
 const PATCH_FILE_HEADER_RE = /^\*\*\*\s+(Add|Update|Delete)\s+File:\s+(.+?)\s*$/i;
 const PATCH_MOVE_TO_RE = /^\*\*\*\s+Move to:\s+(.+?)\s*$/i;
 
+const countDiffLines = (oldStr: string, newStr: string): { added: number; removed: number } => {
+  let added = 0;
+  let removed = 0;
+  for (const change of diffLines(oldStr, newStr)) {
+    const count = change.count ?? 0;
+    if (change.added) added += count;
+    else if (change.removed) removed += count;
+  }
+  return { added, removed };
+};
+
 const parsePatchDiffs = (diff?: string): IParsedPatchDiff[] => {
   if (!diff) return [];
 
@@ -271,14 +283,19 @@ const parsePatchDiffs = (diff?: string): IParsedPatchDiff[] => {
 
   pushCurrent();
 
-  return parsed.map((item) => ({
-    filePath: item.filePath,
-    status: item.status,
-    oldString: item.oldLines.join('\n'),
-    newString: item.newLines.join('\n'),
-    added: item.added,
-    removed: item.removed,
-  }));
+  return parsed.map((item) => {
+    const oldString = item.oldLines.join('\n');
+    const newString = item.newLines.join('\n');
+    const { added, removed } = countDiffLines(oldString, newString);
+    return {
+      filePath: item.filePath,
+      status: item.status,
+      oldString,
+      newString,
+      added,
+      removed,
+    };
+  });
 };
 
 const patchVerbForStatus = (status: string): string => {
@@ -290,7 +307,7 @@ const patchVerbForStatus = (status: string): string => {
 
 const adaptPatchApplyToToolGroup = (
   entry: ITimelinePatchApply,
-): TAdaptedToolGroupEntry => {
+): TAdaptedToolGroupEntry | null => {
   const patchDiffs = parsePatchDiffs(entry.diff);
   if (patchDiffs.length > 0) {
     return {
@@ -314,6 +331,8 @@ const adaptPatchApplyToToolGroup = (
   }
 
   const fileCount = entry.files.length;
+  if (fileCount === 0 && entry.status === 'success') return { calls: [], results: [] };
+
   const fileLabel = fileCount === 0
     ? 'files'
     : fileCount === 1
