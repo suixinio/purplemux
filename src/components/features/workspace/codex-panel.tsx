@@ -245,7 +245,7 @@ const CodexPanel = ({
     );
   }
 
-  if (cliState === 'inactive' && agentProcess !== true) {
+  if (cliState === 'inactive' && agentProcess === false && !codexSessionId && !isTimelineLoading) {
     return (
       <div
         className={cn(

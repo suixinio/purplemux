@@ -237,7 +237,7 @@ const MobileCodexPanel = ({
     );
   }
 
-  if (cliState === 'inactive' && agentProcess !== true) {
+  if (cliState === 'inactive' && agentProcess === false && !codexSessionId && !isTimelineLoading) {
     return (
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4 bg-muted px-6 text-center" role="status">
         <OpenAIIcon size={32} className="text-muted-foreground/60" />
