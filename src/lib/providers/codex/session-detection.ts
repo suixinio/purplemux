@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'os';
 import readline from 'readline';
 import type { ISessionInfo } from '@/types/timeline';
-import type { IAgentSessionWatchOptions, ISessionWatcher } from '@/lib/providers/types';
+import type { IAgentSessionDetectionOptions, IAgentSessionWatchOptions, ISessionWatcher } from '@/lib/providers/types';
 import { codexHookEvents } from '@/lib/providers/codex/hook-events';
 import { runCodexPreflight } from '@/lib/providers/codex/preflight';
 import {
@@ -253,6 +253,7 @@ export const isCodexRunning = async (
 export const detectActiveSession = async (
   panePid: number,
   preloadedChildPids?: number[],
+  options: IAgentSessionDetectionOptions = {},
 ): Promise<ISessionInfo> => {
   try {
     await fs.access(CODEX_DIR);
@@ -283,7 +284,7 @@ export const detectActiveSession = async (
     );
   }
 
-  if (found.cwd) {
+  if (options.allowCwdFallback && found.cwd) {
     const meta = await findLatestCodexSessionForCwd(found.cwd);
     if (meta && await isLikelySessionForProcess(found.pid, meta)) {
       return toRunningSessionInfo(found, meta);

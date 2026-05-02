@@ -14,6 +14,10 @@ export interface IAgentSessionWatchOptions {
   tmuxSession?: string;
 }
 
+export interface IAgentSessionDetectionOptions {
+  allowCwdFallback?: boolean;
+}
+
 export interface ISubscription {
   stop: () => void;
 }
@@ -73,7 +77,7 @@ export interface IAgentProvider {
   matchesProcess(commandName: string, args?: string[]): boolean;
   isValidSessionId(id: unknown): id is string;
 
-  detectActiveSession(panePid: number, childPids?: number[]): Promise<ISessionInfo>;
+  detectActiveSession(panePid: number, childPids?: number[], options?: IAgentSessionDetectionOptions): Promise<ISessionInfo>;
   isAgentRunning(panePid: number, childPids?: number[]): Promise<boolean>;
   watchSessions(
     panePid: number,

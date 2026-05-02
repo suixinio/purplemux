@@ -227,7 +227,7 @@ export const codexProvider: IAgentProvider = {
   },
   isValidSessionId: isValidCodexSessionId,
 
-  detectActiveSession: (panePid, childPids) => detectCodexSession(panePid, childPids),
+  detectActiveSession: (panePid, childPids, options) => detectCodexSession(panePid, childPids, options),
   isAgentRunning: (panePid, childPids) => isCodexRunning(panePid, childPids),
   watchSessions: (panePid, onChange, options) => watchSessionsDir(panePid, onChange, options),
 

@@ -820,11 +820,6 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     return;
   }
 
-  if (hintSessionId && sessionInfo.status === 'not-running') {
-    await updateTabAgentSessionId(conn.sessionName, provider, null).catch(() => {});
-    await updateTabAgentSummary(conn.sessionName, provider, null).catch(() => {});
-  }
-
   // Check if agent process is running in pane before PID file is created
   const isAgentStarting = sessionInfo.status === 'not-running'
     && !hintSessionId
