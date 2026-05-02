@@ -45,19 +45,12 @@ const formatRelativeTime = (
   return tTime('yearsAgo', { count: now.diff(target, 'year') });
 };
 
-const formatTokens = (tokens: number | null): string | null => {
-  if (tokens == null || !Number.isFinite(tokens) || tokens <= 0) return null;
-  if (tokens < 1000) return `${tokens}`;
-  return `${(tokens / 1000).toFixed(1)}k`;
-};
-
 interface ICodexSessionItemProps {
   session: ICodexSessionEntry;
   isResuming: boolean;
   isDisabled: boolean;
   onSelect: (session: ICodexSessionEntry) => void;
   noMessageLabel: string;
-  tokensSuffix: string;
   tSession: ReturnType<typeof useTranslations>;
   tTime: ReturnType<typeof useTranslations>;
 }
@@ -68,24 +61,19 @@ const CodexSessionItem = memo(({
   isDisabled,
   onSelect,
   noMessageLabel,
-  tokensSuffix,
   tSession,
   tTime,
 }: ICodexSessionItemProps) => {
   const activityAt = session.lastActivityAt || session.startedAt;
   const absoluteTime = dayjs(activityAt).format('MM/DD HH:mm');
   const relative = formatRelativeTime(activityAt, tTime);
-  const tokensFormatted = formatTokens(session.totalTokens);
   const message = session.firstUserMessage?.trim() || noMessageLabel;
-  const statsLabel = [
-    tokensFormatted ? `${tokensFormatted} ${tokensSuffix}` : null,
-    tSession('turnCount', { count: session.turnCount }),
-  ].filter(Boolean).join(' · ');
+  const turnLabel = tSession('turnCount', { count: session.turnCount });
   const ariaLabel = [
     message,
     absoluteTime,
     relative,
-    statsLabel,
+    turnLabel,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -123,7 +111,7 @@ const CodexSessionItem = memo(({
           {message}
         </span>
         <span className="shrink-0 text-xs text-muted-foreground">
-          {statsLabel}
+          {turnLabel}
         </span>
       </div>
     </button>
@@ -216,7 +204,6 @@ const CodexSessionListView = ({
               isDisabled={isResumeInProgress}
               onSelect={onSelectSession}
               noMessageLabel={tSession('noMessage')}
-              tokensSuffix={t('codexSessionsTokens')}
               tSession={tSession}
               tTime={tSession}
             />
