@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FolderCode } from 'lucide-react';
+import { FolderCode, GitCompareArrows } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -53,6 +53,8 @@ interface IContentHeaderProps {
   onSplitPane: (paneId: string, orientation: 'horizontal' | 'vertical') => void;
   onEqualizeRatios: () => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
+  isGitPanelOpen: boolean;
+  onToggleGitPanel: () => void;
 }
 
 const ContentHeader = ({
@@ -64,6 +66,8 @@ const ContentHeader = ({
   onSplitPane,
   onEqualizeRatios,
   onUpdateTabPanelType,
+  isGitPanelOpen,
+  onToggleGitPanel,
 }: IContentHeaderProps) => {
   const t = useTranslations('terminal');
   const isMac = useIsMac();
@@ -124,7 +128,6 @@ const ContentHeader = ({
               { value: 'terminal', label: 'TERMINAL', mac: '⌘⇧T', other: '^⇧T' },
               { value: 'claude-code', label: 'CLAUDE', mac: '⌘⇧C', other: '^⇧C' },
               { value: 'codex-cli', label: 'CODEX', mac: '⌘⇧X', other: '^⇧X' },
-              { value: 'diff', label: 'DIFF', mac: '⌘⇧F', other: '^⇧F' },
             ] as const).map((item) => (
               <div key={item.value} className="relative">
                 <button
@@ -282,6 +285,35 @@ const ContentHeader = ({
               />
             </div>
           )}
+
+          <div className="mx-1 h-5 w-px bg-border" />
+
+          <div className="relative">
+            <Tooltip>
+              <TooltipTrigger
+                className={cn(
+                  'flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors',
+                  isGitPanelOpen
+                    ? 'bg-accent text-foreground'
+                    : 'hover:bg-accent hover:text-foreground',
+                )}
+                onClick={onToggleGitPanel}
+                aria-pressed={isGitPanelOpen}
+                aria-label="Toggle Git panel"
+              >
+                <GitCompareArrows className="h-3.5 w-3.5" />
+              </TooltipTrigger>
+              <TooltipContent side="bottom">Git panel ({mod}⇧F)</TooltipContent>
+            </Tooltip>
+            <ShortcutKey
+              mac="⌘⇧F"
+              other="^⇧F"
+              className={cn(
+                'absolute -right-0.5 -top-1.5 rounded bg-muted px-1 py-0.5 text-[10px] font-medium leading-none text-muted-foreground transition-opacity duration-200 pointer-events-none',
+                showShortcuts && !isGitPanelOpen ? 'opacity-100' : 'opacity-0',
+              )}
+            />
+          </div>
         </div>
       </TooltipProvider>
       </div>

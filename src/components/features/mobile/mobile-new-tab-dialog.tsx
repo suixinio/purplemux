@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Terminal, GitCompareArrows, History } from 'lucide-react';
+import { Terminal, History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
@@ -27,7 +27,6 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
     { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: 'Claude', startCommand: 'claude-new' as const, startLabel: tt('claudeNewConversation'), listLabel: tt('sessions') },
     { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: 'Codex', startCommand: 'codex-new' as const, startLabel: tt('codexNewConversation'), listLabel: tt('sessions') },
     { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-5 w-5 text-muted-foreground" />, label: 'Terminal' },
-    { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-5 w-5 text-muted-foreground" />, label: 'Diff' },
   ] as const;
 
   const handleOpenList = async (item: (typeof MENU_ITEMS)[number]) => {

@@ -36,6 +36,7 @@ interface ICacheEntry {
 }
 
 const CACHE_LIMIT = 100;
+const IGNORED_CODEX_TOOL_NAMES = new Set(['write_stdin']);
 
 const g = globalThis as unknown as { __pmuxMessageCountsCache?: Map<string, ICacheEntry> };
 if (!g.__pmuxMessageCountsCache) g.__pmuxMessageCountsCache = new Map();
@@ -164,9 +165,10 @@ export const countMessages = async (filePath: string): Promise<ICountResult> => 
             codexFallbackAssistantCount++;
           }
         } else if (payload?.type === 'function_call' || payload?.type === 'custom_tool_call' || payload?.type === 'web_search_call') {
-          toolCount++;
           const name = payload.type === 'web_search_call' ? 'web_search' : payload.name;
-          if (name) toolBreakdown[name] = (toolBreakdown[name] ?? 0) + 1;
+          if (!name || IGNORED_CODEX_TOOL_NAMES.has(name)) continue;
+          toolCount++;
+          toolBreakdown[name] = (toolBreakdown[name] ?? 0) + 1;
         } else if (payload?.type === 'local_shell_call') {
           toolCount++;
           toolBreakdown.shell = (toolBreakdown.shell ?? 0) + 1;

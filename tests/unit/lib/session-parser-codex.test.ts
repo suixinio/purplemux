@@ -142,4 +142,30 @@ describe('parseCodexContent', () => {
       await fs.rm(dir, { recursive: true, force: true });
     }
   });
+
+  it('suppresses Codex write_stdin tool calls and outputs', () => {
+    const call = {
+      timestamp: '2026-05-02T11:40:00.000Z',
+      type: 'response_item',
+      payload: {
+        type: 'function_call',
+        call_id: 'call-1',
+        name: 'write_stdin',
+        arguments: JSON.stringify({ session_id: 123, chars: '', yield_time_ms: 1000 }),
+      },
+    };
+    const output = {
+      timestamp: '2026-05-02T11:40:01.000Z',
+      type: 'response_item',
+      payload: {
+        type: 'function_call_output',
+        call_id: 'call-1',
+        output: '456',
+      },
+    };
+
+    const entries = parseCodexContent(`${JSON.stringify(call)}\n${JSON.stringify(output)}\n`);
+
+    expect(entries).toHaveLength(0);
+  });
 });

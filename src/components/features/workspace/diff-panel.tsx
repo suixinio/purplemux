@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive } from 'lucide-react';
+import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import DiffHistoryView from '@/components/features/workspace/diff-history-view';
@@ -13,6 +14,7 @@ import DiffFileList from '@/components/features/workspace/diff-file-list';
 interface IDiffPanelProps {
   sessionName: string;
   onSendToAgent?: (text: string, provider: TGitAskProvider) => void;
+  onClose?: () => void;
 }
 
 interface IHeadCommit {
@@ -60,7 +62,7 @@ const AGENT_PROMPT_KEYS = {
   unknown: 'agentPromptGeneric',
 } as const;
 
-const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
+const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
   const gitAskProvider = useConfigStore((s) => s.gitAskProvider);
@@ -246,14 +248,6 @@ const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
     );
   }
 
-  const tabButtonClass = (tab: TTab) =>
-    cn(
-      'rounded px-2 py-0.5 text-xs font-medium transition-colors',
-      activeTab === tab
-        ? 'bg-background text-foreground shadow-sm'
-        : 'text-muted-foreground hover:text-foreground',
-    );
-
   const branchLabel = isDetached && headCommit
     ? `(detached @ ${headCommit.shortHash})`
     : branch || '—';
@@ -274,31 +268,25 @@ const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
 
   return (
     <div className="flex h-full flex-col bg-card">
-      <div className="flex shrink-0 flex-col gap-1 border-b border-border px-3 py-1.5">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-0.5 rounded bg-secondary p-0.5">
-            <button
-              type="button"
-              className={tabButtonClass('changes')}
-              onClick={() => handleTabChange('changes')}
-            >
-              {t('tabChanges')}
-            </button>
-            <button
-              type="button"
-              className={tabButtonClass('history')}
-              onClick={() => handleTabChange('history')}
-            >
-              {t('tabHistory')}
-            </button>
-          </div>
+      <div className="flex shrink-0 flex-col border-b border-border">
+        <div className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1.5">
+          <Tabs
+            value={activeTab}
+            onValueChange={(value) => handleTabChange(value as TTab)}
+            className="gap-0"
+          >
+            <TabsList className="h-7 w-auto min-w-40">
+              <TabsTrigger value="changes" className="relative h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                {t('tabChanges').toUpperCase()}
+              </TabsTrigger>
+              <TabsTrigger value="history" className="relative h-full flex-1 px-2.5 text-[11px] tracking-wide">
+                {t('tabHistory').toUpperCase()}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <TooltipProvider>
             <div className="ml-auto flex items-center gap-1">
-              {hasUpdate && activeTab === 'changes' && (
-                <span className="text-xs text-ui-blue">{t('hasChanges')}</span>
-              )}
-
               {activeTab === 'changes' && !isMobile && (
                 <Tooltip>
                   <TooltipTrigger
@@ -338,7 +326,7 @@ const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
               <Tooltip>
                 <TooltipTrigger
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded',
+                    'relative flex h-7 w-7 items-center justify-center rounded',
                     hasUpdate && activeTab === 'changes'
                       ? 'text-ui-blue hover:bg-accent'
                       : 'text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -349,14 +337,32 @@ const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
                   aria-label={t('refresh')}
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
+                  {hasUpdate && activeTab === 'changes' && (
+                    <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-ui-blue" />
+                  )}
                 </TooltipTrigger>
-                <TooltipContent side="bottom">{t('refresh')}</TooltipContent>
+                <TooltipContent side="bottom">
+                  {hasUpdate && activeTab === 'changes' ? `${t('hasChanges')} · ${t('refresh')}` : t('refresh')}
+                </TooltipContent>
               </Tooltip>
+
+              {onClose && (
+                <Tooltip>
+                  <TooltipTrigger
+                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                    onClick={onClose}
+                    aria-label="Close Git"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">Close</TooltipContent>
+                </Tooltip>
+              )}
             </div>
           </TooltipProvider>
         </div>
 
-        <div className="flex min-w-0 items-center gap-2 text-xs">
+        <div className="flex min-h-9 min-w-0 items-center gap-2 px-3 py-2 text-xs">
           <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <div className="flex min-w-0 flex-1 items-center gap-1">
             <span className="truncate font-medium text-foreground" title={branchLabel}>
