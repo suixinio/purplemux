@@ -39,7 +39,7 @@ const BACKPRESSURE_LIMIT = 1024 * 1024;
 const MAX_WATCHERS = 32;
 const MAX_CONNECTIONS = 32;
 const MAX_WATCHER_RETRIES = 3;
-const MAX_INIT_ENTRIES = 64;
+const MAX_INIT_ENTRIES = 128;
 
 const resolveAgentSummary = async (
   provider: IAgentProvider,

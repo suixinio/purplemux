@@ -295,7 +295,7 @@ const useTimeline = ({
     isLoadingMoreRef.current = true;
     try {
       const res = await fetch(
-        `/api/timeline/entries?jsonlPath=${encodeURIComponent(jsonlPathRef.current)}&beforeByte=${startByteOffsetRef.current}&limit=128`,
+        `/api/timeline/entries?jsonlPath=${encodeURIComponent(jsonlPathRef.current)}&beforeByte=${startByteOffsetRef.current}&limit=256`,
       );
       if (!res.ok) return;
       const data = await res.json();

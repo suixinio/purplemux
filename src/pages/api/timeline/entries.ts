@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { readEntriesBefore } from '@/lib/session-parser';
 import { isAllowedJsonlPath } from '@/lib/path-validation';
 
-const DEFAULT_LIMIT = 64;
+const DEFAULT_LIMIT = 256;
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
