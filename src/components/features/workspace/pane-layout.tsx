@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useCallback, useEffect, type MutableRefObject } from 'react';
+import { memo, useRef, useLayoutEffect, useCallback, useEffect, type MutableRefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import type { TLayoutNode } from '@/types/terminal';
@@ -184,4 +184,20 @@ const PaneLayout = (props: IPaneLayoutProps) => {
   );
 };
 
-export default PaneLayout;
+const getShellKey = (node: TLayoutNode): string => {
+  if (node.type === 'pane') return `pane:${node.id}`;
+  return [
+    'split',
+    node.orientation,
+    node.ratio,
+    getShellKey(node.children[0]),
+    getShellKey(node.children[1]),
+  ].join('|');
+};
+
+export default memo(PaneLayout, (prev, next) =>
+  getShellKey(prev.root) === getShellKey(next.root)
+  && prev.onUpdateRatio === next.onUpdateRatio
+  && prev.onEqualizeRatios === next.onEqualizeRatios
+  && prev.equalizeRef === next.equalizeRef,
+);

@@ -26,7 +26,6 @@ const PANEL_MODES = [
   { type: 'terminal' as const, label: 'TERMINAL' },
   { type: 'claude-code' as const, label: 'CLAUDE' },
   { type: 'codex-cli' as const, label: 'CODEX' },
-  { type: 'diff' as const, label: 'DIFF' },
 ] as const;
 
 interface IMobileTabHeaderProps {
@@ -36,6 +35,7 @@ interface IMobileTabHeaderProps {
   panelType: TPanelType;
   onSwitchPanelType: (type: TPanelType) => void;
   onCreateTab: () => void;
+  onOpenGit: () => void;
   onClose: () => void;
 }
 
@@ -46,6 +46,7 @@ const MobileTabHeader = ({
   panelType,
   onSwitchPanelType,
   onCreateTab,
+  onOpenGit,
   onClose,
 }: IMobileTabHeaderProps) => {
   const t = useTranslations('mobile');
@@ -110,6 +111,14 @@ const MobileTabHeader = ({
             <Copy size={16} />
           </button>
         )}
+
+        <button
+          className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+          onClick={onOpenGit}
+          aria-label="Open Git"
+        >
+          <GitCompareArrows size={16} />
+        </button>
 
         <button
           className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"

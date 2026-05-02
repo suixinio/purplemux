@@ -233,7 +233,7 @@ export const ACTIONS = {
   },
   'view.mode_diff': {
     id: 'view.mode_diff',
-    label: 'Switch to Diff mode',
+    label: 'Toggle Git panel',
     category: 'view',
     defaultKey: `${mod}+shift+f`,
     display: { mac: '⌘⇧F', other: 'Ctrl+Shift+F' },

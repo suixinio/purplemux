@@ -712,6 +712,21 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [handleSwitchPanelType]);
 
   useEffect(() => {
+    const handleSidePanelAgentRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        paneId?: string;
+        text?: string;
+        provider?: TGitAskProvider;
+      }>).detail;
+      if (detail?.paneId !== paneId || !detail.text || !detail.provider) return;
+      handleSendToAgent(detail.text, detail.provider);
+    };
+
+    window.addEventListener('purplemux-send-to-agent', handleSidePanelAgentRequest);
+    return () => window.removeEventListener('purplemux-send-to-agent', handleSidePanelAgentRequest);
+  }, [paneId, handleSendToAgent]);
+
+  useEffect(() => {
     const pending = pendingAgentInputRef.current;
     if (!pending) return;
     const targetPanelType: TPanelType = pending.provider === 'codex' ? 'codex-cli' : 'claude-code';

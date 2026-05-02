@@ -12,11 +12,12 @@ import type { TPanelType } from '@/types/terminal';
 import MobileTabHeader from '@/components/features/mobile/mobile-tab-header';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileNewTabDialog from '@/components/features/mobile/mobile-new-tab-dialog';
+import MobileGitFullscreen from '@/components/features/mobile/mobile-git-fullscreen';
 import { formatTabTitle } from '@/lib/tab-title';
 import { dismissTab } from '@/hooks/use-agent-status';
 import useTabStore from '@/hooks/use-tab-store';
 import type { TCliState } from '@/types/timeline';
-import useConfigStore from '@/hooks/use-config-store';
+import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
 import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
@@ -114,6 +115,8 @@ const MobileTerminalPage = () => {
 
   const [newTabDialogOpen, setNewTabDialogOpen] = useState(false);
   const [claudeCliState, setClaudeCliState] = useState<TCliState>('inactive');
+  const [gitOpen, setGitOpen] = useState(false);
+  const [gitTarget, setGitTarget] = useState<{ sessionName: string; cwdKey: string } | null>(null);
 
   const handleCliStateChange = useCallback((state: TCliState) => {
     setClaudeCliState(state);
@@ -145,6 +148,25 @@ const MobileTerminalPage = () => {
   const tabMetadata = useTabMetadataStore((s) =>
     selectedTabId ? s.metadata[selectedTabId] : undefined,
   );
+
+  const handleOpenGit = useCallback(() => {
+    if (currentTab?.sessionName) {
+      setGitTarget({
+        sessionName: currentTab.sessionName,
+        cwdKey: tabMetadata?.cwd || currentTab.cwd || currentTab.sessionName,
+      });
+    }
+    setGitOpen(true);
+  }, [currentTab, tabMetadata?.cwd]);
+
+  const handleSendDiffToAgent = useCallback((text: string, provider: TGitAskProvider) => {
+    if (!currentPane?.id) return;
+    setGitOpen(false);
+    window.dispatchEvent(new CustomEvent('purplemux-send-to-agent', {
+      detail: { paneId: currentPane.id, text, provider },
+    }));
+  }, [currentPane?.id]);
+
   const currentTabName = useMemo(() => {
     if (!currentTab) return '';
     if (currentTab.name) return currentTab.name;
@@ -278,6 +300,7 @@ const MobileTerminalPage = () => {
           panelType={currentPanelType}
           onSwitchPanelType={handleSwitchPanelType}
           onCreateTab={handleOpenNewTabDialog}
+          onOpenGit={handleOpenGit}
           onClose={handleCloseTab}
         />
       )}
@@ -303,6 +326,13 @@ const MobileTerminalPage = () => {
         open={newTabDialogOpen}
         onOpenChange={setNewTabDialogOpen}
         onCreateTab={handleCreateTab}
+      />
+
+      <MobileGitFullscreen
+        open={gitOpen}
+        sessionName={gitTarget?.sessionName}
+        onClose={() => setGitOpen(false)}
+        onSendToAgent={handleSendDiffToAgent}
       />
     </>
   );

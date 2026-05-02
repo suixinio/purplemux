@@ -1,9 +1,11 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertTriangle, RefreshCw, Plus } from 'lucide-react';
+import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import useLayout, { collectPanes } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useKeyboardShortcuts from '@/hooks/use-keyboard-shortcuts';
@@ -12,8 +14,31 @@ import type { ITabMetadata } from '@/hooks/use-tab-metadata-store';
 import { requestSync } from '@/hooks/use-agent-status';
 import PaneLayout from '@/components/features/workspace/pane-layout';
 import ContentHeader from '@/components/features/workspace/content-header';
+import GitSidePanel from '@/components/features/workspace/git-side-panel';
 import useSidebarActions from '@/hooks/use-sidebar-actions';
 import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
+import type { TGitAskProvider } from '@/hooks/use-config-store';
+
+const GIT_PANEL_OPEN_KEY = 'purplemux-git-panel-open';
+const GIT_PANEL_SIZE_KEY = 'purplemux-git-panel-size';
+const DEFAULT_GIT_PANEL_SIZE = 36;
+const MIN_GIT_PANEL_SIZE = 20;
+const MAX_GIT_PANEL_SIZE = 60;
+const MIN_MAIN_PANEL_WIDTH = '320px';
+const MIN_GIT_PANEL_WIDTH = '320px';
+const MAX_GIT_PANEL_WIDTH = '760px';
+
+const getInitialGitPanelOpen = () => {
+  if (typeof window === 'undefined') return false;
+  return localStorage.getItem(GIT_PANEL_OPEN_KEY) === '1';
+};
+
+const getInitialGitPanelSize = () => {
+  if (typeof window === 'undefined') return DEFAULT_GIT_PANEL_SIZE;
+  const value = Number(localStorage.getItem(GIT_PANEL_SIZE_KEY));
+  if (!Number.isFinite(value)) return DEFAULT_GIT_PANEL_SIZE;
+  return Math.min(MAX_GIT_PANEL_SIZE, Math.max(MIN_GIT_PANEL_SIZE, value));
+};
 
 const TerminalPage = () => {
   const t = useTranslations('terminal');
@@ -23,6 +48,10 @@ const TerminalPage = () => {
   const workspaceCount = useWorkspaceStore((s) => s.workspaces.length);
   const prevWorkspaceIdRef = useRef<string | null>(null);
   const equalizeRef = useRef<(() => void) | null>(null);
+  const gitPanelGroupRef = useRef<GroupImperativeHandle>(null);
+  const [gitPanelOpen, setGitPanelOpen] = useState(getInitialGitPanelOpen);
+  const [gitPanelSize, setGitPanelSize] = useState(getInitialGitPanelSize);
+  const [gitTarget, setGitTarget] = useState<{ sessionName: string; cwdKey: string } | null>(null);
 
   const handleFetchError = useCallback(() => {
     const prevId = prevWorkspaceIdRef.current;
@@ -42,6 +71,61 @@ const TerminalPage = () => {
     !layout.isLoading &&
     collectPanes(layout.layout.root).every((p) => p.tabs.length === 0)
   );
+  const hasActiveLayout = !!(layout.layout && !layout.isLoading && !allTabsEmpty);
+
+  const focusedPane = useMemo(() => {
+    if (!layout.layout?.activePaneId) return null;
+    return collectPanes(layout.layout.root).find((p) => p.id === layout.layout?.activePaneId) ?? null;
+  }, [layout.layout]);
+
+  const focusedTab = useMemo(() => {
+    if (!focusedPane?.activeTabId) return null;
+    return focusedPane.tabs.find((tab) => tab.id === focusedPane.activeTabId) ?? null;
+  }, [focusedPane]);
+  const focusedTabCwd = useTabMetadataStore(
+    (state) => (focusedTab?.id ? state.metadata[focusedTab.id]?.cwd : undefined),
+  );
+  const activeSessionNames = useMemo(() => {
+    if (!layout.layout) return new Set<string>();
+    return new Set(collectPanes(layout.layout.root).flatMap((pane) => pane.tabs.map((tab) => tab.sessionName)));
+  }, [layout.layout]);
+
+  const setGitPanelOpenPersisted = useCallback((open: boolean) => {
+    setGitPanelOpen(open);
+    localStorage.setItem(GIT_PANEL_OPEN_KEY, open ? '1' : '0');
+  }, []);
+
+  const handleSendDiffToAgent = useCallback((text: string, provider: TGitAskProvider) => {
+    if (!focusedPane?.id) return;
+    window.dispatchEvent(new CustomEvent('purplemux-send-to-agent', {
+      detail: { paneId: focusedPane.id, text, provider },
+    }));
+  }, [focusedPane?.id]);
+
+  useEffect(() => {
+    const handleToggle = () => setGitPanelOpenPersisted(!gitPanelOpen);
+    window.addEventListener('purplemux-toggle-git-panel', handleToggle);
+    return () => window.removeEventListener('purplemux-toggle-git-panel', handleToggle);
+  }, [gitPanelOpen, setGitPanelOpenPersisted]);
+
+  useEffect(() => {
+    const sessionName = focusedTab?.sessionName;
+    if (!sessionName) return;
+    const cwdKey = focusedTabCwd || focusedTab.cwd || sessionName;
+    setGitTarget((prev) => {
+      if (prev?.cwdKey === cwdKey && activeSessionNames.has(prev.sessionName)) return prev;
+      return { sessionName, cwdKey };
+    });
+  }, [activeSessionNames, focusedTab?.sessionName, focusedTab?.cwd, focusedTabCwd]);
+
+  useEffect(() => {
+    if (!hasActiveLayout) return;
+    gitPanelGroupRef.current?.setLayout(
+      gitPanelOpen
+        ? { main: 100 - gitPanelSize, git: gitPanelSize }
+        : { main: 100, git: 0 },
+    );
+  }, [activeWorkspaceId, gitPanelOpen, gitPanelSize, hasActiveLayout]);
 
   // Hydrate store from layout data
   const layoutUpdatedAt = layout.layout?.updatedAt;
@@ -142,6 +226,8 @@ const TerminalPage = () => {
           onSplitPane={layout.splitPane}
           onEqualizeRatios={() => equalizeRef.current?.()}
           onUpdateTabPanelType={layout.updateTabPanelType}
+          isGitPanelOpen={gitPanelOpen}
+          onToggleGitPanel={() => setGitPanelOpenPersisted(!gitPanelOpen)}
         />
       )}
 
@@ -168,12 +254,57 @@ const TerminalPage = () => {
             key={activeWorkspaceId}
             className="h-full"
           >
-            <PaneLayout
-              root={layout.layout.root}
-              onUpdateRatio={layout.updateRatio}
-              onEqualizeRatios={layout.equalizeRatios}
-              equalizeRef={equalizeRef}
-            />
+            <Group
+              groupRef={gitPanelGroupRef}
+              className="h-full w-full min-w-0"
+              orientation="horizontal"
+              resizeTargetMinimumSize={{ fine: 8, coarse: 32 }}
+              defaultLayout={gitPanelOpen
+                ? { main: 100 - gitPanelSize, git: gitPanelSize }
+                : { main: 100, git: 0 }}
+              onLayoutChanged={(sizes) => {
+                if (!gitPanelOpen) return;
+                const next = sizes.git;
+                if (next === undefined || next <= 1) return;
+                const clamped = Math.min(MAX_GIT_PANEL_SIZE, Math.max(MIN_GIT_PANEL_SIZE, Math.round(next)));
+                if (clamped === gitPanelSize) return;
+                setGitPanelSize(clamped);
+                localStorage.setItem(GIT_PANEL_SIZE_KEY, String(clamped));
+              }}
+            >
+              <Panel id="main" minSize={MIN_MAIN_PANEL_WIDTH} className="h-full min-w-0">
+                <PaneLayout
+                  root={layout.layout.root}
+                  onUpdateRatio={layout.updateRatio}
+                  onEqualizeRatios={layout.equalizeRatios}
+                  equalizeRef={equalizeRef}
+                />
+              </Panel>
+              <Separator
+                disabled={!gitPanelOpen}
+                className={cn(
+                  'shrink-0 cursor-col-resize bg-border transition-colors duration-100 hover:bg-muted-foreground/50 data-[resize-handle-active]:bg-muted-foreground',
+                  gitPanelOpen ? 'w-px' : 'w-0',
+                )}
+              />
+              <Panel
+                id="git"
+                collapsible
+                collapsedSize="0px"
+                minSize={MIN_GIT_PANEL_WIDTH}
+                maxSize={MAX_GIT_PANEL_WIDTH}
+                groupResizeBehavior="preserve-pixel-size"
+                className="h-full min-w-0 overflow-hidden"
+              >
+                {gitPanelOpen && (
+                  <GitSidePanel
+                    sessionName={gitTarget?.sessionName}
+                    onClose={() => setGitPanelOpenPersisted(false)}
+                    onSendToAgent={handleSendDiffToAgent}
+                  />
+                )}
+              </Panel>
+            </Group>
           </div>
         )}
 
