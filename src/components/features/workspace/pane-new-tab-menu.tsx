@@ -43,10 +43,10 @@ const defaultKeyForPanelType = (panelType?: TPanelType): string => {
   switch (panelType) {
     case 'terminal': return 'terminal';
     case 'web-browser': return 'web-browser';
-    case 'codex-cli': return 'codex-new';
+    case 'codex-cli': return 'codex';
     case 'diff':
     case 'claude-code':
-    default: return 'claude-new';
+    default: return 'claude';
   }
 };
 
@@ -61,10 +61,8 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const menuItems = useMemo(() => {
     const all = [
-      { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeNewConversation'), startAgent: 'claude' as const },
-      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeSessionList') },
-      { key: 'codex-new', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: t('codexNewConversation'), startAgent: 'codex' as const },
-      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: t('codexSessionList') },
+      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: 'Claude', startAgent: 'claude' as const, startLabel: t('claudeNewConversation') },
+      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: 'Codex', startAgent: 'codex' as const, startLabel: t('codexNewConversation') },
       { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
       { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Diff' },
       { key: 'web-browser', type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
@@ -111,20 +109,21 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
     }
   }, [codexI18n, onCreateTab, wsId]);
 
-  const handleSelect = (item: typeof menuItems[number]) => {
+  const handleStartAgent = useCallback((agent: 'claude' | 'codex') => {
     setOpen(false);
-    if ('startAgent' in item && item.startAgent === 'claude') {
+    if (agent === 'claude') {
       const cmd = buildClaudeLaunchCommand({
         workspaceId: wsId,
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
       });
-      onCreateTab(item.type, { command: cmd });
+      onCreateTab('claude-code', { command: cmd });
       return;
     }
-    if ('startAgent' in item && item.startAgent === 'codex') {
-      void launchCodexNewConversation();
-      return;
-    }
+    void launchCodexNewConversation();
+  }, [launchCodexNewConversation, onCreateTab, wsId]);
+
+  const handleSelect = (item: typeof menuItems[number]) => {
+    setOpen(false);
     if (item.key === 'codex') {
       onCreateTab(item.type);
       return;
@@ -173,19 +172,37 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
         </Tooltip>
         <PopoverContent side="bottom" align="start" className="w-44 gap-0 p-0.5" onKeyDown={handleKeyDown}>
           {menuItems.map((item, idx) => (
-            <button
+            <div
               key={item.key}
-              ref={(el) => { itemRefs.current[idx] = el; }}
-              className={cn(
-                'flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-xs text-foreground hover:bg-accent focus:outline-none',
-                activeIndex === idx && 'bg-accent',
-              )}
+              className={cn('flex rounded-sm', activeIndex === idx && 'bg-accent')}
               onMouseEnter={() => setActiveIndex(idx)}
-              onClick={() => handleSelect(item)}
             >
-              {item.icon}
-              <span className="flex-1 text-left">{item.label}</span>
-            </button>
+              <button
+                ref={(el) => { itemRefs.current[idx] = el; }}
+                className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2.5 py-2 text-xs text-foreground hover:bg-accent focus:outline-none"
+                onClick={() => handleSelect(item)}
+              >
+                {item.icon}
+                <span className="flex-1 text-left">{item.label}</span>
+              </button>
+              {'startAgent' in item && item.startAgent && (
+                <Tooltip>
+                  <TooltipTrigger
+                    className="flex w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none"
+                    aria-label={item.startLabel}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      const { startAgent } = item;
+                      if (startAgent) handleStartAgent(startAgent);
+                    }}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{item.startLabel}</TooltipContent>
+                </Tooltip>
+              )}
+            </div>
           ))}
         </PopoverContent>
       </Popover>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Terminal, GitCompareArrows } from 'lucide-react';
+import { Terminal, GitCompareArrows, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
@@ -24,25 +24,23 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   const MENU_ITEMS = [
-    { key: 'claude-new', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeNewConversation'), startAgent: 'claude' as const },
-    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeSessionList') },
-    { key: 'codex-new', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: tt('codexNewConversation'), startAgent: 'codex' as const },
-    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: tt('codexSessionList') },
+    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: 'Claude', startCommand: 'claude-new' as const, startLabel: tt('claudeNewConversation') },
+    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: 'Codex', startCommand: 'codex-new' as const, startLabel: tt('codexNewConversation') },
     { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-5 w-5 text-muted-foreground" />, label: 'Terminal' },
     { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-5 w-5 text-muted-foreground" />, label: 'Diff' },
   ] as const;
 
   const handleSelect = async (item: (typeof MENU_ITEMS)[number]) => {
     setCreatingKey(item.key);
-    if (item.key === 'codex') {
-      await onCreateTab(item.type);
-    } else if ('startAgent' in item && item.startAgent === 'claude') {
-      await onCreateTab(item.type, { command: 'claude-new' });
-    } else if ('startAgent' in item && item.startAgent === 'codex') {
-      await onCreateTab(item.type, { command: 'codex-new' });
-    } else {
-      await onCreateTab(item.type);
-    }
+    await onCreateTab(item.type);
+    setCreatingKey(null);
+    onOpenChange(false);
+  };
+
+  const handleStartNew = async (item: Extract<(typeof MENU_ITEMS)[number], { startCommand: 'claude-new' | 'codex-new' }>) => {
+    const key = `${item.key}-new`;
+    setCreatingKey(key);
+    await onCreateTab(item.type, { command: item.startCommand });
     setCreatingKey(null);
     onOpenChange(false);
   };
@@ -55,17 +53,31 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
         </DialogHeader>
         <div className="grid grid-cols-2 gap-2">
           {MENU_ITEMS.map((item) => (
-            <button
+            <div
               key={item.key}
-              className="flex aspect-square flex-col items-center justify-center gap-2 rounded-lg border border-border bg-background text-foreground transition-colors active:bg-accent disabled:pointer-events-none disabled:opacity-50"
-              disabled={creatingKey !== null}
-              onClick={() => handleSelect(item)}
+              className="relative aspect-square rounded-lg border border-border bg-background text-foreground transition-colors"
             >
-              <span className="flex h-5 w-5 items-center justify-center">
-                {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
-              </span>
-              <span className="text-xs">{item.label}</span>
-            </button>
+              <button
+                className="flex h-full w-full flex-col items-center justify-center gap-2 rounded-lg transition-colors active:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                disabled={creatingKey !== null}
+                onClick={() => handleSelect(item)}
+              >
+                <span className="flex h-5 w-5 items-center justify-center">
+                  {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
+                </span>
+                <span className="text-xs">{item.label}</span>
+              </button>
+              {'startCommand' in item && (
+                <button
+                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm active:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                  aria-label={item.startLabel}
+                  disabled={creatingKey !== null}
+                  onClick={() => handleStartNew(item)}
+                >
+                  {creatingKey === `${item.key}-new` ? <Spinner className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                </button>
+              )}
+            </div>
           ))}
         </div>
       </DialogContent>
