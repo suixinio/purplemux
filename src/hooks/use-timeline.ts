@@ -299,7 +299,31 @@ const useTimeline = ({
       );
       if (!res.ok) return;
       const data = await res.json();
-      setEntries((prev) => [...(data.entries as ITimelineEntry[]), ...prev]);
+      const loadedEntries = data.entries as ITimelineEntry[];
+      setEntries((prev) => {
+        if (!data.replaceEntries) return [...loadedEntries, ...prev];
+
+        const pendings = prev.filter(
+          (e): e is ITimelineEntry & { type: 'user-message'; pending: true } =>
+            e.type === 'user-message' && e.pending === true,
+        );
+        if (pendings.length === 0) return loadedEntries;
+
+        const unmatchedPendings = [...pendings];
+        const merged = loadedEntries.map((entry) => {
+          if (entry.type !== 'user-message') return entry;
+          const target = normalizeUserMessageText(entry.text);
+          const matchIdx = unmatchedPendings.findIndex(
+            (pending) => pending.attachmentPlaceholder || normalizeUserMessageText(pending.text) === target,
+          );
+          if (matchIdx === -1) return entry;
+          const matched = unmatchedPendings[matchIdx];
+          unmatchedPendings.splice(matchIdx, 1);
+          return { ...entry, id: matched.id };
+        });
+
+        return [...merged, ...unmatchedPendings];
+      });
       startByteOffsetRef.current = data.startByteOffset;
       setHasMore(data.hasMore);
     } finally {

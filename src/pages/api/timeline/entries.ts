@@ -1,6 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { readEntriesBefore } from '@/lib/session-parser';
-import { isAllowedJsonlPath } from '@/lib/path-validation';
+import { readCodexEntriesBefore } from '@/lib/session-parser-codex';
+import { isAllowedJsonlPath, isCodexJsonlPath } from '@/lib/path-validation';
 
 const DEFAULT_LIMIT = 256;
 
@@ -25,13 +26,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const limit = parseInt(req.query.limit as string, 10) || DEFAULT_LIMIT;
+  const untilByteParam = parseInt(req.query.untilByte as string, 10);
+  const untilByte = Number.isFinite(untilByteParam) && untilByteParam >= 0
+    ? untilByteParam
+    : undefined;
 
-  const result = await readEntriesBefore(jsonlPath, beforeByte, limit);
+  const isCodex = isCodexJsonlPath(jsonlPath);
+  const result = isCodex
+    ? await readCodexEntriesBefore(jsonlPath, beforeByte, limit, untilByte)
+    : await readEntriesBefore(jsonlPath, beforeByte, limit);
 
   return res.status(200).json({
     entries: result.entries,
     startByteOffset: result.startByteOffset,
     hasMore: result.hasMore,
+    replaceEntries: isCodex,
   });
 };
 

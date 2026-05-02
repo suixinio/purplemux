@@ -5,6 +5,7 @@ import { createLogger } from '@/lib/logger';
 import { uploadPathToImageUrl } from '@/lib/uploads-store';
 import type {
   IIncrementalResult,
+  IChunkReadResult,
   IParseResult,
   IPatchApplyFile,
   ITimelineApprovalRequest,
@@ -34,6 +35,7 @@ import type {
 const log = createLogger('codex-parser');
 const WARN_DEDUP = new Set<string>();
 
+const CHUNK_SIZE = 256_000; // 256KB
 const STDOUT_BUFFER_LIMIT = 1_048_576;
 const SUMMARY_PREVIEW_LIMIT = 100;
 const TRUNCATED_SUFFIX_TEMPLATE = (total: number) => `\n[... truncated, total ${total} bytes]`;
@@ -921,12 +923,15 @@ const mergeToolResults = (entries: ITimelineEntry[]): ITimelineEntry[] => {
 const parseLines = (
   lines: string[],
   state: ICodexParseState,
-): { entries: ITimelineEntry[]; summary?: string; errorCount: number } => {
+  lineOffsets?: number[],
+): { entries: ITimelineEntry[]; entryLineOffsets: number[]; summary?: string; errorCount: number } => {
   const entries: ITimelineEntry[] = [];
+  const entryLineOffsets: number[] = [];
   let summary: string | undefined;
   let errorCount = 0;
 
-  for (const rawLine of lines) {
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const rawLine = lines[lineIdx];
     if (!rawLine.trim()) continue;
     const parsed = tryParseJson(rawLine);
     if (parsed === undefined) {
@@ -948,10 +953,136 @@ const parseLines = (
       }
     }
     const produced = processItem(item, state);
-    if (produced.length > 0) entries.push(...produced);
+    if (produced.length > 0) {
+      entries.push(...produced);
+      entryLineOffsets.push(...produced.map(() => lineOffsets?.[lineIdx] ?? 0));
+    }
   }
 
-  return { entries: mergeToolResults(entries), summary, errorCount };
+  return { entries: mergeToolResults(entries), entryLineOffsets, summary, errorCount };
+};
+
+const readChunk = async (
+  filePath: string, from: number, to: number,
+): Promise<{ content: string; validFrom: number }> => {
+  const readSize = to - from;
+  if (readSize <= 0) return { content: '', validFrom: from };
+  const handle = await fs.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(readSize);
+    await handle.read(buffer, 0, readSize, from);
+    const raw = buffer.toString('utf-8');
+    if (from === 0) return { content: raw, validFrom: 0 };
+    const firstNewline = raw.indexOf('\n');
+    if (firstNewline < 0) return { content: '', validFrom: to };
+    const validFrom = from + Buffer.byteLength(raw.slice(0, firstNewline + 1), 'utf-8');
+    return { content: raw.slice(firstNewline + 1), validFrom };
+  } finally {
+    await handle.close();
+  }
+};
+
+const readExactChunk = async (
+  filePath: string, from: number, to: number,
+): Promise<{ content: string; validFrom: number }> => {
+  const readSize = to - from;
+  if (readSize <= 0) return { content: '', validFrom: from };
+  const handle = await fs.open(filePath, 'r');
+  try {
+    const buffer = Buffer.alloc(readSize);
+    await handle.read(buffer, 0, readSize, from);
+    return { content: buffer.toString('utf-8'), validFrom: from };
+  } finally {
+    await handle.close();
+  }
+};
+
+const splitLinesWithOffsets = (content: string, startOffset: number): { lines: string[]; lineOffsets: number[] } => {
+  const lines = content.split('\n');
+  const lineOffsets: number[] = [];
+  let offset = startOffset;
+  for (const line of lines) {
+    lineOffsets.push(offset);
+    offset += Buffer.byteLength(line, 'utf-8') + 1;
+  }
+  return { lines, lineOffsets };
+};
+
+const parseContentWithOffsets = (
+  content: string,
+  startOffset: number,
+  state: ICodexParseState,
+): IParseResult => {
+  const { lines, lineOffsets } = splitLinesWithOffsets(content, startOffset);
+  const { entries, entryLineOffsets, summary, errorCount } = parseLines(lines, state, lineOffsets);
+  return {
+    entries,
+    entryLineOffsets,
+    lastOffset: startOffset + Buffer.byteLength(content, 'utf-8'),
+    totalLines: lines.filter((line) => line.trim()).length,
+    errorCount,
+    summary,
+  };
+};
+
+const emptyChunk = (): IChunkReadResult => ({
+  entries: [], startByteOffset: 0, fileSize: 0, hasMore: false, errorCount: 0,
+});
+
+const sliceChunkResult = (
+  result: IParseResult,
+  fileSize: number,
+  fallbackStartByteOffset: number,
+  maxEntries: number,
+): IChunkReadResult => {
+  const sliced = result.entries.length > maxEntries;
+  const sliceStart = sliced ? result.entries.length - maxEntries : 0;
+  const entries = sliced ? result.entries.slice(-maxEntries) : result.entries;
+  const startByteOffset = sliced
+    ? result.entryLineOffsets[sliceStart] ?? fallbackStartByteOffset
+    : fallbackStartByteOffset;
+  return {
+    entries,
+    startByteOffset,
+    fileSize,
+    hasMore: startByteOffset > 0,
+    errorCount: result.errorCount,
+    summary: result.summary,
+  };
+};
+
+const readCodexRange = async (
+  filePath: string,
+  fromByte: number,
+  toByte: number,
+  displayFromByte = fromByte,
+): Promise<IChunkReadResult> => {
+  const empty = emptyChunk();
+  try {
+    const stat = await fs.stat(filePath);
+    const fileSize = stat.size;
+    const from = Math.max(0, Math.min(fromByte, fileSize));
+    const to = Math.max(from, Math.min(toByte, fileSize));
+    if (to <= from) return { ...empty, fileSize };
+
+    const { content, validFrom } = await readExactChunk(filePath, from, to);
+    const state = createState();
+    const result = parseContentWithOffsets(content, validFrom, state);
+    const displayEntries = result.entries.filter((_, idx) => {
+      const entryOffset = result.entryLineOffsets[idx] ?? validFrom;
+      return entryOffset >= displayFromByte;
+    });
+    return {
+      entries: displayEntries,
+      startByteOffset: Math.max(validFrom, displayFromByte),
+      fileSize,
+      hasMore: Math.max(validFrom, displayFromByte) > 0,
+      errorCount: result.errorCount,
+      summary: result.summary,
+    };
+  } catch {
+    return empty;
+  }
 };
 
 export class CodexParser {
@@ -990,17 +1121,50 @@ export class CodexParser {
       return { entries: [], entryLineOffsets: [], lastOffset: 0, totalLines: 0, errorCount: 0 };
     }
     const content = await fs.readFile(this.jsonlPath, 'utf-8');
-    const lines = content.split('\n');
-    const { entries, summary, errorCount } = parseLines(lines, this.state);
+    const { entries, entryLineOffsets, summary, errorCount, totalLines } = parseContentWithOffsets(content, 0, this.state);
     this.lastOffset = Buffer.byteLength(content, 'utf-8');
     return {
       entries,
-      entryLineOffsets: entries.map(() => 0),
+      entryLineOffsets,
       lastOffset: this.lastOffset,
-      totalLines: lines.filter((line) => line.trim()).length,
+      totalLines,
       errorCount,
       summary,
     };
+  }
+
+  async parseTail(maxEntries: number): Promise<IChunkReadResult> {
+    const empty = emptyChunk();
+    this.reset();
+    try {
+      const stat = await fs.stat(this.jsonlPath);
+      const fileSize = stat.size;
+      if (fileSize === 0) return empty;
+
+      let chunkSize = CHUNK_SIZE;
+      while (true) {
+        const from = Math.max(0, fileSize - chunkSize);
+        const { content, validFrom } = await readChunk(this.jsonlPath, from, fileSize);
+        if (!content) {
+          if (from === 0) return empty;
+          chunkSize *= 2;
+          continue;
+        }
+
+        this.state = createState();
+        const result = parseContentWithOffsets(content, validFrom, this.state);
+        if (result.entries.length >= maxEntries || from === 0) {
+          this.lastOffset = fileSize;
+          this.pendingBuffer = '';
+          const fallbackStartByteOffset = from === 0 ? 0 : validFrom;
+          return sliceChunkResult(result, fileSize, fallbackStartByteOffset, maxEntries);
+        }
+        if (from === 0) return empty;
+        chunkSize *= 2;
+      }
+    } catch {
+      return empty;
+    }
   }
 
   async parseIncremental(): Promise<IIncrementalResult> {
@@ -1079,4 +1243,54 @@ export const createCodexParser = (jsonlPath: string): CodexParser => new CodexPa
 export const parseCodexContent = (content: string): ITimelineEntry[] => {
   const state = createState();
   return parseLines(content.split('\n'), state).entries;
+};
+
+export const readTailCodexEntries = async (
+  filePath: string,
+  maxEntries: number,
+): Promise<IChunkReadResult> => {
+  const parser = createCodexParser(filePath);
+  return parser.parseTail(maxEntries);
+};
+
+export const readCodexEntriesBefore = async (
+  filePath: string,
+  beforeByte: number,
+  maxEntries: number,
+  untilByte?: number,
+): Promise<IChunkReadResult> => {
+  const empty = emptyChunk();
+  try {
+    if (beforeByte <= 0) return empty;
+    const stat = await fs.stat(filePath);
+    const fileSize = stat.size;
+    const currentStart = Math.max(0, Math.min(beforeByte, fileSize));
+    const rangeEnd = Math.max(currentStart, Math.min(untilByte ?? fileSize, fileSize));
+
+    let chunkSize = CHUNK_SIZE;
+    while (true) {
+      const from = Math.max(0, currentStart - chunkSize);
+      const { content, validFrom } = await readChunk(filePath, from, currentStart);
+      if (content) {
+        const state = createState();
+        const result = parseContentWithOffsets(content, validFrom, state);
+        if (result.entries.length >= maxEntries || from === 0) {
+          const parseStartByteOffset = from === 0 ? 0 : validFrom;
+          const previousPage = sliceChunkResult(
+            result,
+            fileSize,
+            parseStartByteOffset,
+            maxEntries,
+          );
+          return readCodexRange(filePath, parseStartByteOffset, rangeEnd, previousPage.startByteOffset);
+        }
+      }
+      if (from === 0) {
+        return readCodexRange(filePath, 0, rangeEnd);
+      }
+      chunkSize *= 2;
+    }
+  } catch {
+    return empty;
+  }
 };

@@ -4,11 +4,11 @@ import { watch, type FSWatcher } from 'fs';
 import { existsSync, mkdirSync } from 'fs';
 import { type ISessionWatcher } from '@/lib/providers/types';
 import { readTailEntries, parseIncremental, parseJsonlContent } from './session-parser';
-import { CodexParser, createCodexParser, parseCodexContent } from './session-parser-codex';
+import { CodexParser, createCodexParser, parseCodexContent, readTailCodexEntries } from './session-parser-codex';
 import { CODEX_PROVIDER_ID } from '@/lib/providers/codex';
 import { findCodexSessionById } from '@/lib/providers/codex/session-detection';
 import { isCodexJsonlPath } from './path-validation';
-import { open as fsOpen, stat as fsStat, readFile as fsReadFile } from 'fs/promises';
+import { open as fsOpen } from 'fs/promises';
 import { createReadStream } from 'fs';
 import { createInterface } from 'readline';
 import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPaneTitle } from './tmux';
@@ -199,6 +199,7 @@ const readBoundedEntries = async (
 const readInitForCodex = async (
   parser: CodexParser,
   isNewWatcher: boolean,
+  maxEntries: number,
 ): Promise<{
   entries: ITimelineEntry[];
   fileSize: number;
@@ -208,32 +209,9 @@ const readInitForCodex = async (
   summary?: string;
   customTitle?: string;
 }> => {
-  if (isNewWatcher) {
-    const r = await parser.parseAll();
-    return {
-      entries: r.entries,
-      fileSize: r.lastOffset,
-      startByteOffset: 0,
-      hasMore: false,
-      errorCount: r.errorCount,
-      summary: r.summary,
-    };
-  }
-  try {
-    const [stat, content] = await Promise.all([
-      fsStat(parser.path),
-      fsReadFile(parser.path, 'utf-8'),
-    ]);
-    return {
-      entries: parseCodexContent(content),
-      fileSize: stat.size,
-      startByteOffset: 0,
-      hasMore: false,
-      errorCount: 0,
-    };
-  } catch {
-    return { entries: [], fileSize: 0, startByteOffset: 0, hasMore: false, errorCount: 0 };
-  }
+  return isNewWatcher
+    ? parser.parseTail(maxEntries)
+    : readTailCodexEntries(parser.path, maxEntries);
 };
 
 const processFileChange = async (fw: IFileWatcher) => {
@@ -448,7 +426,7 @@ const subscribeToFile = async (
   fw.connections.add(ws);
 
   const result = fw.codexParser
-    ? await readInitForCodex(fw.codexParser, isNewWatcher)
+    ? await readInitForCodex(fw.codexParser, isNewWatcher, MAX_INIT_ENTRIES)
     : await readTailEntries(jsonlPath, MAX_INIT_ENTRIES);
 
   if (result.errorCount > 0) {
