@@ -9,6 +9,8 @@ export const getCodexPromptPath = (workspaceId: string): string =>
 export const sanitizeForTomlTripleQuote = (s: string): string =>
   s.replace(/'''/g, "' ''");
 
+export const toTomlBasicString = (s: string): string => JSON.stringify(s);
+
 const buildBody = (ws: IWorkspace): string => {
   const raw = `# purplemux context
 

@@ -5,7 +5,7 @@ import { getDangerouslySkipPermissions } from '@/lib/config-store';
 import { createLogger } from '@/lib/logger';
 import { buildCodexHookFlags } from '@/lib/providers/codex/hook-config';
 import { runCodexPreflight } from '@/lib/providers/codex/preflight';
-import { getCodexPromptPath, sanitizeForTomlTripleQuote, writeCodexPromptFile } from '@/lib/providers/codex/prompt';
+import { getCodexPromptPath, toTomlBasicString, writeCodexPromptFile } from '@/lib/providers/codex/prompt';
 import {
   detectActiveSession as detectCodexSession,
   isCodexRunning,
@@ -17,6 +17,8 @@ import type { IAgentState, ITab } from '@/types/terminal';
 const log = createLogger('codex-provider');
 
 export const CODEX_PROVIDER_ID = 'codex';
+const PURPLEMUX_DIR = path.join(os.homedir(), '.purplemux');
+const CODEX_LAUNCHER_SCRIPT = path.join(PURPLEMUX_DIR, 'codex-launcher.js');
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -84,24 +86,132 @@ const buildDeveloperInstructionsArgs = async (workspaceId: string): Promise<stri
     log.error({ err: err instanceof Error ? err.message : err, promptPath }, 'codex-prompt read failed');
     return [];
   }
-  const sanitized = sanitizeForTomlTripleQuote(content);
-  const tomlValue = `'''${sanitized}'''`;
-  const arg = `developer_instructions=${tomlValue}`;
-  return ['-c', shellSingleQuote(arg)];
+  const arg = `developer_instructions=${toTomlBasicString(content)}`;
+  return ['-c', arg];
 };
 
 const shellSingleQuote = (value: string): string => `'${value.replace(/'/g, `'\\''`)}'`;
 
-const composeLaunchCommand = async (workspaceId: string | undefined, resumeSessionId?: string): Promise<string> => {
+export const CODEX_LAUNCHER_SCRIPT_CONTENT = `#!/usr/bin/env node
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawn } = require('node:child_process');
+
+const baseDir = path.join(os.homedir(), '.purplemux');
+
+const readTrim = (filePath) => {
+  try {
+    return fs.readFileSync(filePath, 'utf8').trim();
+  } catch {
+    return '';
+  }
+};
+
+const parseArgs = (argv) => {
+  const result = { workspaceId: null, resumeSessionId: null };
+  for (let i = 0; i < argv.length; i += 1) {
+    const item = argv[i];
+    const next = argv[i + 1];
+    if (item === '--workspace-id' && next) {
+      result.workspaceId = next;
+      i += 1;
+    } else if (item.startsWith('--workspace-id=')) {
+      result.workspaceId = item.slice('--workspace-id='.length);
+    } else if (item === '--resume-session-id' && next) {
+      result.resumeSessionId = next;
+      i += 1;
+    } else if (item.startsWith('--resume-session-id=')) {
+      result.resumeSessionId = item.slice('--resume-session-id='.length);
+    }
+  }
+  return result;
+};
+
+const fetchArgs = async (payload) => {
+  if (typeof fetch !== 'function') {
+    throw new Error('Node.js 20+ is required to launch Codex from purplemux');
+  }
+  const port = readTrim(path.join(baseDir, 'port'));
+  if (!port) throw new Error('purplemux port file is missing');
+  const token = readTrim(path.join(baseDir, 'cli-token'));
+  const headers = { 'content-type': 'application/json' };
+  if (token) headers['x-pmux-token'] = token;
+  const res = await fetch(\`http://127.0.0.1:\${port}/api/codex/launch-args\`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const message = await res.text().catch(() => '');
+    throw new Error(\`failed to get Codex launch args: HTTP \${res.status} \${message}\`.trim());
+  }
+  const data = await res.json();
+  if (!Array.isArray(data.args) || data.args.some((arg) => typeof arg !== 'string')) {
+    throw new Error('invalid Codex launch args response');
+  }
+  return data.args;
+};
+
+const main = async () => {
+  const args = await fetchArgs(parseArgs(process.argv.slice(2)));
+  const child = spawn('codex', args, { stdio: 'inherit' });
+  child.on('exit', (code, signal) => {
+    if (signal) {
+      process.kill(process.pid, signal);
+      setTimeout(() => process.exit(1), 100);
+      return;
+    }
+    process.exit(code ?? 1);
+  });
+  child.on('error', (err) => {
+    console.error(err.message || String(err));
+    process.exit(1);
+  });
+};
+
+main().catch((err) => {
+  console.error(err && err.message ? err.message : String(err));
+  process.exit(1);
+});
+`;
+
+const ensureCodexLauncherScript = async (): Promise<string> => {
+  await fs.mkdir(PURPLEMUX_DIR, { recursive: true, mode: 0o700 });
+  try {
+    const existing = await fs.readFile(CODEX_LAUNCHER_SCRIPT, 'utf-8');
+    if (existing === CODEX_LAUNCHER_SCRIPT_CONTENT) {
+      await fs.chmod(CODEX_LAUNCHER_SCRIPT, 0o700).catch(() => {});
+      return CODEX_LAUNCHER_SCRIPT;
+    }
+  } catch {
+    // missing or unreadable; rewrite below
+  }
+  await fs.writeFile(CODEX_LAUNCHER_SCRIPT, CODEX_LAUNCHER_SCRIPT_CONTENT, { mode: 0o700 });
+  return CODEX_LAUNCHER_SCRIPT;
+};
+
+export const buildCodexRuntimeArgs = async (workspaceId: string | undefined, resumeSessionId?: string): Promise<string[]> => {
+  if (resumeSessionId && !isValidCodexSessionId(resumeSessionId)) {
+    throw new Error(`Invalid codex session ID format: ${resumeSessionId}`);
+  }
   const skipPerms = await getDangerouslySkipPermissions();
   const { args: hookArgs } = await buildCodexHookFlags();
   const devInstrArgs = workspaceId ? await buildDeveloperInstructionsArgs(workspaceId) : [];
 
-  const parts: string[] = ['codex'];
+  const parts: string[] = [];
   if (resumeSessionId) parts.push('resume', resumeSessionId);
   parts.push(...hookArgs);
   parts.push(...devInstrArgs);
   if (skipPerms) parts.push('--yolo');
+  return parts;
+};
+
+const composeLaunchCommand = async (workspaceId: string | undefined, resumeSessionId?: string): Promise<string> => {
+  const scriptPath = await ensureCodexLauncherScript();
+  const parts = ['node', shellSingleQuote(scriptPath)];
+  if (workspaceId) parts.push('--workspace-id', shellSingleQuote(workspaceId));
+  if (resumeSessionId) parts.push('--resume-session-id', shellSingleQuote(resumeSessionId));
   return parts.join(' ');
 };
 

@@ -125,7 +125,7 @@ export const buildCodexHookFlags = async (): Promise<ICodexHookFlagsResult> => {
     userEntryCount += userEntries.length;
     const merged: ICodexHookEntry[] = [ourEntry(), ...userEntries];
     const serialized = serializeEntries(merged);
-    args.push('-c', `hooks.${event}=${shellSingleQuote(serialized)}`);
+    args.push('-c', `hooks.${event}=${serialized}`);
   }
 
   log.debug(`codex hooks merged: ${userEntryCount} user entries`);
@@ -152,7 +152,7 @@ export const buildCodexHookFlags = async (): Promise<ICodexHookFlagsResult> => {
 
 export const buildCodexHookFlagsString = async (): Promise<string> => {
   const { args } = await buildCodexHookFlags();
-  return args.join(' ');
+  return args.map(shellSingleQuote).join(' ');
 };
 
 export const __resetCodexHookConfigCache = (): void => {
