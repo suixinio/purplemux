@@ -71,7 +71,13 @@
     "skipPermissions": "Пропустить проверку прав доступа",
     "skipPermissionsDescription": "Пропускает запросы разрешений при запуске агентов Claude и Codex.",
     "showTerminal": "Показывать терминал вместе с агентом",
-    "showTerminalDescription": "Отображает область терминала рядом с вкладками агента. Если выключено, новые вкладки агента открываются со свёрнутым терминалом."
+    "showTerminalDescription": "Отображает область терминала рядом с вкладками агента. Если выключено, новые вкладки агента открываются со свёрнутым терминалом.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Изменить пароль",

@@ -71,7 +71,13 @@
     "skipPermissions": "権限チェックをスキップ",
     "skipPermissionsDescription": "ClaudeとCodexエージェント実行時の権限確認をスキップします。",
     "showTerminal": "エージェントでターミナルを一緒に表示",
-    "showTerminalDescription": "エージェント画面と並べてターミナル領域を表示します。オフにすると、新しいエージェントタブはターミナルを閉じた状態で開きます。"
+    "showTerminalDescription": "エージェント画面と並べてターミナル領域を表示します。オフにすると、新しいエージェントタブはターミナルを閉じた状態で開きます。",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "パスワード変更",

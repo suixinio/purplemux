@@ -71,7 +71,13 @@
     "skipPermissions": "跳过权限检查",
     "skipPermissionsDescription": "运行 Claude 和 Codex 智能体时跳过权限确认。",
     "showTerminal": "在智能体中一同显示终端",
-    "showTerminalDescription": "在智能体标签页旁显示终端区域。关闭时，新的智能体标签页将以折叠的终端打开。"
+    "showTerminalDescription": "在智能体标签页旁显示终端区域。关闭时，新的智能体标签页将以折叠的终端打开。",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "更改密码",

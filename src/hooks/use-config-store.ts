@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type { TEditorPreset } from '@/lib/editor-url';
 import type { TToastPosition } from '@/lib/toast-position';
+import type { TGitAskProvider } from '@/lib/config-store';
 
 export type { TToastPosition } from '@/lib/toast-position';
+export type { TGitAskProvider } from '@/lib/config-store';
 
 export type TNetworkAccess = 'localhost' | 'tailscale' | 'all';
 
@@ -16,6 +18,7 @@ export interface IConfigInitialData {
   customCSS?: string;
   dangerouslySkipPermissions?: boolean;
   claudeShowTerminal?: boolean;
+  gitAskProvider?: TGitAskProvider;
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;
@@ -35,6 +38,7 @@ export interface IConfigInitialData {
 interface IConfigState {
   dangerouslySkipPermissions: boolean;
   claudeShowTerminal: boolean;
+  gitAskProvider: TGitAskProvider;
   editorUrl: string;
   editorPreset: TEditorPreset;
   notificationsEnabled: boolean;
@@ -54,6 +58,7 @@ interface IConfigState {
   hydrate: (data: IConfigInitialData) => void;
   setDangerouslySkipPermissions: (enabled: boolean) => void;
   setClaudeShowTerminal: (enabled: boolean) => void;
+  setGitAskProvider: (provider: TGitAskProvider) => void;
   setEditorUrl: (url: string) => void;
   setEditorPreset: (preset: TEditorPreset) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
@@ -79,6 +84,7 @@ const initialConfig = {
   editorPreset: 'code-server' as TEditorPreset,
   dangerouslySkipPermissions: false,
   claudeShowTerminal: true,
+  gitAskProvider: 'claude' as TGitAskProvider,
   hasAuthPassword: false,
   locale: 'en',
   customCSS: '',
@@ -102,6 +108,7 @@ const saveConfig = (updates: Record<string, unknown>) => {
 const useConfigStore = create<IConfigState>((set, get) => ({
   dangerouslySkipPermissions: initialConfig.dangerouslySkipPermissions,
   claudeShowTerminal: initialConfig.claudeShowTerminal,
+  gitAskProvider: initialConfig.gitAskProvider,
   editorUrl: initialConfig.editorUrl,
   editorPreset: initialConfig.editorPreset,
   notificationsEnabled: initialConfig.notificationsEnabled,
@@ -122,6 +129,7 @@ const useConfigStore = create<IConfigState>((set, get) => ({
     set({
       dangerouslySkipPermissions: data.dangerouslySkipPermissions ?? false,
       claudeShowTerminal: data.claudeShowTerminal ?? true,
+      gitAskProvider: data.gitAskProvider === 'codex' ? 'codex' : 'claude',
       editorUrl: data.editorUrl ?? '',
       editorPreset: data.editorPreset ?? 'code-server',
       notificationsEnabled: data.notificationsEnabled ?? true,
@@ -148,6 +156,11 @@ const useConfigStore = create<IConfigState>((set, get) => ({
   setClaudeShowTerminal: (enabled) => {
     set({ claudeShowTerminal: enabled });
     saveConfig({ claudeShowTerminal: enabled });
+  },
+
+  setGitAskProvider: (provider) => {
+    set({ gitAskProvider: provider });
+    saveConfig({ gitAskProvider: provider });
   },
 
   setEditorUrl: (url) => {

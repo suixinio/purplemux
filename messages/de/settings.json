@@ -71,7 +71,13 @@
     "skipPermissions": "Berechtigungsprüfungen überspringen",
     "skipPermissionsDescription": "Überspringt Berechtigungsabfragen beim Ausführen von Claude- und Codex-Agenten.",
     "showTerminal": "Terminal zusammen mit Agent anzeigen",
-    "showTerminalDescription": "Zeigt den Terminalbereich neben Agent-Tabs an. Wenn deaktiviert, werden neue Agent-Tabs mit eingeklapptem Terminal geöffnet."
+    "showTerminalDescription": "Zeigt den Terminalbereich neben Agent-Tabs an. Wenn deaktiviert, werden neue Agent-Tabs mit eingeklapptem Terminal geöffnet.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Passwort ändern",

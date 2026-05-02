@@ -12,7 +12,7 @@ import useTerminal from '@/hooks/use-terminal';
 import useTerminalWebSocket from '@/hooks/use-terminal-websocket';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import { useLayoutStore } from '@/hooks/use-layout';
-import useConfigStore from '@/hooks/use-config-store';
+import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
@@ -214,7 +214,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const clearRef = useRef<() => void>(() => {});
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
-  const pendingClaudeInputRef = useRef<string | null>(null);
+  const pendingAgentInputRef = useRef<{ text: string; provider: TGitAskProvider } | null>(null);
   const codexRelaunchRef = useRef<() => void | Promise<void>>(() => {});
   const clickedTerminalRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
@@ -706,17 +706,19 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     updateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, updateTabPanelType]);
 
-  const handleSendToClaude = useCallback((text: string) => {
-    pendingClaudeInputRef.current = text;
-    handleSwitchPanelType('claude-code');
+  const handleSendToAgent = useCallback((text: string, provider: TGitAskProvider) => {
+    pendingAgentInputRef.current = { text, provider };
+    handleSwitchPanelType(provider === 'codex' ? 'codex-cli' : 'claude-code');
   }, [handleSwitchPanelType]);
 
   useEffect(() => {
-    if (activePanelType !== 'claude-code' || !pendingClaudeInputRef.current) return;
-    const text = pendingClaudeInputRef.current;
-    pendingClaudeInputRef.current = null;
+    const pending = pendingAgentInputRef.current;
+    if (!pending) return;
+    const targetPanelType: TPanelType = pending.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    if (activePanelType !== targetPanelType) return;
+    pendingAgentInputRef.current = null;
     const timer = window.setTimeout(() => {
-      setInputValueRef.current?.(text);
+      setInputValueRef.current?.(pending.text);
       focusInputRef.current?.();
     }, 100);
     return () => window.clearTimeout(timer);
@@ -1024,7 +1026,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           <DiffPanel
             key={activeTab.sessionName}
             sessionName={activeTab.sessionName}
-            onSendToClaude={handleSendToClaude}
+            onSendToAgent={handleSendToAgent}
           />
         )}
 

@@ -71,7 +71,13 @@
     "skipPermissions": "Skip Permission Checks",
     "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
     "showTerminal": "Show Terminal with Agent",
-    "showTerminalDescription": "Display the terminal area alongside agent tabs. When off, new agent tabs open with the terminal collapsed."
+    "showTerminalDescription": "Display the terminal area alongside agent tabs. When off, new agent tabs open with the terminal collapsed.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Change Password",

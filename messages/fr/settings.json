@@ -71,7 +71,13 @@
     "skipPermissions": "Ignorer les vérifications de permissions",
     "skipPermissionsDescription": "Ignore les demandes de permissions lors de l'exécution des agents Claude et Codex.",
     "showTerminal": "Afficher le terminal avec l'agent",
-    "showTerminalDescription": "Affiche la zone du terminal à côté des onglets d'agent. Désactivé, les nouveaux onglets d'agent s'ouvrent avec le terminal réduit."
+    "showTerminalDescription": "Affiche la zone du terminal à côté des onglets d'agent. Désactivé, les nouveaux onglets d'agent s'ouvrent avec le terminal réduit.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Changer le mot de passe",

@@ -6,12 +6,13 @@ import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import useIsMobile from '@/hooks/use-is-mobile';
+import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import DiffHistoryView from '@/components/features/workspace/diff-history-view';
 import DiffFileList from '@/components/features/workspace/diff-file-list';
 
 interface IDiffPanelProps {
   sessionName: string;
-  onSendToClaude?: (text: string) => void;
+  onSendToAgent?: (text: string, provider: TGitAskProvider) => void;
 }
 
 interface IHeadCommit {
@@ -49,19 +50,20 @@ const ERROR_MESSAGE_KEYS = {
   unknown: 'syncErrorGeneric',
 } as const;
 
-const CLAUDE_PROMPT_KEYS = {
-  'no-upstream': 'claudePromptNoUpstream',
-  auth: 'claudePromptAuth',
-  diverged: 'claudePromptDiverged',
-  rejected: 'claudePromptRejected',
-  'local-changes': 'claudePromptLocalChanges',
-  timeout: 'claudePromptTimeout',
-  unknown: 'claudePromptGeneric',
+const AGENT_PROMPT_KEYS = {
+  'no-upstream': 'agentPromptNoUpstream',
+  auth: 'agentPromptAuth',
+  diverged: 'agentPromptDiverged',
+  rejected: 'agentPromptRejected',
+  'local-changes': 'agentPromptLocalChanges',
+  timeout: 'agentPromptTimeout',
+  unknown: 'agentPromptGeneric',
 } as const;
 
-const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
+const DiffPanel = ({ sessionName, onSendToAgent }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
+  const gitAskProvider = useConfigStore((s) => s.gitAskProvider);
 
   const [diff, setDiff] = useState('');
   const [isGitRepo, setIsGitRepo] = useState<boolean | null>(null);
@@ -177,10 +179,10 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
 
         toast.error(t(messageKey), {
           duration: ERROR_TOAST_DURATION,
-          action: onSendToClaude ? {
-            label: t('askClaude'),
+          action: onSendToAgent ? {
+            label: t(gitAskProvider === 'codex' ? 'askCodex' : 'askClaude'),
             onClick: () => {
-              const promptKey = CLAUDE_PROMPT_KEYS[kind];
+              const promptKey = AGENT_PROMPT_KEYS[kind];
               const intro = t(promptKey, {
                 branch: branch || 'HEAD',
                 upstream: data.upstream ?? '',
@@ -191,7 +193,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
               const body = trimmedStderr
                 ? `${intro}\n\n\`\`\`\n${trimmedStderr.trim()}\n\`\`\``
                 : intro;
-              onSendToClaude(body);
+              onSendToAgent(body, gitAskProvider);
             },
           } : undefined,
         });
@@ -204,7 +206,7 @@ const DiffPanel = ({ sessionName, onSendToClaude }: IDiffPanelProps) => {
     } finally {
       setSyncing(false);
     }
-  }, [sessionName, syncing, t, fetchDiff, onSendToClaude, branch]);
+  }, [sessionName, syncing, t, fetchDiff, onSendToAgent, gitAskProvider, branch]);
 
   useEffect(() => {
     fetchDiff().then(() => pollForChanges());

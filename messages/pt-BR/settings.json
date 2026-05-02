@@ -71,7 +71,13 @@
     "skipPermissions": "Pular Verificacao de Permissoes",
     "skipPermissionsDescription": "Ignora prompts de permissao ao executar agentes Claude e Codex.",
     "showTerminal": "Mostrar Terminal com o agente",
-    "showTerminalDescription": "Exibe a area do terminal ao lado das abas de agente. Quando desativado, novas abas de agente abrem com o terminal recolhido."
+    "showTerminalDescription": "Exibe a area do terminal ao lado das abas de agente. Quando desativado, novas abas de agente abrem com o terminal recolhido.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Alterar Senha",

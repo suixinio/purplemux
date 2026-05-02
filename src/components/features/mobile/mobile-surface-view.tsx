@@ -22,7 +22,7 @@ import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { getInitialTabStateFromLayoutTab, selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
-import useConfigStore from '@/hooks/use-config-store';
+import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
@@ -164,7 +164,7 @@ const MobileSurfaceView = ({
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
 
   const pendingRestartRef = useRef<string | null>(null);
-  const pendingClaudeInputRef = useRef<string | null>(null);
+  const pendingAgentInputRef = useRef<{ text: string; provider: TGitAskProvider } | null>(null);
   const codexRelaunchRef = useRef<() => void | Promise<void>>(() => {});
   const lastTitleRef = useRef('');
   const agentProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentProcess ?? null : null);
@@ -600,22 +600,24 @@ const MobileSurfaceView = ({
     setTimeout(() => sendStdin('\x03'), 300);
   }, [activeTabId, agentModePrompt, buildClaudeCommand, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
 
-  const handleSendToClaude = useCallback((text: string) => {
+  const handleSendToAgent = useCallback((text: string, provider: TGitAskProvider) => {
     if (!activeTabId) return;
-    pendingClaudeInputRef.current = text;
-    onUpdateTabPanelType(paneId, activeTabId, 'claude-code');
+    pendingAgentInputRef.current = { text, provider };
+    onUpdateTabPanelType(paneId, activeTabId, provider === 'codex' ? 'codex-cli' : 'claude-code');
   }, [activeTabId, paneId, onUpdateTabPanelType]);
 
   useEffect(() => {
-    if (!isClaudeCode || !pendingClaudeInputRef.current) return;
-    const text = pendingClaudeInputRef.current;
-    pendingClaudeInputRef.current = null;
+    const pending = pendingAgentInputRef.current;
+    if (!pending) return;
+    const targetPanelType: TPanelType = pending.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    if (panelType !== targetPanelType) return;
+    pendingAgentInputRef.current = null;
     const timer = window.setTimeout(() => {
-      setInputValueRef.current?.(text);
+      setInputValueRef.current?.(pending.text);
       focusInputRef.current?.();
     }, 100);
     return () => window.clearTimeout(timer);
-  }, [isClaudeCode]);
+  }, [panelType]);
 
   const handleWebUrlChange = useCallback((url: string) => {
     if (!activeTabId || !layoutWsId) return;
@@ -669,7 +671,7 @@ const MobileSurfaceView = ({
         <DiffPanel
           key={activeTab.sessionName}
           sessionName={activeTab.sessionName}
-          onSendToClaude={handleSendToClaude}
+          onSendToAgent={handleSendToAgent}
         />
       )}
 

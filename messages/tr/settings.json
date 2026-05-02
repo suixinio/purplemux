@@ -71,7 +71,13 @@
     "skipPermissions": "İzin Kontrollerini Atla",
     "skipPermissionsDescription": "Claude ve Codex ajanları çalıştırılırken izin istemlerini atlar.",
     "showTerminal": "Terminali ajanla göster",
-    "showTerminalDescription": "Terminal alanını ajan sekmeleriyle birlikte gösterir. Kapalıyken yeni ajan sekmeleri terminal kapalı olarak açılır."
+    "showTerminalDescription": "Terminal alanını ajan sekmeleriyle birlikte gösterir. Kapalıyken yeni ajan sekmeleri terminal kapalı olarak açılır.",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "Şifre Değiştir",

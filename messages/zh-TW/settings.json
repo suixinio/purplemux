@@ -71,7 +71,13 @@
     "skipPermissions": "跳過權限檢查",
     "skipPermissionsDescription": "執行 Claude 和 Codex 代理時跳過權限確認。",
     "showTerminal": "在代理中一同顯示終端機",
-    "showTerminalDescription": "在代理分頁旁顯示終端機區域。關閉時，新的代理分頁將以收合的終端機開啟。"
+    "showTerminalDescription": "在代理分頁旁顯示終端機區域。關閉時，新的代理分頁將以收合的終端機開啟。",
+    "gitAskProvider": "Git Help Agent",
+    "gitAskProviderDescription": "Choose which agent receives prompts from Git sync failure actions.",
+    "gitAskProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
+    }
   },
   "auth": {
     "changePassword": "變更密碼",

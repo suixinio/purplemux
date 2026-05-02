@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
+import type { TGitAskProvider } from '@/hooks/use-config-store';
 import { TOAST_POSITIONS, type TToastPosition } from '@/lib/toast-position';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
@@ -559,6 +560,8 @@ const AgentTab = () => {
   const setDangerouslySkipPermissions = useConfigStore((state) => state.setDangerouslySkipPermissions);
   const claudeShowTerminal = useConfigStore((state) => state.claudeShowTerminal);
   const setClaudeShowTerminal = useConfigStore((state) => state.setClaudeShowTerminal);
+  const gitAskProvider = useConfigStore((state) => state.gitAskProvider);
+  const setGitAskProvider = useConfigStore((state) => state.setGitAskProvider);
 
   return (
     <div className="space-y-4">
@@ -599,6 +602,31 @@ const AgentTab = () => {
           checked={claudeShowTerminal}
           onCheckedChange={setClaudeShowTerminal}
         />
+      </div>
+      <div className="space-y-3">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">{t('gitAskProvider')}</p>
+          <p className="text-sm text-muted-foreground">{t('gitAskProviderDescription')}</p>
+        </div>
+        <RadioGroup
+          value={gitAskProvider}
+          onValueChange={(value) => setGitAskProvider(value as TGitAskProvider)}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {(['claude', 'codex'] as const).map((provider) => (
+            <Label
+              key={provider}
+              htmlFor={`git-ask-provider-${provider}`}
+              className={cn(
+                'flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-normal',
+                gitAskProvider === provider && 'border-foreground/30 bg-accent',
+              )}
+            >
+              <RadioGroupItem id={`git-ask-provider-${provider}`} value={provider} />
+              {t(`gitAskProviderOptions.${provider}`)}
+            </Label>
+          ))}
+        </RadioGroup>
       </div>
     </div>
   );
