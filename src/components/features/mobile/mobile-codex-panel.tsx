@@ -214,7 +214,7 @@ const MobileCodexPanel = ({
   }
 
   if (view === 'session-list') {
-    if (!cwd) {
+    if (agentProcess === null || !cwd) {
       return (
         <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
           <Spinner className="h-4 w-4 text-muted-foreground" />
