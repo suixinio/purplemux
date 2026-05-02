@@ -759,7 +759,7 @@ export const navigateToTabOrCreate = async (
 
   if (!ws) {
     if (!workspaceDir) return;
-    const created = await wsStore.createWorkspace(workspaceDir, workspaceName, agentSessionId ?? undefined);
+    const created = await wsStore.createWorkspace(workspaceDir, workspaceName, agentSessionId ?? undefined, panelType);
     if (!created) return;
     targetWsId = created.id;
 

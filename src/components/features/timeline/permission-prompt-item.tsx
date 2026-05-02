@@ -5,7 +5,7 @@ import { ShieldCheck, ShieldAlert, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
-import { ackNotificationInput } from '@/hooks/use-claude-status';
+import { ackNotificationInput } from '@/hooks/use-agent-status';
 
 interface IPermissionPromptItemProps {
   sessionName: string;

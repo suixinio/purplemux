@@ -15,6 +15,7 @@ import ConnectionStatus from '@/components/features/workspace/connection-status'
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
 import MobileCodexPanel from '@/components/features/mobile/mobile-codex-panel';
 import MobileTerminalToolbar from '@/components/features/mobile/mobile-terminal-toolbar';
+import PaneAgentModePrompt from '@/components/features/workspace/pane-agent-mode-prompt';
 import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
@@ -26,6 +27,7 @@ import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
 import { toast } from 'sonner';
 
 
@@ -40,6 +42,27 @@ interface ITermActions {
 interface IWsActions {
   sendStdin: (data: string) => void;
   sendResize: (cols: number, rows: number) => void;
+}
+
+type TAgentPanelType = Extract<TPanelType, 'claude-code' | 'codex-cli'>;
+
+interface IAgentCheckResponse {
+  running?: boolean;
+  checkedAt?: number;
+  sessionId?: unknown;
+  resumable?: unknown;
+  providerId?: unknown;
+  providerDisplayName?: unknown;
+  providerPanelType?: unknown;
+}
+
+interface IAgentModePrompt {
+  tabId: string;
+  providerId: string;
+  displayName: string;
+  panelType: TAgentPanelType;
+  sessionId: string | null;
+  resumable: boolean;
 }
 
 const NOOP_TERM_ACTIONS: ITermActions = {
@@ -70,6 +93,9 @@ interface IMobileSurfaceViewProps {
 }
 
 const MOBILE_FONT_SIZE = 11;
+
+const isAgentPanelType = (value: unknown): value is TAgentPanelType =>
+  value === 'claude-code' || value === 'codex-cli';
 
 const MobileSurfaceView = ({
   paneId,
@@ -145,6 +171,34 @@ const MobileSurfaceView = ({
   const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : null);
   const claudeCliState = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.cliState ?? 'inactive' : 'inactive');
+  const agentModeShownTabsRef = useRef<Set<string>>(new Set());
+  const [agentModePrompt, setAgentModePrompt] = useState<IAgentModePrompt | null>(null);
+
+  const handleAgentCheckResult = useCallback((tabId: string, data: IAgentCheckResponse) => {
+    if (data.running !== true || !isAgentPanelType(data.providerPanelType)) {
+      setAgentModePrompt((prev) => (prev?.tabId === tabId ? null : prev));
+      return;
+    }
+
+    const providerId = typeof data.providerId === 'string' && data.providerId
+      ? data.providerId
+      : data.providerPanelType;
+    const promptKey = `${tabId}:${providerId}`;
+    if (agentModeShownTabsRef.current.has(promptKey)) return;
+    agentModeShownTabsRef.current.add(promptKey);
+
+    const displayName = typeof data.providerDisplayName === 'string' && data.providerDisplayName
+      ? data.providerDisplayName
+      : providerId;
+    setAgentModePrompt({
+      tabId,
+      providerId,
+      displayName,
+      panelType: data.providerPanelType,
+      sessionId: typeof data.sessionId === 'string' && data.sessionId ? data.sessionId : null,
+      resumable: data.resumable === true,
+    });
+  }, []);
 
   const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
     enabled: isClaudeCode && claudeCliState === 'inactive',
@@ -215,17 +269,23 @@ const MobileSurfaceView = ({
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         const prevCheckedAt = useTabStore.getState().tabs[tabId]?.agentProcessCheckedAt ?? 0;
-        fetch(`/api/check-claude?session=${tab.sessionName}`)
+        fetch(`/api/check-agent?session=${tab.sessionName}`)
           .then((res) => res.json())
-          .then(({ running, checkedAt }) => {
+          .then((data: IAgentCheckResponse) => {
+            if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, data);
+            const running = data.running === true;
+            const checkedAt = typeof data.checkedAt === 'number' ? data.checkedAt : Date.now();
             const current = useTabStore.getState().tabs[tabId];
             if (current && current.agentProcessCheckedAt !== prevCheckedAt) {
               if (current.agentProcess !== running) {
                 setTimeout(() => {
-                  fetch(`/api/check-claude?session=${tab.sessionName}`)
+                  fetch(`/api/check-agent?session=${tab.sessionName}`)
                     .then((r) => r.json())
-                    .then(({ running, checkedAt }) => {
-                      useTabStore.getState().setAgentProcess(tabId, running, checkedAt);
+                    .then((retryData: IAgentCheckResponse) => {
+                      if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, retryData);
+                      const retryRunning = retryData.running === true;
+                      const retryCheckedAt = typeof retryData.checkedAt === 'number' ? retryData.checkedAt : Date.now();
+                      useTabStore.getState().setAgentProcess(tabId, retryRunning, retryCheckedAt);
                     })
                     .catch(() => {});
                 }, 500);
@@ -394,21 +454,22 @@ const MobileSurfaceView = ({
     setIsCreating(false);
   }, [paneId, onCreateTab]);
 
-  const buildClaudeCommand = useCallback((): string =>
+  const buildClaudeCommand = useCallback((resumeSessionId?: string | null): string =>
     buildClaudeLaunchCommand({
       workspaceId: layoutWsId,
       dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
+      resumeSessionId,
     }), [layoutWsId]);
 
   const handleNewClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
     useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin(`${buildClaudeCommand()}\r`);
+    sendStdin(`${buildClaudeCommand(null)}\r`);
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
   const handleRestartClaudeSession = useCallback(() => {
     if (status !== 'connected' || !activeTabId) return;
-    pendingRestartRef.current = buildClaudeCommand();
+    pendingRestartRef.current = buildClaudeCommand(null);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
@@ -470,7 +531,7 @@ const MobileSurfaceView = ({
     pendingRestartRef.current = command;
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin('/quit\r');
+    sendCodexQuitCommand(sendStdin);
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
 
   useEffect(() => {
@@ -483,6 +544,61 @@ const MobileSurfaceView = ({
     if (tabId) markAgentLaunch(tabId);
     sendStdin(`${cmd}\r`);
   }, [agentProcess, status, sendStdin, markAgentLaunch]);
+
+  useEffect(() => {
+    if (!activeTabId || agentProcess !== true || panelType !== 'terminal') {
+      setAgentModePrompt(null);
+      return;
+    }
+    if (agentModePrompt?.tabId !== activeTabId) return;
+  }, [activeTabId, agentProcess, panelType, agentModePrompt]);
+
+  useEffect(() => {
+    if (!activeTabId || agentProcess !== true || panelType !== 'terminal') return;
+    if (agentModePrompt?.tabId === activeTabId) return;
+    const sessionName = activeTab?.sessionName;
+    if (!sessionName) return;
+
+    let cancelled = false;
+    fetch(`/api/check-agent?session=${sessionName}`)
+      .then((res) => res.json())
+      .then((data: IAgentCheckResponse) => {
+        if (!cancelled) handleAgentCheckResult(activeTabId, data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTabId, activeTab?.sessionName, agentProcess, panelType, agentModePrompt?.tabId, handleAgentCheckResult]);
+
+  const handleSwitchToAgentMode = useCallback(async () => {
+    const prompt = agentModePrompt;
+    if (!activeTabId || !prompt || prompt.tabId !== activeTabId) return;
+    setAgentModePrompt(null);
+    onUpdateTabPanelType(paneId, activeTabId, prompt.panelType);
+    if (status !== 'connected') return;
+
+    const resumeSessionId = prompt.resumable ? prompt.sessionId : null;
+    if (prompt.panelType === 'codex-cli') {
+      let command: string;
+      try {
+        command = await fetchCodexLaunchCommand(layoutWsId, resumeSessionId);
+      } catch {
+        toast.error(tt('codexLaunchFailed'));
+        return;
+      }
+      pendingRestartRef.current = command;
+      markAgentLaunch(activeTabId, { resetAgentSession: !resumeSessionId });
+      useTabStore.getState().setSessionView(activeTabId, 'check');
+      sendCodexQuitCommand(sendStdin);
+      return;
+    }
+
+    pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin('\x03');
+    setTimeout(() => sendStdin('\x03'), 300);
+  }, [activeTabId, agentModePrompt, buildClaudeCommand, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
 
   const handleSendToClaude = useCallback((text: string) => {
     if (!activeTabId) return;
@@ -610,6 +726,14 @@ const MobileSurfaceView = ({
 
       {!isAgentPanel && !isWebBrowser && !isDiff && status === 'connected' && (
         <MobileTerminalToolbar sendStdin={sendWebStdin} terminalConnected={status === 'connected'} />
+      )}
+
+      {agentModePrompt && agentModePrompt.tabId === activeTabId && panelType === 'terminal' && (
+        <PaneAgentModePrompt
+          modeName={agentModePrompt.displayName}
+          onSwitch={handleSwitchToAgentMode}
+          onDismiss={() => setAgentModePrompt(null)}
+        />
       )}
 
       {noTabs && (

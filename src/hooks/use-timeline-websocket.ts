@@ -26,6 +26,7 @@ interface IResumeErrorPayload {
 
 interface IUseTimelineWebSocketOptions {
   sessionName: string;
+  agentSessionId?: string | null;
   claudeSessionId?: string | null;
   panelType?: 'claude-code' | 'codex-cli';
   enabled: boolean;
@@ -49,6 +50,7 @@ interface IUseTimelineWebSocketReturn {
 
 const useTimelineWebSocket = ({
   sessionName,
+  agentSessionId,
   claudeSessionId,
   panelType,
   enabled,
@@ -101,7 +103,8 @@ const useTimelineWebSocket = ({
 
       const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
       const params = new URLSearchParams({ session: sessionName });
-      if (claudeSessionId) params.set('claudeSessionId', claudeSessionId);
+      const effectiveAgentSessionId = agentSessionId ?? claudeSessionId;
+      if (effectiveAgentSessionId) params.set('agentSessionId', effectiveAgentSessionId);
       if (panelType) params.set('panelType', panelType);
       const ws = new WebSocket(
         `${protocol}//${location.host}/api/timeline?${params}`,
@@ -176,7 +179,7 @@ const useTimelineWebSocket = ({
         console.log('[timeline-ws] connection error');
       };
     },
-    [sessionName, claudeSessionId, panelType, clearTimers],
+    [sessionName, agentSessionId, claudeSessionId, panelType, clearTimers],
   );
 
   useEffect(() => {
@@ -209,7 +212,7 @@ const useTimelineWebSocket = ({
         wsRef.current = null;
       }
     };
-  }, [enabled, sessionName, claudeSessionId, panelType, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, sessionName, agentSessionId, claudeSessionId, panelType, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleVisibilityChange = () => {

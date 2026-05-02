@@ -13,7 +13,14 @@ const g = globalThis as unknown as { __ptCodexConfigToastShown?: boolean };
 
 const USER_CONFIG_PATH = path.join(os.homedir(), '.codex', 'config.toml');
 
-const CODEX_HOOK_EVENTS = ['SessionStart', 'UserPromptSubmit', 'Stop', 'PermissionRequest'] as const;
+const CODEX_HOOK_EVENTS = [
+  'SessionStart',
+  'UserPromptSubmit',
+  'PreToolUse',
+  'PostToolUse',
+  'Stop',
+  'PermissionRequest',
+] as const;
 export type TCodexHookEvent = typeof CODEX_HOOK_EVENTS[number];
 
 interface ICodexHookCommand {

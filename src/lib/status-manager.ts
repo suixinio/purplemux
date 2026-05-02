@@ -1480,11 +1480,13 @@ class StatusManager {
     const title = pushType === 'needs-input' ? 'Input Required' : 'Task Complete';
     const body = entry.lastUserMessage?.slice(0, 100) || entry.tabName || tabId;
     const ws = (await getWorkspaces()).workspaces.find((w) => w.id === entry.workspaceId);
+    const providerId = entry.agentProviderId === 'codex' ? 'codex' : 'claude';
     const payload = JSON.stringify({
       title,
       body,
       tabId,
       workspaceId: entry.workspaceId,
+      providerId,
       // Field name kept `claudeSessionId` for SW back-compat: existing service workers
       // (public/sw.js) read this key and a brief stale-SW window during upgrade would
       // break notifications if renamed.

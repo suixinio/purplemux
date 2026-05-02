@@ -4,12 +4,13 @@ import { getLayout, addTabToPane } from '@/lib/layout-store';
 import { collectPanes } from '@/lib/layout-tree';
 import { getWorkspaceById, getWorkspaces } from '@/lib/workspace-store';
 import { resolveFirstPaneId } from '@/lib/cli-utils';
+import { getProviderByPanelType } from '@/lib/providers';
 import { createLogger } from '@/lib/logger';
 import type { TPanelType } from '@/types/terminal';
 
 const log = createLogger('api:cli:tabs');
 
-const VALID_PANEL_TYPES: TPanelType[] = ['terminal', 'claude-code', 'web-browser', 'diff'];
+const VALID_PANEL_TYPES: TPanelType[] = ['terminal', 'claude-code', 'codex-cli', 'web-browser', 'diff'];
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (!verifyCliToken(req)) {
@@ -18,7 +19,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
   if (req.method === 'GET') {
     const wsId = typeof req.query.workspaceId === 'string' ? req.query.workspaceId : undefined;
-    const tabs: Array<{ tabId: string; workspaceId: string; name: string; sessionName: string; panelType?: string }> = [];
+    const tabs: Array<{
+      tabId: string;
+      workspaceId: string;
+      name: string;
+      sessionName: string;
+      panelType?: string;
+      agentProviderId: string | null;
+      agentSessionId: string | null;
+    }> = [];
 
     const workspaceIds = wsId ? [wsId] : (await getWorkspaces()).workspaces.map((w) => w.id);
 
@@ -28,12 +37,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       const layout = await getLayout(id);
       for (const pane of collectPanes(layout.root)) {
         for (const tab of pane.tabs) {
+          const provider = getProviderByPanelType(tab.panelType);
           tabs.push({
             tabId: tab.id,
             workspaceId: id,
             name: tab.name,
             sessionName: tab.sessionName,
             panelType: tab.panelType,
+            agentProviderId: provider?.id ?? null,
+            agentSessionId: provider?.readSessionId(tab) ?? null,
           });
         }
       }
@@ -58,9 +70,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!paneId) {
       return res.status(500).json({ error: 'No pane available in workspace' });
     }
-    const resolvedType: TPanelType = VALID_PANEL_TYPES.includes(panelType as TPanelType)
-      ? (panelType as TPanelType)
-      : 'terminal';
+    if (panelType !== undefined && !VALID_PANEL_TYPES.includes(panelType as TPanelType)) {
+      return res.status(400).json({
+        error: 'Invalid panelType',
+        validPanelTypes: VALID_PANEL_TYPES,
+      });
+    }
+    const resolvedType: TPanelType = panelType ? (panelType as TPanelType) : 'terminal';
 
     try {
       const tab = await addTabToPane(workspaceId, paneId, name, ws.directories[0], resolvedType);
@@ -71,6 +87,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         paneId,
         sessionName: tab.sessionName,
         name: tab.name,
+        panelType: tab.panelType,
+        agentProviderId: null,
+        agentSessionId: null,
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'unknown error';

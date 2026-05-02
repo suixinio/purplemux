@@ -22,21 +22,31 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const found = await findTab(workspaceId, tabId);
   if (!found) return res.status(404).json({ error: 'Tab not found' });
 
+  const provider = getProviderByPanelType(found.tab.panelType);
+  const agentSessionId = provider?.readSessionId(found.tab) ?? null;
   const alive = await hasSession(found.tab.sessionName);
   if (!alive) {
-    return res.status(200).json({ tabId, workspaceId, alive: false });
+    return res.status(200).json({
+      tabId,
+      workspaceId,
+      alive: false,
+      agentProviderId: provider?.id ?? null,
+      agentSessionId,
+      claudeSessionId: agentSessionId,
+    });
   }
 
   const command = await getPaneCurrentCommand(found.tab.sessionName);
-  const provider = getProviderByPanelType(found.tab.panelType);
   return res.status(200).json({
     tabId,
     workspaceId,
     alive: true,
     command,
     cliState: found.tab.cliState ?? null,
+    agentProviderId: provider?.id ?? null,
+    agentSessionId,
     // Response key kept as `claudeSessionId` for back-compat with external CLI consumers.
-    claudeSessionId: provider?.readSessionId(found.tab) ?? null,
+    claudeSessionId: agentSessionId,
   });
 };
 

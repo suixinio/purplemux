@@ -285,6 +285,9 @@ const getCachedSessionStats = async (jsonlPath: string): Promise<ICodexSessionSt
   }
 };
 
+export const readCodexSessionStats = (jsonlPath: string): Promise<ICodexSessionStats | null> =>
+  getCachedSessionStats(jsonlPath);
+
 export const readCodexTimelineSessionStats = async (jsonlPath: string): Promise<ITimelineSessionStats | null> => {
   const stats = await getCachedSessionStats(jsonlPath);
   if (!stats) return null;

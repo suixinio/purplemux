@@ -23,6 +23,7 @@ export interface ITimelineSyncState {
 
 interface IUseTimelineOptions {
   sessionName: string;
+  agentSessionId?: string | null;
   claudeSessionId?: string | null;
   panelType?: 'claude-code' | 'codex-cli';
   enabled: boolean;
@@ -60,6 +61,7 @@ interface IUseTimelineReturn {
 
 const useTimeline = ({
   sessionName,
+  agentSessionId,
   claudeSessionId,
   panelType,
   enabled,
@@ -348,6 +350,7 @@ const useTimeline = ({
 
   const { status: wsStatus, reconnect, sendResume } = useTimelineWebSocket({
     sessionName,
+    agentSessionId,
     claudeSessionId,
     panelType,
     enabled,

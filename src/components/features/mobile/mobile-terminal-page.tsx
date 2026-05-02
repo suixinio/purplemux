@@ -13,7 +13,7 @@ import MobileTabHeader from '@/components/features/mobile/mobile-tab-header';
 import MobileSurfaceView from '@/components/features/mobile/mobile-surface-view';
 import MobileNewTabDialog from '@/components/features/mobile/mobile-new-tab-dialog';
 import { formatTabTitle } from '@/lib/tab-title';
-import { dismissTab } from '@/hooks/use-claude-status';
+import { dismissTab } from '@/hooks/use-agent-status';
 import useTabStore from '@/hooks/use-tab-store';
 import type { TCliState } from '@/types/timeline';
 import useConfigStore from '@/hooks/use-config-store';

@@ -10,11 +10,12 @@ self.addEventListener('push', (event) => {
     body: data.body || '',
     icon: '/android-chrome-192x192.png',
     badge: '/favicon-32x32.png',
-    tag: data.claudeSessionId ? `session:${data.claudeSessionId}` : undefined,
+    tag: data.claudeSessionId ? `session:${data.providerId || 'claude'}:${data.claudeSessionId}` : undefined,
     renotify: !!data.claudeSessionId,
     data: {
       tabId: data.tabId,
       workspaceId: data.workspaceId,
+      providerId: data.providerId || 'claude',
       claudeSessionId: data.claudeSessionId || null,
       workspaceName: data.workspaceName || '',
       workspaceDir: data.workspaceDir || null,
@@ -39,8 +40,8 @@ const PUSH_NAV_KEY = '/_push-pending';
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const { tabId, workspaceId, claudeSessionId, workspaceName, workspaceDir } = event.notification.data || {};
-  const navData = { tabId, workspaceId, claudeSessionId, workspaceName, workspaceDir };
+  const { tabId, workspaceId, providerId, claudeSessionId, workspaceName, workspaceDir } = event.notification.data || {};
+  const navData = { tabId, workspaceId, providerId, claudeSessionId, workspaceName, workspaceDir };
 
   event.waitUntil(
     caches.open(PUSH_NAV_CACHE).then((cache) =>

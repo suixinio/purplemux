@@ -29,7 +29,7 @@ import { cn } from '@/lib/utils';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useSessionHistoryStore from '@/hooks/use-session-history-store';
-import { dismissTab } from '@/hooks/use-claude-status';
+import { dismissTab } from '@/hooks/use-agent-status';
 import { navigateToTab, navigateToTabOrCreate, useLayoutStore } from '@/hooks/use-layout';
 import { findPane } from '@/lib/layout-tree';
 import type { ITabState } from '@/hooks/use-tab-store';

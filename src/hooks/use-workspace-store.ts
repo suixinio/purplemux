@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { toast } from 'sonner';
 import { t } from '@/lib/i18n';
 import { getVisuallyOrderedWorkspaces } from '@/lib/workspace-order';
-import type { IWorkspace, IWorkspaceGroup } from '@/types/terminal';
+import type { IWorkspace, IWorkspaceGroup, TPanelType } from '@/types/terminal';
 
 const reorderToVisual = (
   workspaces: IWorkspace[],
@@ -39,7 +39,7 @@ interface IWorkspaceState {
   hydrate: (data: IWorkspaceInitialData) => void;
   fetchWorkspaces: () => Promise<void>;
   syncWorkspaces: () => Promise<void>;
-  createWorkspace: (directory: string, name?: string, resumeSessionId?: string) => Promise<IWorkspace | null>;
+  createWorkspace: (directory: string, name?: string, resumeSessionId?: string, panelType?: TPanelType) => Promise<IWorkspace | null>;
   deleteWorkspace: (workspaceId: string) => Promise<boolean>;
   removeWorkspace: (workspaceId: string) => void;
   markPendingDelete: (workspaceId: string) => void;
@@ -229,12 +229,12 @@ const useWorkspaceStore = create<IWorkspaceState>((set, get) => ({
     }
   },
 
-  createWorkspace: async (directory, name?, resumeSessionId?) => {
+  createWorkspace: async (directory, name?, resumeSessionId?, panelType?) => {
     try {
       const res = await fetch('/api/workspace', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ directory, name, resumeSessionId }),
+        body: JSON.stringify({ directory, name, resumeSessionId, panelType }),
       });
       if (!res.ok) {
         const data = await res.json();

@@ -25,6 +25,8 @@ import CodexSessionListView from '@/components/features/workspace/codex-session-
 import type { ICodexSessionEntry } from '@/lib/codex-session-list';
 import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
 
+const CODEX_BOOT_CHECK_INTERVAL_MS = 800;
+
 interface IMobileCodexPanelProps {
   tabId?: string;
   wsId?: string;
@@ -118,7 +120,7 @@ const MobileCodexPanel = ({
     agentProcess: agentProcessFromTimeline,
   } = useTimeline({
     sessionName: sessionName ?? '',
-    claudeSessionId: codexSessionId,
+    agentSessionId: codexSessionId,
     panelType: 'codex-cli',
     enabled: !!sessionName,
     resumeCallbacks: {
@@ -166,6 +168,41 @@ const MobileCodexPanel = ({
     }).catch(() => {});
     return () => controller.abort();
   }, [tabId, cliState]);
+
+  useEffect(() => {
+    if (!tabId || !sessionName || view !== 'check') return;
+    if (cliState !== 'inactive' && cliState !== 'unknown' && cliState !== 'cancelled') {
+      useTabStore.getState().setSessionView(tabId, 'timeline');
+      return;
+    }
+    if (agentProcess === true || agentProcessFromTimeline === true) {
+      useTabStore.getState().setAgentProcess(tabId, true, Date.now());
+      return;
+    }
+
+    let stopped = false;
+    const checkReady = async () => {
+      try {
+        const res = await fetch(`/api/check-agent?session=${sessionName}`);
+        if (!res.ok) return;
+        const data = await res.json() as { running?: boolean; providerPanelType?: unknown; checkedAt?: number };
+        if (stopped || data.running !== true || data.providerPanelType !== 'codex-cli') return;
+        useTabStore.getState().setAgentProcess(
+          tabId,
+          true,
+          typeof data.checkedAt === 'number' ? data.checkedAt : Date.now(),
+        );
+      } catch {
+        // Keep the boot progress visible; the next tick may succeed.
+      }
+    };
+    void checkReady();
+    const id = window.setInterval(checkReady, CODEX_BOOT_CHECK_INTERVAL_MS);
+    return () => {
+      stopped = true;
+      window.clearInterval(id);
+    };
+  }, [agentProcess, agentProcessFromTimeline, cliState, sessionName, tabId, view]);
 
   const { meta } = useSessionMeta(entries, sessionSummary, initMeta, sessionStats, tabAgentSummary, tabLastUserMessage);
   const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName ?? '');

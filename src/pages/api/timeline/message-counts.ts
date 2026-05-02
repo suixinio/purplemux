@@ -13,6 +13,13 @@ interface IRawEntry {
   message?: {
     content?: unknown;
   };
+  payload?: {
+    type?: string;
+    role?: string;
+    message?: string;
+    name?: string;
+    content?: unknown;
+  };
 }
 
 interface ICountResult {
@@ -68,11 +75,46 @@ const isRealUserMessage = (entry: IRawEntry): boolean => {
   return false;
 };
 
-const countMessages = async (filePath: string): Promise<ICountResult> => {
-  let userCount = 0;
+const isRealCodexUserMessage = (message: unknown): boolean => {
+  if (typeof message !== 'string') return false;
+  const text = message.trim();
+  if (!text) return false;
+  if (text.startsWith('<') && text.includes('environment_context')) return false;
+  if (text.startsWith('<') && text.includes('user_instructions')) return false;
+  if (text.startsWith('# AGENTS.md instructions')) return false;
+  return true;
+};
+
+const hasCodexResponseText = (content: unknown): boolean => {
+  if (typeof content === 'string') return content.trim().length > 0;
+  if (!Array.isArray(content)) return false;
+  return content.some((item) => {
+    if (typeof item !== 'object' || item === null) return false;
+    const block = item as { type?: string; text?: string };
+    if (block.type !== 'output_text' && block.type !== 'input_text') return false;
+    return typeof block.text === 'string' && block.text.trim().length > 0;
+  });
+};
+
+const hasCodexUserText = (content: unknown): boolean => {
+  if (typeof content === 'string') return isRealCodexUserMessage(content);
+  if (!Array.isArray(content)) return false;
+  return content.some((item) => {
+    if (typeof item !== 'object' || item === null) return false;
+    const block = item as { type?: string; text?: string };
+    return block.type === 'input_text' && isRealCodexUserMessage(block.text);
+  });
+};
+
+export const countMessages = async (filePath: string): Promise<ICountResult> => {
+  let claudeUserCount = 0;
   let toolCount = 0;
   const assistantIds = new Set<string>();
   const toolBreakdown: Record<string, number> = {};
+  let codexUserCount = 0;
+  let codexAssistantCount = 0;
+  let codexFallbackUserCount = 0;
+  let codexFallbackAssistantCount = 0;
 
   const stream = createReadStream(filePath, { encoding: 'utf-8' });
   const rl = createInterface({ input: stream, crlfDelay: Infinity });
@@ -105,7 +147,30 @@ const countMessages = async (filePath: string): Promise<ICountResult> => {
           }
         }
       } else if (obj.type === 'user' && isRealUserMessage(obj)) {
-        userCount++;
+        claudeUserCount++;
+      } else if (obj.type === 'event_msg') {
+        const payload = obj.payload;
+        if (payload?.type === 'user_message' && isRealCodexUserMessage(payload.message)) {
+          codexUserCount++;
+        } else if (payload?.type === 'agent_message' && typeof payload.message === 'string' && payload.message.trim()) {
+          codexAssistantCount++;
+        }
+      } else if (obj.type === 'response_item') {
+        const payload = obj.payload;
+        if (payload?.type === 'message') {
+          if (payload.role === 'user' && hasCodexUserText(payload.content)) {
+            codexFallbackUserCount++;
+          } else if (payload.role === 'assistant' && hasCodexResponseText(payload.content)) {
+            codexFallbackAssistantCount++;
+          }
+        } else if (payload?.type === 'function_call' || payload?.type === 'custom_tool_call' || payload?.type === 'web_search_call') {
+          toolCount++;
+          const name = payload.type === 'web_search_call' ? 'web_search' : payload.name;
+          if (name) toolBreakdown[name] = (toolBreakdown[name] ?? 0) + 1;
+        } else if (payload?.type === 'local_shell_call') {
+          toolCount++;
+          toolBreakdown.shell = (toolBreakdown.shell ?? 0) + 1;
+        }
       }
     }
   } finally {
@@ -113,9 +178,11 @@ const countMessages = async (filePath: string): Promise<ICountResult> => {
     stream.destroy();
   }
 
+  const hasCodexEventCounts = codexUserCount > 0 || codexAssistantCount > 0;
+
   return {
-    userCount,
-    assistantCount: assistantIds.size,
+    userCount: hasCodexEventCounts ? codexUserCount : claudeUserCount + codexFallbackUserCount,
+    assistantCount: hasCodexEventCounts ? codexAssistantCount : assistantIds.size + codexFallbackAssistantCount,
     toolCount,
     toolBreakdown,
   };

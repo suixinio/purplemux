@@ -55,3 +55,19 @@ export const getProcessArgs = async (
     return null;
   }
 };
+
+export const getProcessStartTimeMs = async (
+  pid: number | string,
+  options?: { timeoutMs?: number },
+): Promise<number | null> => {
+  try {
+    const { stdout } = await execFile(
+      'ps', ['-p', String(pid), '-o', 'lstart='],
+      options?.timeoutMs ? { timeout: options.timeoutMs } : {},
+    );
+    const parsed = Date.parse(stdout.trim().replace(/\s+/g, ' '));
+    return Number.isFinite(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};

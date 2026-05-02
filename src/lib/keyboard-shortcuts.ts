@@ -176,7 +176,7 @@ export const ACTIONS = {
 
   'panel.focus_input': {
     id: 'panel.focus_input',
-    label: 'Focus Claude input',
+    label: 'Focus agent input',
     category: 'panel',
     defaultKey: `${mod}+i`,
     display: { mac: '⌘I', other: 'Ctrl+I' },

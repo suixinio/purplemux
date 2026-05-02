@@ -2,18 +2,19 @@ import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 
-interface IPaneClaudeModePromptProps {
+interface IPaneAgentModePromptProps {
+  modeName: string;
   onSwitch: () => void;
   onDismiss: () => void;
 }
 
-const PaneClaudeModePrompt = ({ onSwitch, onDismiss }: IPaneClaudeModePromptProps) => {
+const PaneAgentModePrompt = ({ modeName, onSwitch, onDismiss }: IPaneAgentModePromptProps) => {
   const t = useTranslations('terminal');
   const tc = useTranslations('common');
 
   return (
     <div className="absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-lg animate-[fadeIn_200ms_ease-out]">
-      <span className="text-xs text-muted-foreground">{t('switchToClaudeMode')}</span>
+      <span className="text-xs text-muted-foreground">{t('switchToAgentMode', { name: modeName })}</span>
       <Button
         variant="default"
         size="sm"
@@ -33,4 +34,4 @@ const PaneClaudeModePrompt = ({ onSwitch, onDismiss }: IPaneClaudeModePromptProp
   );
 };
 
-export default PaneClaudeModePrompt;
+export default PaneAgentModePrompt;

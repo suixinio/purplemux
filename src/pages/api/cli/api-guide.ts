@@ -14,15 +14,17 @@ GET /api/cli/workspaces
 
 GET /api/cli/tabs?workspaceId=WS
   List tabs. Without workspaceId, lists tabs across all workspaces.
-  Response: { "tabs": [{ "tabId", "workspaceId", "name", "sessionName", "panelType" }] }
+  Response: { "tabs": [{ "tabId", "workspaceId", "name", "sessionName", "panelType", "agentProviderId", "agentSessionId" }] }
 
 POST /api/cli/tabs
-  Body: { "workspaceId": "WS", "name"?: "...", "panelType"?: "terminal" | "claude-code" | "web-browser" | "diff" }
+  Body: { "workspaceId": "WS", "name"?: "...", "panelType"?: "terminal" | "claude-code" | "codex-cli" | "web-browser" | "diff" }
+  Invalid panelType returns HTTP 400 with validPanelTypes.
   Creates a tab in the first pane of the workspace.
-  Response: { "tabId", "workspaceId", "paneId", "sessionName", "name" }
+  Response: { "tabId", "workspaceId", "paneId", "sessionName", "name", "panelType", "agentProviderId", "agentSessionId" }
 
 GET /api/cli/tabs/<tabId>?workspaceId=WS
   Tab info.
+  Response: { "tabId", "workspaceId", "paneId", "name", "sessionName", "panelType", "agentProviderId", "agentSessionId" }
 
 DELETE /api/cli/tabs/<tabId>?workspaceId=WS
   Close the tab (kills tmux session and removes from layout).
@@ -33,7 +35,7 @@ POST /api/cli/tabs/<tabId>/send?workspaceId=WS
   Response: { "status": "sent" }
 
 GET /api/cli/tabs/<tabId>/status?workspaceId=WS
-  Response: { "tabId", "workspaceId", "alive", "command", "cliState", "claudeSessionId" }
+  Response: { "tabId", "workspaceId", "alive", "command", "cliState", "agentProviderId", "agentSessionId", "claudeSessionId" }
 
 GET /api/cli/tabs/<tabId>/result?workspaceId=WS
   Capture the current pane content.

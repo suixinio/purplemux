@@ -153,10 +153,12 @@ const useWebPush = () => {
     const handlePushNavigation = (params: {
       workspaceId: string;
       tabId?: string;
+      providerId?: string | null;
       claudeSessionId?: string | null;
       workspaceName?: string;
       workspaceDir?: string | null;
     }) => {
+      const providerId = params.providerId === 'codex' ? 'codex' : 'claude';
       if (params.claudeSessionId) {
         navigateToTabOrCreate(
           params.workspaceId,
@@ -164,6 +166,7 @@ const useWebPush = () => {
           params.claudeSessionId,
           params.workspaceName ?? '',
           params.workspaceDir ?? null,
+          providerId,
         );
       } else if (params.tabId) {
         navigateToTab(params.workspaceId, params.tabId);
@@ -188,6 +191,7 @@ const useWebPush = () => {
           handlePushNavigation({
             workspaceId: data.workspaceId,
             tabId: data.tabId ?? undefined,
+            providerId: data.providerId,
             claudeSessionId: data.claudeSessionId,
             workspaceName: data.workspaceName ?? '',
             workspaceDir: data.workspaceDir,

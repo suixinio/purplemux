@@ -30,7 +30,7 @@ export const ackNotificationInput = (tabId: string, seq: number) => {
   }
 };
 
-const useClaudeStatus = () => {
+const useAgentStatus = () => {
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mountedRef = useRef(true);
@@ -164,4 +164,4 @@ const useClaudeStatus = () => {
   }, []);
 };
 
-export default useClaudeStatus;
+export default useAgentStatus;

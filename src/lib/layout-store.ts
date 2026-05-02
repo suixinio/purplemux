@@ -170,6 +170,9 @@ const syncWorkspaceDirectories = (wsId: string, root: TLayoutNode): void => {
   }
 };
 
+const isAgentPanelType = (panelType: TPanelType | undefined): boolean =>
+  panelType === 'claude-code' || panelType === 'codex-cli';
+
 export const crossCheckLayout = async (
   layout: ILayoutData,
   tmuxSessions: string[],
@@ -186,9 +189,9 @@ export const crossCheckLayout = async (
       if (tab.panelType === 'web-browser') continue;
       layoutSessions.add(tab.sessionName);
 
-      if (!tmuxSet.has(tab.sessionName) && tab.panelType === 'claude-code') {
+      if (!tmuxSet.has(tab.sessionName) && isAgentPanelType(tab.panelType)) {
         const cwd = tab.cwd || defaultCwd;
-        log.debug(`crossCheck: Claude tab session recreated: ${tab.sessionName} (cwd: ${cwd})`);
+        log.debug(`crossCheck: agent tab session recreated: ${tab.sessionName} (cwd: ${cwd})`);
         await createSession(tab.sessionName, 80, 24, cwd);
         changed = true;
       }

@@ -205,8 +205,9 @@ const WebInputBar = ({
       : null;
 
     try {
+      const shouldConfirmImageRefs = !isCodex && fetchPane !== null;
       let baselineRefs = 0;
-      if (fetchPane) {
+      if (shouldConfirmImageRefs) {
         try {
           baselineRefs = countImageRefs(await fetchPane());
         } catch {
@@ -217,7 +218,7 @@ const WebInputBar = ({
       let allConfirmed = true;
       for (const att of sentAttachments) {
         sendStdin(`\x1b[200~${escapePathForPrompt(att.path)}\x1b[201~`);
-        if (!fetchPane) {
+        if (!shouldConfirmImageRefs) {
           await new Promise((r) => setTimeout(r, 400));
           continue;
         }
@@ -254,7 +255,7 @@ const WebInputBar = ({
     } finally {
       setIsDispatching(false);
     }
-  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, agentSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t, submitDelayMs]);
+  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, agentSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t, submitDelayMs, isCodex]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return;

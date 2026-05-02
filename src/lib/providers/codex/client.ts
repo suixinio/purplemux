@@ -2,11 +2,14 @@
 // server-side because hook flags, user config merging, and prompt content all
 // depend on Node-only filesystem access.
 
-export const fetchCodexLaunchCommand = async (workspaceId?: string | null): Promise<string> => {
+export const fetchCodexLaunchCommand = async (
+  workspaceId?: string | null,
+  resumeSessionId?: string | null,
+): Promise<string> => {
   const res = await fetch('/api/codex/launch-command', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ workspaceId: workspaceId ?? null }),
+    body: JSON.stringify({ workspaceId: workspaceId ?? null, resumeSessionId: resumeSessionId ?? null }),
   });
   if (!res.ok) {
     throw new Error('Failed to build Codex launch command');

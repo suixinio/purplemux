@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import readline from 'readline';
 import { createLogger } from '@/lib/logger';
+import { readCodexSessionStats } from '@/lib/stats/jsonl-parser-codex';
 
 const log = createLogger('codex-session-list');
 
@@ -18,9 +19,11 @@ export interface ICodexSessionEntry {
   sessionId: string;
   jsonlPath: string;
   startedAt: number;
+  lastActivityAt: number;
   cwd: string | null;
   model: string | null;
   firstUserMessage: string | null;
+  turnCount: number;
   totalTokens: number | null;
 }
 
@@ -55,6 +58,13 @@ interface ICodexUserMessagePayload {
   message?: string;
 }
 
+const isDisplayableUserMessage = (text: string): boolean => {
+  if (!text) return false;
+  if (text.startsWith('<') && text.includes('environment_context')) return false;
+  if (text.startsWith('<') && text.includes('user_instructions')) return false;
+  return true;
+};
+
 const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null> => {
   const stream = createReadStream(jsonlPath, { encoding: 'utf-8' });
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -64,6 +74,7 @@ const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null
   let cwd: string | null = null;
   let model: string | null = null;
   let firstUserMessage: string | null = null;
+  let turnCount = 0;
   let lineCount = 0;
   let isFirstLine = true;
   let metaParsed = false;
@@ -96,9 +107,6 @@ const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null
         continue;
       }
 
-      if (firstUserMessage) break;
-      if (lineCount > MAX_LINES_FOR_FIRST_MESSAGE) break;
-
       if (!line.includes('"user_message"')) continue;
       try {
         const parsed = JSON.parse(line) as { type?: string; payload?: ICodexUserMessagePayload };
@@ -106,11 +114,11 @@ const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null
         const payload = parsed.payload;
         if (!payload || payload.type !== 'user_message') continue;
         const text = typeof payload.message === 'string' ? payload.message.trim() : '';
-        if (!text) continue;
-        if (text.startsWith('<') && text.includes('environment_context')) continue;
-        if (text.startsWith('<') && text.includes('user_instructions')) continue;
-        firstUserMessage = truncateMessage(text);
-        break;
+        if (!isDisplayableUserMessage(text)) continue;
+        turnCount++;
+        if (!firstUserMessage && lineCount <= MAX_LINES_FOR_FIRST_MESSAGE) {
+          firstUserMessage = truncateMessage(text);
+        }
       } catch {}
     }
   } finally {
@@ -127,9 +135,11 @@ const extractMeta = async (jsonlPath: string): Promise<ICodexSessionEntry | null
     sessionId: session_id,
     jsonlPath,
     startedAt,
+    lastActivityAt: startedAt,
     cwd,
     model,
     firstUserMessage,
+    turnCount,
     totalTokens: null,
   };
 };
@@ -151,8 +161,17 @@ const getCachedEntry = async (jsonlPath: string): Promise<ICodexSessionEntry | n
   try {
     const entry = await extractMeta(jsonlPath);
     if (!entry) return null;
-    cache.set(jsonlPath, { entry, mtime: stat.mtimeMs, cachedAt: Date.now() });
-    return entry;
+    const stats = await readCodexSessionStats(jsonlPath).catch(() => null);
+    const enriched: ICodexSessionEntry = stats
+      ? {
+          ...entry,
+          lastActivityAt: stat.mtimeMs,
+          model: entry.model ?? stats.model,
+          totalTokens: stats.totalTokens > 0 ? stats.totalTokens : null,
+        }
+      : { ...entry, lastActivityAt: stat.mtimeMs };
+    cache.set(jsonlPath, { entry: enriched, mtime: stat.mtimeMs, cachedAt: Date.now() });
+    return enriched;
   } catch (err) {
     warnOnce(`parse:${jsonlPath}`, { jsonlPath, err: err instanceof Error ? err.message : err });
     return null;
@@ -223,7 +242,7 @@ export const listCodexSessions = async ({
     sessions.push(entry);
   }
 
-  sessions.sort((a, b) => b.startedAt - a.startedAt);
+  sessions.sort((a, b) => b.lastActivityAt - a.lastActivityAt);
   return { sessions, scannedDirs, scannedFiles };
 };
 

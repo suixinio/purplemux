@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { addTabToPane, updateTabClaudeSessionId } from '@/lib/layout-store';
+import { addTabToPane, updateTabAgentSessionId } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
 import { getStatusManager } from '@/lib/status-manager';
 import { getProviderByPanelType } from '@/lib/providers';
@@ -39,12 +39,22 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!tab) {
       return res.status(404).json({ error: 'Pane not found' });
     }
+
+    if (resumeSessionId && provider && !command) {
+      provider.writeSessionId(tab, resumeSessionId);
+      await updateTabAgentSessionId(tab.sessionName, provider, resumeSessionId);
+    }
+
     if (tab.panelType !== 'web-browser') {
+      const tabProvider = getProviderByPanelType(tab.panelType);
       getStatusManager().registerTab(tab.id, {
         cliState: 'inactive',
         workspaceId: wsId,
         tabName: tab.name,
         tmuxSession: tab.sessionName,
+        panelType: tab.panelType,
+        agentProviderId: tabProvider?.id,
+        agentSessionId: tabProvider?.readSessionId(tab) ?? null,
         lastEvent: null,
         eventSeq: 0,
       });
@@ -54,8 +64,6 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
 
     if (resumeSessionId && provider && !command) {
-      await updateTabClaudeSessionId(tab.sessionName, resumeSessionId);
-      provider.writeSessionId(tab, resumeSessionId);
       setTimeout(async () => {
         try {
           const resumeCmd = await provider.buildResumeCommand(resumeSessionId, { workspaceId: wsId });

@@ -3,7 +3,6 @@ import { useTranslations } from 'next-intl';
 import dayjs from 'dayjs';
 import { AlertCircle, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import { cn } from '@/lib/utils';
 import type { ICodexSessionEntry } from '@/lib/codex-session-list';
@@ -52,12 +51,6 @@ const formatTokens = (tokens: number | null): string | null => {
   return `${(tokens / 1000).toFixed(1)}k`;
 };
 
-const lastSegment = (cwd: string | null): string => {
-  if (!cwd) return '~';
-  const segments = cwd.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? cwd;
-};
-
 interface ICodexSessionItemProps {
   session: ICodexSessionEntry;
   isResuming: boolean;
@@ -65,8 +58,7 @@ interface ICodexSessionItemProps {
   onSelect: (session: ICodexSessionEntry) => void;
   noMessageLabel: string;
   tokensSuffix: string;
-  modelLabel: string;
-  unknownModelLabel: string;
+  tSession: ReturnType<typeof useTranslations>;
   tTime: ReturnType<typeof useTranslations>;
 }
 
@@ -77,73 +69,64 @@ const CodexSessionItem = memo(({
   onSelect,
   noMessageLabel,
   tokensSuffix,
-  modelLabel,
-  unknownModelLabel,
+  tSession,
   tTime,
 }: ICodexSessionItemProps) => {
-  const relative = formatRelativeTime(session.startedAt, tTime);
-  const cwdShort = lastSegment(session.cwd);
+  const activityAt = session.lastActivityAt || session.startedAt;
+  const absoluteTime = dayjs(activityAt).format('MM/DD HH:mm');
+  const relative = formatRelativeTime(activityAt, tTime);
   const tokensFormatted = formatTokens(session.totalTokens);
   const message = session.firstUserMessage?.trim() || noMessageLabel;
+  const statsLabel = [
+    tokensFormatted ? `${tokensFormatted} ${tokensSuffix}` : null,
+    tSession('turnCount', { count: session.turnCount }),
+  ].filter(Boolean).join(' · ');
   const ariaLabel = [
     message,
+    absoluteTime,
     relative,
-    cwdShort,
-    tokensFormatted ? `${tokensFormatted} ${tokensSuffix}` : null,
+    statsLabel,
   ]
     .filter(Boolean)
     .join(' · ');
 
-  const tooltipModel = session.model
-    ? `${modelLabel}: ${session.model}`
-    : `${modelLabel}: ${unknownModelLabel}`;
-
   return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <button
-            type="button"
-            aria-label={ariaLabel}
-            disabled={isDisabled}
-            onClick={() => onSelect(session)}
-            className={cn(
-              'flex w-full min-h-14 flex-col gap-1 border-b border-border/50 px-4 py-3 text-left transition-colors',
-              'hover:bg-claude-active/5 focus-visible:bg-claude-active/5 focus:outline-none',
-              isResuming && 'bg-claude-active/5',
-              isDisabled && !isResuming && 'pointer-events-none opacity-50',
-            )}
-          />
-        }
-      >
-        <div className="flex items-center gap-1.5">
+    <button
+      type="button"
+      aria-label={ariaLabel}
+      disabled={isDisabled}
+      onClick={() => onSelect(session)}
+      className={cn(
+        'w-full cursor-pointer border-b border-border/50 py-3 pl-1 pr-4 text-left transition-colors',
+        'hover:bg-claude-active/5 focus-visible:bg-claude-active/5 focus:outline-none',
+        isResuming && 'bg-claude-active/5',
+        isDisabled && !isResuming && 'pointer-events-none opacity-50',
+      )}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5 text-xs">
           {isResuming ? (
             <Loader2 size={14} className="shrink-0 animate-spin text-claude-active" />
           ) : (
             <span className="inline-block h-1.5 w-1.5 shrink-0" />
           )}
-          <span className="line-clamp-1 min-w-0 truncate text-sm font-medium text-foreground">
-            {message}
+          <span className="text-muted-foreground">
+            {absoluteTime}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 pl-[20px] text-xs text-muted-foreground">
-          <span className="shrink-0">{relative}</span>
-          <span aria-hidden>·</span>
-          <span className="min-w-0 truncate" title={session.cwd ?? ''}>
-            {cwdShort}
-          </span>
-          {tokensFormatted && (
-            <span className="ml-auto shrink-0 font-mono">{tokensFormatted} {tokensSuffix}</span>
-          )}
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="left" className="max-w-xs">
-        <div className="flex flex-col gap-0.5">
-          <span>{tooltipModel}</span>
-          {session.cwd && <span className="opacity-70">{session.cwd}</span>}
-        </div>
-      </TooltipContent>
-    </Tooltip>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {relative}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center justify-between gap-2 pl-[12px]">
+        <span className="min-w-0 truncate text-left text-sm font-medium">
+          {message}
+        </span>
+        <span className="shrink-0 text-xs text-muted-foreground">
+          {statsLabel}
+        </span>
+      </div>
+    </button>
   );
 });
 
@@ -153,11 +136,13 @@ const SessionListSkeleton = () => (
   <div className="flex flex-col">
     {[1, 2, 3].map((i) => (
       <div key={i} className="border-b border-border/50 px-4 py-3">
-        <div className="h-4 w-3/4 animate-pulse rounded bg-muted" />
-        <div className="mt-2 flex items-center gap-2 pl-[20px]">
-          <div className="h-3 w-12 animate-pulse rounded bg-muted" />
-          <div className="h-3 w-16 animate-pulse rounded bg-muted" />
-          <div className="ml-auto h-3 w-10 animate-pulse rounded bg-muted" />
+        <div className="flex items-center justify-between">
+          <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-3.5 w-16 animate-pulse rounded bg-muted" />
+        </div>
+        <div className="mt-2 flex items-center justify-between pl-[18px]">
+          <div className="h-4 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-3.5 w-20 animate-pulse rounded bg-muted" />
         </div>
       </div>
     ))}
@@ -223,22 +208,19 @@ const CodexSessionListView = ({
         </div>
       ) : (
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <TooltipProvider delay={100}>
-            {sessions.map((session) => (
-              <CodexSessionItem
-                key={session.jsonlPath}
-                session={session}
-                isResuming={session.sessionId === resumingSessionId}
-                isDisabled={isResumeInProgress}
-                onSelect={onSelectSession}
-                noMessageLabel={tSession('noMessage')}
-                tokensSuffix={t('codexSessionsTokens')}
-                modelLabel={t('codexSessionsModelLabel')}
-                unknownModelLabel={t('codexSessionsUnknownModel')}
-                tTime={tSession}
-              />
-            ))}
-          </TooltipProvider>
+          {sessions.map((session) => (
+            <CodexSessionItem
+              key={session.jsonlPath}
+              session={session}
+              isResuming={session.sessionId === resumingSessionId}
+              isDisabled={isResumeInProgress}
+              onSelect={onSelectSession}
+              noMessageLabel={tSession('noMessage')}
+              tokensSuffix={t('codexSessionsTokens')}
+              tSession={tSession}
+              tTime={tSession}
+            />
+          ))}
         </div>
       )}
     </div>

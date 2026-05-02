@@ -264,7 +264,7 @@ Usage: purplemux <command> [args...]
 Commands:
   workspaces                               List workspaces
   tab list [-w WS]                         List tabs (optionally scoped to workspace)
-  tab create -w WS [-n NAME] [-t TYPE]     Create a tab in workspace (type: terminal | claude-code | web-browser | diff)
+  tab create -w WS [-n NAME] [-t TYPE]     Create a tab in workspace (type: terminal | claude-code | codex-cli | web-browser | diff)
   tab send -w WS TAB_ID CONTENT...         Send input to a tab
   tab status -w WS TAB_ID                  Tab status
   tab result -w WS TAB_ID                  Capture tab pane content

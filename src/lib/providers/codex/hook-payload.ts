@@ -11,6 +11,8 @@ import type {
 export type TCodexHookEventName =
   | 'SessionStart'
   | 'UserPromptSubmit'
+  | 'PreToolUse'
+  | 'PostToolUse'
   | 'Stop'
   | 'PermissionRequest';
 
@@ -24,6 +26,8 @@ export interface ICodexHookPayload {
   source?: string;
   prompt?: string | null;
   call_id?: string;
+  tool_name?: string;
+  tool_input?: unknown;
   request_type?: string;
   exec_command?: unknown;
   apply_patch?: unknown;
@@ -40,6 +44,8 @@ export const translateCodexHookEvent = (
     case 'SessionStart':
       return { kind: 'session-start' };
     case 'UserPromptSubmit':
+    case 'PreToolUse':
+    case 'PostToolUse':
       return { kind: 'prompt-submit' };
     case 'Stop':
       return { kind: 'stop' };
@@ -62,6 +68,35 @@ const asStringRecord = (value: unknown): Record<string, string> | undefined => {
 };
 
 const PATCH_OPERATIONS: ReadonlySet<TPatchOperation> = new Set(['modify', 'create', 'delete']);
+const FILE_HEADER_RE = /^\*\*\*\s+(Add|Update|Delete)\s+File:\s+(.+?)\s*$/i;
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : null;
+
+const normalizeToolName = (value: unknown): string | null =>
+  typeof value === 'string' && value.trim() ? value.trim().toLowerCase() : null;
+
+const patchOperationFromHeader = (op: string): TPatchOperation => {
+  if (op.toLowerCase() === 'add') return 'create';
+  if (op.toLowerCase() === 'delete') return 'delete';
+  return 'modify';
+};
+
+const parseApplyPatchCommand = (command: string): IPatchEntry[] => {
+  const patches: IPatchEntry[] = [];
+  for (const line of command.split('\n')) {
+    const match = line.match(FILE_HEADER_RE);
+    if (!match) continue;
+    patches.push({
+      operation: patchOperationFromHeader(match[1]),
+      path: match[2],
+      diff: command,
+    });
+  }
+  return patches.length > 0
+    ? patches
+    : [{ operation: 'modify', path: 'apply_patch', diff: command }];
+};
 
 const parseExecApproval = (
   payload: ICodexHookPayload,
@@ -77,6 +112,22 @@ const parseExecApproval = (
   if (cwd) result.cwd = cwd;
   const env = asStringRecord((ec as Record<string, unknown>).env);
   if (env) result.env = env;
+  return result;
+};
+
+const parseToolInputExecApproval = (
+  payload: ICodexHookPayload,
+): IExecApprovalRequest | null => {
+  const toolName = normalizeToolName(payload.tool_name);
+  const toolInput = asRecord(payload.tool_input);
+  if (!toolName || !toolInput) return null;
+  if (toolName !== 'bash' && toolName !== 'exec_command') return null;
+
+  const command = asString(toolInput.command);
+  if (!command) return null;
+  const result: IExecApprovalRequest = { type: 'ExecApprovalRequest', command };
+  const cwd = asString(payload.cwd);
+  if (cwd) result.cwd = cwd;
   return result;
 };
 
@@ -109,6 +160,21 @@ const parseApplyPatchApproval = (
   return result;
 };
 
+const parseToolInputApplyPatchApproval = (
+  payload: ICodexHookPayload,
+): IApplyPatchApprovalRequest | null => {
+  const toolName = normalizeToolName(payload.tool_name);
+  const toolInput = asRecord(payload.tool_input);
+  if (toolName !== 'apply_patch' || !toolInput) return null;
+
+  const command = asString(toolInput.command);
+  if (!command) return null;
+  return {
+    type: 'ApplyPatchApprovalRequest',
+    patches: parseApplyPatchCommand(command),
+  };
+};
+
 const parseRequestPermissions = (
   payload: ICodexHookPayload,
 ): IRequestPermissions | null => {
@@ -139,5 +205,9 @@ export const parseCodexPermissionRequest = (
     const parsed = parseExecApproval(payload);
     if (parsed) return parsed;
   }
+  const parsedToolApplyPatch = parseToolInputApplyPatchApproval(payload);
+  if (parsedToolApplyPatch) return parsedToolApplyPatch;
+  const parsedToolExec = parseToolInputExecApproval(payload);
+  if (parsedToolExec) return parsedToolExec;
   return null;
 };

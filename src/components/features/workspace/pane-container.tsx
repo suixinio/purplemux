@@ -16,6 +16,7 @@ import useConfigStore from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ClaudeCodePanel from '@/components/features/workspace/claude-code-panel';
 import CodexPanel from '@/components/features/workspace/codex-panel';
@@ -25,7 +26,7 @@ import ConnectionStatus from '@/components/features/workspace/connection-status'
 import WebBrowserPanel from '@/components/features/workspace/web-browser-panel';
 import DiffPanel from '@/components/features/workspace/diff-panel';
 import PaneDisconnectedOverlay from '@/components/features/workspace/pane-disconnected-overlay';
-import PaneClaudeModePrompt from '@/components/features/workspace/pane-claude-mode-prompt';
+import PaneAgentModePrompt from '@/components/features/workspace/pane-agent-mode-prompt';
 import PanePathInputOverlay from '@/components/features/workspace/pane-path-input-overlay';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
@@ -36,7 +37,7 @@ import { formatTabTitle, parseCurrentCommand, isShellProcess } from '@/lib/tab-t
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { getInitialTabStateFromLayoutTab, selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
-import { dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
+import { dismissTab as dismissStatusTab } from '@/hooks/use-agent-status';
 
 
 interface ITermActions {
@@ -50,6 +51,27 @@ interface ITermActions {
 interface IWsActions {
   sendStdin: (data: string) => void;
   sendResize: (cols: number, rows: number) => void;
+}
+
+type TAgentPanelType = Extract<TPanelType, 'claude-code' | 'codex-cli'>;
+
+interface IAgentCheckResponse {
+  running?: boolean;
+  checkedAt?: number;
+  sessionId?: unknown;
+  resumable?: unknown;
+  providerId?: unknown;
+  providerDisplayName?: unknown;
+  providerPanelType?: unknown;
+}
+
+interface IAgentModePrompt {
+  tabId: string;
+  providerId: string;
+  displayName: string;
+  panelType: TAgentPanelType;
+  sessionId: string | null;
+  resumable: boolean;
 }
 
 const NOOP_TERM_ACTIONS: ITermActions = {
@@ -77,6 +99,9 @@ const TERMINAL_FONT_SIZES: Record<string, { normal: number; claudeCode: number }
 };
 
 const EMPTY_TABS: ITab[] = [];
+
+const isAgentPanelType = (value: unknown): value is TAgentPanelType =>
+  value === 'claude-code' || value === 'codex-cli';
 
 const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const t = useTranslations('terminal');
@@ -240,8 +265,34 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const { prompts: quickPrompts } = useQuickPrompts();
 
-  const claudeModeShownTabsRef = useRef<Set<string>>(new Set());
-  const [showClaudeModePrompt, setShowClaudeModePrompt] = useState(false);
+  const agentModeShownTabsRef = useRef<Set<string>>(new Set());
+  const [agentModePrompt, setAgentModePrompt] = useState<IAgentModePrompt | null>(null);
+
+  const handleAgentCheckResult = useCallback((tabId: string, data: IAgentCheckResponse) => {
+    if (data.running !== true || !isAgentPanelType(data.providerPanelType)) {
+      setAgentModePrompt((prev) => (prev?.tabId === tabId ? null : prev));
+      return;
+    }
+
+    const providerId = typeof data.providerId === 'string' && data.providerId
+      ? data.providerId
+      : data.providerPanelType;
+    const promptKey = `${tabId}:${providerId}`;
+    if (agentModeShownTabsRef.current.has(promptKey)) return;
+    agentModeShownTabsRef.current.add(promptKey);
+
+    const displayName = typeof data.providerDisplayName === 'string' && data.providerDisplayName
+      ? data.providerDisplayName
+      : providerId;
+    setAgentModePrompt({
+      tabId,
+      providerId,
+      displayName,
+      panelType: data.providerPanelType,
+      sessionId: typeof data.sessionId === 'string' && data.sessionId ? data.sessionId : null,
+      resumable: data.resumable === true,
+    });
+  }, []);
 
   const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
     enabled: isClaudeCode && claudeCliState === 'inactive',
@@ -355,17 +406,23 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const tab = tabsRef.current.find((t) => t.id === tabId);
       if (tab) {
         const prevCheckedAt = useTabStore.getState().tabs[tabId]?.agentProcessCheckedAt ?? 0;
-        fetch(`/api/check-claude?session=${tab.sessionName}`)
+        fetch(`/api/check-agent?session=${tab.sessionName}`)
           .then((res) => res.json())
-          .then(({ running, checkedAt }) => {
+          .then((data: IAgentCheckResponse) => {
+            if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, data);
+            const running = data.running === true;
+            const checkedAt = typeof data.checkedAt === 'number' ? data.checkedAt : Date.now();
             const current = useTabStore.getState().tabs[tabId];
             if (current && current.agentProcessCheckedAt !== prevCheckedAt) {
               if (current.agentProcess !== running) {
                 setTimeout(() => {
-                  fetch(`/api/check-claude?session=${tab.sessionName}`)
+                  fetch(`/api/check-agent?session=${tab.sessionName}`)
                     .then((r) => r.json())
-                    .then(({ running, checkedAt }) => {
-                      useTabStore.getState().setAgentProcess(tabId, running, checkedAt);
+                    .then((retryData: IAgentCheckResponse) => {
+                      if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, retryData);
+                      const retryRunning = retryData.running === true;
+                      const retryCheckedAt = typeof retryData.checkedAt === 'number' ? retryData.checkedAt : Date.now();
+                      useTabStore.getState().setAgentProcess(tabId, retryRunning, retryCheckedAt);
                     })
                     .catch(() => {});
                 }, 500);
@@ -676,14 +733,29 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   useEffect(() => {
     if (!activeTabId || agentProcess !== true || activePanelType !== 'terminal') {
-      setShowClaudeModePrompt(false);
+      setAgentModePrompt(null);
       return;
     }
-    if (claudeModeShownTabsRef.current.has(activeTabId)) return;
+    if (agentModePrompt?.tabId !== activeTabId) return;
+  }, [activeTabId, agentProcess, activePanelType, agentModePrompt]);
 
-    claudeModeShownTabsRef.current.add(activeTabId);
-    setShowClaudeModePrompt(true);
-  }, [activeTabId, agentProcess, activePanelType]);
+  useEffect(() => {
+    if (!activeTabId || agentProcess !== true || activePanelType !== 'terminal') return;
+    if (agentModePrompt?.tabId === activeTabId) return;
+    const sessionName = activeTab?.sessionName;
+    if (!sessionName) return;
+
+    let cancelled = false;
+    fetch(`/api/check-agent?session=${sessionName}`)
+      .then((res) => res.json())
+      .then((data: IAgentCheckResponse) => {
+        if (!cancelled) handleAgentCheckResult(activeTabId, data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTabId, activePanelType, activeTab?.sessionName, agentProcess, agentModePrompt?.tabId, handleAgentCheckResult]);
 
   const {
     showPathInput,
@@ -776,34 +848,38 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     pendingRestartRef.current = command;
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin('/quit\r');
+    sendCodexQuitCommand(sendStdin);
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
 
-  const handleSwitchToClaudeMode = useCallback(async () => {
-    if (!activeTabId) return;
-    setShowClaudeModePrompt(false);
-    handleSwitchPanelType('claude-code');
+  const handleSwitchToAgentMode = useCallback(async () => {
+    const prompt = agentModePrompt;
+    if (!activeTabId || !prompt || prompt.tabId !== activeTabId) return;
+    setAgentModePrompt(null);
+    handleSwitchPanelType(prompt.panelType);
     if (status !== 'connected') return;
 
-    let resumeSessionId = claudeSessionId;
-    if (!resumeSessionId) {
-      const tab = tabsRef.current.find((t) => t.id === activeTabId);
-      if (tab) {
-        try {
-          const res = await fetch(`/api/check-claude?session=${tab.sessionName}`);
-          const data = await res.json();
-          resumeSessionId = typeof data.sessionId === 'string' && data.resumable ? data.sessionId : null;
-        } catch {
-          // fall through with null
-        }
+    const resumeSessionId = prompt.resumable ? prompt.sessionId : null;
+
+    if (prompt.panelType === 'codex-cli') {
+      let command: string;
+      try {
+        command = await fetchCodexLaunchCommand(layoutWsId, resumeSessionId);
+      } catch {
+        toast.error(t('codexLaunchFailed'));
+        return;
       }
+      pendingRestartRef.current = command;
+      markAgentLaunch(activeTabId, { resetAgentSession: !resumeSessionId });
+      useTabStore.getState().setSessionView(activeTabId, 'check');
+      sendCodexQuitCommand(sendStdin);
+      return;
     }
 
     pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('\x03');
     setTimeout(() => sendStdin('\x03'), 300);
-  }, [activeTabId, status, sendStdin, claudeSessionId, buildClaudeCommand, handleSwitchPanelType]);
+  }, [activeTabId, agentModePrompt, status, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, t, buildClaudeCommand]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
@@ -1129,10 +1205,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           />
         )}
 
-        {showClaudeModePrompt && (
-          <PaneClaudeModePrompt
-            onSwitch={handleSwitchToClaudeMode}
-            onDismiss={() => setShowClaudeModePrompt(false)}
+        {agentModePrompt && agentModePrompt.tabId === activeTabId && activePanelType === 'terminal' && (
+          <PaneAgentModePrompt
+            modeName={agentModePrompt.displayName}
+            onSwitch={handleSwitchToAgentMode}
+            onDismiss={() => setAgentModePrompt(null)}
           />
         )}
 
