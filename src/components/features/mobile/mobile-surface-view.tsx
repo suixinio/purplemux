@@ -23,7 +23,7 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
-import useCodexUpdatePromptDetector, { useCodexUpdatePromptViewSync } from '@/hooks/use-codex-update-prompt-detector';
+import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { toast } from 'sonner';
@@ -156,18 +156,11 @@ const MobileSurfaceView = ({
     onTerminalData: onCodexUpdateData,
     onRespond: onCodexUpdateResponse,
   } = useCodexUpdatePromptDetector({
-    enabled: isCodex,
+    enabled: isCodex && claudeCliState === 'inactive',
     scopeKey: activeTabId,
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
     onUpdated: () => { void codexRelaunchRef.current(); },
-  });
-  useCodexUpdatePromptViewSync({
-    enabled: isCodex,
-    tabId: activeTabId,
-    prompt: codexUpdatePrompt,
-    sessionView,
-    agentProcess,
   });
 
   const handleCliStateChange = useCallback((state: TCliState) => {

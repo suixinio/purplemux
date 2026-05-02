@@ -195,6 +195,19 @@ const CodexPanel = ({
     );
   }
 
+  if (updatePrompt && onUpdatePromptResponse) {
+    return (
+      <div
+        className={cn(
+          'animate-delayed-fade-in flex h-full w-full flex-col items-center justify-center gap-3 px-6',
+          className,
+        )}
+      >
+        <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+      </div>
+    );
+  }
+
   if (view === 'check') {
     return (
       <div
@@ -203,11 +216,7 @@ const CodexPanel = ({
           className,
         )}
       >
-        {updatePrompt && onUpdatePromptResponse ? (
-          <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
-        ) : (
-          <CodexBootProgress onRestart={onRestart} />
-        )}
+        <CodexBootProgress onRestart={onRestart} />
       </div>
     );
   }

@@ -197,14 +197,18 @@ const MobileCodexPanel = ({
     );
   }
 
+  if (updatePrompt && onUpdatePromptResponse) {
+    return (
+      <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
+        <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+      </div>
+    );
+  }
+
   if (view === 'check') {
     return (
       <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
-        {updatePrompt && onUpdatePromptResponse ? (
-          <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
-        ) : (
-          <CodexBootProgress onRestart={onRestart} />
-        )}
+        <CodexBootProgress onRestart={onRestart} />
       </div>
     );
   }

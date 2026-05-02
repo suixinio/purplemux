@@ -4,7 +4,6 @@ import {
   type ICodexUpdatePromptInfo,
   type TCodexUpdateAnswer,
 } from '@/lib/codex-update-prompt-detector';
-import useTabStore, { type TSessionView } from '@/hooks/use-tab-store';
 
 const DEBOUNCE_MS = 200;
 const RELAUNCH_DELAY_MS = 700;
@@ -23,14 +22,6 @@ interface IUseCodexUpdatePromptDetectorReturn {
   onRespond: (answer: TCodexUpdateAnswer) => void;
 }
 
-interface IUseCodexUpdatePromptViewSyncOptions {
-  enabled: boolean;
-  tabId?: string | null;
-  prompt: ICodexUpdatePromptInfo | null;
-  sessionView: TSessionView | null;
-  agentProcess: boolean | null;
-}
-
 const useCodexUpdatePromptDetector = ({
   enabled,
   scopeKey,
@@ -42,7 +33,7 @@ const useCodexUpdatePromptDetector = ({
     scopeKey: null,
     prompt: null,
   });
-  const enabledRef = useRef(enabled);
+  const enabledRef = useRef(false);
   const scopeKeyRef = useRef(scopeKey ?? null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const relaunchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -61,22 +52,6 @@ const useCodexUpdatePromptDetector = ({
   useEffect(() => {
     scopeKeyRef.current = scopeKey ?? null;
   }, [scopeKey]);
-
-  useEffect(() => {
-    enabledRef.current = enabled;
-    if (!enabled) {
-      if (debounceRef.current) {
-        clearTimeout(debounceRef.current);
-        debounceRef.current = null;
-      }
-      handledSuccessRef.current = false;
-    }
-  }, [enabled]);
-
-  useEffect(() => () => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (relaunchTimerRef.current) clearTimeout(relaunchTimerRef.current);
-  }, []);
 
   const onTerminalData = useCallback(() => {
     if (!enabledRef.current || debounceRef.current) return;
@@ -114,6 +89,27 @@ const useCodexUpdatePromptDetector = ({
     }, DEBOUNCE_MS);
   }, []);
 
+  useEffect(() => {
+    const wasEnabled = enabledRef.current;
+    enabledRef.current = enabled;
+    if (!enabled) {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+        debounceRef.current = null;
+      }
+      handledSuccessRef.current = false;
+      return;
+    }
+    if (!wasEnabled) {
+      onTerminalData();
+    }
+  }, [enabled, onTerminalData]);
+
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (relaunchTimerRef.current) clearTimeout(relaunchTimerRef.current);
+  }, []);
+
   const onRespond = useCallback((answer: TCodexUpdateAnswer) => {
     if (answer === 'update') {
       setUpdatePromptState((prev) => prev.prompt ? { ...prev, prompt: { ...prev.prompt, status: 'updating' } } : prev);
@@ -126,38 +122,6 @@ const useCodexUpdatePromptDetector = ({
 
   const visiblePrompt = updatePromptState.scopeKey === (scopeKey ?? null) ? updatePromptState.prompt : null;
   return { updatePrompt: enabled ? visiblePrompt : null, onTerminalData, onRespond };
-};
-
-export const useCodexUpdatePromptViewSync = ({
-  enabled,
-  tabId,
-  prompt,
-  sessionView,
-  agentProcess,
-}: IUseCodexUpdatePromptViewSyncOptions) => {
-  const promptWasVisibleRef = useRef(false);
-
-  useEffect(() => {
-    if (!enabled || !tabId) {
-      promptWasVisibleRef.current = false;
-      return;
-    }
-
-    if (prompt) {
-      promptWasVisibleRef.current = true;
-      if (sessionView !== 'check') {
-        useTabStore.getState().setSessionView(tabId, 'check');
-      }
-      return;
-    }
-
-    if (promptWasVisibleRef.current) {
-      promptWasVisibleRef.current = false;
-      if (sessionView === 'check' && agentProcess === true) {
-        useTabStore.getState().setSessionView(tabId, 'timeline');
-      }
-    }
-  }, [agentProcess, enabled, prompt, sessionView, tabId]);
 };
 
 export default useCodexUpdatePromptDetector;
