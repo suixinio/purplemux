@@ -1,29 +1,19 @@
-// Workspace prompt path mirrors getCodexPromptPath (lib/providers/codex/prompt.ts)
-// and the hook override args are pre-built server-side via buildCodexHookFlags
-// (lib/providers/codex/hook-config.ts). Kept literal here because this module
-// runs in the browser and cannot import node-only modules. Update both sides
-// together if the prompt path moves.
+// Browser entrypoint for Codex launch commands. The command itself is composed
+// server-side because hook flags, user config merging, and prompt content all
+// depend on Node-only filesystem access.
 
-interface IBuildCodexLaunchCommandOptions {
-  workspaceId?: string | null;
-  resumeSessionId?: string | null;
-  hookOverrideArgs?: readonly string[];
-  dangerouslySkipPermissions?: boolean;
-}
-
-export const buildCodexLaunchCommand = ({
-  workspaceId,
-  resumeSessionId,
-  hookOverrideArgs = [],
-  dangerouslySkipPermissions,
-}: IBuildCodexLaunchCommandOptions): string => {
-  const parts: string[] = ['codex'];
-  if (resumeSessionId) parts.push('resume', resumeSessionId);
-  parts.push(...hookOverrideArgs);
-  if (workspaceId) {
-    const promptPath = `~/.purplemux/workspaces/${workspaceId}/codex-prompt.md`;
-    parts.push('-c', `"developer_instructions='''$(cat ${promptPath})'''"`);
+export const fetchCodexLaunchCommand = async (workspaceId?: string | null): Promise<string> => {
+  const res = await fetch('/api/codex/launch-command', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ workspaceId: workspaceId ?? null }),
+  });
+  if (!res.ok) {
+    throw new Error('Failed to build Codex launch command');
   }
-  if (dangerouslySkipPermissions) parts.push('--yolo');
-  return parts.join(' ');
+  const data = await res.json() as { command?: unknown };
+  if (typeof data.command !== 'string' || !data.command.trim()) {
+    throw new Error('Invalid Codex launch command response');
+  }
+  return data.command;
 };

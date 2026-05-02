@@ -54,6 +54,7 @@ interface IUseWebInputOptions {
   tabId?: string;
   onRestartSession?: () => void;
   onMessageSent?: (message: string) => void;
+  disabledMessage?: string;
 }
 
 const useWebInput = (
@@ -86,7 +87,7 @@ const useWebInput = (
 
   const send = useCallback(() => {
     if (mode === 'disabled') {
-      toast.error('Claude Code가 실행 중이 아닙니다');
+      toast.error(options?.disabledMessage ?? 'Claude Code가 실행 중이 아닙니다');
       return;
     }
 
@@ -118,7 +119,7 @@ const useWebInput = (
 
     setValue('');
     if (tabId) clearDraft(tabId);
-  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, onMessageSent, tabId]);
+  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, onMessageSent, tabId, options?.disabledMessage]);
 
   const interrupt = useCallback(() => {
     if (!terminalWsConnected) {

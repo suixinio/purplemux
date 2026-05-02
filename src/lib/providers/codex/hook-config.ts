@@ -128,7 +128,7 @@ export const buildCodexHookFlags = async (): Promise<ICodexHookFlagsResult> => {
     args.push('-c', `hooks.${event}=${shellSingleQuote(serialized)}`);
   }
 
-  log.info(`codex hooks merged: ${userEntryCount} user entries`);
+  log.debug(`codex hooks merged: ${userEntryCount} user entries`);
 
   if (user.parseError && !g.__ptCodexConfigToastShown) {
     g.__ptCodexConfigToastShown = true;

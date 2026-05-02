@@ -25,7 +25,8 @@ import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
-import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { toast } from 'sonner';
 
 
 interface ITermActions {
@@ -138,7 +139,7 @@ const MobileSurfaceView = ({
 
   const pendingRestartRef = useRef<string | null>(null);
   const pendingClaudeInputRef = useRef<string | null>(null);
-  const codexRelaunchRef = useRef<() => void>(() => {});
+  const codexRelaunchRef = useRef<() => void | Promise<void>>(() => {});
   const lastTitleRef = useRef('');
   const agentProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentProcess ?? null : null);
   const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
@@ -159,7 +160,7 @@ const MobileSurfaceView = ({
     scopeKey: activeTabId,
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
-    onUpdated: () => codexRelaunchRef.current(),
+    onUpdated: () => { void codexRelaunchRef.current(); },
   });
 
   const handleCliStateChange = useCallback((state: TCliState) => {
@@ -407,34 +408,65 @@ const MobileSurfaceView = ({
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
-  const buildCodexCommand = useCallback((): string =>
-    buildCodexLaunchCommand({
-      workspaceId: layoutWsId,
-      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
-    }), [layoutWsId]);
+  const buildCodexCommand = useCallback(
+    () => fetchCodexLaunchCommand(layoutWsId),
+    [layoutWsId],
+  );
 
-  const handleNewCodexSession = useCallback(() => {
-    if (status !== 'connected' || !activeTabId) return;
-    useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin(`${buildCodexCommand()}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+  const markAgentLaunch = useCallback((tabId: string, options?: { resetAgentSession?: boolean }) => {
+    fetch('/api/status/agent-launch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId, resetAgentSession: options?.resetAgentSession === true }),
+    }).catch(() => {});
+  }, []);
 
-  const handleRelaunchCodexSession = useCallback(() => {
+  const handleNewCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(tt('codexLaunchFailed'));
+      return;
+    }
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin(`${buildCodexCommand()}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+    sendStdin(`${command}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
+
+  const handleRelaunchCodexSession = useCallback(async () => {
+    if (status !== 'connected' || !activeTabId) return;
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(tt('codexLaunchFailed'));
+      return;
+    }
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${command}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
 
   useEffect(() => {
     codexRelaunchRef.current = handleRelaunchCodexSession;
   }, [handleRelaunchCodexSession]);
 
-  const handleRestartCodexSession = useCallback(() => {
+  const handleRestartCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
-    pendingRestartRef.current = buildCodexCommand();
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(tt('codexLaunchFailed'));
+      return;
+    }
+    pendingRestartRef.current = command;
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/quit\r');
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
@@ -442,8 +474,10 @@ const MobileSurfaceView = ({
     if (!isShellProcess(lastTitleRef.current)) return;
     const cmd = pendingRestartRef.current;
     pendingRestartRef.current = null;
+    const tabId = activeTabIdRef.current;
+    if (tabId) markAgentLaunch(tabId);
     sendStdin(`${cmd}\r`);
-  }, [agentProcess, status, sendStdin]);
+  }, [agentProcess, status, sendStdin, markAgentLaunch]);
 
   const handleSendToClaude = useCallback((text: string) => {
     if (!activeTabId) return;
@@ -542,7 +576,13 @@ const MobileSurfaceView = ({
       {isCodex && activeTab && (
         <MobileCodexPanel
           tabId={activeTabId ?? undefined}
+          wsId={layoutWsId ?? undefined}
           sessionName={activeTab.sessionName}
+          sendStdin={sendWebStdin}
+          terminalWsConnected={status === 'connected'}
+          focusTerminal={focus}
+          focusInputRef={focusInputRef}
+          setInputValueRef={setInputValueRef}
           onNewSession={handleNewCodexSession}
           onRestart={handleRestartCodexSession}
           updatePrompt={codexUpdatePrompt}

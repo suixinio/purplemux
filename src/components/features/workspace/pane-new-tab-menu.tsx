@@ -8,17 +8,17 @@ import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TPanelType } from '@/types/terminal';
-import useConfigStore from '@/hooks/use-config-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useIsMac from '@/hooks/use-is-mac';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
-import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { useCodexSessionsPrefetch } from '@/hooks/use-codex-sessions';
 import CodexSessionListSheet from '@/components/features/workspace/codex-session-list-sheet';
-import { notifyCodexResumeFailed } from '@/lib/codex-notifications';
+import { notifyCodexLaunchFailed, notifyCodexResumeFailed } from '@/lib/codex-notifications';
 import type { ICodexSessionEntry } from '@/lib/codex-session-list';
+import useConfigStore from '@/hooks/use-config-store';
 
 interface IPaneNewTabMenuProps {
   paneId: string;
@@ -111,13 +111,14 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
     itemRefs.current[activeIndex]?.focus();
   }, [open, activeIndex]);
 
-  const launchCodexNewConversation = useCallback(() => {
-    const cmd = buildCodexLaunchCommand({
-      workspaceId: wsId,
-      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
-    });
-    onCreateTab('codex-cli', { command: cmd });
-  }, [onCreateTab, wsId]);
+  const launchCodexNewConversation = useCallback(async () => {
+    try {
+      const cmd = await fetchCodexLaunchCommand(wsId);
+      onCreateTab('codex-cli', { command: cmd });
+    } catch {
+      notifyCodexLaunchFailed(codexI18n);
+    }
+  }, [codexI18n, onCreateTab, wsId]);
 
   const handleResumeCodexSession = useCallback(
     (session: ICodexSessionEntry) => {
@@ -144,7 +145,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
       return;
     }
     if ('startAgent' in item && item.startAgent === 'codex') {
-      launchCodexNewConversation();
+      void launchCodexNewConversation();
       return;
     }
     if (item.key === 'codex') {

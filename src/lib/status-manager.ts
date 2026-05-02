@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
-import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
+import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, updateTabAgentState, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { getChildPids } from '@/lib/process-utils';
 import { getProviderByPanelType } from '@/lib/providers/registry';
@@ -13,6 +13,9 @@ import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
 import { createRateLimitsWatcher } from '@/lib/rate-limits-watcher';
 import { createLogger } from '@/lib/logger';
 import { capturePaneAtWidth } from '@/lib/capture-at-width';
+import { isCodexTuiReadyContent } from '@/lib/codex-tui-ready-detector';
+import { CODEX_PROVIDER_ID } from '@/lib/providers/codex';
+import { findCodexSessionById } from '@/lib/providers/codex/session-detection';
 import { parsePermissionOptions } from '@/lib/permission-prompt';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { ITab } from '@/types/terminal';
@@ -78,6 +81,7 @@ const STALE_MS_INTERRUPTED = 20_000;
 const STALE_MS_AWAITING_API = 90_000;
 const PROCESS_RETRY_COUNT = 3;
 const JSONL_WATCH_DEBOUNCE_MS = 100;
+const LAUNCH_READY_POLL_DELAYS_MS = [700, 1_500, 3_000, 5_000, 8_000] as const;
 
 interface IJsonlIdleCache {
   mtimeMs: number;
@@ -406,7 +410,7 @@ class StatusManager {
       for (const tab of tabs) {
         const paneInfo = panesInfo.get(tab.sessionName);
         const provider = getProviderByPanelType(tab.panelType);
-        const detected = await this.readTabMetadata(paneInfo, provider);
+        const detected = await this.readTabMetadata(paneInfo, provider, tab);
         const persisted: TCliState = (tab.cliState as TCliState | undefined) ?? 'idle';
         const cliState: TCliState = persisted === 'busy' ? 'unknown' : persisted;
 
@@ -483,6 +487,7 @@ class StatusManager {
   private async readTabMetadata(
     paneInfo: IPaneInfo | undefined,
     provider: IAgentProvider | null,
+    tab?: ITab,
   ): Promise<{ lastAssistantSnippet: string | null; currentAction: ICurrentAction | null; jsonlPath: string | null }> {
     const empty = { lastAssistantSnippet: null, currentAction: null, jsonlPath: null };
     if (!paneInfo || !paneInfo.pid || !provider) return empty;
@@ -490,6 +495,26 @@ class StatusManager {
     const childPids = await getChildPids(paneInfo.pid);
     const running = await provider.isAgentRunning(paneInfo.pid, childPids);
     if (!running) return empty;
+
+    if (tab) {
+      const persistedJsonlPath = provider.readJsonlPath(tab);
+      if (persistedJsonlPath) {
+        try {
+          await fs.access(persistedJsonlPath);
+          const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(persistedJsonlPath);
+          return { lastAssistantSnippet, currentAction, jsonlPath: persistedJsonlPath };
+        } catch { /* fall through */ }
+      }
+
+      const persistedSessionId = provider.readSessionId(tab);
+      if (persistedSessionId && provider.id === CODEX_PROVIDER_ID) {
+        const codexSession = await findCodexSessionById(persistedSessionId);
+        if (codexSession?.jsonlPath) {
+          const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(codexSession.jsonlPath);
+          return { lastAssistantSnippet, currentAction, jsonlPath: codexSession.jsonlPath };
+        }
+      }
+    }
 
     const session = await provider.detectActiveSession(paneInfo.pid, childPids);
     if (session.status !== 'running' || !session.jsonlPath) {
@@ -568,7 +593,7 @@ class StatusManager {
         if (!existing) {
           const persisted: TCliState = (tab.cliState as TCliState | undefined) ?? 'idle';
           const initialState: TCliState = persisted === 'busy' ? 'unknown' : persisted;
-          const detected = await this.readTabMetadata(paneInfo, provider);
+          const detected = await this.readTabMetadata(paneInfo, provider, tab);
           // lastEvent는 메모리 전용이라 재시작 시 유실. persisted needs-input을 복원할 때는
           // 클라이언트 ack가 seq=0과 매칭할 baseline이 필요하므로 합성한다.
           const syntheticLastEvent: ILastEvent | null = initialState === 'needs-input'
@@ -604,7 +629,7 @@ class StatusManager {
         const processChanged = existing.currentProcess !== currentProcess;
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         const panelTypeChanged = existing.panelType !== tab.panelType;
-        const refreshed = await this.readTabMetadata(paneInfo, provider);
+        const refreshed = await this.readTabMetadata(paneInfo, provider, tab);
         existing.tabName = tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : '');
         existing.currentProcess = currentProcess;
         existing.paneTitle = newPaneTitle;
@@ -863,18 +888,12 @@ class StatusManager {
   ): Promise<boolean> {
     if (!(await checkAgentRunning())) return false;
 
-    const title = entry.paneTitle ?? '';
-    if (!title || SHELL_TITLE_RE.test(title)) return false;
-
     const content = await capturePaneAtWidth(entry.tmuxSession, 80, 24).catch((err) => {
       log.warn('codex tui ready capture failed: %s', err);
       return null;
     });
     if (!content) return false;
-
-    const hasBox = content.includes('╭') && content.includes('╰');
-    const hasMarker = content.includes('›') || content.includes('!');
-    return hasBox && hasMarker;
+    return isCodexTuiReadyContent(content);
   }
 
   async recoverUnknownIfPending(tabId: string): Promise<{ recovered: boolean; reason?: string }> {
@@ -1066,6 +1085,19 @@ class StatusManager {
     }
 
     if (changed) {
+      const provider = getProviderByPanelType(entry.panelType);
+      if (provider) {
+        updateTabAgentState(entry.tmuxSession, provider, {
+          ...(meta.sessionId !== undefined ? { sessionId: meta.sessionId } : {}),
+          ...(meta.jsonlPath !== undefined ? { jsonlPath: meta.jsonlPath } : {}),
+          ...(meta.agentSummary !== undefined || meta.clearMessages
+            ? { summary: meta.clearMessages ? null : meta.agentSummary ?? null }
+            : {}),
+          ...(meta.lastUserMessage !== undefined || meta.clearMessages
+            ? { lastUserMessage: meta.clearMessages ? null : meta.lastUserMessage ?? null }
+            : {}),
+        }).catch(() => {});
+      }
       this.persistToLayout(entry);
       this.broadcastUpdate(tabId, entry);
     }
@@ -1166,10 +1198,43 @@ class StatusManager {
     }
   }
 
-  markAgentLaunch(tabId: string): void {
+  markAgentLaunch(tabId: string, options?: { resetAgentSession?: boolean }): void {
     const entry = this.tabs.get(tabId);
     if (!entry) return;
     entry.lastResumeOrStartedAt = Date.now();
+    if (options?.resetAgentSession) {
+      entry.agentSessionId = null;
+      entry.jsonlPath = null;
+      entry.agentSummary = null;
+      entry.lastUserMessage = null;
+      entry.lastAssistantMessage = null;
+      entry.currentAction = null;
+      entry.permissionRequest = null;
+      const existingWatcher = this.jsonlWatchers.get(tabId);
+      if (existingWatcher) {
+        existingWatcher.watcher.close();
+        if (existingWatcher.debounceTimer) clearTimeout(existingWatcher.debounceTimer);
+        this.jsonlWatchers.delete(tabId);
+      }
+      this.persistToLayout(entry);
+      const provider = getProviderByPanelType(entry.panelType);
+      if (provider) {
+        updateTabAgentState(entry.tmuxSession, provider, {
+          sessionId: null,
+          jsonlPath: null,
+          summary: null,
+          lastUserMessage: null,
+        }).catch(() => {});
+      }
+      this.broadcastUpdate(tabId, entry);
+    }
+    for (const delay of LAUNCH_READY_POLL_DELAYS_MS) {
+      setTimeout(() => {
+        this.poll().catch((err) => {
+          log.error({ err, tabId }, 'Launch readiness poll error');
+        });
+      }, delay);
+    }
   }
 
   addClient(ws: WebSocket): void {
@@ -1251,14 +1316,18 @@ class StatusManager {
         const tab = collectAllTabs(layout.root).find((t) => t.sessionName === tmuxSession);
         const tabProvider = getProviderByPanelType(tab?.panelType);
         const tabSessionId = tab && tabProvider ? tabProvider.readSessionId(tab) : null;
-        if (tab && tabSessionId) {
-          const cwd = await getSessionCwd(tmuxSession);
-          if (cwd) {
-            const candidate = `${cwdToProjectPath(cwd)}/${tabSessionId}.jsonl`;
-            try {
-              await fs.access(candidate);
-              jsonlPath = candidate;
-            } catch { /* noop */ }
+        if (tab && tabProvider && tabSessionId) {
+          if (tabProvider.id === CODEX_PROVIDER_ID) {
+            jsonlPath = (await findCodexSessionById(tabSessionId))?.jsonlPath ?? null;
+          } else {
+            const cwd = await getSessionCwd(tmuxSession);
+            if (cwd) {
+              const candidate = `${cwdToProjectPath(cwd)}/${tabSessionId}.jsonl`;
+              try {
+                await fs.access(candidate);
+                jsonlPath = candidate;
+              } catch { /* noop */ }
+            }
           }
         }
 

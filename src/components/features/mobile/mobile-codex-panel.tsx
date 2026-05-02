@@ -1,21 +1,34 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus } from 'lucide-react';
-import Spinner from '@/components/ui/spinner';
+import { ChevronDown, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useTimeline from '@/hooks/use-timeline';
+import useSessionMeta from '@/hooks/use-session-meta';
+import useGitBranch from '@/hooks/use-git-branch';
+import useGitStatus from '@/hooks/use-git-status';
+import useTmuxInfo from '@/hooks/use-tmux-info';
+import useMessageCounts from '@/hooks/use-message-counts';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
-import CodexStatusDot from '@/components/features/workspace/codex-status-dot';
 import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
-import PermissionPromptCard from '@/components/features/timeline/permission-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import WebInputBar from '@/components/features/workspace/web-input-bar';
+import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
+import useQuickPrompts from '@/hooks/use-quick-prompts';
+import { MetaCompact } from '@/components/features/workspace/session-meta-content';
+import MobileMetaSheet from './mobile-meta-sheet';
 import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
 
 interface IMobileCodexPanelProps {
   tabId?: string;
+  wsId?: string;
   sessionName?: string;
+  sendStdin: (data: string) => void;
+  terminalWsConnected: boolean;
+  focusTerminal: () => void;
+  focusInputRef: React.MutableRefObject<(() => void) | undefined>;
+  setInputValueRef: React.MutableRefObject<((v: string) => void) | undefined>;
   onNewSession?: () => void;
   onRestart?: () => void;
   updatePrompt?: ICodexUpdatePromptInfo | null;
@@ -24,7 +37,13 @@ interface IMobileCodexPanelProps {
 
 const MobileCodexPanel = ({
   tabId,
+  wsId,
   sessionName,
+  sendStdin,
+  terminalWsConnected,
+  focusTerminal,
+  focusInputRef,
+  setInputValueRef,
   onNewSession,
   onRestart,
   updatePrompt,
@@ -36,14 +55,29 @@ const MobileCodexPanel = ({
   const cliState = useTabStore((s) => (tabId ? s.tabs[tabId]?.cliState ?? 'inactive' : 'inactive'));
   const compactingSince = useTabStore((s) => (tabId ? s.tabs[tabId]?.compactingSince ?? null : null));
   const codexSessionId = useTabStore((s) => (tabId ? s.tabs[tabId]?.agentSessionId ?? null : null));
+  const tabAgentSummary = useTabStore((s) => (tabId ? s.tabs[tabId]?.agentSummary ?? null : null));
+  const tabLastUserMessage = useTabStore((s) => (tabId ? s.tabs[tabId]?.lastUserMessage ?? null : null));
   const view = useTabStore((s) => (tabId ? selectSessionView(s.tabs, tabId) : 'session-list' as const));
+  const [metaSheetOpen, setMetaSheetOpen] = useState(false);
+  const scrollToBottomRef = useRef<(() => void) | undefined>(undefined);
+  const { prompts: quickPrompts } = useQuickPrompts();
 
   const handleStart = useCallback(() => onNewSession?.(), [onNewSession]);
+  const handleScrollToBottom = useCallback(() => {
+    if (cliState !== 'idle') return;
+    scrollToBottomRef.current?.();
+  }, [cliState]);
+  const handleSelectQuickPrompt = useCallback((prompt: string) => {
+    setInputValueRef.current?.(prompt);
+    focusInputRef.current?.();
+  }, [setInputValueRef, focusInputRef]);
 
   const {
     entries,
     tasks,
     sessionId,
+    jsonlPath,
+    sessionSummary,
     initMeta,
     sessionStats,
     wsStatus,
@@ -52,13 +86,56 @@ const MobileCodexPanel = ({
     loadMore: loadMoreTimeline,
     hasMore: timelineHasMore,
     retrySession,
+    addPendingUserMessage,
+    removePendingUserMessage,
+    agentProcess: agentProcessFromTimeline,
   } = useTimeline({
     sessionName: sessionName ?? '',
     claudeSessionId: codexSessionId,
     panelType: 'codex-cli',
     enabled: !!sessionName,
+    onSync: tabId ? (state) => {
+      const checkedAt = Date.now();
+      if (state.agentProcess !== null) {
+        useTabStore.getState().setAgentProcess(tabId, state.agentProcess, checkedAt);
+      }
+      if (!state.agentInstalled) {
+        useTabStore.getState().setAgentInstalled(tabId, false);
+      }
+      useTabStore.getState().setTimelineLoading(tabId, state.isLoading);
+    } : undefined,
     getCliState: tabId ? () => useTabStore.getState().tabs[tabId]?.cliState : undefined,
   });
+
+  const prevAgentProcessRef = useRef(agentProcess);
+  useEffect(() => {
+    const prev = prevAgentProcessRef.current;
+    prevAgentProcessRef.current = agentProcess;
+    if (prev !== true && agentProcess === true && agentProcessFromTimeline !== true) {
+      retrySession();
+    }
+  }, [agentProcess, agentProcessFromTimeline, retrySession]);
+
+  useEffect(() => {
+    if (!tabId || cliState !== 'unknown') return;
+    const controller = new AbortController();
+    fetch('/api/tmux/recover-unknown', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId }),
+      signal: controller.signal,
+    }).catch(() => {});
+    return () => controller.abort();
+  }, [tabId, cliState]);
+
+  const { meta } = useSessionMeta(entries, sessionSummary, initMeta, sessionStats, tabAgentSummary, tabLastUserMessage);
+  const { branch, isLoading: isBranchLoading } = useGitBranch(sessionName ?? '');
+  const { status: gitStatus } = useGitStatus(sessionName ?? '', metaSheetOpen);
+  const tmuxInfo = useTmuxInfo(sessionName ?? '', metaSheetOpen);
+  const messageCounts = useMessageCounts(jsonlPath, metaSheetOpen);
+  const metaWithCounts = messageCounts
+    ? { ...meta, userCount: messageCounts.userCount, assistantCount: messageCounts.assistantCount }
+    : meta;
 
   if (!agentInstalled) {
     return (
@@ -101,42 +178,90 @@ const MobileCodexPanel = ({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-muted">
-      <div className="flex h-9 shrink-0 items-center gap-2 border-b border-border/40 px-3">
-        <OpenAIIcon size={16} className="text-foreground" aria-label="Codex" />
-        <span className="text-sm font-medium text-foreground">Codex</span>
-        <CodexStatusDot cliState={cliState} className="ml-auto" />
+      <div
+        className="flex shrink-0 cursor-pointer items-center justify-between border-b px-4 py-1.5 hover:bg-muted/30"
+        role="button"
+        tabIndex={0}
+        onClick={() => setMetaSheetOpen(true)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setMetaSheetOpen(true);
+          }
+        }}
+      >
+        <MetaCompact
+          title={meta.title}
+          totalCost={meta.totalCost}
+          branch={branch}
+          usedPercentage={meta.usedPercentage}
+          currentContextTokens={meta.currentContextTokens}
+          contextWindowSize={meta.contextWindowSize}
+        />
+        <ChevronDown
+          size={14}
+          className="shrink-0 text-muted-foreground"
+        />
       </div>
-      {cliState === 'needs-input' && tabId && sessionName && (
-        <div className="shrink-0 border-b border-border/40 p-3">
-          <PermissionPromptCard tabId={tabId} sessionName={sessionName} />
-        </div>
-      )}
       <div className="min-h-0 flex-1">
-        {cliState === 'busy' && entries.length === 0 && !isTimelineLoading ? (
-          <div className="flex h-full flex-col items-center justify-center gap-2 text-muted-foreground">
-            <Spinner className="h-4 w-4" />
-            <p className="text-xs">{t('codexTimelinePlaceholder')}</p>
-          </div>
-        ) : (
-          <TimelineView
-            entries={entries}
-            tasks={tasks}
-            sessionId={sessionId}
-            sessionName={sessionName}
-            tabId={tabId}
-            initMeta={initMeta}
-            sessionStats={sessionStats}
-            cliState={cliState}
-            compactingSince={compactingSince}
-            wsStatus={wsStatus}
-            isLoading={isTimelineLoading}
-            error={timelineError}
-            onRetry={retrySession}
-            onLoadMore={loadMoreTimeline}
-            hasMore={timelineHasMore}
-          />
-        )}
+        <TimelineView
+          entries={entries}
+          tasks={tasks}
+          sessionId={sessionId}
+          sessionName={sessionName}
+          tabId={tabId}
+          initMeta={initMeta}
+          sessionStats={sessionStats}
+          cliState={cliState}
+          compactingSince={compactingSince}
+          wsStatus={wsStatus}
+          isLoading={isTimelineLoading}
+          error={timelineError}
+          onRetry={retrySession}
+          onLoadMore={loadMoreTimeline}
+          hasMore={timelineHasMore}
+          scrollToBottomRef={scrollToBottomRef}
+        />
       </div>
+      <div className="shrink-0 pb-3">
+        <WebInputBar
+          tabId={tabId}
+          wsId={wsId}
+          sessionName={sessionName}
+          agentSessionId={codexSessionId}
+          provider="codex"
+          cliState={cliState}
+          sendStdin={sendStdin}
+          terminalWsConnected={terminalWsConnected}
+          visible={view === 'timeline'}
+          focusTerminal={focusTerminal}
+          focusInputRef={focusInputRef}
+          setInputValueRef={setInputValueRef}
+          maxRows={3}
+          onRestartSession={onRestart}
+          onSend={handleScrollToBottom}
+          onOptimisticSend={addPendingUserMessage}
+          onAddPendingMessage={addPendingUserMessage}
+          onRemovePendingMessage={removePendingUserMessage}
+        />
+        <QuickPromptBar
+          prompts={quickPrompts}
+          visible={view === 'timeline'}
+          onSelect={handleSelectQuickPrompt}
+        />
+      </div>
+      <MobileMetaSheet
+        open={metaSheetOpen}
+        onOpenChange={setMetaSheetOpen}
+        meta={metaWithCounts}
+        toolCount={messageCounts?.toolCount ?? null}
+        toolBreakdown={messageCounts?.toolBreakdown ?? null}
+        branch={branch}
+        isBranchLoading={isBranchLoading}
+        sessionId={sessionId}
+        gitStatus={gitStatus}
+        tmuxInfo={tmuxInfo}
+      />
     </div>
   );
 };

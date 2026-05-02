@@ -37,7 +37,8 @@ interface IWebInputBarProps {
   tabId?: string;
   wsId?: string;
   sessionName?: string;
-  claudeSessionId?: string | null;
+  agentSessionId?: string | null;
+  provider?: 'claude' | 'codex';
   cliState: TCliState;
   sendStdin: (data: string) => void;
   terminalWsConnected: boolean;
@@ -58,7 +59,8 @@ const WebInputBar = ({
   tabId,
   wsId,
   sessionName,
-  claudeSessionId,
+  agentSessionId,
+  provider = 'claude',
   cliState,
   sendStdin,
   terminalWsConnected,
@@ -76,6 +78,7 @@ const WebInputBar = ({
 }: IWebInputBarProps) => {
   const t = useTranslations('terminal');
   const tc = useTranslations('common');
+  const isCodex = provider === 'codex';
   const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
     useMessageHistory({ wsId });
   const handleMessageSent = useCallback(
@@ -89,7 +92,12 @@ const WebInputBar = ({
     cliState,
     sendStdin,
     terminalWsConnected,
-    { tabId, onRestartSession, onMessageSent: handleMessageSent },
+    {
+      tabId,
+      onRestartSession,
+      onMessageSent: handleMessageSent,
+      disabledMessage: isCodex ? t('codexInactiveMessage') : undefined,
+    },
   );
   const isMobileDevice = useIsMobileDevice();
 
@@ -160,7 +168,7 @@ const WebInputBar = ({
 
     if (!hasAttach) {
       onSend?.();
-      if (claudeSessionId) registerPushTarget(claudeSessionId);
+      if (agentSessionId) registerPushTarget(agentSessionId);
       send();
       return;
     }
@@ -177,7 +185,7 @@ const WebInputBar = ({
       addHistory(trimmed);
     }
     onSend?.();
-    if (claudeSessionId) registerPushTarget(claudeSessionId);
+    if (agentSessionId) registerPushTarget(agentSessionId);
 
     setIsDispatching(true);
     const pendingId = onAddPendingMessage?.(
@@ -244,7 +252,7 @@ const WebInputBar = ({
     } finally {
       setIsDispatching(false);
     }
-  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, claudeSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t]);
+  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, agentSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return;
@@ -444,7 +452,7 @@ const WebInputBar = ({
           <div className="mx-auto w-full max-w-content px-3 pb-1">
             <div className="grid grid-cols-[1fr_auto_1fr] items-center px-2 text-[11px] text-muted-foreground/70">
               <Loader2 size={10} className="mr-1.5 justify-self-end animate-spin" />
-              <span>{t('claudeConnecting')}</span>
+              <span>{t('connecting')}</span>
               <span />
             </div>
           </div>
@@ -528,7 +536,7 @@ const WebInputBar = ({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={t('inputPlaceholder')}
-              aria-label={t('inputAriaLabel')}
+              aria-label={isCodex ? 'Codex message input' : t('inputAriaLabel')}
               className="flex-1 resize-none bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
               rows={1}
               style={{
@@ -558,7 +566,7 @@ const WebInputBar = ({
                 size="sm"
                 className={cn(
                   'h-7 w-7 shrink-0 p-0 text-muted-foreground hover:text-foreground',
-                  canDispatch && 'text-claude-active',
+                  canDispatch && (isCodex ? 'text-foreground' : 'text-claude-active'),
                   !canDispatch && 'opacity-30',
                 )}
                 onClick={handleSendClick}

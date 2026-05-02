@@ -31,7 +31,6 @@ import WebSearchItem from '@/components/features/timeline/web-search-item';
 import McpToolCallItem from '@/components/features/timeline/mcp-tool-call-item';
 import PatchApplyItem from '@/components/features/timeline/patch-apply-item';
 import ContextCompactedItem from '@/components/features/timeline/context-compacted-item';
-import ReasoningSummaryItem from '@/components/features/timeline/reasoning-summary-item';
 import ErrorNoticeItem from '@/components/features/timeline/error-notice-item';
 
 interface ITimelineViewProps {
@@ -171,7 +170,7 @@ const TimelineEntryRenderer = ({ entry, sessionName }: { entry: ITimelineEntry; 
     case 'context-compacted':
       return <ContextCompactedItem entry={entry} />;
     case 'reasoning-summary':
-      return <ReasoningSummaryItem entry={entry} />;
+      return null;
     case 'error-notice':
       return <ErrorNoticeItem entry={entry} />;
     default:
@@ -290,10 +289,14 @@ const TimelineView = ({
   const [prevSessionId, setPrevSessionId] = useState(sessionId);
   const [hasOverflowBelow, setHasOverflowBelow] = useState(false);
 
+  const hasPendingUserMessage = entries.some((entry) => entry.type === 'user-message' && entry.pending === true);
+
   if (prevSessionId !== sessionId) {
     setPrevSessionId(sessionId);
-    setSkipAnimation(true);
-    setAnchorUserId(null);
+    if (!hasPendingUserMessage) {
+      setSkipAnimation(true);
+      setAnchorUserId(null);
+    }
     armedRef.current = false;
     wasBusyRef.current = false;
     pendingShrinkRef.current = false;

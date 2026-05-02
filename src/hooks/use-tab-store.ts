@@ -57,6 +57,17 @@ const DEFAULT_TAB_STATE: ITabState = {
   workspaceId: '',
 };
 
+const deriveCliStateFromHookEvent = (event: ILastEvent, fallback: TCliState): TCliState => {
+  if (fallback === 'cancelled') return fallback;
+  switch (event.name) {
+    case 'session-start': return 'idle';
+    case 'prompt-submit': return 'busy';
+    case 'notification': return 'needs-input';
+    case 'stop': return 'ready-for-review';
+    case 'interrupt': return 'idle';
+  }
+};
+
 interface ITabStore {
   tabs: Record<string, ITabState>;
   tabOrders: Record<string, string[]>;
@@ -286,7 +297,20 @@ const useTabStore = create<ITabStore>((set) => ({
       const prev = state.tabs[tabId];
       if (!prev) return state;
       if (prev.eventSeq !== undefined && event.seq <= prev.eventSeq) return state;
-      return { tabs: updateTab(state.tabs, tabId, { lastEvent: event, eventSeq: event.seq }) };
+      const cliState = deriveCliStateFromHookEvent(event, prev.cliState);
+      return {
+        tabs: updateTab(state.tabs, tabId, {
+          cliState,
+          lastEvent: event,
+          eventSeq: event.seq,
+          readyForReviewAt: cliState === 'ready-for-review' ? Date.now() : null,
+          busySince: cliState === 'busy' ? Date.now() : null,
+          dismissedAt: cliState === 'busy' ? null : prev.dismissedAt,
+          permissionRequest: prev.cliState === 'needs-input' && cliState !== 'needs-input'
+            ? null
+            : prev.permissionRequest,
+        }),
+      };
     }),
 }));
 

@@ -11,6 +11,7 @@ export interface IAgentLaunchCommandOptions {
 
 export interface IAgentSessionWatchOptions {
   skipInitial?: boolean;
+  tmuxSession?: string;
 }
 
 export interface ISubscription {

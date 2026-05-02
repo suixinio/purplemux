@@ -6,6 +6,7 @@ import { type ISessionWatcher } from '@/lib/providers/types';
 import { readTailEntries, parseIncremental, parseJsonlContent } from './session-parser';
 import { CodexParser, createCodexParser, parseCodexContent } from './session-parser-codex';
 import { CODEX_PROVIDER_ID } from '@/lib/providers/codex';
+import { findCodexSessionById } from '@/lib/providers/codex/session-detection';
 import { isCodexJsonlPath } from './path-validation';
 import { open as fsOpen, stat as fsStat, readFile as fsReadFile } from 'fs/promises';
 import { createReadStream } from 'fs';
@@ -14,6 +15,7 @@ import { getSessionPanePid, checkTerminalProcess, sendKeys, getSessionCwd, getPa
 import { cwdToProjectPath } from './session-list';
 import {
   updateTabAgentSessionId,
+  updateTabAgentState,
   updateTabAgentSummary,
   updateTabLastUserMessage,
   parseSessionName,
@@ -150,7 +152,11 @@ const subscribeAndUpdateSummary = async (
 ) => {
   const jsonlSummary = await subscribeToFile(ws, jsonlPath, sessionId, sessionName, provider);
   const summary = await resolveAgentSummary(provider, sessionName, jsonlSummary);
-  await updateTabAgentSummary(sessionName, provider, summary).catch(() => {});
+  await updateTabAgentState(sessionName, provider, {
+    sessionId: sessionId ?? provider.sessionIdFromJsonlPath(jsonlPath),
+    jsonlPath,
+    summary,
+  }).catch(() => {});
 };
 
 const broadcastToWatcher = (watcherKey: string, msg: TTimelineServerMessage) => {
@@ -617,7 +623,12 @@ const cleanup = (conn: ITimelineConnection) => {
 const resolveJsonlPath = async (
   tmuxSession: string,
   sessionId: string,
+  provider: IAgentProvider,
 ): Promise<string | null> => {
+  if (provider.id === CODEX_PROVIDER_ID) {
+    return (await findCodexSessionById(sessionId))?.jsonlPath ?? null;
+  }
+
   const cwd = await getSessionCwd(tmuxSession);
   if (!cwd) return null;
   const projectDir = cwdToProjectPath(cwd);
@@ -651,7 +662,7 @@ const handleResumeMessage = async (
 
     await updateTabAgentSessionId(conn.sessionName, conn.provider, sessionId).catch(() => {});
 
-    const jsonlPath = await resolveJsonlPath(tmuxSession, sessionId);
+    const jsonlPath = await resolveJsonlPath(tmuxSession, sessionId, conn.provider);
 
     sendJson(ws, {
       type: 'timeline:resume-started',
@@ -798,10 +809,10 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     && !hintSessionId
     && await provider.isAgentRunning(panePid);
 
-  if (sessionInfo.status === 'running' && sessionInfo.sessionId) {
+  if (sessionInfo.status === 'running') {
     sendJson(ws, {
       type: 'timeline:session-changed',
-      newSessionId: sessionInfo.sessionId,
+      newSessionId: sessionInfo.sessionId ?? '',
       reason: 'session-waiting',
     });
   } else if (isAgentStarting) {
@@ -824,7 +835,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
     if (sessionInfo.sessionId) {
       await updateTabAgentSessionId(conn.sessionName, provider, sessionInfo.sessionId).catch(() => {});
     }
-    const jsonlPath = await resolveJsonlPath(sessionName, effectiveSessionId);
+    const jsonlPath = await resolveJsonlPath(sessionName, effectiveSessionId, provider);
     if (jsonlPath) {
       conn.currentJsonlPath = jsonlPath;
       await subscribeAndUpdateSummary(ws, jsonlPath, effectiveSessionId, conn.sessionName, provider);
@@ -832,7 +843,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
       sendEmptyInit(ws, effectiveSessionId);
     }
   } else if (!isAgentStarting) {
-    sendEmptyInit(ws);
+    sendEmptyInit(ws, '', sessionInfo.status === 'running');
   }
 
   if (conn.cleaned) return;
@@ -906,7 +917,7 @@ export const handleTimelineConnection = async (ws: WebSocket, request: IncomingM
           }
         }
       }
-    }, { skipInitial: true });
+    }, { skipInitial: true, tmuxSession: sessionName });
     sessionWatchers.set(wsKey, sw);
   }
 

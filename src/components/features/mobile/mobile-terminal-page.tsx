@@ -20,7 +20,7 @@ import useConfigStore from '@/hooks/use-config-store';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
 import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
-import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 
 const MobileTerminalPage = () => {
   const t = useTranslations('terminal');
@@ -172,10 +172,12 @@ const MobileTerminalPage = () => {
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
       });
     } else if (options?.command === 'codex-new') {
-      cmd = buildCodexLaunchCommand({
-        workspaceId: activeWorkspaceId,
-        dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
-      });
+      try {
+        cmd = await fetchCodexLaunchCommand(activeWorkspaceId);
+      } catch {
+        toast.error(t('codexLaunchFailed'));
+        return;
+      }
     }
     const newTab = await layout.createTabInPane(currentPane.id, panelType, cmd, options?.resumeSessionId);
     if (newTab) {
@@ -184,7 +186,7 @@ const MobileTerminalPage = () => {
         useTabStore.getState().setSessionView(newTab.id, 'check');
       }
     }
-  }, [currentPane, layout, activeWorkspaceId]);
+  }, [currentPane, layout, activeWorkspaceId, t]);
 
   const handleCloseTab = useCallback(() => {
     if (!currentPane || !selectedTabId) return;

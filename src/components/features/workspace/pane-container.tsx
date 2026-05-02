@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Group, Panel, Separator, type GroupImperativeHandle } from 'react-resizable-panels';
 import { ChevronDown, ChevronUp, Plus, TerminalSquare } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import type { ITab, TPanelType } from '@/types/terminal';
@@ -14,7 +15,7 @@ import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import { useShallow } from 'zustand/react/shallow';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
-import { buildCodexLaunchCommand } from '@/lib/providers/codex/client';
+import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ClaudeCodePanel from '@/components/features/workspace/claude-code-panel';
 import CodexPanel from '@/components/features/workspace/codex-panel';
@@ -189,7 +190,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const focusInputRef = useRef<(() => void) | undefined>(undefined);
   const setInputValueRef = useRef<((v: string) => void) | undefined>(undefined);
   const pendingClaudeInputRef = useRef<string | null>(null);
-  const codexRelaunchRef = useRef<() => void>(() => {});
+  const codexRelaunchRef = useRef<() => void | Promise<void>>(() => {});
   const clickedTerminalRef = useRef(false);
   const pointerDownPosRef = useRef<{ x: number; y: number } | null>(null);
   const pendingFocusRef = useRef<(() => void) | null>(null);
@@ -206,7 +207,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const agentProcess = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentProcess ?? null : null);
   const claudeSessionId = useTabStore((s) => activeTabId ? s.tabs[activeTabId]?.agentSessionId ?? null : null);
   const sessionView = useTabStore((s) => activeTabId ? selectSessionView(s.tabs, activeTabId) : 'session-list');
-  const claudeInputVisible = sessionView === 'timeline';
+  const agentInputVisible = sessionView === 'timeline';
 
   const deferredFocusInput = useCallback((fn: () => void) => {
     if (wasDragRef.current) return;
@@ -256,7 +257,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     scopeKey: activeTabId,
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
-    onUpdated: () => codexRelaunchRef.current(),
+    onUpdated: () => { void codexRelaunchRef.current(); },
   });
 
   useEffect(() => {
@@ -538,7 +539,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       wsActionsRef.current.sendResize(cols, rows);
       const targetTerminal = clickedTerminalRef.current;
       clickedTerminalRef.current = false;
-      if (targetTerminal || !isAgentPanel || !claudeInputVisible) {
+      if (targetTerminal || !isAgentPanel || !agentInputVisible) {
         focus();
       } else {
         deferredFocusInput(() => focusInputRef.current?.());
@@ -714,34 +715,65 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     sendStdin('/exit\r');
   }, [status, sendStdin, activeTabId, buildClaudeCommand]);
 
-  const buildCodexCommand = useCallback((): string =>
-    buildCodexLaunchCommand({
-      workspaceId: layoutWsId,
-      dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
-    }), [layoutWsId]);
+  const buildCodexCommand = useCallback(
+    () => fetchCodexLaunchCommand(layoutWsId),
+    [layoutWsId],
+  );
 
-  const handleNewCodexSession = useCallback(() => {
-    if (status !== 'connected' || !activeTabId) return;
-    useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin(`${buildCodexCommand()}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+  const markAgentLaunch = useCallback((tabId: string, options?: { resetAgentSession?: boolean }) => {
+    fetch('/api/status/agent-launch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tabId, resetAgentSession: options?.resetAgentSession === true }),
+    }).catch(() => {});
+  }, []);
 
-  const handleRelaunchCodexSession = useCallback(() => {
+  const handleNewCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(t('codexLaunchFailed'));
+      return;
+    }
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
-    sendStdin(`${buildCodexCommand()}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+    sendStdin(`${command}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
+
+  const handleRelaunchCodexSession = useCallback(async () => {
+    if (status !== 'connected' || !activeTabId) return;
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(t('codexLaunchFailed'));
+      return;
+    }
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+    sendStdin(`${command}\r`);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
 
   useEffect(() => {
     codexRelaunchRef.current = handleRelaunchCodexSession;
   }, [handleRelaunchCodexSession]);
 
-  const handleRestartCodexSession = useCallback(() => {
+  const handleRestartCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
-    pendingRestartRef.current = buildCodexCommand();
+    let command: string;
+    try {
+      command = await buildCodexCommand();
+    } catch {
+      toast.error(t('codexLaunchFailed'));
+      return;
+    }
+    pendingRestartRef.current = command;
+    markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/quit\r');
-  }, [status, sendStdin, activeTabId, buildCodexCommand]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
 
   const handleSwitchToClaudeMode = useCallback(async () => {
     if (!activeTabId) return;
@@ -775,8 +807,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     if (!isShellProcess(lastTitleRef.current)) return;
     const cmd = pendingRestartRef.current;
     pendingRestartRef.current = null;
+    const tabId = activeTabIdRef.current;
+    if (tabId) markAgentLaunch(tabId);
     sendStdin(`${cmd}\r`);
-  }, [agentProcess, status, sendStdin]);
+  }, [agentProcess, status, sendStdin, markAgentLaunch]);
 
   const splitGroupRef = useRef<GroupImperativeHandle>(null);
   const [isTerminalCollapsed, setIsTerminalCollapsed] = useState(false);
@@ -828,8 +862,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const { cols, rows } = fit();
       wsActionsRef.current.sendResize(cols, rows);
       if (isFocused) {
-        if (isClaudeCode) {
-          if (claudeInputVisible) deferredFocusInput(() => focusInputRef.current?.());
+        if (isAgentPanel) {
+          if (agentInputVisible) deferredFocusInput(() => focusInputRef.current?.());
         } else {
           focus();
         }
@@ -839,10 +873,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, [isAgentPanel, activeTabId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    if (isFocused && isClaudeCode && claudeInputVisible) {
+    if (isFocused && isAgentPanel && agentInputVisible) {
       deferredFocusInput(() => focusInputRef.current?.());
     }
-  }, [claudeInputVisible]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [agentInputVisible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const noTabs = tabs.length === 0;
   const ready = isReady && (status === 'connected' || hasEverConnected) && !noTabs && !sessionSwitching;
@@ -957,8 +991,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
           >
             <div
               className={cn('flex h-full flex-col bg-card', isTerminalCollapsed && 'pb-3')}
-              onDragOver={isClaudeCode ? handleTimelineDragOver : undefined}
-              onDrop={isClaudeCode ? handleTimelineDrop : undefined}
+              onDragOver={isAgentPanel ? handleTimelineDragOver : undefined}
+              onDrop={isAgentPanel ? handleTimelineDrop : undefined}
             >
               {isClaudeCode && activeTab && !showInitialLoading && activeTabId && (
                 <ClaudeCodePanel
@@ -976,35 +1010,6 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onTrustResponse={onTrustResponse}
                 />
               )}
-              {isClaudeCode && !showInitialLoading && claudeInputVisible && (
-                <WebInputBar
-                  key={activeTabId}
-                  tabId={activeTabId ?? undefined}
-                  wsId={layoutWsId ?? undefined}
-                  sessionName={activeTab?.sessionName}
-                  claudeSessionId={claudeSessionId}
-                  cliState={claudeCliState}
-                  sendStdin={sendWebStdin}
-                  terminalWsConnected={status === 'connected'}
-                  visible
-                  focusTerminal={focus}
-                  focusInputRef={focusInputRef}
-                  setInputValueRef={setInputValueRef}
-                  onRestartSession={handleRestartClaudeSession}
-                  onSend={handleScrollToBottom}
-                  onOptimisticSend={handleOptimisticSend}
-                  onAddPendingMessage={handleAddPendingMessage}
-                  onRemovePendingMessage={handleRemovePendingMessage}
-                  attachFilesRef={attachFilesRef}
-                />
-              )}
-              {isClaudeCode && !showInitialLoading && claudeInputVisible && activeTabId && (
-                <QuickPromptBar
-                  prompts={quickPrompts}
-                  visible
-                  onSelect={handleSelectQuickPrompt}
-                />
-              )}
               {isCodex && activeTab && !showInitialLoading && activeTabId && (
                 <CodexPanel
                   key={activeTab.sessionName}
@@ -1015,6 +1020,39 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onRestart={handleRestartCodexSession}
                   updatePrompt={codexUpdatePrompt}
                   onUpdatePromptResponse={onCodexUpdateResponse}
+                  scrollToBottomRef={scrollToBottomRef}
+                  addPendingMessageRef={addPendingMessageRef}
+                  removePendingMessageRef={removePendingMessageRef}
+                />
+              )}
+              {isAgentPanel && !showInitialLoading && agentInputVisible && (
+                <WebInputBar
+                  key={activeTabId}
+                  tabId={activeTabId ?? undefined}
+                  wsId={layoutWsId ?? undefined}
+                  sessionName={activeTab?.sessionName}
+                  agentSessionId={claudeSessionId}
+                  provider={isCodex ? 'codex' : 'claude'}
+                  cliState={claudeCliState}
+                  sendStdin={sendWebStdin}
+                  terminalWsConnected={status === 'connected'}
+                  visible
+                  focusTerminal={focus}
+                  focusInputRef={focusInputRef}
+                  setInputValueRef={setInputValueRef}
+                  onRestartSession={isCodex ? handleRestartCodexSession : handleRestartClaudeSession}
+                  onSend={handleScrollToBottom}
+                  onOptimisticSend={handleOptimisticSend}
+                  onAddPendingMessage={handleAddPendingMessage}
+                  onRemovePendingMessage={handleRemovePendingMessage}
+                  attachFilesRef={attachFilesRef}
+                />
+              )}
+              {isAgentPanel && !showInitialLoading && agentInputVisible && activeTabId && (
+                <QuickPromptBar
+                  prompts={quickPrompts}
+                  visible
+                  onSelect={handleSelectQuickPrompt}
                 />
               )}
             </div>

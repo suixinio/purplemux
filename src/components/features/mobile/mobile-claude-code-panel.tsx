@@ -14,9 +14,11 @@ import useTmuxInfo from '@/hooks/use-tmux-info';
 import useMessageCounts from '@/hooks/use-message-counts';
 import SessionListView from '@/components/features/workspace/session-list-view';
 import SessionEmptyView from '@/components/features/workspace/session-empty-view';
+import AgentBootProgress from '@/components/features/workspace/agent-boot-progress';
 import BypassPromptCard from '@/components/features/workspace/bypass-prompt-card';
 import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import ClaudeLogo from '@/components/icons/claude-logo';
 import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
 import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
@@ -229,22 +231,32 @@ const MobileClaudeCodePanel = ({
   }
 
   if (view === 'check') {
+    if (!startingPromptOptions) {
+      return (
+        <AgentBootProgress
+          icon={(
+            <ClaudeLogo className="h-8 w-8 text-foreground motion-safe:animate-spin motion-reduce:opacity-70 [animation-duration:1.5s]" />
+          )}
+          main={(claudeSessionId || sessionId) ? t('claudeBootResuming') : t('claudeBootMain')}
+          almostReady={t('claudeBootAlmostReady')}
+          subtitle={t('claudeBootSubtitle')}
+          className="animate-delayed-fade-in min-h-0 flex-1 bg-muted"
+        />
+      );
+    }
+
     return (
       <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted">
-        <Spinner className="h-4 w-4 text-muted-foreground" />
-        <span className="mt-2 text-sm text-muted-foreground">{(claudeSessionId || sessionId) ? t('resumingSession') : t('creatingConversation')}</span>
-        {startingPromptOptions && (
-          startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
-            <BypassPromptCard
-              sessionName={sessionName}
-              options={startingPromptOptions.options}
-              fallback={
-                <span className="text-xs text-muted-foreground">{t('checkTerminal')}</span>
-              }
-            />
-          ) : (
-            <span className="mt-3 text-xs text-muted-foreground">{t('checkTerminal')}</span>
-          )
+        {startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
+          <BypassPromptCard
+            sessionName={sessionName}
+            options={startingPromptOptions.options}
+            fallback={
+              <span className="text-xs text-muted-foreground">{t('checkTerminal')}</span>
+            }
+          />
+        ) : (
+          <span className="mt-3 text-xs text-muted-foreground">{t('checkTerminal')}</span>
         )}
       </div>
     );
@@ -337,7 +349,7 @@ const MobileClaudeCodePanel = ({
           tabId={tabId}
           wsId={wsId}
           sessionName={sessionName}
-          claudeSessionId={claudeSessionId}
+          agentSessionId={claudeSessionId}
           cliState={storeCliState}
           sendStdin={sendStdin}
           terminalWsConnected={terminalWsConnected}

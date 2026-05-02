@@ -10,9 +10,11 @@ import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import { useSessionMetaCompute } from '@/hooks/use-session-meta';
 import SessionListView from '@/components/features/workspace/session-list-view';
 import SessionEmptyView from '@/components/features/workspace/session-empty-view';
+import AgentBootProgress from '@/components/features/workspace/agent-boot-progress';
 import BypassPromptCard from '@/components/features/workspace/bypass-prompt-card';
 import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
+import ClaudeLogo from '@/components/icons/claude-logo';
 import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 import SessionMetaBar, { SessionMetaBarSkeleton } from '@/components/features/workspace/session-meta-bar';
 
@@ -209,32 +211,42 @@ const ClaudeCodePanel = ({
   }
 
   if (view === 'check') {
+    if (!startingPromptOptions) {
+      return (
+        <AgentBootProgress
+          icon={(
+            <ClaudeLogo className="h-8 w-8 text-foreground motion-safe:animate-spin motion-reduce:opacity-70 [animation-duration:1.5s]" />
+          )}
+          main={(claudeSessionId || sessionId) ? t('claudeBootResuming') : t('claudeBootMain')}
+          almostReady={t('claudeBootAlmostReady')}
+          subtitle={t('claudeBootSubtitle')}
+          className={cn('animate-delayed-fade-in', className)}
+        />
+      );
+    }
+
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
-        <Spinner className="h-4 w-4 text-muted-foreground" />
-        <span className="mt-2 text-sm text-muted-foreground">{(claudeSessionId || sessionId) ? t('resumingSession') : t('creatingConversation')}</span>
-        {startingPromptOptions && (
-          startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
-            <BypassPromptCard
-              sessionName={sessionName}
-              options={startingPromptOptions.options}
-              fallback={
-                <button
-                  className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                  onClick={onClose}
-                >
-                  {t('checkTerminal')}
-                </button>
-              }
-            />
-          ) : (
-            <button
-              className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
-              onClick={onClose}
-            >
-              {t('checkTerminal')}
-            </button>
-          )
+        {startingPromptOptions.isBypassPrompt && startingPromptOptions.options.length > 0 ? (
+          <BypassPromptCard
+            sessionName={sessionName}
+            options={startingPromptOptions.options}
+            fallback={
+              <button
+                className="text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                onClick={onClose}
+              >
+                {t('checkTerminal')}
+              </button>
+            }
+          />
+        ) : (
+          <button
+            className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            onClick={onClose}
+          >
+            {t('checkTerminal')}
+          </button>
         )}
       </div>
     );

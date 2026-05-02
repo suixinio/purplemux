@@ -111,7 +111,7 @@ const useTimeline = ({
     startByteOffsetRef.current = 0;
   }
 
-  const isLoading = !wsInitReceived;
+  const isLoading = !wsInitReceived && entries.length === 0;
 
   const handleInit = useCallback((newEntries: ITimelineEntry[], _totalEntries: number, initSessionId: string, summary?: string, meta?: IInitMeta, startByteOffset?: number, hasMoreInit?: boolean, jsonlPath?: string | null, isClaudeStarting?: boolean, initStats?: ISessionStats | null) => {
     setWsInitReceived(true);
@@ -216,18 +216,21 @@ const useTimeline = ({
       setTimeout(() => {
         if (getCliStateRef.current?.() !== 'busy') return;
         setEntries((prev) =>
-          prev.map((e) =>
-            e.id === id && e.type === 'user-message' && e.pending === true
-              ? { ...e, fadingOut: true }
-              : e,
-          ),
+          prev.some((e) => e.id !== id)
+            ? prev.map((e) =>
+                e.id === id && e.type === 'user-message' && e.pending === true
+                  ? { ...e, fadingOut: true }
+                  : e,
+              )
+            : prev,
         );
         setTimeout(() => {
-          setEntries((prev) =>
-            prev.filter(
+          setEntries((prev) => {
+            if (!prev.some((e) => e.id !== id)) return prev;
+            return prev.filter(
               (e) => !(e.id === id && e.type === 'user-message' && e.pending === true),
-            ),
-          );
+            );
+          });
         }, PENDING_FADE_OUT_DURATION_MS);
       }, PENDING_AUTOHIDE_DELAY_MS);
     }
@@ -264,7 +267,12 @@ const useTimeline = ({
     }
     setSessionId(newSessionId || null);
     setAgentProcess(true);
-    setEntries([]);
+    setEntries((prev) =>
+      prev.filter(
+        (e): e is ITimelineEntry & { type: 'user-message'; pending: true } =>
+          e.type === 'user-message' && e.pending === true,
+      ),
+    );
     setSessionSummary(undefined);
     setInitMeta(undefined);
     setSessionStats(null);

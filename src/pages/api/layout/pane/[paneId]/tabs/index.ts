@@ -48,6 +48,9 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
         lastEvent: null,
         eventSeq: 0,
       });
+      if (command) {
+        getStatusManager().markAgentLaunch(tab.id);
+      }
     }
 
     if (resumeSessionId && provider && !command) {
