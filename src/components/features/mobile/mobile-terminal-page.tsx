@@ -149,7 +149,7 @@ const MobileTerminalPage = () => {
     if (!currentTab) return '';
     if (currentTab.name) return currentTab.name;
     const rawTitle = tabMetadata?.title || currentTab.title;
-    const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
+    const formatted = rawTitle ? formatTabTitle(rawTitle, currentTab.panelType) : '';
     if (formatted) return formatted;
     return `Tab ${currentTab.order + 1}`;
   }, [currentTab, tabMetadata]);

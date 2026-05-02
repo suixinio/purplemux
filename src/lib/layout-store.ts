@@ -762,25 +762,26 @@ export const patchTab = async (
   let authoritativeCwd: string | null | undefined;
   let authoritativeTitle: string | null | undefined;
   if (patch.cwd !== undefined || patch.title !== undefined) {
-    const sessionName = await (async () => {
+    const tabInfo = await (async () => {
       const filePath = resolveLayoutFile(wsId);
       const layout = await readLayoutFile(filePath);
       if (!layout) return null;
-      return findPane(layout.root, paneId)?.tabs.find((t) => t.id === tabId)?.sessionName ?? null;
+      const tab = findPane(layout.root, paneId)?.tabs.find((t) => t.id === tabId);
+      return tab ? { sessionName: tab.sessionName, panelType: patch.panelType ?? tab.panelType } : null;
     })();
-    if (sessionName) {
+    if (tabInfo?.sessionName) {
       const { getSessionCwd, getPaneCurrentCommand } = await import('@/lib/tmux');
       const { formatTabTitle } = await import('@/lib/tab-title');
       if (patch.cwd !== undefined) {
-        authoritativeCwd = await getSessionCwd(sessionName);
+        authoritativeCwd = await getSessionCwd(tabInfo.sessionName);
       }
       if (patch.title !== undefined) {
         const [cmd, cwd] = await Promise.all([
-          getPaneCurrentCommand(sessionName),
-          authoritativeCwd !== undefined ? Promise.resolve(authoritativeCwd) : getSessionCwd(sessionName),
+          getPaneCurrentCommand(tabInfo.sessionName),
+          authoritativeCwd !== undefined ? Promise.resolve(authoritativeCwd) : getSessionCwd(tabInfo.sessionName),
         ]);
         if (cmd && cwd) {
-          authoritativeTitle = formatTabTitle(`${cmd}|${cwd}`);
+          authoritativeTitle = formatTabTitle(`${cmd}|${cwd}`, tabInfo.panelType);
         }
       }
     }

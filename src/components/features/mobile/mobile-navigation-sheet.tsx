@@ -142,7 +142,7 @@ const MobileNavigationSheet = ({
     if (tab.name) return tab.name;
     const meta = metadata[tab.id];
     const rawTitle = meta?.title || tab.title;
-    const formatted = rawTitle ? formatTabTitle(rawTitle) : '';
+    const formatted = rawTitle ? formatTabTitle(rawTitle, tab.panelType) : '';
     if (formatted) return formatted;
     return `Tab ${tab.order + 1}`;
   };

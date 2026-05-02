@@ -204,7 +204,8 @@ const MobileSurfaceView = ({
       if (!tabId) return;
       if (title === lastTitleRef.current) return;
       lastTitleRef.current = title;
-      const formatted = formatTabTitle(title);
+      const activeTab = tabsRef.current.find((t) => t.id === tabId);
+      const formatted = formatTabTitle(title, activeTab?.panelType);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       if (isShellProcess(title) && pendingRestartRef.current) {
         const cmd = pendingRestartRef.current;

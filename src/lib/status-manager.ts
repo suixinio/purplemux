@@ -427,7 +427,7 @@ class StatusManager {
         this.tabs.set(tab.id, {
           cliState,
           workspaceId: ws.id,
-          tabName: tab.name || (paneTitle ? formatTabTitle(paneTitle) : ''),
+          tabName: tab.name || (paneTitle ? formatTabTitle(paneTitle, tab.panelType) : ''),
           currentProcess,
           paneTitle,
           tmuxSession: tab.sessionName,
@@ -602,7 +602,7 @@ class StatusManager {
           const entry: ITabStatusEntry = {
             cliState: initialState,
             workspaceId: ws.id,
-            tabName: tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : ''),
+            tabName: tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle, tab.panelType) : ''),
             currentProcess,
             paneTitle: newPaneTitle,
             tmuxSession: tab.sessionName,
@@ -630,7 +630,7 @@ class StatusManager {
         const messageChanged = existing.lastUserMessage !== tab.lastUserMessage;
         const panelTypeChanged = existing.panelType !== tab.panelType;
         const refreshed = await this.readTabMetadata(paneInfo, provider, tab);
-        existing.tabName = tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle) : '');
+        existing.tabName = tab.name || (newPaneTitle ? formatTabTitle(newPaneTitle, tab.panelType) : '');
         existing.currentProcess = currentProcess;
         existing.paneTitle = newPaneTitle;
         existing.workspaceId = ws.id;

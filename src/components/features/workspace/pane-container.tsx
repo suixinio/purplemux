@@ -343,7 +343,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       if (title === lastTitleRef.current) return;
       lastTitleRef.current = title;
 
-      const formatted = formatTabTitle(title);
+      const formatted = formatTabTitle(title, activeTab?.panelType);
       const process = parseCurrentCommand(title);
       useTabMetadataStore.getState().setTitle(tabId, formatted);
       useTabStore.getState().setCurrentProcess(tabId, process);

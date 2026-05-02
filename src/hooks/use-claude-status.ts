@@ -61,7 +61,7 @@ const useClaudeStatus = () => {
               useTabStore.getState().syncAllFromServer(msg.tabs);
               for (const [tabId, entry] of Object.entries(msg.tabs)) {
                 if (entry.paneTitle && !useTabMetadataStore.getState().metadata[tabId]?.title) {
-                  useTabMetadataStore.getState().setTitle(tabId, formatTabTitle(entry.paneTitle));
+                  useTabMetadataStore.getState().setTitle(tabId, formatTabTitle(entry.paneTitle, entry.panelType));
                 }
               }
               break;
@@ -91,7 +91,7 @@ const useClaudeStatus = () => {
                 eventSeq: msg.eventSeq,
               });
               if (msg.paneTitle) {
-                useTabMetadataStore.getState().setTitle(msg.tabId, formatTabTitle(msg.paneTitle));
+                useTabMetadataStore.getState().setTitle(msg.tabId, formatTabTitle(msg.paneTitle, msg.panelType));
               }
               break;
 
