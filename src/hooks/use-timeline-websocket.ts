@@ -209,7 +209,7 @@ const useTimelineWebSocket = ({
         wsRef.current = null;
       }
     };
-  }, [enabled, sessionName, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [enabled, sessionName, claudeSessionId, panelType, connectTrigger]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const handleVisibilityChange = () => {
