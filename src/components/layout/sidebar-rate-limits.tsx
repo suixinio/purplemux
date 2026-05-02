@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import useRateLimitsStore from '@/hooks/use-rate-limits-store';
-import type { IRateLimitWindow } from '@/types/status';
+import type { IRateLimitWindow, IRateLimitsData, TRateLimitsProvider } from '@/types/status';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import {
   Tooltip,
   TooltipContent,
@@ -98,24 +100,66 @@ const LimitBar = ({ label, window }: { label: TLimitLabel; window: IRateLimitWin
   );
 };
 
+const PROVIDER_LABELS: Record<TRateLimitsProvider, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+};
+
+const PROVIDER_ICONS = {
+  claude: ClaudeCodeIcon,
+  codex: OpenAIIcon,
+} satisfies Record<TRateLimitsProvider, typeof ClaudeCodeIcon>;
+
+const ProviderRateLimits = ({ provider, data }: { provider: TRateLimitsProvider; data: IRateLimitsData }) => {
+  if (!data.five_hour && !data.seven_day) return null;
+
+  const ProviderIcon = PROVIDER_ICONS[provider];
+
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted-foreground/5 text-muted-foreground ring-1 ring-muted-foreground/10"
+        aria-label={PROVIDER_LABELS[provider]}
+        title={PROVIDER_LABELS[provider]}
+      >
+        <ProviderIcon size={14} />
+      </div>
+      <div className="min-w-0 flex-1 space-y-1">
+        {data.five_hour && <LimitBar label="5h" window={data.five_hour} />}
+        {data.seven_day && <LimitBar label="7d" window={data.seven_day} />}
+      </div>
+    </div>
+  );
+};
+
 const SidebarRateLimits = () => {
   const data = useRateLimitsStore((s) => s.data);
   const [, setTick] = useState(0);
+  const providers: TRateLimitsProvider[] = ['claude', 'codex'];
+  const visibleProviders = providers.filter((provider) => {
+    const limits = data?.[provider];
+    return limits && (limits.five_hour || limits.seven_day);
+  });
 
   useEffect(() => {
-    if (!data) return;
+    if (visibleProviders.length === 0) return;
     const id = setInterval(() => setTick((t) => t + 1), 60_000);
     return () => clearInterval(id);
-  }, [data]);
+  }, [visibleProviders.length]);
 
-  if (!data) return null;
-  if (!data.five_hour && !data.seven_day) return null;
+  if (visibleProviders.length === 0) return null;
 
   return (
     <TooltipProvider delay={200}>
-      <div className="space-y-1 px-3 py-1.5">
-        {data.five_hour && <LimitBar label="5h" window={data.five_hour} />}
-        {data.seven_day && <LimitBar label="7d" window={data.seven_day} />}
+      <div className="px-3 py-1.5">
+        {visibleProviders.map((provider, index) => (
+          <div
+            key={provider}
+            className={index > 0 ? 'mt-2 border-t border-sidebar-border/70 pt-2' : undefined}
+          >
+            <ProviderRateLimits provider={provider} data={data![provider]!} />
+          </div>
+        ))}
       </div>
     </TooltipProvider>
   );

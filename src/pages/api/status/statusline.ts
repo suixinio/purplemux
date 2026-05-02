@@ -4,7 +4,7 @@ import path from 'path';
 import os from 'os';
 import { spawn } from 'child_process';
 import { verifyCliToken } from '@/lib/cli-token';
-import { RATE_LIMITS_FILE } from '@/lib/statusline-script';
+import { writeProviderRateLimits } from '@/lib/rate-limits-cache';
 import { writeSessionStats, readSessionStats } from '@/lib/session-stats';
 import { broadcastSessionStats } from '@/lib/timeline-server';
 import { createLogger } from '@/lib/logger';
@@ -91,14 +91,15 @@ const writeRateLimitsIfPresent = async (input: IClaudeStatusInput): Promise<void
   const sevenDay = input.rate_limits?.seven_day ?? null;
   if (!fiveHour && !sevenDay) return;
 
+  const ts = Date.now() / 1000;
   const data = {
-    ts: Date.now() / 1000,
+    ts,
     five_hour: fiveHour,
     seven_day: sevenDay,
   };
 
   try {
-    await fs.writeFile(RATE_LIMITS_FILE, JSON.stringify(data));
+    await writeProviderRateLimits('claude', data);
   } catch (err) {
     log.debug({ err }, 'failed to write rate-limits.json');
   }

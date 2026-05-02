@@ -1,9 +1,9 @@
 import { create } from 'zustand';
-import type { IRateLimitsData } from '@/types/status';
+import type { IRateLimitsCache } from '@/types/status';
 
 interface IRateLimitsStore {
-  data: IRateLimitsData | null;
-  setData: (data: IRateLimitsData) => void;
+  data: IRateLimitsCache | null;
+  setData: (data: IRateLimitsCache) => void;
 }
 
 const useRateLimitsStore = create<IRateLimitsStore>((set) => ({

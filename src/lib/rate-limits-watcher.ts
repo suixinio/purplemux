@@ -3,25 +3,25 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { createLogger } from '@/lib/logger';
 import { RATE_LIMITS_FILE } from '@/lib/statusline-script';
-import type { IRateLimitsData } from '@/types/status';
+import type { IRateLimitsCache } from '@/types/status';
 
 const log = createLogger('rate-limits');
 
 const DEBOUNCE_MS = 500;
-const WATCH_DIR = path.dirname(RATE_LIMITS_FILE);
-const WATCH_FILENAME = path.basename(RATE_LIMITS_FILE);
 
-export type TRateLimitsCallback = (data: IRateLimitsData) => void;
+export type TRateLimitsCallback = (data: IRateLimitsCache) => void;
 
 export const createRateLimitsWatcher = (onChange: TRateLimitsCallback) => {
   let watcher: fs.FSWatcher | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let lastTs = 0;
+  const watchDir = path.dirname(RATE_LIMITS_FILE);
+  const watchFilename = path.basename(RATE_LIMITS_FILE);
 
   const readAndNotify = async () => {
     try {
       const raw = await fsPromises.readFile(RATE_LIMITS_FILE, 'utf-8');
-      const data = JSON.parse(raw) as IRateLimitsData;
+      const data = JSON.parse(raw) as IRateLimitsCache;
       if (data.ts && data.ts !== lastTs) {
         lastTs = data.ts;
         onChange(data);
@@ -35,19 +35,19 @@ export const createRateLimitsWatcher = (onChange: TRateLimitsCallback) => {
     readAndNotify();
 
     try {
-      watcher = fs.watch(WATCH_DIR, (_eventType, filename) => {
-        if (filename !== WATCH_FILENAME) return;
+      watcher = fs.watch(watchDir, (_eventType, filename) => {
+        if (filename !== watchFilename) return;
         if (debounceTimer) clearTimeout(debounceTimer);
         debounceTimer = setTimeout(readAndNotify, DEBOUNCE_MS);
       });
 
       watcher.on('error', () => {
-        log.debug(`${WATCH_DIR} watch error, retrying...`);
+        log.debug(`${watchDir} watch error, retrying...`);
         stop();
         setTimeout(start, 5_000);
       });
     } catch {
-      log.debug(`${WATCH_DIR} not available yet, retrying...`);
+      log.debug(`${watchDir} not available yet, retrying...`);
       setTimeout(start, 5_000);
     }
   };

@@ -16,11 +16,12 @@ import { capturePaneAtWidth } from '@/lib/capture-at-width';
 import { isCodexTuiReadyContent } from '@/lib/codex-tui-ready-detector';
 import { CODEX_PROVIDER_ID } from '@/lib/providers/codex';
 import { findCodexSessionById } from '@/lib/providers/codex/session-detection';
+import { cacheCodexRateLimitsFromJsonl } from '@/lib/codex-rate-limits-cache';
 import { parsePermissionOptions } from '@/lib/permission-prompt';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { ITab } from '@/types/terminal';
 import type { TCliState, TToolName } from '@/types/timeline';
-import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsData, TEventName, ILastEvent } from '@/types/status';
+import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsCache, TEventName, ILastEvent } from '@/types/status';
 import type { IPermissionRequest } from '@/types/codex-permission';
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
@@ -376,7 +377,7 @@ class StatusManager {
   private clients = new Set<WebSocket>();
   private initialized = false;
   private rateLimitsWatcher: ReturnType<typeof createRateLimitsWatcher> | null = null;
-  private lastRateLimits: IRateLimitsData | null = null;
+  private lastRateLimits: IRateLimitsCache | null = null;
   private jsonlWatchers = new Map<string, { watcher: FSWatcher; jsonlPath: string; debounceTimer: ReturnType<typeof setTimeout> | null }>();
   private compactStaleTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
@@ -1406,6 +1407,9 @@ class StatusManager {
     }
 
     const { currentAction, lastAssistantSnippet, reset, interrupted, lastEntryTs } = await checkJsonlIdle(jsonlPath);
+    if (entry.agentProviderId === CODEX_PROVIDER_ID || entry.panelType === 'codex-cli') {
+      cacheCodexRateLimitsFromJsonl(jsonlPath).catch(() => {});
+    }
 
     if (
       interrupted

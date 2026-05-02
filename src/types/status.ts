@@ -97,9 +97,17 @@ export interface IRateLimitsData {
   seven_day: IRateLimitWindow | null;
 }
 
+export type TRateLimitsProvider = 'claude' | 'codex';
+
+export interface IRateLimitsCache {
+  ts: number;
+  claude?: IRateLimitsData | null;
+  codex?: IRateLimitsData | null;
+}
+
 export interface IRateLimitsUpdateMessage {
   type: 'rate-limits:update';
-  data: IRateLimitsData;
+  data: IRateLimitsCache;
 }
 
 export interface ISessionHistorySyncMessage {
