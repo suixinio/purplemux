@@ -12,6 +12,8 @@
   "notRunningHint2": "terminal actual para ver la línea de tiempo.",
   "loadMore": "Cargar mensajes anteriores",
   "timelineAria": "Línea de tiempo de Claude Code",
+  "contextCompacted": "Contexto compactado",
+  "contextCompacting": "Compactando contexto...",
   "planPendingLabel": "Plan pendiente de aprobación",
   "planViewDetail": "Ver detalles",
   "planDialogDescription": "Detalles del plan",

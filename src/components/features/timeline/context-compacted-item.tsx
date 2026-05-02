@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslations } from 'next-intl';
 import { Combine } from 'lucide-react';
 import type { ITimelineContextCompacted } from '@/types/timeline';
 
@@ -13,6 +14,7 @@ const formatTokens = (n?: number): string => {
 };
 
 const ContextCompactedItem = ({ entry }: IContextCompactedItemProps) => {
+  const t = useTranslations('timeline');
   const before = entry.beforeTokens;
   const after = entry.afterTokens;
   const reduction =
@@ -23,7 +25,7 @@ const ContextCompactedItem = ({ entry }: IContextCompactedItemProps) => {
   return (
     <div className="animate-in fade-in flex items-center gap-1.5 py-1 text-xs text-muted-foreground/70 duration-150">
       <Combine size={12} className="shrink-0" />
-      <span>컨텍스트 압축</span>
+      <span>{t('contextCompacted')}</span>
       {before != null && after != null && (
         <span className="tabular-nums">
           {formatTokens(before)} → {formatTokens(after)} tokens

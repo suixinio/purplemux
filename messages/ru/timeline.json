@@ -12,6 +12,8 @@
   "notRunningHint2": "терминале, чтобы увидеть ленту событий.",
   "loadMore": "Загрузить предыдущие сообщения",
   "timelineAria": "Лента событий Claude Code",
+  "contextCompacted": "Контекст сжат",
+  "contextCompacting": "Сжатие контекста...",
   "planPendingLabel": "План ожидает одобрения",
   "planViewDetail": "Подробнее",
   "planDialogDescription": "Детали плана",

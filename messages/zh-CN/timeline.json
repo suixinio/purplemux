@@ -12,6 +12,8 @@
   "notRunningHint2": "Claude Code即可查看时间线。",
   "loadMore": "加载更早的消息",
   "timelineAria": "Claude Code时间线",
+  "contextCompacted": "上下文已压缩",
+  "contextCompacting": "正在压缩上下文...",
   "planPendingLabel": "方案待审批",
   "planViewDetail": "查看详情",
   "planDialogDescription": "方案详情",

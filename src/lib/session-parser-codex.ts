@@ -888,16 +888,8 @@ const processItem = (
       return processResponseItem(payload, timestamp, state);
     case 'event_msg':
       return processEventMsg(payload, timestamp, state);
-    case 'compacted': {
-      const entry: ITimelineContextCompacted = {
-        id: nanoid(),
-        type: 'context-compacted',
-        timestamp,
-        beforeTokens: safeNumber(payload.before_tokens),
-        afterTokens: safeNumber(payload.after_tokens),
-      };
-      return [entry];
-    }
+    case 'compacted':
+      return [];
     default:
       return [];
   }

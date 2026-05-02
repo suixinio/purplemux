@@ -12,6 +12,8 @@
   "notRunningHint2": "即可查看時間軸。",
   "loadMore": "載入更早的訊息",
   "timelineAria": "Claude Code 時間軸",
+  "contextCompacted": "上下文已壓縮",
+  "contextCompacting": "正在壓縮上下文...",
   "planPendingLabel": "計畫待核准",
   "planViewDetail": "查看詳情",
   "planDialogDescription": "計畫詳情",

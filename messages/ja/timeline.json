@@ -12,6 +12,8 @@
   "notRunningHint2": "Claude Codeを起動するとタイムラインが表示されます。",
   "loadMore": "以前のメッセージを読み込む",
   "timelineAria": "Claude Codeタイムライン",
+  "contextCompacted": "コンテキストを圧縮しました",
+  "contextCompacting": "コンテキストを圧縮中...",
   "planPendingLabel": "プランの承認待ち",
   "planViewDetail": "詳細を見る",
   "planDialogDescription": "プランの詳細",

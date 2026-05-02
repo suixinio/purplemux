@@ -12,6 +12,8 @@
   "notRunningHint2": "terminal actuel pour voir la chronologie.",
   "loadMore": "Charger les messages précédents",
   "timelineAria": "Chronologie Claude Code",
+  "contextCompacted": "Contexte compacté",
+  "contextCompacting": "Compactage du contexte...",
   "planPendingLabel": "Plan en attente d'approbation",
   "planViewDetail": "Voir les détails",
   "planDialogDescription": "Détails du plan",

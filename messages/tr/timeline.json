@@ -12,6 +12,8 @@
   "notRunningHint2": "terminalde Claude Code'u başlatın.",
   "loadMore": "Önceki mesajları yükle",
   "timelineAria": "Claude Code zaman çizelgesi",
+  "contextCompacted": "Bağlam sıkıştırıldı",
+  "contextCompacting": "Bağlam sıkıştırılıyor...",
   "planPendingLabel": "Onay bekleyen plan",
   "planViewDetail": "Ayrıntıları görüntüle",
   "planDialogDescription": "Plan ayrıntıları",

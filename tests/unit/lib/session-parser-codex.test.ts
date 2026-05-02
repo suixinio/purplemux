@@ -26,4 +26,28 @@ describe('parseCodexContent', () => {
       images: ['/api/uploads/ws-1/tab-1/image.png'],
     });
   });
+
+  it('uses context_compacted event_msg and ignores top-level compacted records', () => {
+    const compacted = {
+      timestamp: '2026-05-02T11:34:43.788Z',
+      type: 'compacted',
+      payload: {
+        replacement_history: [],
+      },
+    };
+    const eventMsg = {
+      timestamp: '2026-05-02T11:34:43.796Z',
+      type: 'event_msg',
+      payload: {
+        type: 'context_compacted',
+      },
+    };
+
+    const entries = parseCodexContent(`${JSON.stringify(compacted)}\n${JSON.stringify(eventMsg)}\n`);
+
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      type: 'context-compacted',
+    });
+  });
 });

@@ -12,6 +12,8 @@
   "notRunningHint2": "Terminal, um die Timeline anzuzeigen.",
   "loadMore": "Ältere Nachrichten laden",
   "timelineAria": "Claude Code Timeline",
+  "contextCompacted": "Kontext komprimiert",
+  "contextCompacting": "Kontext wird komprimiert...",
   "planPendingLabel": "Plan wartet auf Genehmigung",
   "planViewDetail": "Details anzeigen",
   "planDialogDescription": "Plandetails",

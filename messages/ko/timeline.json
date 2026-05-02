@@ -12,6 +12,8 @@
   "notRunningHint2": "실행하면 타임라인이 표시됩니다.",
   "loadMore": "이전 내용 더보기",
   "timelineAria": "Claude Code 타임라인",
+  "contextCompacted": "컨텍스트 압축",
+  "contextCompacting": "컨텍스트 압축 중...",
   "planPendingLabel": "플랜 승인 대기",
   "planViewDetail": "자세히 보기",
   "planDialogDescription": "Plan 상세 내용",

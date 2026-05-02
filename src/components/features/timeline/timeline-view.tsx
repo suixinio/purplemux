@@ -894,7 +894,7 @@ const TimelineView = ({
           {isCompacting && (
             <div className="flex items-center gap-2 px-4 py-3 text-xs text-muted-foreground">
               <Spinner size={10} className="text-claude-active" />
-              <span>컨텍스트 압축 중…</span>
+              <span>{t('contextCompacting')}</span>
             </div>
           )}
           <div ref={bottomSentinelRef} aria-hidden style={{ height: 0, overflowAnchor: 'none' }} />
