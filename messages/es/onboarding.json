@@ -5,7 +5,7 @@
     "language": "Idioma",
     "appearance": "Tema de la app",
     "theme": "Tema del terminal",
-    "claude": "Configuración de Claude",
+    "claude": "Agent Settings",
     "network": "Acceso a la red",
     "complete": "Completado"
   },
@@ -30,7 +30,7 @@
   "languageDescription": "Seleccione su idioma preferido.",
   "appearanceDescription": "Selecciona el tema de visualización general de la aplicación.",
   "skipPermissions": "Omitir verificación de permisos",
-  "skipPermissionsDescription": "Añade la opción --dangerously-skip-permissions al ejecutar Claude Code.",
+  "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
   "networkDescription": "Elige qué redes pueden acceder a purplemux. Puedes cambiarlo más tarde en Ajustes > Sistema.",
   "networkFootnote": "Si usas un proxy inverso, túnel o Tailscale Serve, \"Solo Localhost\" es suficiente.",
   "networkOptions": {

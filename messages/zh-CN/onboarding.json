@@ -5,7 +5,7 @@
     "language": "语言",
     "appearance": "应用主题",
     "theme": "终端主题",
-    "claude": "Claude设置",
+    "claude": "Agent Settings",
     "network": "网络访问",
     "complete": "完成"
   },
@@ -30,7 +30,7 @@
   "languageDescription": "选择您偏好的语言。",
   "appearanceDescription": "选择应用的整体显示主题。",
   "skipPermissions": "跳过权限检查",
-  "skipPermissionsDescription": "运行Claude Code时添加--dangerously-skip-permissions选项。",
+  "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
   "networkDescription": "选择哪些网络可以访问 purplemux。稍后可在设置 > 系统中更改。",
   "networkFootnote": "如果通过反向代理、隧道或 Tailscale Serve 访问，选择\"仅 Localhost\"即可。",
   "networkOptions": {

@@ -5,7 +5,7 @@
     "language": "Dil",
     "appearance": "Uygulama Teması",
     "theme": "Terminal Teması",
-    "claude": "Claude Ayarları",
+    "claude": "Agent Settings",
     "network": "Ağ Erişimi",
     "complete": "Tamamlandı"
   },
@@ -30,7 +30,7 @@
   "languageDescription": "Tercih ettiğiniz dili seçin.",
   "appearanceDescription": "Uygulama genelinde görüntüleme temasını seçin.",
   "skipPermissions": "İzin Kontrollerini Atla",
-  "skipPermissionsDescription": "Claude Code çalıştırılırken --dangerously-skip-permissions seçeneğini ekler.",
+  "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
   "networkDescription": "Hangi ağların purplemux'a erişebileceğini seçin. Daha sonra Ayarlar > Sistem'den değiştirilebilir.",
   "networkFootnote": "Ters proxy, tünel veya Tailscale Serve kullanıyorsanız \"Yalnızca Localhost\" yeterlidir.",
   "networkOptions": {

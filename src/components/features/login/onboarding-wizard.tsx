@@ -520,6 +520,14 @@ const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWiza
               <p className="text-sm text-muted-foreground">
                 {t('skipPermissionsDescription')}
               </p>
+              <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+                <span>
+                  Claude: <code className="rounded bg-muted px-1 py-0.5 font-mono">--dangerously-skip-permissions</code>
+                </span>
+                <span>
+                  Codex: <code className="rounded bg-muted px-1 py-0.5 font-mono">--yolo</code>
+                </span>
+              </div>
             </div>
             <Switch
               checked={skipPermissions}

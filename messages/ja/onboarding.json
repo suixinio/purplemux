@@ -5,7 +5,7 @@
     "language": "言語",
     "appearance": "アプリテーマ",
     "theme": "ターミナルテーマ",
-    "claude": "Claude設定",
+    "claude": "Agent Settings",
     "network": "ネットワークアクセス",
     "complete": "完了"
   },
@@ -30,7 +30,7 @@
   "languageDescription": "使用する言語を選択してください。",
   "appearanceDescription": "アプリ全体の表示テーマを選択します。",
   "skipPermissions": "権限チェックをスキップ",
-  "skipPermissionsDescription": "Claude Code実行時に--dangerously-skip-permissionsオプションを追加します。",
+  "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
   "networkDescription": "どのネットワークから purplemux にアクセスできるかを選択します。設定 > システムで後から変更できます。",
   "networkFootnote": "リバースプロキシ、トンネル、Tailscale Serve を経由する場合は「Localhost のみ」で十分です。",
   "networkOptions": {
