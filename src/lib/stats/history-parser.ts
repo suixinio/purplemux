@@ -5,6 +5,7 @@ import readline from 'readline';
 import dayjs from 'dayjs';
 import type { IHistoryResponse, TPeriod } from '@/types/stats';
 import { isWithinPeriod } from './period-filter';
+import { parseCodexHistory } from './jsonl-parser-codex';
 
 const HISTORY_PATH = path.join(os.homedir(), '.claude', 'history.jsonl');
 
@@ -42,6 +43,26 @@ export const parseHistory = async (period: TPeriod, limit: number = 10): Promise
     lengthCounts.set(bucket.label, 0);
   }
 
+  const addEntry = (display: string, timestamp: number) => {
+    totalEntries++;
+
+    const command = extractCommand(display);
+    if (command) {
+      commandCounts.set(command, (commandCounts.get(command) ?? 0) + 1);
+    }
+
+    const len = display.length;
+    for (const bucket of LENGTH_BUCKETS) {
+      if (len <= bucket.max) {
+        lengthCounts.set(bucket.label, (lengthCounts.get(bucket.label) ?? 0) + 1);
+        break;
+      }
+    }
+
+    const hour = String(dayjs(timestamp).hour());
+    hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+  };
+
   try {
     const stream = createReadStream(HISTORY_PATH, { encoding: 'utf-8' });
     const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
@@ -55,30 +76,19 @@ export const parseHistory = async (period: TPeriod, limit: number = 10): Promise
 
         if (!isWithinPeriod(new Date(timestamp), period)) continue;
 
-        totalEntries++;
         const display = String(entry.display ?? '');
-
-        const command = extractCommand(display);
-        if (command) {
-          commandCounts.set(command, (commandCounts.get(command) ?? 0) + 1);
-        }
-
-        const len = display.length;
-        for (const bucket of LENGTH_BUCKETS) {
-          if (len <= bucket.max) {
-            lengthCounts.set(bucket.label, (lengthCounts.get(bucket.label) ?? 0) + 1);
-            break;
-          }
-        }
-
-        const hour = String(dayjs(timestamp).hour());
-        hourCounts[hour] = (hourCounts[hour] ?? 0) + 1;
+        addEntry(display, timestamp);
       } catch {
         // skip malformed lines
       }
     }
   } catch {
     // file doesn't exist
+  }
+
+  const codexHistory = await parseCodexHistory(period);
+  for (const entry of codexHistory) {
+    addEntry(entry.text, entry.timestamp);
   }
 
   const topCommands = Array.from(commandCounts.entries())

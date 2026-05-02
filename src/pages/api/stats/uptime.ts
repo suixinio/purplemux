@@ -4,6 +4,7 @@ import os from 'os';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import dayjs from 'dayjs';
 import { parseTimestampsByDay } from '@/lib/stats/jsonl-parser';
+import { parseCodexTimestampsByDay } from '@/lib/stats/jsonl-parser-codex';
 import { getCached, setCached } from '@/lib/stats/cache';
 import type { IUptimeResponse, IStreak, IStreakDay } from '@/types/stats';
 
@@ -11,7 +12,7 @@ const SLOT_MS = 60 * 1000;
 const ACTIVITY_GAP_MS = 15 * 60 * 1000;
 const CACHE_DIR = pathModule.join(os.homedir(), '.purplemux', 'stats');
 const CACHE_PATH = pathModule.join(CACHE_DIR, 'uptime-cache.json');
-const DISK_CACHE_VERSION = 1;
+const DISK_CACHE_VERSION = 2;
 
 interface IUptimeDiskCache {
   version: number;
@@ -185,7 +186,21 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     }
   }
 
-  const freshData = await parseTimestampsByDay(needDates);
+  const [claudeFreshData, codexFreshData] = await Promise.all([
+    parseTimestampsByDay(needDates),
+    parseCodexTimestampsByDay(needDates),
+  ]);
+  const freshData = new Map<string, Map<string, number[]>>(claudeFreshData);
+  for (const [date, daySessions] of codexFreshData) {
+    const existing = freshData.get(date);
+    if (existing) {
+      for (const [sessionId, timestamps] of daySessions) {
+        existing.set(sessionId, [...(existing.get(sessionId) ?? []), ...timestamps]);
+      }
+    } else {
+      freshData.set(date, daySessions);
+    }
+  }
 
   const updatedCache: IUptimeDiskCache = {
     version: DISK_CACHE_VERSION,

@@ -1,6 +1,6 @@
 import { useMemo, memo } from 'react';
 import { useTranslations } from 'next-intl';
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { Activity, DollarSign, CalendarDays, TrendingUp } from 'lucide-react';
 import dayjs from 'dayjs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,8 +17,8 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
   const t = useTranslations('stats');
 
   const chartConfig: ChartConfig = {
-    sessions: { label: t('sessions'), color: 'var(--ui-blue)' },
-    messages: { label: t('messages'), color: 'var(--ui-teal)' },
+    claudeMessages: { label: t('aggregatedClaudeLabel'), color: 'var(--ui-purple)' },
+    codexMessages: { label: t('aggregatedCodexLabel'), color: 'var(--ui-teal)' },
   };
 
   const chartData = useMemo(() => {
@@ -26,8 +26,8 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
       .slice(-30)
       .map((d) => ({
         date: d.date,
-        sessions: d.sessionCount,
-        messages: d.messageCount,
+        claudeMessages: d.claudeMessageCount ?? d.messageCount,
+        codexMessages: d.codexMessageCount ?? 0,
       }));
   }, [data.dailyActivity]);
 
@@ -71,13 +71,7 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
           </CardHeader>
           <CardContent>
             <ChartContainer config={chartConfig} className="aspect-auto h-48 w-full">
-              <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="fillSessions" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--ui-blue)" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="var(--ui-blue)" stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                 <CartesianGrid vertical={false} strokeDasharray="3 3" />
                 <XAxis
                   dataKey="date"
@@ -97,14 +91,19 @@ const OverviewSection = ({ data }: IOverviewSectionProps) => {
                   content={<ChartTooltipContent />}
                   labelFormatter={(v) => dayjs(v).format('YYYY-MM-DD')}
                 />
-                <Area
-                  dataKey="messages"
-                  type="monotone"
-                  fill="url(#fillSessions)"
-                  stroke="var(--ui-blue)"
-                  strokeWidth={1.5}
+                <Bar
+                  dataKey="claudeMessages"
+                  stackId="messages"
+                  fill="var(--ui-purple)"
+                  radius={0}
                 />
-              </AreaChart>
+                <Bar
+                  dataKey="codexMessages"
+                  stackId="messages"
+                  fill="var(--ui-teal)"
+                  radius={[2, 2, 0, 0]}
+                />
+              </BarChart>
             </ChartContainer>
           </CardContent>
         </Card>

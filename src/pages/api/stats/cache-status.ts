@@ -2,6 +2,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import fs from 'fs/promises';
 import path from 'path';
 import os from 'os';
+import { countCodexJsonlFiles } from '@/lib/stats/jsonl-parser-codex';
 
 const CACHE_PATH = path.join(os.homedir(), '.purplemux', 'stats', 'cache.json');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
@@ -29,7 +30,11 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     return res.status(405).json({ error: 'method-not-allowed' });
   }
 
-  const fileCount = await countJsonlFiles();
+  const [claudeFileCount, codexFileCount] = await Promise.all([
+    countJsonlFiles(),
+    countCodexJsonlFiles(),
+  ]);
+  const fileCount = claudeFileCount + codexFileCount;
 
   try {
     await fs.access(CACHE_PATH);

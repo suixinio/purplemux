@@ -6,15 +6,16 @@ import readline from 'readline';
 import { createLogger } from '@/lib/logger';
 import { isWithinPeriod } from './period-filter';
 import { calculateOpenAICost } from '@/lib/openai-tokens';
-import type { TPeriod } from '@/types/stats';
+import { shortenCwd } from './daily-report-builder';
+import type { IProjectStats, ISessionStats, TPeriod } from '@/types/stats';
 import type { ISessionStats as ITimelineSessionStats } from '@/types/timeline';
 
 const log = createLogger('codex-stats-parser');
 
 const SESSIONS_ROOT = path.join(os.homedir(), '.codex', 'sessions');
-const DEFAULT_DAYS_BACK = 30;
 const TAIL_BYTES = 1024 * 1024;
 const CACHE_TTL_MS = 30_000;
+const CONCURRENCY_LIMIT = 10;
 
 export interface ICodexRateLimitsBucket {
   usedPercent: number;
@@ -59,6 +60,15 @@ interface ICacheEntry {
   cachedAt: number;
 }
 
+interface ICodexSessionActivity {
+  sessionId: string | null;
+  cwd: string | null;
+  startedAt: number;
+  lastActivityAt: number;
+  messageCount: number;
+  userMessages: { timestamp: number; text: string }[];
+}
+
 const g = globalThis as unknown as { __ptCodexStatsCache?: Map<string, ICacheEntry> };
 if (!g.__ptCodexStatsCache) g.__ptCodexStatsCache = new Map();
 const cache = g.__ptCodexStatsCache;
@@ -70,6 +80,84 @@ const dayDirPath = (date: Date): string =>
     String(date.getMonth() + 1).padStart(2, '0'),
     String(date.getDate()).padStart(2, '0'),
   );
+
+const dateFromString = (date: string): Date | null => {
+  const match = date.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (!year || !month || !day) return null;
+  return new Date(year, month - 1, day);
+};
+
+const runWithConcurrency = async <T>(tasks: (() => Promise<T>)[], limit: number): Promise<T[]> => {
+  const results: T[] = [];
+  let index = 0;
+
+  const runNext = async (): Promise<void> => {
+    while (index < tasks.length) {
+      const current = index++;
+      results[current] = await tasks[current]();
+    }
+  };
+
+  await Promise.all(Array.from({ length: Math.min(limit, tasks.length) }, () => runNext()));
+  return results;
+};
+
+const collectAllCodexJsonlPaths = async (dir = SESSIONS_ROOT): Promise<string[]> => {
+  let names: string[];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+
+  const paths: string[] = [];
+  for (const name of names) {
+    const entryPath = path.join(dir, name);
+    const stat = await fs.stat(entryPath).catch(() => null);
+    if (stat?.isDirectory()) {
+      paths.push(...await collectAllCodexJsonlPaths(entryPath));
+    } else if (stat?.isFile() && name.endsWith('.jsonl')) {
+      paths.push(entryPath);
+    }
+  }
+  return paths;
+};
+
+const collectCodexJsonlPathsForDates = async (dates: Iterable<string>): Promise<string[]> => {
+  const allPaths: string[] = [];
+  for (const date of dates) {
+    const parsed = dateFromString(date);
+    if (!parsed) continue;
+    let names: string[];
+    try {
+      names = await fs.readdir(dayDirPath(parsed));
+    } catch {
+      continue;
+    }
+    for (const name of names) {
+      if (name.endsWith('.jsonl')) allPaths.push(path.join(dayDirPath(parsed), name));
+    }
+  }
+  return allPaths;
+};
+
+const collectCodexJsonlPathsForPeriod = async (period: TPeriod): Promise<string[]> => {
+  if (period === 'all') return collectAllCodexJsonlPaths();
+
+  const dates: string[] = [];
+  const today = new Date();
+  const daysBack = period === 'today' ? 1 : period === '7d' ? 7 : 30;
+  for (let i = 0; i < daysBack; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    dates.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  }
+  return collectCodexJsonlPathsForDates(dates);
+};
 
 interface ICodexTokenUsage {
   total_tokens?: number;
@@ -143,6 +231,75 @@ const readTailLines = async (jsonlPath: string, sizeBytes: number, fileSize: num
   }
   if (start > 0 && lines.length > 0) lines.shift();
   return lines;
+};
+
+const parseCodexActivityFile = async (jsonlPath: string): Promise<ICodexSessionActivity> => {
+  const stream = createReadStream(jsonlPath, { encoding: 'utf-8' });
+  const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+  const activity: ICodexSessionActivity = {
+    sessionId: null,
+    cwd: null,
+    startedAt: 0,
+    lastActivityAt: 0,
+    messageCount: 0,
+    userMessages: [],
+  };
+
+  try {
+    for await (const line of rl) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      try {
+        const parsed = JSON.parse(trimmed) as {
+          timestamp?: string;
+          type?: string;
+          payload?: {
+            id?: string;
+            timestamp?: string;
+            cwd?: string;
+            type?: string;
+            message?: string;
+          };
+        };
+        const timestampMs = parsed.timestamp ? Date.parse(parsed.timestamp) : 0;
+        if (timestampMs && timestampMs > activity.lastActivityAt) {
+          activity.lastActivityAt = timestampMs;
+        }
+
+        if (parsed.type === 'session_meta' && parsed.payload) {
+          activity.sessionId = parsed.payload.id ?? activity.sessionId;
+          activity.cwd = parsed.payload.cwd ?? activity.cwd;
+          const startedAt = parsed.payload.timestamp ? Date.parse(parsed.payload.timestamp) : timestampMs;
+          if (startedAt) activity.startedAt = startedAt;
+          continue;
+        }
+
+        if (parsed.type === 'event_msg' && parsed.payload?.type === 'user_message') {
+          const text = typeof parsed.payload.message === 'string' ? parsed.payload.message : '';
+          const ts = timestampMs || activity.startedAt;
+          if (text && ts) {
+            activity.messageCount++;
+            activity.userMessages.push({ timestamp: ts, text });
+          }
+        }
+      } catch {
+        // skip malformed lines
+      }
+    }
+  } catch {
+    // file read error
+  } finally {
+    rl.close();
+    stream.destroy();
+  }
+
+  if (!activity.startedAt && activity.userMessages.length > 0) {
+    activity.startedAt = activity.userMessages[0].timestamp;
+  }
+  if (!activity.lastActivityAt) {
+    activity.lastActivityAt = activity.userMessages.at(-1)?.timestamp ?? activity.startedAt;
+  }
+  return activity;
 };
 
 const extractTailInfo = (lines: string[]): { tokenCount: ITokenCountRecord | null; model: string | null } => {
@@ -231,10 +388,11 @@ const parseCodexJsonlFile = async (jsonlPath: string, stat: Stats): Promise<ICod
   const cachedInputTokens = usage?.cached_input_tokens ?? 0;
   const outputTokens = usage?.output_tokens ?? 0;
   const reasoningOutputTokens = usage?.reasoning_output_tokens ?? 0;
-  const totalTokens = info?.total_token_usage?.total_tokens
+  const rawTotalTokens = info?.total_token_usage?.total_tokens
     ?? info?.last_token_usage?.total_tokens
     ?? 0;
-  const currentContextTokens = info?.last_token_usage?.total_tokens ?? totalTokens;
+  const totalTokens = Math.max(0, inputTokens - cachedInputTokens) + outputTokens;
+  const currentContextTokens = info?.last_token_usage?.total_tokens ?? rawTotalTokens;
   const contextWindowSize = info?.model_context_window ?? 0;
   const usedPercentage = contextWindowSize > 0
     ? Math.round((currentContextTokens / contextWindowSize) * 100)
@@ -309,36 +467,16 @@ export const readCodexTimelineSessionStats = async (jsonlPath: string): Promise<
   };
 };
 
-const collectCodexJsonlPaths = async (daysBack: number): Promise<string[]> => {
-  const today = new Date();
-  const dayPaths: string[] = [];
-  for (let i = 0; i < daysBack; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() - i);
-    dayPaths.push(dayDirPath(d));
-  }
-
-  const allPaths: string[] = [];
-  for (const dir of dayPaths) {
-    let names: string[];
-    try {
-      names = await fs.readdir(dir);
-    } catch {
-      continue;
-    }
-    for (const name of names) {
-      if (!name.endsWith('.jsonl')) continue;
-      allPaths.push(path.join(dir, name));
-    }
-  }
-  return allPaths;
-};
-
 export interface ICodexProviderStats {
   daily: { date: string; tokens: number; sessions: number }[];
-  totals: { tokens: number; sessions: number };
+  totals: { tokens: number; tokensWithCached: number; sessions: number; cachedInputTokens: number };
   extras: ICodexExtras | null;
   sessions: ICodexSessionStats[];
+}
+
+export interface ICodexHistoryEntry {
+  text: string;
+  timestamp: number;
 }
 
 const formatDate = (ms: number): string => {
@@ -347,10 +485,9 @@ const formatDate = (ms: number): string => {
 };
 
 export const parseCodexJsonl = async (period: TPeriod): Promise<ICodexProviderStats> => {
-  const daysBack = period === '7d' ? 7 : period === 'today' ? 1 : DEFAULT_DAYS_BACK;
-  const jsonlPaths = await collectCodexJsonlPaths(daysBack);
+  const jsonlPaths = await collectCodexJsonlPathsForPeriod(period);
   if (jsonlPaths.length === 0) {
-    return { daily: [], totals: { tokens: 0, sessions: 0 }, extras: null, sessions: [] };
+    return { daily: [], totals: { tokens: 0, tokensWithCached: 0, sessions: 0, cachedInputTokens: 0 }, extras: null, sessions: [] };
   }
 
   const results = await Promise.all(jsonlPaths.map(getCachedSessionStats));
@@ -363,6 +500,8 @@ export const parseCodexJsonl = async (period: TPeriod): Promise<ICodexProviderSt
 
   const dailyMap = new Map<string, { tokens: number; sessions: number }>();
   let totalTokens = 0;
+  let cachedInputTokens = 0;
+  let tokensWithCached = 0;
   for (const s of sessions) {
     const dateKey = formatDate(s.startedAt);
     const day = dailyMap.get(dateKey) ?? { tokens: 0, sessions: 0 };
@@ -370,6 +509,8 @@ export const parseCodexJsonl = async (period: TPeriod): Promise<ICodexProviderSt
     day.sessions += 1;
     dailyMap.set(dateKey, day);
     totalTokens += s.totalTokens;
+    cachedInputTokens += s.cachedInputTokens;
+    tokensWithCached += s.totalTokens + s.cachedInputTokens;
   }
 
   const daily = Array.from(dailyMap.entries())
@@ -382,10 +523,115 @@ export const parseCodexJsonl = async (period: TPeriod): Promise<ICodexProviderSt
 
   return {
     daily,
-    totals: { tokens: totalTokens, sessions: sessions.length },
+    totals: { tokens: totalTokens, tokensWithCached, sessions: sessions.length, cachedInputTokens },
     extras: latest?.extras ?? null,
     sessions,
   };
+};
+
+export const countCodexJsonlFiles = async (): Promise<number> => {
+  const paths = await collectAllCodexJsonlPaths();
+  return paths.length;
+};
+
+export const parseCodexSessions = async (period: TPeriod): Promise<ISessionStats[]> => {
+  const jsonlPaths = await collectCodexJsonlPathsForPeriod(period);
+  if (jsonlPaths.length === 0) return [];
+
+  const tasks = jsonlPaths.map((jsonlPath) => async (): Promise<ISessionStats | null> => {
+    const [stats, activity] = await Promise.all([
+      getCachedSessionStats(jsonlPath),
+      parseCodexActivityFile(jsonlPath),
+    ]);
+    if (!stats) return null;
+    if (!isWithinPeriod(stats.startedAt, period)) return null;
+
+    const startedAt = stats.startedAt || activity.startedAt;
+    const lastActivityAt = Math.max(activity.lastActivityAt, startedAt);
+    return {
+      sessionId: stats.sessionId,
+      project: stats.cwd ? shortenCwd(stats.cwd) : (activity.cwd ? shortenCwd(activity.cwd) : ''),
+      startedAt: new Date(startedAt).toISOString(),
+      lastActivityAt: new Date(lastActivityAt).toISOString(),
+      messageCount: activity.messageCount,
+      totalTokens: stats.totalTokens,
+      totalTokensWithCached: stats.totalTokens + stats.cachedInputTokens,
+      model: stats.model ?? '',
+    };
+  });
+
+  const results = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+  return results
+    .filter((s): s is ISessionStats => s !== null)
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+};
+
+export const parseCodexProjects = async (period: TPeriod): Promise<IProjectStats[]> => {
+  const sessions = await parseCodexSessions(period);
+  const projectMap = new Map<string, IProjectStats>();
+
+  for (const s of sessions) {
+    const project = s.project || '(unknown)';
+    const existing = projectMap.get(project);
+    if (existing) {
+      existing.sessionCount++;
+      existing.messageCount += s.messageCount;
+      existing.totalTokens += s.totalTokens;
+    } else {
+      projectMap.set(project, {
+        project,
+        sessionCount: 1,
+        messageCount: s.messageCount,
+        totalTokens: s.totalTokens,
+      });
+    }
+  }
+
+  return Array.from(projectMap.values()).sort((a, b) => b.totalTokens - a.totalTokens);
+};
+
+export const parseCodexTimestampsByDay = async (
+  targetDates: Set<string>,
+): Promise<Map<string, Map<string, number[]>>> => {
+  const jsonlPaths = await collectCodexJsonlPathsForDates(targetDates);
+  if (jsonlPaths.length === 0) return new Map();
+
+  const tasks = jsonlPaths.map((jsonlPath) => async () => parseCodexActivityFile(jsonlPath));
+  const activities = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+  const days = new Map<string, Map<string, number[]>>();
+
+  for (const activity of activities) {
+    const sessionId = activity.sessionId ? `codex:${activity.sessionId}` : `codex:${activity.startedAt}`;
+    for (const message of activity.userMessages) {
+      const date = formatDate(message.timestamp);
+      if (!targetDates.has(date)) continue;
+      let daySessions = days.get(date);
+      if (!daySessions) {
+        daySessions = new Map();
+        days.set(date, daySessions);
+      }
+      const timestamps = daySessions.get(sessionId);
+      if (timestamps) {
+        timestamps.push(message.timestamp);
+      } else {
+        daySessions.set(sessionId, [message.timestamp]);
+      }
+    }
+  }
+
+  return days;
+};
+
+export const parseCodexHistory = async (period: TPeriod): Promise<ICodexHistoryEntry[]> => {
+  const jsonlPaths = await collectCodexJsonlPathsForPeriod(period);
+  if (jsonlPaths.length === 0) return [];
+
+  const tasks = jsonlPaths.map((jsonlPath) => async () => parseCodexActivityFile(jsonlPath));
+  const activities = await runWithConcurrency(tasks, CONCURRENCY_LIMIT);
+  return activities
+    .flatMap((activity) => activity.userMessages)
+    .filter((entry) => isWithinPeriod(entry.timestamp, period))
+    .sort((a, b) => b.timestamp - a.timestamp);
 };
 
 export const clearCodexStatsCache = (): void => cache.clear();

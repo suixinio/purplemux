@@ -34,6 +34,7 @@ const MODEL_COLOR_MAP: Record<string, string> = {
 };
 
 const getModelColor = (model: string): string => {
+  if (model.startsWith('codex:')) return 'var(--ui-teal)';
   const key = normalizeModelName(model);
   if (MODEL_COLOR_MAP[key]) return MODEL_COLOR_MAP[key];
   const lower = model.toLowerCase();
@@ -41,6 +42,20 @@ const getModelColor = (model: string): string => {
   if (lower.includes('sonnet')) return 'var(--ui-coral)';
   if (lower.includes('haiku')) return 'var(--ui-teal)';
   return 'var(--ui-gray)';
+};
+
+const getModelLabel = (
+  rawKey: string,
+  tokens: IOverviewResponse['modelTokens'][string],
+  claudeLabel: string,
+  codexLabel: string,
+): string => {
+  const provider = tokens.provider ?? (rawKey.startsWith('codex:') ? 'codex' : 'claude');
+  const model = tokens.model ?? (rawKey.startsWith('codex:') ? rawKey.slice('codex:'.length) : rawKey);
+  const modelLabel = provider === 'claude'
+    ? formatModelDisplayName(model || rawKey)
+    : (model || 'Unknown model').replace(/^(openai\/|models\/)/, '');
+  return `${provider === 'codex' ? codexLabel : claudeLabel} / ${modelLabel}`;
 };
 
 const TokenSection = ({ data }: ITokenSectionProps) => {
@@ -74,7 +89,7 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
   const modelBarData = useMemo(() => {
     return Object.entries(data.modelTokens)
       .map(([model, tokens]) => ({
-        model: formatModelDisplayName(model),
+        model: getModelLabel(model, tokens, t('aggregatedClaudeLabel'), t('aggregatedCodexLabel')),
         input: tokens.input,
         output: tokens.output,
         cacheRead: tokens.cacheRead,
@@ -83,8 +98,9 @@ const TokenSection = ({ data }: ITokenSectionProps) => {
         cost: tokens.cost,
         fill: getModelColor(model),
       }))
+      .filter((d) => d.total > 0 || d.cost > 0)
       .sort((a, b) => b.total - a.total);
-  }, [data.modelTokens]);
+  }, [data.modelTokens, t]);
 
   const totalCost = useMemo(() => {
     return modelBarData.reduce((sum, d) => sum + d.cost, 0);

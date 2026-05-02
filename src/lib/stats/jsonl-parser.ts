@@ -18,6 +18,8 @@ interface IRawSessionAgg {
   messageCount: number;
   totalInputTokens: number;
   totalOutputTokens: number;
+  totalCacheReadTokens: number;
+  totalCacheCreationTokens: number;
   model: string;
 }
 
@@ -84,6 +86,8 @@ const parseJsonlStream = async (
             messageCount: 0,
             totalInputTokens: 0,
             totalOutputTokens: 0,
+            totalCacheReadTokens: 0,
+            totalCacheCreationTokens: 0,
             model: '',
           };
           sessions.set(sessionId, agg);
@@ -106,6 +110,8 @@ const parseJsonlStream = async (
             if (usage) {
               agg.totalInputTokens += Number(usage.input_tokens ?? 0);
               agg.totalOutputTokens += Number(usage.output_tokens ?? 0);
+              agg.totalCacheReadTokens += Number(usage.cache_read_input_tokens ?? 0);
+              agg.totalCacheCreationTokens += Number(usage.cache_creation_input_tokens ?? 0);
             }
           }
         }
@@ -277,6 +283,7 @@ export const parseAllSessions = async (period: TPeriod): Promise<ISessionStats[]
         lastActivityAt: s.lastActivityAt,
         messageCount: s.messageCount,
         totalTokens: s.totalInputTokens + s.totalOutputTokens,
+        totalTokensWithCached: s.totalInputTokens + s.totalOutputTokens + s.totalCacheReadTokens + s.totalCacheCreationTokens,
         model: s.model,
       });
     }

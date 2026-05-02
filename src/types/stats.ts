@@ -7,6 +7,10 @@ export interface IStatsCacheDailyActivity {
   messageCount: number;
   sessionCount: number;
   toolCallCount: number;
+  claudeMessageCount?: number;
+  codexMessageCount?: number;
+  claudeSessionCount?: number;
+  codexSessionCount?: number;
 }
 
 export interface ITokenBreakdown {
@@ -67,7 +71,18 @@ export interface IOverviewResponse {
   previousMessages: number;
   totalToolCalls: number;
   dailyActivity: IStatsCacheDailyActivity[];
-  modelTokens: Record<string, { input: number; output: number; cacheRead: number; cacheCreation: number; cacheCreation5m: number; cacheCreation1h: number; cost: number }>;
+  modelTokens: Record<string, {
+    input: number;
+    output: number;
+    cacheRead: number;
+    cacheCreation: number;
+    cacheCreation5m: number;
+    cacheCreation1h: number;
+    cost: number;
+    provider?: 'claude' | 'codex';
+    model?: string | null;
+    cachedInput?: number;
+  }>;
   dailyTokens: { date: string; input: number; output: number; cacheRead: number; cacheCreation: number }[];
   hourlyDistribution: Record<string, number>;
   dayHourDistribution: Record<string, number>;
@@ -101,6 +116,7 @@ export interface ISessionStats {
   lastActivityAt: string;
   messageCount: number;
   totalTokens: number;
+  totalTokensWithCached?: number;
   model: string;
 }
 
@@ -179,8 +195,15 @@ export interface IAggregatedDailyEntry {
 }
 
 export interface IAggregatedTotals {
-  claude: { tokens: number; sessions: number };
-  codex: { tokens: number; sessions: number };
+  claude: { tokens: number; tokensWithCached: number; sessions: number };
+  codex: { tokens: number; tokensWithCached: number; sessions: number; cachedInputTokens: number };
+}
+
+export interface IAggregatedModelBreakdown {
+  provider: 'claude' | 'codex';
+  model: string | null;
+  tokens: number;
+  sessions: number;
 }
 
 export interface IAggregatedRateLimitsBucket {
@@ -206,6 +229,7 @@ export interface IAggregatedStatsResponse {
   period: TPeriod;
   daily: IAggregatedDailyEntry[];
   totals: IAggregatedTotals;
+  modelBreakdown: IAggregatedModelBreakdown[];
   codexExtras: IAggregatedCodexExtras | null;
   errors: { provider: 'claude' | 'codex'; message: string }[];
   computedAt: string;

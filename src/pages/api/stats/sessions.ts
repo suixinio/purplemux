@@ -1,9 +1,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { parseAllSessions } from '@/lib/stats/jsonl-parser';
-import { readStatsCache } from '@/lib/stats/stats-cache-parser';
+import { parseCodexSessions } from '@/lib/stats/jsonl-parser-codex';
 import { parsePeriod } from '@/lib/stats/period-filter';
 import { getCached, setCached } from '@/lib/stats/cache';
-import type { ISessionsResponse } from '@/types/stats';
+import type { IStatsCacheLongestSession, ISessionStats, ISessionsResponse } from '@/types/stats';
+
+const getDuration = (session: ISessionStats): number =>
+  new Date(session.lastActivityAt).getTime() - new Date(session.startedAt).getTime();
+
+const getLongestSession = (sessions: ISessionStats[]): IStatsCacheLongestSession | null => {
+  let longest: IStatsCacheLongestSession | null = null;
+  for (const session of sessions) {
+    const duration = getDuration(session);
+    if (duration <= 0) continue;
+    if (!longest || duration > longest.duration) {
+      longest = {
+        sessionId: session.sessionId,
+        duration,
+        messageCount: session.messageCount,
+        timestamp: session.startedAt,
+      };
+    }
+  }
+  return longest;
+};
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== 'GET') {
@@ -17,13 +37,15 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const cached = getCached<ISessionsResponse>(cacheKey);
   if (cached) return res.status(200).json(cached);
 
-  const [sessions, statsCache] = await Promise.all([
+  const [claudeSessions, codexSessions] = await Promise.all([
     parseAllSessions(period),
-    readStatsCache(),
+    parseCodexSessions(period),
   ]);
+  const sessions = [...claudeSessions, ...codexSessions]
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt));
 
   const durations = sessions
-    .map((s) => new Date(s.lastActivityAt).getTime() - new Date(s.startedAt).getTime())
+    .map(getDuration)
     .filter((d) => d > 0);
 
   const averageDurationMs = durations.length > 0
@@ -33,7 +55,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const response: ISessionsResponse = {
     sessions,
     averageDurationMs,
-    longestSession: statsCache.longestSession.sessionId ? statsCache.longestSession : null,
+    longestSession: getLongestSession(sessions),
     totalSessions: sessions.length,
   };
 
