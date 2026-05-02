@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Terminal, GitCompareArrows, Plus } from 'lucide-react';
+import { Terminal, GitCompareArrows, History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
@@ -24,13 +24,13 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   const MENU_ITEMS = [
-    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: 'Claude', startCommand: 'claude-new' as const, startLabel: tt('claudeNewConversation') },
-    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: 'Codex', startCommand: 'codex-new' as const, startLabel: tt('codexNewConversation') },
+    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: 'Claude', startCommand: 'claude-new' as const, startLabel: tt('claudeNewConversation'), listLabel: tt('sessions') },
+    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: 'Codex', startCommand: 'codex-new' as const, startLabel: tt('codexNewConversation'), listLabel: tt('sessions') },
     { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-5 w-5 text-muted-foreground" />, label: 'Terminal' },
     { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-5 w-5 text-muted-foreground" />, label: 'Diff' },
   ] as const;
 
-  const handleSelect = async (item: (typeof MENU_ITEMS)[number]) => {
+  const handleOpenList = async (item: (typeof MENU_ITEMS)[number]) => {
     setCreatingKey(item.key);
     await onCreateTab(item.type);
     setCreatingKey(null);
@@ -43,6 +43,14 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
     await onCreateTab(item.type, { command: item.startCommand });
     setCreatingKey(null);
     onOpenChange(false);
+  };
+
+  const handleSelect = async (item: (typeof MENU_ITEMS)[number]) => {
+    if ('startCommand' in item) {
+      await handleStartNew(item);
+      return;
+    }
+    await handleOpenList(item);
   };
 
   return (
@@ -63,18 +71,21 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
                 onClick={() => handleSelect(item)}
               >
                 <span className="flex h-5 w-5 items-center justify-center">
-                  {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
+                  {creatingKey === `${item.key}-new` ? <Spinner className="h-4 w-4" /> : item.icon}
                 </span>
-                <span className="text-xs">{item.label}</span>
+                <span className="line-clamp-2 max-w-full px-1 text-center text-xs leading-tight">
+                  {'startLabel' in item ? item.startLabel : item.label}
+                </span>
               </button>
               {'startCommand' in item && (
                 <button
-                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground shadow-sm active:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                  aria-label={item.startLabel}
+                  className="absolute right-2 top-2 flex h-7 items-center justify-center gap-1 rounded-full border border-border bg-background px-2 text-[11px] text-muted-foreground shadow-sm active:bg-accent disabled:pointer-events-none disabled:opacity-50"
+                  aria-label={item.listLabel}
                   disabled={creatingKey !== null}
-                  onClick={() => handleStartNew(item)}
+                  onClick={() => handleOpenList(item)}
                 >
-                  {creatingKey === `${item.key}-new` ? <Spinner className="h-3.5 w-3.5" /> : <Plus className="h-3.5 w-3.5" />}
+                  {creatingKey === item.key ? <Spinner className="h-3.5 w-3.5" /> : <History className="h-3.5 w-3.5" />}
+                  <span className="whitespace-nowrap leading-none">{item.listLabel}</span>
                 </button>
               )}
             </div>

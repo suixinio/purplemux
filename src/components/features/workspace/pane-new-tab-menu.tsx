@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Plus, Terminal, Globe, GitCompareArrows } from 'lucide-react';
+import { History, Plus, Terminal, Globe, GitCompareArrows } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
@@ -61,8 +61,8 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const menuItems = useMemo(() => {
     const all = [
-      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: 'Claude', startAgent: 'claude' as const, startLabel: t('claudeNewConversation') },
-      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: 'Codex', startAgent: 'codex' as const, startLabel: t('codexNewConversation') },
+      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: 'Claude', startAgent: 'claude' as const, startLabel: t('claudeNewConversation'), listLabel: t('sessions') },
+      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: 'Codex', startAgent: 'codex' as const, startLabel: t('codexNewConversation'), listLabel: t('sessions') },
       { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
       { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Diff' },
       { key: 'web-browser', type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
@@ -122,13 +122,17 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
     void launchCodexNewConversation();
   }, [launchCodexNewConversation, onCreateTab, wsId]);
 
-  const handleSelect = (item: typeof menuItems[number]) => {
+  const handleOpenList = (item: typeof menuItems[number]) => {
     setOpen(false);
-    if (item.key === 'codex') {
-      onCreateTab(item.type);
+    onCreateTab(item.type);
+  };
+
+  const handleSelect = (item: typeof menuItems[number]) => {
+    if ('startAgent' in item && item.startAgent) {
+      handleStartAgent(item.startAgent);
       return;
     }
-    onCreateTab(item.type);
+    handleOpenList(item);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -170,7 +174,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
           </TooltipTrigger>
           <TooltipContent side="bottom">{t('newTabTooltip', { shortcut: `${mod}T` })}</TooltipContent>
         </Tooltip>
-        <PopoverContent side="bottom" align="start" className="w-44 gap-0 p-0.5" onKeyDown={handleKeyDown}>
+        <PopoverContent side="bottom" align="start" className="w-max min-w-52 max-w-[calc(100vw-1rem)] gap-0 p-0.5" onKeyDown={handleKeyDown}>
           {menuItems.map((item, idx) => (
             <div
               key={item.key}
@@ -183,23 +187,25 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
                 onClick={() => handleSelect(item)}
               >
                 {item.icon}
-                <span className="flex-1 text-left">{item.label}</span>
+                <span className="min-w-0 flex-1 truncate text-left">
+                  {'startLabel' in item ? item.startLabel : item.label}
+                </span>
               </button>
               {'startAgent' in item && item.startAgent && (
                 <Tooltip>
                   <TooltipTrigger
-                    className="flex w-7 items-center justify-center rounded-sm text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none"
-                    aria-label={item.startLabel}
+                    className="flex max-w-36 shrink-0 items-center justify-center gap-1 rounded-sm px-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none"
+                    aria-label={item.listLabel}
                     onClick={(e) => {
                       e.stopPropagation();
-                      const { startAgent } = item;
-                      if (startAgent) handleStartAgent(startAgent);
+                      handleOpenList(item);
                     }}
                     onKeyDown={(e) => e.stopPropagation()}
                   >
-                    <Plus className="h-3.5 w-3.5" />
+                    <History className="h-3.5 w-3.5" />
+                    <span className="truncate whitespace-nowrap">{item.listLabel}</span>
                   </TooltipTrigger>
-                  <TooltipContent side="right">{item.startLabel}</TooltipContent>
+                  <TooltipContent side="right">{item.listLabel}</TooltipContent>
                 </Tooltip>
               )}
             </div>
