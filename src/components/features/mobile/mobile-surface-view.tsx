@@ -19,7 +19,7 @@ import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import type { TCliState } from '@/types/timeline';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
-import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
+import useTabStore, { getInitialTabStateFromLayoutTab, selectSessionView } from '@/hooks/use-tab-store';
 import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
@@ -319,9 +319,13 @@ const MobileSurfaceView = ({
 
     if (connectedSessionRef.current !== null) reset();
 
-    useTabStore.getState().initTab(activeTabId, {
+    const tabStore = useTabStore.getState();
+    const existingTabState = tabStore.tabs[activeTabId];
+
+    tabStore.initTab(activeTabId, {
       terminalConnected: false,
       panelType: tab.panelType,
+      ...(!existingTabState ? getInitialTabStateFromLayoutTab(tab) : {}),
     });
 
     connectedSessionRef.current = tab.sessionName;

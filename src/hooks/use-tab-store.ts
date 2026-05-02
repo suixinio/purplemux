@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { TCliState } from '@/types/timeline';
 import type { ICurrentAction, ILastEvent, TTabDisplayStatus, TTerminalStatus } from '@/types/status';
-import type { TPanelType } from '@/types/terminal';
+import type { ITab, TPanelType } from '@/types/terminal';
 import type { IPermissionRequest } from '@/types/codex-permission';
 import type { ISessionMetaData } from '@/hooks/use-session-meta';
 
@@ -326,6 +326,22 @@ export const selectSessionView = (tabs: Record<string, ITabState>, tabId: string
   const tab = tabs[tabId];
   if (!tab) return 'session-list';
   return tab.sessionView;
+};
+
+export const getInitialTabStateFromLayoutTab = (tab: ITab): Partial<ITabState> => {
+  const patch: Partial<ITabState> = { panelType: tab.panelType };
+  const providerId = tab.agentState?.providerId
+    ?? (tab.panelType === 'codex-cli' ? 'codex' : tab.panelType === 'claude-code' ? 'claude' : undefined);
+  const sessionId = tab.agentState?.sessionId ?? tab.claudeSessionId ?? null;
+
+  if (providerId) patch.agentProviderId = providerId;
+  if (sessionId) {
+    patch.agentSessionId = sessionId;
+    patch.agentSummary = tab.agentState?.summary ?? tab.claudeSummary ?? null;
+    patch.sessionView = 'timeline';
+  }
+
+  return patch;
 };
 
 export const selectTabDisplayStatus = (tabs: Record<string, ITabState>, tabId: string): TTabDisplayStatus => {

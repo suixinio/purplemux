@@ -35,7 +35,7 @@ import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
 import { formatTabTitle, parseCurrentCommand, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
-import useTabStore, { selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
+import useTabStore, { getInitialTabStateFromLayoutTab, selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
 import { dismissTab as dismissStatusTab } from '@/hooks/use-claude-status';
 
 
@@ -485,10 +485,14 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       lastTitleRef.current = '';
     }
 
+    const tabStore = useTabStore.getState();
+    const existingTabState = tabStore.tabs[activeTabId];
+
     // 탭 전환 시 터미널 연결 상태만 리셋, 상태 WS가 관리하는 값은 보존
-    useTabStore.getState().initTab(activeTabId, {
+    tabStore.initTab(activeTabId, {
       terminalConnected: false,
       panelType: tab.panelType,
+      ...(!existingTabState ? getInitialTabStateFromLayoutTab(tab) : {}),
     });
 
     connectedSessionRef.current = tab.sessionName;

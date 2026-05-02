@@ -222,7 +222,7 @@ const CodexPanel = ({
   }
 
   if (view === 'session-list') {
-    if (!cwd) {
+    if (agentProcess === null || !cwd) {
       return (
         <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
           <Spinner className="h-4 w-4 text-muted-foreground" />
