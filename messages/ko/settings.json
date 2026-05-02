@@ -69,9 +69,9 @@
   },
   "claude": {
     "skipPermissions": "권한 확인 건너뛰기",
-    "skipPermissionsDescription": "Claude CLI 실행 시 --dangerously-skip-permissions 옵션을 추가합니다.",
-    "showTerminal": "Claude에서 터미널 같이 보기",
-    "showTerminalDescription": "Claude Code 화면과 함께 터미널 영역을 표시합니다. 끄면 새 Claude 탭이 터미널이 닫힌 상태로 시작됩니다."
+    "skipPermissionsDescription": "Claude와 Codex 에이전트 실행 시 권한 확인을 건너뜁니다.",
+    "showTerminal": "에이전트에서 터미널 같이 보기",
+    "showTerminalDescription": "에이전트 화면과 함께 터미널 영역을 표시합니다. 끄면 새 에이전트 탭이 터미널이 닫힌 상태로 시작됩니다."
   },
   "auth": {
     "changePassword": "비밀번호 변경",

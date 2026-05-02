@@ -69,9 +69,9 @@
   },
   "claude": {
     "skipPermissions": "Skip Permission Checks",
-    "skipPermissionsDescription": "Adds --dangerously-skip-permissions option when running Claude CLI.",
-    "showTerminal": "Show Terminal with Claude",
-    "showTerminalDescription": "Display the terminal area alongside Claude Code. When off, new Claude tabs open with the terminal collapsed."
+    "skipPermissionsDescription": "Skips permission prompts when running Claude and Codex agents.",
+    "showTerminal": "Show Terminal with Agent",
+    "showTerminalDescription": "Display the terminal area alongside agent tabs. When off, new agent tabs open with the terminal collapsed."
   },
   "auth": {
     "changePassword": "Change Password",

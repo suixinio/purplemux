@@ -69,9 +69,9 @@
   },
   "claude": {
     "skipPermissions": "İzin Kontrollerini Atla",
-    "skipPermissionsDescription": "Claude CLI çalıştırılırken --dangerously-skip-permissions seçeneğini ekler.",
-    "showTerminal": "Terminali Claude ile Göster",
-    "showTerminalDescription": "Terminal alanını Claude Code ile birlikte gösterir. Kapalıyken yeni Claude sekmeleri terminal kapalı olarak açılır."
+    "skipPermissionsDescription": "Claude ve Codex ajanları çalıştırılırken izin istemlerini atlar.",
+    "showTerminal": "Terminali ajanla göster",
+    "showTerminalDescription": "Terminal alanını ajan sekmeleriyle birlikte gösterir. Kapalıyken yeni ajan sekmeleri terminal kapalı olarak açılır."
   },
   "auth": {
     "changePassword": "Şifre Değiştir",

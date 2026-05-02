@@ -69,9 +69,9 @@
   },
   "claude": {
     "skipPermissions": "Ignorer les vérifications de permissions",
-    "skipPermissionsDescription": "Ajoute l'option --dangerously-skip-permissions lors de l'exécution de Claude CLI.",
-    "showTerminal": "Afficher le terminal avec Claude",
-    "showTerminalDescription": "Affiche la zone du terminal à côté de Claude Code. Désactivé, les nouveaux onglets Claude s'ouvrent avec le terminal réduit."
+    "skipPermissionsDescription": "Ignore les demandes de permissions lors de l'exécution des agents Claude et Codex.",
+    "showTerminal": "Afficher le terminal avec l'agent",
+    "showTerminalDescription": "Affiche la zone du terminal à côté des onglets d'agent. Désactivé, les nouveaux onglets d'agent s'ouvrent avec le terminal réduit."
   },
   "auth": {
     "changePassword": "Changer le mot de passe",

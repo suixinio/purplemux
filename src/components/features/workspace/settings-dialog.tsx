@@ -4,8 +4,7 @@ import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 import packageJson from '../../../../package.json';
 import isElectron from '@/hooks/use-is-electron';
-import { Bell, ChevronDown, ChevronRight, Dices, FolderCode, Globe, ImageIcon, Keyboard, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Trash2, Wrench, X, Zap } from 'lucide-react';
-import ClaudeLogo from '@/components/icons/claude-logo';
+import { Bell, Bot, ChevronDown, ChevronRight, Dices, FolderCode, Globe, ImageIcon, Keyboard, Layout, Lock, Monitor, Moon, Network, Palette, RotateCcw, Settings, Sun, Terminal, Trash2, Wrench, X, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Input } from '@/components/ui/input';
@@ -59,9 +58,9 @@ const settingsItems: ISettingsItem[] = [
   { id: 'general', labelKey: 'general', icon: <Settings className="h-4 w-4" /> },
   { id: 'appearance', labelKey: 'appearance', icon: <Palette className="h-4 w-4" /> },
   { id: 'terminal', labelKey: 'terminal', icon: <Terminal className="h-4 w-4" /> },
+  { id: 'claude', labelKey: 'agent', icon: <Bot className="h-4 w-4" /> },
   { id: 'notification', labelKey: 'notification', icon: <Bell className="h-4 w-4" /> },
   { id: 'editor', labelKey: 'editor', icon: <FolderCode className="h-4 w-4" /> },
-  { id: 'claude', labelKey: 'claude', icon: <ClaudeLogo className="h-4 w-4" /> },
   { id: 'auth', labelKey: 'auth', icon: <Lock className="h-4 w-4" /> },
   { id: 'tailscale', labelKey: 'tailscale', icon: <Globe className="h-4 w-4" /> },
   { id: 'quick-prompts', labelKey: 'quickPrompts', icon: <Zap className="h-4 w-4" /> },
@@ -554,7 +553,7 @@ const EditorTab = () => {
   );
 };
 
-const ClaudeTab = () => {
+const AgentTab = () => {
   const t = useTranslations('settings.claude');
   const dangerouslySkipPermissions = useConfigStore((state) => state.dangerouslySkipPermissions);
   const setDangerouslySkipPermissions = useConfigStore((state) => state.setDangerouslySkipPermissions);
@@ -571,6 +570,14 @@ const ClaudeTab = () => {
           <p className="text-sm text-muted-foreground">
             {t('skipPermissionsDescription')}
           </p>
+          <div className="mt-1 flex flex-wrap gap-1.5 text-xs text-muted-foreground">
+            <span>
+              Claude: <code className="rounded bg-muted px-1 py-0.5 font-mono">--dangerously-skip-permissions</code>
+            </span>
+            <span>
+              Codex: <code className="rounded bg-muted px-1 py-0.5 font-mono">--yolo</code>
+            </span>
+          </div>
         </div>
         <Switch
           id="skip-permissions"
@@ -1057,7 +1064,7 @@ const SettingsDialog = ({ open, onOpenChange }: ISettingsDialogProps) => {
             {activeTab === 'terminal' && <TerminalTab />}
             {activeTab === 'notification' && <NotificationTab />}
             {activeTab === 'editor' && <EditorTab />}
-            {activeTab === 'claude' && <ClaudeTab />}
+            {activeTab === 'claude' && <AgentTab />}
             {activeTab === 'auth' && <AuthTab />}
             {activeTab === 'tailscale' && <TailscaleSettings />}
             {activeTab === 'quick-prompts' && <QuickPromptsSettings />}

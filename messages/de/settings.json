@@ -69,9 +69,9 @@
   },
   "claude": {
     "skipPermissions": "Berechtigungsprüfungen überspringen",
-    "skipPermissionsDescription": "Fügt die Option --dangerously-skip-permissions beim Ausführen der Claude CLI hinzu.",
-    "showTerminal": "Terminal zusammen mit Claude anzeigen",
-    "showTerminalDescription": "Zeigt den Terminalbereich neben Claude Code an. Wenn deaktiviert, werden neue Claude-Tabs mit eingeklapptem Terminal geöffnet."
+    "skipPermissionsDescription": "Überspringt Berechtigungsabfragen beim Ausführen von Claude- und Codex-Agenten.",
+    "showTerminal": "Terminal zusammen mit Agent anzeigen",
+    "showTerminalDescription": "Zeigt den Terminalbereich neben Agent-Tabs an. Wenn deaktiviert, werden neue Agent-Tabs mit eingeklapptem Terminal geöffnet."
   },
   "auth": {
     "changePassword": "Passwort ändern",
