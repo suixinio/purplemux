@@ -52,6 +52,7 @@ const parseJsonlStream = async (
   period: TPeriod,
 ): Promise<IRawSessionAgg[]> => {
   const sessions = new Map<string, IRawSessionAgg>();
+  const countedUsageIds = new Set<string>();
   let cwd = '';
 
   try {
@@ -108,10 +109,15 @@ const parseJsonlStream = async (
 
             const usage = message.usage as Record<string, unknown> | undefined;
             if (usage) {
-              agg.totalInputTokens += Number(usage.input_tokens ?? 0);
-              agg.totalOutputTokens += Number(usage.output_tokens ?? 0);
-              agg.totalCacheReadTokens += Number(usage.cache_read_input_tokens ?? 0);
-              agg.totalCacheCreationTokens += Number(usage.cache_creation_input_tokens ?? 0);
+              const messageId = typeof message.id === 'string' ? message.id : '';
+              const usageId = messageId || String(entry.uuid ?? '');
+              if (!usageId || !countedUsageIds.has(usageId)) {
+                if (usageId) countedUsageIds.add(usageId);
+                agg.totalInputTokens += Number(usage.input_tokens ?? 0);
+                agg.totalOutputTokens += Number(usage.output_tokens ?? 0);
+                agg.totalCacheReadTokens += Number(usage.cache_read_input_tokens ?? 0);
+                agg.totalCacheCreationTokens += Number(usage.cache_creation_input_tokens ?? 0);
+              }
             }
           }
         }

@@ -13,7 +13,7 @@ import type {
   ITokenBreakdown,
 } from '@/types/stats';
 
-const CACHE_VERSION = 2;
+const CACHE_VERSION = 3;
 const CACHE_DIR = path.join(os.homedir(), '.purplemux', 'stats');
 const CACHE_PATH = path.join(CACHE_DIR, 'cache.json');
 const PROJECTS_DIR = path.join(os.homedir(), '.claude', 'projects');
@@ -79,6 +79,7 @@ const parseDaysFromFile = async (
 ): Promise<Map<string, IStatsDailyData>> => {
   const days = new Map<string, IStatsDailyData>();
   const sessionsByDay = new Map<string, Map<string, { start: string; end: string; messages: number }>>();
+  const countedUsageIds = new Set<string>();
 
   try {
     const stream = createReadStream(filePath, { encoding: 'utf-8' });
@@ -140,22 +141,27 @@ const parseDaysFromFile = async (
           const model = String(message.model ?? '');
           const usage = message.usage as Record<string, unknown> | undefined;
           if (model && !model.startsWith('<') && usage) {
-            if (!day.modelTokens[model]) {
-              day.modelTokens[model] = emptyModelTokens();
+            const messageId = typeof message.id === 'string' ? message.id : '';
+            const usageId = messageId || String(entry.uuid ?? '');
+            if (!usageId || !countedUsageIds.has(usageId)) {
+              if (usageId) countedUsageIds.add(usageId);
+              if (!day.modelTokens[model]) {
+                day.modelTokens[model] = emptyModelTokens();
+              }
+              const mt = day.modelTokens[model];
+              const cc = Number(usage.cache_creation_input_tokens ?? 0);
+              const cacheCreation = usage.cache_creation as Record<string, unknown> | undefined;
+              const cc1h = Number(cacheCreation?.ephemeral_1h_input_tokens ?? 0);
+              const cc5m = cacheCreation?.ephemeral_5m_input_tokens != null
+                ? Number(cacheCreation.ephemeral_5m_input_tokens)
+                : Math.max(0, cc - cc1h);
+              mt.input += Number(usage.input_tokens ?? 0);
+              mt.output += Number(usage.output_tokens ?? 0);
+              mt.cacheRead += Number(usage.cache_read_input_tokens ?? 0);
+              mt.cacheCreation += cc;
+              mt.cacheCreation5m += cc5m;
+              mt.cacheCreation1h += cc1h;
             }
-            const mt = day.modelTokens[model];
-            const cc = Number(usage.cache_creation_input_tokens ?? 0);
-            const cacheCreation = usage.cache_creation as Record<string, unknown> | undefined;
-            const cc1h = Number(cacheCreation?.ephemeral_1h_input_tokens ?? 0);
-            const cc5m = cacheCreation?.ephemeral_5m_input_tokens != null
-              ? Number(cacheCreation.ephemeral_5m_input_tokens)
-              : Math.max(0, cc - cc1h);
-            mt.input += Number(usage.input_tokens ?? 0);
-            mt.output += Number(usage.output_tokens ?? 0);
-            mt.cacheRead += Number(usage.cache_read_input_tokens ?? 0);
-            mt.cacheCreation += cc;
-            mt.cacheCreation5m += cc5m;
-            mt.cacheCreation1h += cc1h;
           }
 
           if (sessionId) {

@@ -214,22 +214,14 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
     }
 
     for (const [model, tokens] of Object.entries(modelTokens)) {
-      const usage = cache.modelUsage[model];
-      if (!usage) continue;
-      const allTimeTotal = usage.inputTokens + usage.outputTokens
-        + usage.cacheReadInputTokens + usage.cacheCreationInputTokens;
-      const periodTotal = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheCreation;
-      if (allTimeTotal > 0) {
-        const allTimeCost = estimateCostFromUsage(
-          model,
-          usage.inputTokens,
-          usage.outputTokens,
-          usage.cacheReadInputTokens,
-          usage.cacheCreation5mInputTokens,
-          usage.cacheCreation1hInputTokens,
-        );
-        tokens.cost = allTimeCost * (periodTotal / allTimeTotal);
-      }
+      tokens.cost = estimateCostFromUsage(
+        model,
+        tokens.input,
+        tokens.output,
+        tokens.cacheRead,
+        tokens.cacheCreation5m,
+        tokens.cacheCreation1h,
+      );
     }
   }
 
@@ -257,20 +249,14 @@ export const buildOverview = (cache: IStatsCache, period: TPeriod): IOverviewRes
     let cost = 0;
     for (const day of dates) {
       for (const [model, breakdown] of Object.entries(day.tokensByModel)) {
-        const usage = cache.modelUsage[model];
-        if (!usage) continue;
-        const allTimeTotal = usage.inputTokens + usage.outputTokens
-          + usage.cacheReadInputTokens + usage.cacheCreationInputTokens;
-        const dayTotal = breakdown.input + breakdown.output + breakdown.cacheRead + breakdown.cacheCreation;
-        if (allTimeTotal > 0) {
-          const allTimeCost = estimateCostFromUsage(
-            model, usage.inputTokens, usage.outputTokens,
-            usage.cacheReadInputTokens,
-            usage.cacheCreation5mInputTokens,
-            usage.cacheCreation1hInputTokens,
-          );
-          cost += allTimeCost * (dayTotal / allTimeTotal);
-        }
+        cost += estimateCostFromUsage(
+          model,
+          breakdown.input,
+          breakdown.output,
+          breakdown.cacheRead,
+          breakdown.cacheCreation5m,
+          breakdown.cacheCreation1h,
+        );
       }
     }
     return cost;
