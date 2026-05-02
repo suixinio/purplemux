@@ -1,11 +1,14 @@
 import DiffPanel from '@/components/features/workspace/diff-panel';
 import type { TGitAskProvider } from '@/hooks/use-config-store';
+import type { IDiffSettings } from '@/types/terminal';
 
 interface IMobileGitFullscreenProps {
   open: boolean;
   sessionName?: string;
   onClose: () => void;
   onSendToAgent?: (text: string, provider: TGitAskProvider) => void;
+  settings?: IDiffSettings;
+  onSettingsChange?: (patch: Partial<IDiffSettings>) => void;
 }
 
 const MobileGitFullscreen = ({
@@ -13,6 +16,8 @@ const MobileGitFullscreen = ({
   sessionName,
   onClose,
   onSendToAgent,
+  settings,
+  onSettingsChange,
 }: IMobileGitFullscreenProps) => {
   if (!open) return null;
 
@@ -24,6 +29,8 @@ const MobileGitFullscreen = ({
             sessionName={sessionName}
             onSendToAgent={onSendToAgent}
             onClose={onClose}
+            settings={settings}
+            onSettingsChange={onSettingsChange}
           />
         ) : (
           <div className="flex h-full items-center justify-center px-6 text-center text-sm text-muted-foreground">

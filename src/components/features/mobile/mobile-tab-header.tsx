@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { X, Plus, GitCompareArrows, Copy } from 'lucide-react';
+import { X, Plus, GitCompareArrows, Copy, TerminalSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import TabStatusIndicator from '@/components/features/workspace/tab-status-indicator';
-import { tryAgentSwitch } from '@/lib/agent-switch-lock';
+import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import CopyPaneDrawer from '@/components/features/workspace/copy-pane-drawer';
 import useTabStore from '@/hooks/use-tab-store';
 import ProcessIcon from '@/components/icons/process-icon';
@@ -22,11 +22,15 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { TPanelType } from '@/types/terminal';
 
-const PANEL_MODES = [
-  { type: 'terminal' as const, label: 'TERMINAL' },
-  { type: 'claude-code' as const, label: 'CLAUDE' },
-  { type: 'codex-cli' as const, label: 'CODEX' },
-] as const;
+type TModeButton = {
+  type: TPanelType;
+  label: string;
+  startAction?: boolean;
+};
+
+const iconButtonClassName = 'relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
+const activeIconButtonClassName = 'bg-accent text-foreground';
+const iconClassName = 'h-4 w-4 shrink-0';
 
 interface IMobileTabHeaderProps {
   tabId: string;
@@ -55,6 +59,45 @@ const MobileTabHeader = ({
   const [copyOpen, setCopyOpen] = useState(false);
   const showCopy = panelType === 'terminal' && !!sessionName;
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
+  const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
+  const visibleAgentPanelType = isAgentPanel(panelType)
+    ? panelType
+    : isAgentRunning(tabEntry?.cliState)
+      ? runtimeAgentPanelType
+      : undefined;
+  const modeButtons: TModeButton[] = [
+    { type: 'terminal', label: 'TERMINAL' },
+    ...(visibleAgentPanelType
+      ? [{
+          type: visibleAgentPanelType,
+          label: visibleAgentPanelType === 'codex-cli' ? 'CODEX' : 'CLAUDE',
+        }]
+      : [
+          { type: 'claude-code' as const, label: 'CLAUDE', startAction: true },
+          { type: 'codex-cli' as const, label: 'CODEX', startAction: true },
+        ]),
+  ];
+  const getModeButtonLabel = (mode: TModeButton) =>
+    mode.startAction ? `Start ${mode.label[0]}${mode.label.slice(1).toLowerCase()}` : mode.label[0] + mode.label.slice(1).toLowerCase();
+  const renderModeIcon = (mode: TModeButton) => {
+    const icon = mode.type === 'terminal' ? (
+      <TerminalSquare className={iconClassName} />
+    ) : mode.type === 'claude-code' ? (
+      <ClaudeCodeIcon size={16} />
+    ) : mode.type === 'codex-cli' ? (
+      <OpenAIIcon size={16} className="shrink-0" aria-label="Codex" />
+    ) : null;
+
+    if (!mode.startAction) return icon;
+    return (
+      <>
+        {icon}
+        <span className="absolute right-1 top-1 flex h-3 w-3 items-center justify-center rounded-full bg-background ring-1 ring-border">
+          <Plus className="h-2 w-2 text-muted-foreground" />
+        </span>
+      </>
+    );
+  };
   const processColor = tabEntry?.terminalStatus === 'server'
     ? 'text-ui-green'
     : tabEntry?.terminalStatus === 'running'
@@ -70,11 +113,11 @@ const MobileTabHeader = ({
         ) : panelType === 'codex-cli' ? (
           <OpenAIIcon size={16} className="shrink-0 text-foreground" aria-label="Codex" />
         ) : panelType === 'diff' ? (
-          <GitCompareArrows className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <GitCompareArrows className={cn(iconClassName, 'text-muted-foreground')} />
         ) : (
           <ProcessIcon
             process={tabEntry?.currentProcess}
-            className={cn('h-3.5 w-3.5 shrink-0', processColor)}
+            className={cn(iconClassName, processColor)}
           />
         )}
         <span className="truncate text-xs text-foreground">{tabName}</span>
@@ -82,58 +125,76 @@ const MobileTabHeader = ({
 
       <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
         <div className="flex items-center gap-px">
-          {PANEL_MODES.map((mode) => (
+          {modeButtons.map((mode) => (
             <button
               key={mode.type}
               className={cn(
-                'rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide transition-colors',
-                panelType === mode.type
-                  ? 'bg-accent text-foreground'
-                  : 'text-muted-foreground/60 hover:text-muted-foreground',
+                iconButtonClassName,
+                panelType === mode.type && activeIconButtonClassName,
               )}
+              aria-label={getModeButtonLabel(mode)}
+              title={getModeButtonLabel(mode)}
               onClick={() => {
                 if (panelType === mode.type) return;
-                if (!tryAgentSwitch({ current: panelType, target: mode.type, cliState: tabEntry?.cliState })) return;
+                if (!tryAgentSwitch({
+                  current: panelType,
+                  target: mode.type,
+                  cliState: tabEntry?.cliState,
+                  runningAgentPanelType: runtimeAgentPanelType,
+                })) return;
+                if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {
+                  window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
+                    detail: {
+                      tabId,
+                      provider: mode.type === 'codex-cli' ? 'codex' : 'claude',
+                    },
+                  }));
+                  return;
+                }
                 onSwitchPanelType(mode.type);
               }}
             >
-              {mode.label}
+              {renderModeIcon(mode)}
             </button>
           ))}
         </div>
 
         {showCopy && (
           <button
-            className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+            className={iconButtonClassName}
             onClick={() => setCopyOpen(true)}
             aria-label={tt('copyPaneLabel')}
+            title={tt('copyPaneLabel')}
           >
-            <Copy size={16} />
+            <Copy className={iconClassName} />
           </button>
         )}
 
         <button
-          className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+          className={iconButtonClassName}
           onClick={onOpenGit}
           aria-label="Open Git"
+          title="Open Git"
         >
-          <GitCompareArrows size={16} />
+          <GitCompareArrows className={iconClassName} />
         </button>
 
         <button
-          className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+          className={iconButtonClassName}
           onClick={onCreateTab}
           aria-label={t('newTab')}
+          title={t('newTab')}
         >
-          <Plus size={16} />
+          <Plus className={iconClassName} />
         </button>
 
         <AlertDialog>
           <AlertDialogTrigger
-            className="flex h-10 w-10 items-center justify-center text-muted-foreground transition-colors"
+            className={cn(iconButtonClassName, 'hover:text-ui-red')}
             aria-label={t('closeTab')}
+            title={t('closeTab')}
           >
-            <X size={16} />
+            <X className={iconClassName} />
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>

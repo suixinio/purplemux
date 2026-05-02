@@ -10,11 +10,14 @@ import useIsMobile from '@/hooks/use-is-mobile';
 import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import DiffHistoryView from '@/components/features/workspace/diff-history-view';
 import DiffFileList from '@/components/features/workspace/diff-file-list';
+import type { IDiffSettings, TDiffTab, TDiffViewMode } from '@/types/terminal';
 
 interface IDiffPanelProps {
   sessionName: string;
   onSendToAgent?: (text: string, provider: TGitAskProvider) => void;
   onClose?: () => void;
+  settings?: IDiffSettings;
+  onSettingsChange?: (patch: Partial<IDiffSettings>) => void;
 }
 
 interface IHeadCommit {
@@ -33,8 +36,6 @@ interface ISyncStep {
   stderr: string;
 }
 
-type TViewMode = 'split' | 'unified';
-type TTab = 'changes' | 'history';
 type TSyncErrorKind = 'no-upstream' | 'auth' | 'diverged' | 'rejected' | 'local-changes' | 'timeout' | 'unknown';
 
 const POLL_INTERVAL = 10_000;
@@ -62,7 +63,7 @@ const AGENT_PROMPT_KEYS = {
   unknown: 'agentPromptGeneric',
 } as const;
 
-const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => {
+const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsChange }: IDiffPanelProps) => {
   const t = useTranslations('diff');
   const isMobile = useIsMobile();
   const gitAskProvider = useConfigStore((s) => s.gitAskProvider);
@@ -78,15 +79,8 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => 
   const [isDetached, setIsDetached] = useState(false);
   const [stash, setStash] = useState(0);
   const [headCommit, setHeadCommit] = useState<IHeadCommit | null>(null);
-  const [viewMode, setViewMode] = useState<TViewMode>(() => {
-    if (typeof window === 'undefined') return 'split';
-    const saved = localStorage.getItem('diff-output-format');
-    return saved === 'line-by-line' ? 'unified' : 'split';
-  });
-  const [activeTab, setActiveTab] = useState<TTab>(() => {
-    if (typeof window === 'undefined') return 'changes';
-    return (localStorage.getItem('diff-active-tab') as TTab) || 'changes';
-  });
+  const viewMode: TDiffViewMode = settings?.viewMode ?? 'split';
+  const activeTab: TDiffTab = settings?.activeTab ?? 'changes';
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
   const [syncing, setSyncing] = useState(false);
 
@@ -146,10 +140,9 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => 
     setHistoryRefreshToken((n) => n + 1);
   }, [fetchDiff]);
 
-  const handleTabChange = useCallback((tab: TTab) => {
-    setActiveTab(tab);
-    localStorage.setItem('diff-active-tab', tab);
-  }, []);
+  const handleTabChange = useCallback((tab: TDiffTab) => {
+    onSettingsChange?.({ activeTab: tab });
+  }, [onSettingsChange]);
 
   const handleSync = useCallback(async () => {
     if (syncing) return;
@@ -270,9 +263,9 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => 
     <div className="flex h-full flex-col bg-card">
       <div className="flex shrink-0 flex-col border-b border-border">
         <div className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1.5">
-          <Tabs
-            value={activeTab}
-            onValueChange={(value) => handleTabChange(value as TTab)}
+            <Tabs
+              value={activeTab}
+            onValueChange={(value) => handleTabChange(value as TDiffTab)}
             className="gap-0"
           >
             <TabsList className="h-7 w-auto min-w-40">
@@ -291,11 +284,7 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose }: IDiffPanelProps) => 
                 <Tooltip>
                   <TooltipTrigger
                     className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
-                    onClick={() => setViewMode((m) => {
-                      const next: TViewMode = m === 'split' ? 'unified' : 'split';
-                      localStorage.setItem('diff-output-format', next === 'unified' ? 'line-by-line' : 'side-by-side');
-                      return next;
-                    })}
+                    onClick={() => onSettingsChange?.({ viewMode: viewMode === 'split' ? 'unified' : 'split' })}
                     aria-label={viewMode === 'split' ? t('lineByLine') : t('sideBySide')}
                   >
                     {viewMode === 'split' ? <Rows2 className="h-3.5 w-3.5" /> : <Columns2 className="h-3.5 w-3.5" />}

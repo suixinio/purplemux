@@ -15,7 +15,7 @@ import {
   equalizeNode,
   isEqualized,
 } from '@/lib/layout-tree';
-import type { ITab, TLayoutNode, IPaneNode, ILayoutData, TPanelType } from '@/types/terminal';
+import type { ITab, TLayoutNode, IPaneNode, ILayoutData, TPanelType, IDiffSettings } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 import type { IAgentProvider } from '@/lib/providers/types';
 import { claudeProvider } from '@/lib/providers/claude';
@@ -112,7 +112,7 @@ const extractWsIdFromPath = (filePath: string): string | null => {
 };
 
 export const writeLayoutFile = async (data: ILayoutData, filePath: string): Promise<void> => {
-  const contentKey = JSON.stringify({ root: data.root, activePaneId: data.activePaneId });
+  const contentKey = JSON.stringify({ root: data.root, activePaneId: data.activePaneId, diffSettings: data.diffSettings });
   const cache = g.__ptLayoutContentCache!;
 
   if (cache.get(filePath) === contentKey) return;
@@ -590,7 +590,7 @@ const mutate = async (
 
 export const patchLayout = async (
   wsId: string,
-  patch: { activePaneId?: string; ratioUpdate?: { path: number[]; ratio: number }; equalize?: boolean },
+  patch: { activePaneId?: string; ratioUpdate?: { path: number[]; ratio: number }; equalize?: boolean; diffSettings?: Partial<IDiffSettings> },
 ): Promise<ILayoutData | null> =>
   mutate(wsId, (layout) => {
     if (patch.activePaneId !== undefined) {
@@ -603,6 +603,12 @@ export const patchLayout = async (
     }
     if (patch.equalize) {
       layout.root = equalizeNode(layout.root);
+    }
+    if (patch.diffSettings) {
+      layout.diffSettings = {
+        ...(layout.diffSettings ?? {}),
+        ...patch.diffSettings,
+      };
     }
     return layout;
   });

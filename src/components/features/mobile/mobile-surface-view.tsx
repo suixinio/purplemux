@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import Spinner from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import type { ITab, TPanelType } from '@/types/terminal';
+import type { IDiffSettings, ITab, TPanelType } from '@/types/terminal';
 import WebBrowserPanel from '@/components/features/workspace/web-browser-panel';
 import DiffPanel from '@/components/features/workspace/diff-panel';
 import useTerminal from '@/hooks/use-terminal';
@@ -88,6 +88,7 @@ interface IMobileSurfaceViewProps {
   onSwitchTab: (paneId: string, tabId: string) => void;
   onRemoveTabLocally: (paneId: string, tabId: string) => void;
   onUpdateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
+  onUpdateDiffSettings: (patch: Partial<IDiffSettings>) => void;
   onCliStateChange?: (state: TCliState) => void;
   onOpenNewTabDialog?: () => void;
 }
@@ -107,6 +108,7 @@ const MobileSurfaceView = ({
   onSwitchTab,
   onRemoveTabLocally: _onRemoveTabLocally,
   onUpdateTabPanelType,
+  onUpdateDiffSettings,
   onCliStateChange,
   onOpenNewTabDialog,
 }: IMobileSurfaceViewProps) => {
@@ -123,6 +125,7 @@ const MobileSurfaceView = ({
     (state) => (activeTabId ? state.metadata[activeTabId]?.cwd : undefined),
   );
   const layoutWsId = useLayoutStore((state) => state.workspaceId);
+  const diffSettings = useLayoutStore((state) => state.layout?.diffSettings);
 
   const { theme: terminalTheme } = useTerminalTheme();
   const [hasEverConnected, setHasEverConnected] = useState(false);
@@ -535,6 +538,26 @@ const MobileSurfaceView = ({
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
 
   useEffect(() => {
+    const handleStartAgentRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        tabId?: string;
+        provider?: TGitAskProvider;
+      }>).detail;
+      if (detail?.tabId !== activeTabId) return;
+      if (detail.provider !== 'claude' && detail.provider !== 'codex') return;
+      onUpdateTabPanelType(paneId, activeTabId, detail.provider === 'codex' ? 'codex-cli' : 'claude-code');
+      if (detail.provider === 'codex') {
+        void handleNewCodexSession();
+        return;
+      }
+      handleNewClaudeSession();
+    };
+
+    window.addEventListener('purplemux-start-agent', handleStartAgentRequest);
+    return () => window.removeEventListener('purplemux-start-agent', handleStartAgentRequest);
+  }, [activeTabId, handleNewClaudeSession, handleNewCodexSession, onUpdateTabPanelType, paneId]);
+
+  useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
     if (status !== 'connected') return;
     if (!isShellProcess(lastTitleRef.current)) return;
@@ -687,6 +710,8 @@ const MobileSurfaceView = ({
           key={activeTab.sessionName}
           sessionName={activeTab.sessionName}
           onSendToAgent={handleSendToAgent}
+          settings={diffSettings}
+          onSettingsChange={onUpdateDiffSettings}
         />
       )}
 

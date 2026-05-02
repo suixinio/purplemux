@@ -23,8 +23,8 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   if (req.method === 'PATCH') {
-    const { activePaneId, ratioUpdate, equalize } = req.body ?? {};
-    const result = await patchLayout(wsId, { activePaneId, ratioUpdate, equalize });
+    const { activePaneId, ratioUpdate, equalize, diffSettings } = req.body ?? {};
+    const result = await patchLayout(wsId, { activePaneId, ratioUpdate, equalize, diffSettings });
     if (!result) {
       return res.status(404).json({ error: 'Target not found' });
     }

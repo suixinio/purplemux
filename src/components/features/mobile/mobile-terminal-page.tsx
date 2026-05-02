@@ -317,6 +317,7 @@ const MobileTerminalPage = () => {
           onSwitchTab={layout.switchTabInPane}
           onRemoveTabLocally={layout.removeTabLocally}
           onUpdateTabPanelType={layout.updateTabPanelType}
+          onUpdateDiffSettings={layout.updateDiffSettings}
           onCliStateChange={handleCliStateChange}
           onOpenNewTabDialog={handleOpenNewTabDialog}
         />
@@ -333,6 +334,8 @@ const MobileTerminalPage = () => {
         sessionName={gitTarget?.sessionName}
         onClose={() => setGitOpen(false)}
         onSendToAgent={handleSendDiffToAgent}
+        settings={layout.layout?.diffSettings}
+        onSettingsChange={layout.updateDiffSettings}
       />
     </>
   );
