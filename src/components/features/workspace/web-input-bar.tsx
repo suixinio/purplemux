@@ -82,7 +82,7 @@ const WebInputBar = ({
   const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
     useMessageHistory({ wsId });
   const isMobileDevice = useIsMobileDevice();
-  const submitDelayMs = isCodex && isMobileDevice ? 250 : 50;
+  const submitDelayMs = isCodex ? 250 : 50;
   const handleMessageSent = useCallback(
     (message: string) => {
       addHistory(message);

@@ -2,7 +2,8 @@ import { useTranslations } from 'next-intl';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import AgentBootProgress from '@/components/features/workspace/agent-boot-progress';
 
-const ERROR_THRESHOLD_MS = 5_000;
+const ALMOST_READY_MS = 3_000;
+const ERROR_THRESHOLD_MS = 10_000;
 
 interface ICodexBootProgressProps {
   className?: string;
@@ -29,6 +30,7 @@ const CodexBootProgress = ({ className, onRestart, onShowTerminal }: ICodexBootP
       restartLabel={t('codexBootRestart')}
       showTerminalLabel={t('codexBootShowTerminal')}
       className={className}
+      almostReadyMs={ALMOST_READY_MS}
       errorThresholdMs={ERROR_THRESHOLD_MS}
       onRestart={onRestart}
       onShowTerminal={onShowTerminal}
