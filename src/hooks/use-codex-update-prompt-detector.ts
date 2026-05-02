@@ -4,6 +4,7 @@ import {
   type ICodexUpdatePromptInfo,
   type TCodexUpdateAnswer,
 } from '@/lib/codex-update-prompt-detector';
+import useTabStore, { type TSessionView } from '@/hooks/use-tab-store';
 
 const DEBOUNCE_MS = 200;
 const RELAUNCH_DELAY_MS = 700;
@@ -20,6 +21,14 @@ interface IUseCodexUpdatePromptDetectorReturn {
   updatePrompt: ICodexUpdatePromptInfo | null;
   onTerminalData: () => void;
   onRespond: (answer: TCodexUpdateAnswer) => void;
+}
+
+interface IUseCodexUpdatePromptViewSyncOptions {
+  enabled: boolean;
+  tabId?: string | null;
+  prompt: ICodexUpdatePromptInfo | null;
+  sessionView: TSessionView | null;
+  agentProcess: boolean | null;
 }
 
 const useCodexUpdatePromptDetector = ({
@@ -117,6 +126,38 @@ const useCodexUpdatePromptDetector = ({
 
   const visiblePrompt = updatePromptState.scopeKey === (scopeKey ?? null) ? updatePromptState.prompt : null;
   return { updatePrompt: enabled ? visiblePrompt : null, onTerminalData, onRespond };
+};
+
+export const useCodexUpdatePromptViewSync = ({
+  enabled,
+  tabId,
+  prompt,
+  sessionView,
+  agentProcess,
+}: IUseCodexUpdatePromptViewSyncOptions) => {
+  const promptWasVisibleRef = useRef(false);
+
+  useEffect(() => {
+    if (!enabled || !tabId) {
+      promptWasVisibleRef.current = false;
+      return;
+    }
+
+    if (prompt) {
+      promptWasVisibleRef.current = true;
+      if (sessionView !== 'check') {
+        useTabStore.getState().setSessionView(tabId, 'check');
+      }
+      return;
+    }
+
+    if (promptWasVisibleRef.current) {
+      promptWasVisibleRef.current = false;
+      if (sessionView === 'check' && agentProcess === true) {
+        useTabStore.getState().setSessionView(tabId, 'timeline');
+      }
+    }
+  }, [agentProcess, enabled, prompt, sessionView, tabId]);
 };
 
 export default useCodexUpdatePromptDetector;

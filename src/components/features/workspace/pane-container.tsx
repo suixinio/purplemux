@@ -28,7 +28,7 @@ import PaneDisconnectedOverlay from '@/components/features/workspace/pane-discon
 import PaneClaudeModePrompt from '@/components/features/workspace/pane-claude-mode-prompt';
 import PanePathInputOverlay from '@/components/features/workspace/pane-path-input-overlay';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
-import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
+import useCodexUpdatePromptDetector, { useCodexUpdatePromptViewSync } from '@/hooks/use-codex-update-prompt-detector';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
 import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
@@ -253,11 +253,18 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     onTerminalData: onCodexUpdateData,
     onRespond: onCodexUpdateResponse,
   } = useCodexUpdatePromptDetector({
-    enabled: isCodex && sessionView === 'check',
+    enabled: isCodex,
     scopeKey: activeTabId,
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
     onUpdated: () => { void codexRelaunchRef.current(); },
+  });
+  useCodexUpdatePromptViewSync({
+    enabled: isCodex,
+    tabId: activeTabId,
+    prompt: codexUpdatePrompt,
+    sessionView,
+    agentProcess,
   });
 
   useEffect(() => {
