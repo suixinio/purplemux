@@ -61,7 +61,9 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
               disabled={creatingKey !== null}
               onClick={() => handleSelect(item)}
             >
-              {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
+              <span className="flex h-5 w-5 items-center justify-center">
+                {creatingKey === item.key ? <Spinner className="h-4 w-4" /> : item.icon}
+              </span>
               <span className="text-xs">{item.label}</span>
             </button>
           ))}
