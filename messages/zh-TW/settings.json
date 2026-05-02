@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "啟用通知",
-    "enableDescription": "Claude 任務完成時顯示系統通知。僅在 Electron 應用程式中有效。",
+    "enableDescription": "代理任務完成時顯示系統通知。僅在 Electron 應用程式中有效。",
     "permissionDenied": "瀏覽器通知權限被拒絕。請在瀏覽器設定中允許。",
     "notSupported": "此瀏覽器不支援 Web Push。",
     "toastSection": "應用程式內提示",

@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "Bildirimleri Etkinleştir",
-    "enableDescription": "Claude görevleri tamamlandığında sistem bildirimleri gösterir. Yalnızca Electron uygulamasında çalışır.",
+    "enableDescription": "Ajan görevleri tamamlandığında sistem bildirimleri gösterir. Yalnızca Electron uygulamasında çalışır.",
     "permissionDenied": "Tarayıcı bildirim izni reddedildi. Lütfen tarayıcı ayarlarından izin verin.",
     "notSupported": "Web Push bu tarayıcıda desteklenmiyor.",
     "toastSection": "Uygulama içi toast",

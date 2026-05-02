@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "通知を有効化",
-    "enableDescription": "Claudeタスク完了時にシステム通知を表示します。Electronアプリでのみ動作します。",
+    "enableDescription": "エージェントタスク完了時にシステム通知を表示します。Electronアプリでのみ動作します。",
     "permissionDenied": "ブラウザの通知許可が拒否されました。ブラウザの設定で許可してください。",
     "notSupported": "このブラウザは Web Push に対応していません。",
     "toastSection": "アプリ内トースト",

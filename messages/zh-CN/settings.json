@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "启用通知",
-    "enableDescription": "Claude任务完成时显示系统通知。仅在Electron应用中有效。",
+    "enableDescription": "智能体任务完成时显示系统通知。仅在Electron应用中有效。",
     "permissionDenied": "浏览器通知权限被拒绝。请在浏览器设置中允许。",
     "notSupported": "此浏览器不支持 Web Push。",
     "toastSection": "应用内提示",

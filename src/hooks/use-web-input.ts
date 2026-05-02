@@ -89,7 +89,7 @@ const useWebInput = (
 
   const send = useCallback(() => {
     if (mode === 'disabled') {
-      toast.error(options?.disabledMessage ?? 'Claude Code가 실행 중이 아닙니다');
+      toast.error(options?.disabledMessage ?? t('terminal', 'inputDisabledPlaceholder'));
       return;
     }
 

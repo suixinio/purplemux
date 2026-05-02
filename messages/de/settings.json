@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "Benachrichtigungen aktivieren",
-    "enableDescription": "Systembenachrichtigungen anzeigen, wenn Claude-Aufgaben abgeschlossen sind. Funktioniert nur in der Electron-App.",
+    "enableDescription": "Systembenachrichtigungen anzeigen, wenn Agent-Aufgaben abgeschlossen sind. Funktioniert nur in der Electron-App.",
     "permissionDenied": "Browser-Benachrichtigungsberechtigung verweigert. Bitte in den Browser-Einstellungen erlauben.",
     "notSupported": "Web Push wird in diesem Browser nicht unterstützt.",
     "toastSection": "In-App-Toast",

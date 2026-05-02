@@ -98,7 +98,7 @@ const WebInputBar = ({
       tabId,
       onRestartSession,
       onMessageSent: handleMessageSent,
-      disabledMessage: isCodex ? t('codexInactiveMessage') : undefined,
+      disabledMessage: isCodex ? t('codexInactiveMessage') : t('inputDisabledPlaceholder'),
       submitDelayMs,
     },
   );
@@ -539,7 +539,7 @@ const WebInputBar = ({
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
               placeholder={t('inputPlaceholder')}
-              aria-label={isCodex ? 'Codex message input' : t('inputAriaLabel')}
+              aria-label={isCodex ? t('codexInputAriaLabel') : t('inputAriaLabel')}
               className="flex-1 resize-none bg-transparent py-1 text-sm text-foreground outline-none placeholder:text-muted-foreground"
               rows={1}
               style={{

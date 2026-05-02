@@ -87,7 +87,7 @@
   },
   "notification": {
     "enable": "Activer les notifications",
-    "enableDescription": "Affiche des notifications système lorsque les tâches Claude sont terminées. Fonctionne uniquement dans l'application Electron.",
+    "enableDescription": "Affiche des notifications système lorsque les tâches de l'agent sont terminées. Fonctionne uniquement dans l'application Electron.",
     "permissionDenied": "Autorisation des notifications du navigateur refusée. Veuillez l'autoriser dans les paramètres du navigateur.",
     "notSupported": "Web Push n'est pas pris en charge par ce navigateur.",
     "toastSection": "Toast dans l'application",
