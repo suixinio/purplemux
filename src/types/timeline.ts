@@ -346,7 +346,9 @@ export interface ISessionStats {
   transcriptPath?: string;
 
   inputTokens?: number;
+  cachedInputTokens?: number;
   outputTokens?: number;
+  reasoningOutputTokens?: number;
   cost?: number | null;
   currentContextTokens?: number;
   contextWindowSize?: number;

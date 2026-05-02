@@ -24,6 +24,8 @@
     "toolsCount": "도구 {count}",
     "tokens": "토큰",
     "inputOutput": "입력 {input} / 출력 {output}",
+    "cachedTokens": "캐시 {count}",
+    "reasoningTokens": "추론 {count}",
     "context": "컨텍스트",
     "model": "모델",
     "cost": "비용",

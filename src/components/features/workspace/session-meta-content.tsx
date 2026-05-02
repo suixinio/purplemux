@@ -154,7 +154,9 @@ export interface IMetaDetailProps {
   toolCount: number | null;
   toolBreakdown: Record<string, number> | null;
   inputTokens: number | null;
+  cachedInputTokens?: number | null;
   outputTokens: number | null;
+  reasoningOutputTokens?: number | null;
   totalCost: number | null;
   currentContextTokens: number | null;
   contextWindowSize: number | null;
@@ -193,7 +195,9 @@ export const MetaDetail = ({
   toolCount,
   toolBreakdown,
   inputTokens,
+  cachedInputTokens = null,
   outputTokens,
+  reasoningOutputTokens = null,
   totalCost,
   currentContextTokens,
   contextWindowSize,
@@ -209,6 +213,17 @@ export const MetaDetail = ({
   const updatedRelative = updatedAt ? dayjs(updatedAt).fromNow() : '';
   const hasTokens = inputTokens !== null && outputTokens !== null;
   const hasContext = currentContextTokens !== null && contextWindowSize !== null && contextWindowSize > 0;
+  const tokenDetails = hasTokens
+      ? [
+        t('inputOutput', { input: formatTokenDetail(inputTokens!), output: formatTokenDetail(outputTokens!) }),
+        cachedInputTokens !== null && cachedInputTokens > 0
+          ? t('cachedTokens', { count: formatTokenDetail(cachedInputTokens) })
+          : null,
+        reasoningOutputTokens !== null && reasoningOutputTokens > 0
+          ? t('reasoningTokens', { count: formatTokenDetail(reasoningOutputTokens) })
+          : null,
+      ].filter(Boolean).join(' / ')
+    : '';
 
   return (
     <div className="flex flex-col gap-1">
@@ -268,7 +283,7 @@ export const MetaDetail = ({
           <div className="flex items-baseline gap-2">
             <span className="w-14 shrink-0 text-xs text-muted-foreground/70">{t('tokens')}</span>
             <span className="font-mono text-xs text-muted-foreground">
-              {t('inputOutput', { input: formatTokenDetail(inputTokens!), output: formatTokenDetail(outputTokens!) })}
+              {tokenDetails}
             </span>
           </div>
         )}

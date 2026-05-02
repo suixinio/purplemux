@@ -24,6 +24,8 @@
     "toolsCount": "Araçlar {count}",
     "tokens": "Token",
     "inputOutput": "Giriş {input} / Çıkış {output}",
+    "cachedTokens": "Önbellek {count}",
+    "reasoningTokens": "Akıl yürütme {count}",
     "context": "Bağlam",
     "model": "Model",
     "cost": "Maliyet",

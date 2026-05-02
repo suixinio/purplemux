@@ -24,6 +24,8 @@
     "toolsCount": "ツール {count}",
     "tokens": "トークン",
     "inputOutput": "入力 {input} / 出力 {output}",
+    "cachedTokens": "キャッシュ {count}",
+    "reasoningTokens": "推論 {count}",
     "context": "コンテキスト",
     "model": "モデル",
     "cost": "コスト",

@@ -10,7 +10,9 @@ export interface ISessionMetaData {
   userCount: number;
   assistantCount: number;
   inputTokens: number | null;
+  cachedInputTokens: number | null;
   outputTokens: number | null;
+  reasoningOutputTokens: number | null;
   totalCost: number | null;
   currentContextTokens: number | null;
   contextWindowSize: number | null;
@@ -34,7 +36,9 @@ const createEmptyMeta = (newSessionTitle: string): ISessionMetaData => ({
   userCount: 0,
   assistantCount: 0,
   inputTokens: null,
+  cachedInputTokens: null,
   outputTokens: null,
+  reasoningOutputTokens: null,
   totalCost: null,
   currentContextTokens: null,
   contextWindowSize: null,
@@ -70,7 +74,9 @@ const applyStats = (base: ISessionMetaData, stats: ISessionStats | null | undefi
   return {
     ...base,
     inputTokens: stats.inputTokens ?? null,
+    cachedInputTokens: stats.cachedInputTokens ?? null,
     outputTokens: stats.outputTokens ?? null,
+    reasoningOutputTokens: stats.reasoningOutputTokens ?? null,
     totalCost: stats.cost ?? null,
     currentContextTokens: stats.currentContextTokens || null,
     contextWindowSize: stats.contextWindowSize || null,

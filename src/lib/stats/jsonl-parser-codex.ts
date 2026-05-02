@@ -5,13 +5,15 @@ import os from 'os';
 import readline from 'readline';
 import { createLogger } from '@/lib/logger';
 import { isWithinPeriod } from './period-filter';
+import { calculateOpenAICost } from '@/lib/openai-tokens';
 import type { TPeriod } from '@/types/stats';
+import type { ISessionStats as ITimelineSessionStats } from '@/types/timeline';
 
 const log = createLogger('codex-stats-parser');
 
 const SESSIONS_ROOT = path.join(os.homedir(), '.codex', 'sessions');
 const DEFAULT_DAYS_BACK = 30;
-const TAIL_BYTES = 64 * 1024;
+const TAIL_BYTES = 1024 * 1024;
 const CACHE_TTL_MS = 30_000;
 
 export interface ICodexRateLimitsBucket {
@@ -39,7 +41,15 @@ export interface ICodexSessionStats {
   startedAt: number;
   cwd: string | null;
   model: string | null;
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
   totalTokens: number;
+  currentContextTokens: number;
+  contextWindowSize: number;
+  usedPercentage: number | null;
+  cost: number | null;
   extras: ICodexExtras | null;
 }
 
@@ -61,6 +71,14 @@ const dayDirPath = (date: Date): string =>
     String(date.getDate()).padStart(2, '0'),
   );
 
+interface ICodexTokenUsage {
+  total_tokens?: number;
+  input_tokens?: number;
+  cached_input_tokens?: number;
+  output_tokens?: number;
+  reasoning_output_tokens?: number;
+}
+
 interface ITokenCountInfo {
   total_token_usage?: {
     total_tokens?: number;
@@ -69,35 +87,38 @@ interface ITokenCountInfo {
     output_tokens?: number;
     reasoning_output_tokens?: number;
   };
-  last_token_usage?: {
-    total_tokens?: number;
-  };
+  last_token_usage?: ICodexTokenUsage;
   model_context_window?: number;
-  rate_limits?: {
-    primary?: { used_percent?: number; window_minutes?: number; resets_in_seconds?: number };
-    secondary?: { used_percent?: number; window_minutes?: number; resets_in_seconds?: number };
-  };
+}
+
+interface ITokenCountRateLimits {
+  primary?: { used_percent?: number; window_minutes?: number; resets_at?: number; resets_in_seconds?: number };
+  secondary?: { used_percent?: number; window_minutes?: number; resets_at?: number; resets_in_seconds?: number };
+}
+
+interface ITokenCountRecord {
+  info: ITokenCountInfo;
+  rateLimits: ITokenCountRateLimits | null;
 }
 
 const num = (raw: unknown): number | null =>
   typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
 
-const readSessionMetaLine = async (jsonlPath: string): Promise<{ sessionId: string | null; startedAt: number; cwd: string | null; model: string | null }> => {
-  const stream = createReadStream(jsonlPath, { encoding: 'utf-8', start: 0, end: 16 * 1024 });
+const readSessionMetaLine = async (jsonlPath: string): Promise<{ sessionId: string | null; startedAt: number; cwd: string | null }> => {
+  const stream = createReadStream(jsonlPath, { encoding: 'utf-8', start: 0 });
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-  let result = { sessionId: null as string | null, startedAt: 0, cwd: null as string | null, model: null as string | null };
+  let result = { sessionId: null as string | null, startedAt: 0, cwd: null as string | null };
   try {
     for await (const line of rl) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       try {
-        const parsed = JSON.parse(trimmed) as { type?: string; payload?: { id?: string; timestamp?: string; cwd?: string; model?: string }; timestamp?: string };
+        const parsed = JSON.parse(trimmed) as { type?: string; payload?: { id?: string; timestamp?: string; cwd?: string }; timestamp?: string };
         if (parsed.type !== 'session_meta' || !parsed.payload) break;
         result = {
           sessionId: parsed.payload.id ?? null,
           startedAt: parsed.payload.timestamp ? Date.parse(parsed.payload.timestamp) : (parsed.timestamp ? Date.parse(parsed.timestamp) : 0),
           cwd: parsed.payload.cwd ?? null,
-          model: parsed.payload.model ?? null,
         };
       } catch {}
       break;
@@ -124,37 +145,65 @@ const readTailLines = async (jsonlPath: string, sizeBytes: number, fileSize: num
   return lines;
 };
 
-const extractTokenCount = (lines: string[]): ITokenCountInfo | null => {
+const extractTailInfo = (lines: string[]): { tokenCount: ITokenCountRecord | null; model: string | null } => {
+  let tokenCount: ITokenCountRecord | null = null;
+  let model: string | null = null;
+
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
-    if (!line || !line.includes('token_count')) continue;
+    if (!line) continue;
     try {
-      const parsed = JSON.parse(line) as { type?: string; payload?: { type?: string; info?: ITokenCountInfo } };
-      if (parsed.type !== 'event_msg') continue;
+      const parsed = JSON.parse(line) as {
+        type?: string;
+        payload?: {
+          type?: string;
+          model?: string;
+          info?: ITokenCountInfo;
+          rate_limits?: ITokenCountRateLimits;
+        };
+      };
       const payload = parsed.payload;
-      if (!payload || payload.type !== 'token_count' || !payload.info) continue;
-      return payload.info;
+      if (!payload) continue;
+      if (!model && parsed.type === 'turn_context' && typeof payload.model === 'string') {
+        model = payload.model;
+      }
+      if (!tokenCount && parsed.type === 'event_msg' && payload.type === 'token_count' && payload.info) {
+        tokenCount = {
+          info: payload.info,
+          rateLimits: payload.rate_limits ?? null,
+        };
+      }
+      if (tokenCount && model) break;
     } catch {}
   }
-  return null;
+  return { tokenCount, model };
 };
 
-const buildExtras = (info: ITokenCountInfo, capturedAt: number): ICodexExtras => {
-  const rl = info.rate_limits;
+const resetSeconds = (window: { resets_at?: number; resets_in_seconds?: number } | undefined, capturedAt: number): number | undefined => {
+  if (!window) return undefined;
+  if (typeof window.resets_in_seconds === 'number') return window.resets_in_seconds;
+  if (typeof window.resets_at === 'number') {
+    return Math.max(0, Math.round(window.resets_at - capturedAt / 1000));
+  }
+  return undefined;
+};
+
+const buildExtras = (record: ITokenCountRecord, capturedAt: number): ICodexExtras => {
+  const { info, rateLimits: rl } = record;
   const rateLimits: ICodexRateLimits | null = rl
     ? {
         primary: rl.primary && typeof rl.primary.used_percent === 'number'
           ? {
               usedPercent: rl.primary.used_percent,
               windowMinutes: rl.primary.window_minutes,
-              resetsInSeconds: rl.primary.resets_in_seconds,
+              resetsInSeconds: resetSeconds(rl.primary, capturedAt),
             }
           : undefined,
         secondary: rl.secondary && typeof rl.secondary.used_percent === 'number'
           ? {
               usedPercent: rl.secondary.used_percent,
               windowMinutes: rl.secondary.window_minutes,
-              resetsInSeconds: rl.secondary.resets_in_seconds,
+              resetsInSeconds: resetSeconds(rl.secondary, capturedAt),
             }
           : undefined,
       }
@@ -174,20 +223,40 @@ const parseCodexJsonlFile = async (jsonlPath: string, stat: Stats): Promise<ICod
   if (!meta.sessionId || !meta.startedAt) return null;
 
   const tailLines = await readTailLines(jsonlPath, TAIL_BYTES, stat.size);
-  const info = extractTokenCount(tailLines);
+  const { tokenCount, model } = extractTailInfo(tailLines);
+  const info = tokenCount?.info;
+  const usage = info?.total_token_usage ?? info?.last_token_usage;
 
+  const inputTokens = usage?.input_tokens ?? 0;
+  const cachedInputTokens = usage?.cached_input_tokens ?? 0;
+  const outputTokens = usage?.output_tokens ?? 0;
+  const reasoningOutputTokens = usage?.reasoning_output_tokens ?? 0;
   const totalTokens = info?.total_token_usage?.total_tokens
     ?? info?.last_token_usage?.total_tokens
     ?? 0;
-  const extras = info ? buildExtras(info, stat.mtimeMs) : null;
+  const currentContextTokens = info?.last_token_usage?.total_tokens ?? totalTokens;
+  const contextWindowSize = info?.model_context_window ?? 0;
+  const usedPercentage = contextWindowSize > 0
+    ? Math.round((currentContextTokens / contextWindowSize) * 100)
+    : null;
+  const extras = tokenCount ? buildExtras(tokenCount, stat.mtimeMs) : null;
+  const cost = calculateOpenAICost(model, inputTokens, cachedInputTokens, outputTokens, contextWindowSize);
 
   return {
     sessionId: meta.sessionId,
     jsonlPath,
     startedAt: meta.startedAt,
     cwd: meta.cwd,
-    model: meta.model,
+    model,
+    inputTokens,
+    cachedInputTokens,
+    outputTokens,
+    reasoningOutputTokens,
     totalTokens,
+    currentContextTokens,
+    contextWindowSize,
+    usedPercentage,
+    cost,
     extras,
   };
 };
@@ -214,6 +283,27 @@ const getCachedSessionStats = async (jsonlPath: string): Promise<ICodexSessionSt
     cache.set(jsonlPath, { stats: null, mtimeMs: stat.mtimeMs, cachedAt: Date.now() });
     return null;
   }
+};
+
+export const readCodexTimelineSessionStats = async (jsonlPath: string): Promise<ITimelineSessionStats | null> => {
+  const stats = await getCachedSessionStats(jsonlPath);
+  if (!stats) return null;
+
+  return {
+    sessionId: stats.sessionId,
+    transcriptPath: stats.jsonlPath,
+    inputTokens: stats.inputTokens,
+    cachedInputTokens: stats.cachedInputTokens,
+    outputTokens: stats.outputTokens,
+    reasoningOutputTokens: stats.reasoningOutputTokens,
+    cost: stats.cost,
+    currentContextTokens: stats.currentContextTokens,
+    contextWindowSize: stats.contextWindowSize,
+    usedPercentage: stats.usedPercentage,
+    model: stats.model,
+    exceeds200k: stats.currentContextTokens > 200_000,
+    receivedAt: Date.now(),
+  };
 };
 
 const collectCodexJsonlPaths = async (daysBack: number): Promise<string[]> => {

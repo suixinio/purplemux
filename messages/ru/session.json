@@ -24,6 +24,8 @@
     "toolsCount": "Инструменты {count}",
     "tokens": "Токены",
     "inputOutput": "Вход {input} / Выход {output}",
+    "cachedTokens": "Кэш {count}",
+    "reasoningTokens": "Рассуждение {count}",
     "context": "Контекст",
     "model": "Модель",
     "cost": "Стоимость",

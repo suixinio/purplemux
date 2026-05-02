@@ -24,6 +24,7 @@ import { getStatusManager } from './status-manager';
 import { getProviderByPanelType } from '@/lib/providers';
 import type { IAgentProvider } from '@/lib/providers';
 import { extractSessionIdFromJsonlPath, readSessionStats } from './session-stats';
+import { readCodexTimelineSessionStats } from './stats/jsonl-parser-codex';
 import type { TTimelineServerMessage, IInitMeta, ITimelineEntry, ISessionStats } from '@/types/timeline';
 import path from 'path';
 import { isAllowedJsonlPath } from './path-validation';
@@ -105,6 +106,15 @@ const sendJson = (ws: WebSocket, msg: TTimelineServerMessage) => {
   if (canSend(ws)) {
     ws.send(JSON.stringify(msg));
   }
+};
+
+const readTimelineSessionStats = async (
+  jsonlPath: string,
+  sessionId: string,
+  isCodex: boolean,
+): Promise<ISessionStats | null> => {
+  if (isCodex) return readCodexTimelineSessionStats(jsonlPath);
+  return sessionId ? readSessionStats(sessionId) : null;
 };
 
 export const broadcastSessionStats = (stats: ISessionStats) => {
@@ -287,6 +297,17 @@ const processFileChange = async (fw: IFileWatcher) => {
         }
       }
     }
+
+    if (fw.codexParser && newOffset !== prevOffset) {
+      const sessionStats = await readCodexTimelineSessionStats(fw.jsonlPath).catch(() => null);
+      if (sessionStats) {
+        const msg: TTimelineServerMessage = { type: 'timeline:stats-update', sessionStats };
+        const str = JSON.stringify(msg);
+        for (const ws of fw.connections) {
+          if (canSend(ws)) ws.send(str);
+        }
+      }
+    }
   } finally {
     fw.processing = false;
     if (fw.pendingChange) {
@@ -446,8 +467,8 @@ const subscribeToFile = async (
   const firstTimestamp = result.hasMore ? await readFirstTimestamp(jsonlPath) : null;
   const meta = computeInitMeta(result.entries, result.fileSize, firstTimestamp, result.customTitle);
 
-  const resolvedSessionId = sessionId ?? extractSessionIdFromJsonlPath(jsonlPath) ?? '';
-  const sessionStats = resolvedSessionId ? await readSessionStats(resolvedSessionId) : null;
+  const resolvedSessionId = sessionId ?? provider.sessionIdFromJsonlPath(jsonlPath) ?? '';
+  const sessionStats = await readTimelineSessionStats(jsonlPath, resolvedSessionId, Boolean(fw.codexParser));
 
   sendJson(ws, {
     type: 'timeline:init',

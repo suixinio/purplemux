@@ -24,6 +24,8 @@
     "toolsCount": "工具 {count}",
     "tokens": "令牌",
     "inputOutput": "输入 {input} / 输出 {output}",
+    "cachedTokens": "缓存 {count}",
+    "reasoningTokens": "推理 {count}",
     "context": "上下文",
     "model": "模型",
     "cost": "费用",

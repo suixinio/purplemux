@@ -24,6 +24,8 @@
     "toolsCount": "工具 {count}",
     "tokens": "Token 數",
     "inputOutput": "輸入 {input} / 輸出 {output}",
+    "cachedTokens": "快取 {count}",
+    "reasoningTokens": "推理 {count}",
     "context": "上下文",
     "model": "模型",
     "cost": "費用",

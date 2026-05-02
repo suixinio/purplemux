@@ -24,6 +24,8 @@
     "toolsCount": "Outils {count}",
     "tokens": "Tokens",
     "inputOutput": "Entrée {input} / Sortie {output}",
+    "cachedTokens": "Cache {count}",
+    "reasoningTokens": "Raisonnement {count}",
     "context": "Contexte",
     "model": "Modèle",
     "cost": "Coût",

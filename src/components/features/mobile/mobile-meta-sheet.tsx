@@ -2,22 +2,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { MetaDetail } from '@/components/features/workspace/session-meta-content';
 import type { ITmuxInfo } from '@/components/features/workspace/session-meta-content';
 import type { IGitStatus } from '@/lib/git-status';
-
-interface ISessionMetaData {
-  title: string;
-  createdAt: string | null;
-  updatedAt: string | null;
-  fileSize: number;
-  userCount: number;
-  assistantCount: number;
-  inputTokens: number | null;
-  outputTokens: number | null;
-  totalCost: number | null;
-  currentContextTokens: number | null;
-  contextWindowSize: number | null;
-  usedPercentage: number | null;
-  model: string | null;
-}
+import type { ISessionMetaData } from '@/hooks/use-session-meta';
 
 interface IMobileMetaSheetProps {
   open: boolean;
@@ -59,7 +44,9 @@ const MobileMetaSheet = ({
           toolCount={toolCount}
           toolBreakdown={toolBreakdown}
           inputTokens={meta.inputTokens}
+          cachedInputTokens={meta.cachedInputTokens}
           outputTokens={meta.outputTokens}
+          reasoningOutputTokens={meta.reasoningOutputTokens}
           totalCost={meta.totalCost}
           currentContextTokens={meta.currentContextTokens}
           contextWindowSize={meta.contextWindowSize}
