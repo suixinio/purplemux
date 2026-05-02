@@ -70,4 +70,70 @@ describe('isCodexTuiReadyContent', () => {
   2. No
 `)).toBe(false);
   });
+
+  it('detects a resumed session whose welcome banner has scrolled off', () => {
+    expect(isCodexTuiReadyContent(`
+› Implement the new feature
+
+  Sure, I'll start by reviewing the existing code.
+
+› Run the tests
+
+  All tests pass. Here is the summary of changes:
+  - Added validation for input
+  - Updated tests
+
+›
+
+  gpt-5.5 high · ~/Workspace/github.com/subicura/purplemux
+`)).toBe(true);
+  });
+
+  it('detects a launch screen with trailing pane padding', () => {
+    expect(isCodexTuiReadyContent(`
+╭───────────────────────────────────────────────╮
+│ >_ OpenAI Codex (v0.128.0)                    │
+│                                               │
+│ model:       gpt-5.5 high   /model to change  │
+│ directory:   ~/Workspace/…/subicura/purplemux │
+│ permissions: YOLO mode                        │
+╰───────────────────────────────────────────────╯
+
+  Tip: NEW: Prevent sleep while running is now available
+  in /experimental.
+
+
+› Explain this codebase
+
+  gpt-5.5 high · ~/Workspace/github.com/subicura/purple…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+`)).toBe(true);
+  });
+
+  it('does not treat a pane with only stale content as ready', () => {
+    expect(isCodexTuiReadyContent(`
+$ codex resume 12345678-aaaa-bbbb-cccc-1234567890ab
+Error: session not found
+$
+`)).toBe(false);
+  });
 });
