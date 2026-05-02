@@ -34,6 +34,13 @@ describe('countMessages', () => {
           name: 'exec_command',
         },
       },
+      {
+        type: 'response_item',
+        payload: {
+          type: 'function_call',
+          name: 'write_stdin',
+        },
+      },
     ];
 
     await fs.writeFile(jsonlPath, lines.map((line) => JSON.stringify(line)).join('\n') + '\n');

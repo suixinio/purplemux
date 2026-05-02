@@ -230,7 +230,7 @@ const createState = (): ICodexParseState => ({
   suppressedCallIds: new Set(),
 });
 
-const SUPPRESSED_FUNCTION_NAMES = new Set(['exec_command', 'shell', 'bash']);
+const SUPPRESSED_FUNCTION_NAMES = new Set(['exec_command', 'shell', 'bash', 'write_stdin']);
 
 const setInFlight = (state: ICodexParseState, callId: string, entry: TInFlightEntry) => {
   const existing = state.inFlight.get(callId);
