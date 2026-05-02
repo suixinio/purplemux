@@ -101,7 +101,7 @@ const MobileWorkspaceTabBar = ({
             >
               <span
                 className={cn(
-                  'flex h-4 w-4 items-center justify-center rounded-full',
+                  'flex h-[18px] w-[18px] items-center justify-center rounded-full',
                   isActive && 'bg-muted',
                 )}
               >
