@@ -116,13 +116,13 @@ const ProviderRateLimits = ({ provider, data }: { provider: TRateLimitsProvider;
   const ProviderIcon = PROVIDER_ICONS[provider];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <div
-        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-muted-foreground/5 text-muted-foreground ring-1 ring-muted-foreground/10"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-muted-foreground/5 text-muted-foreground ring-1 ring-muted-foreground/10"
         aria-label={PROVIDER_LABELS[provider]}
         title={PROVIDER_LABELS[provider]}
       >
-        <ProviderIcon size={14} />
+        <ProviderIcon size={18} />
       </div>
       <div className="min-w-0 flex-1 space-y-1">
         {data.five_hour && <LimitBar label="5h" window={data.five_hour} />}

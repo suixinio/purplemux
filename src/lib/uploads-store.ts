@@ -17,6 +17,11 @@ const MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
 };
 
+const IMAGE_MIME_BY_EXT: Record<string, string> = Object.fromEntries(
+  Object.entries(MIME_EXTENSIONS).map(([mime, ext]) => [`.${ext}`, mime]),
+);
+IMAGE_MIME_BY_EXT['.jpeg'] = 'image/jpeg';
+
 interface ISaveImageOptions {
   data: Buffer;
   mime: string;
@@ -45,6 +50,54 @@ const sanitizeId = (value?: string): string => {
 
 const isValidMime = (mime: string): mime is keyof typeof MIME_EXTENSIONS =>
   mime in MIME_EXTENSIONS;
+
+const getImageMimeForPath = (filePath: string): string | null =>
+  IMAGE_MIME_BY_EXT[path.extname(filePath).toLowerCase()] ?? null;
+
+const isPathInsideUploads = (filePath: string): boolean => {
+  const root = path.resolve(UPLOADS_DIR);
+  const resolved = path.resolve(filePath);
+  return resolved !== root && resolved.startsWith(root + path.sep);
+};
+
+const uploadPathToSegments = (filePath: string): string[] | null => {
+  if (filePath.includes('\0')) return null;
+  const resolved = path.resolve(filePath);
+  if (!isPathInsideUploads(resolved)) return null;
+  if (!getImageMimeForPath(resolved)) return null;
+
+  const rel = path.relative(path.resolve(UPLOADS_DIR), resolved);
+  const segments = rel.split(path.sep).filter(Boolean);
+  return segments.length > 0 ? segments : null;
+};
+
+const uploadPathToImageUrl = (filePath: string): string | null => {
+  const segments = uploadPathToSegments(filePath);
+  if (!segments) return null;
+  return `/api/uploads/${segments.map(encodeURIComponent).join('/')}`;
+};
+
+const resolveUploadImagePath = (segments: string[]): string | null => {
+  if (segments.length === 0) return null;
+  if (
+    segments.some(
+      (part) =>
+        !part ||
+        part === '.' ||
+        part === '..' ||
+        part.includes('\0') ||
+        part.includes('/') ||
+        part.includes('\\'),
+    )
+  ) {
+    return null;
+  }
+
+  const resolved = path.resolve(UPLOADS_DIR, ...segments);
+  if (!isPathInsideUploads(resolved)) return null;
+  if (!getImageMimeForPath(resolved)) return null;
+  return resolved;
+};
 
 const buildFilename = (originalName: string | undefined, mime: string): string => {
   const ext = MIME_EXTENSIONS[mime];
@@ -197,6 +250,9 @@ export {
   cleanupExpiredUploads,
   cleanupAllUploads,
   isValidMime,
+  getImageMimeForPath,
+  resolveUploadImagePath,
+  uploadPathToImageUrl,
   MAX_BYTES,
   GENERIC_MAX_BYTES,
   UPLOADS_DIR,

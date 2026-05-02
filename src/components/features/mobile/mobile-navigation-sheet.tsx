@@ -25,7 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
-import type { IWorkspace, IWorkspaceGroup, IPaneNode, ITab } from '@/types/terminal';
+import type { IWorkspace, IWorkspaceGroup, IPaneNode, ITab, TPanelType } from '@/types/terminal';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useTabStore, { selectWorkspacePortsLabel } from '@/hooks/use-tab-store';
 import { formatTabTitle } from '@/lib/tab-title';
@@ -152,6 +152,30 @@ const MobileNavigationSheet = ({
 
   const getTabProcess = (tab: ITab) => tabs[tab.id]?.currentProcess;
 
+  const getTabAgentSummary = (tab: ITab, panelType: TPanelType): string | null => {
+    if (panelType !== 'claude-code' && panelType !== 'codex-cli') return null;
+
+    const liveState = tabs[tab.id];
+    const clean = (value: string | null | undefined): string | null => {
+      const text = value?.trim();
+      return text ? text : null;
+    };
+
+    const liveSummary = clean(liveState?.agentSummary);
+    if (liveSummary) return liveSummary;
+
+    const agentSummary =
+      tab.agentState &&
+      ((panelType === 'claude-code' && tab.agentState.providerId === 'claude') ||
+        (panelType === 'codex-cli' && tab.agentState.providerId === 'codex'))
+        ? clean(tab.agentState.summary)
+        : null;
+    return agentSummary
+      ?? clean(panelType === 'claude-code' ? tab.claudeSummary : null)
+      ?? clean(liveState?.lastUserMessage)
+      ?? clean(tab.lastUserMessage);
+  };
+
   const getTabNerdColor = (tab: ITab) => {
     const terminalStatus = tabs[tab.id]?.terminalStatus;
     if (terminalStatus === 'server') return 'text-ui-green';
@@ -163,6 +187,7 @@ const MobileNavigationSheet = ({
     const isCurrentWs = workspaceId === activeWorkspaceId;
     const isTabActive = isCurrentWs && pane.id === activePaneId && tab.id === activeTabId;
     const panelType = tab.panelType ?? 'terminal';
+    const agentSummary = getTabAgentSummary(tab, panelType);
 
     return (
       <div key={tab.id} className="relative flex items-center">
@@ -208,9 +233,9 @@ const MobileNavigationSheet = ({
           </span>
           <div className="min-w-0 flex-1">
             <span className="block truncate">{getTabDisplayName(tab)}</span>
-            {panelType === 'claude-code' && tab.claudeSummary && (
+            {agentSummary && (
               <span className="block truncate text-xs text-muted-foreground/70">
-                {tab.claudeSummary}
+                {agentSummary}
               </span>
             )}
           </div>

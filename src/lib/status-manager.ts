@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import { getWorkspaces } from '@/lib/workspace-store';
-import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabClaudeSummary, updateTabAgentState, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
+import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabAgentSummary, updateTabAgentState, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { getChildPids } from '@/lib/process-utils';
 import { getProviderByPanelType } from '@/lib/providers/registry';
@@ -664,10 +664,13 @@ class StatusManager {
         if (existing.cliState === 'busy' || existing.cliState === 'needs-input') {
           const paneTitle = await getPaneTitle(tab.sessionName);
           const liveSummary = provider?.parsePaneTitle(paneTitle) ?? null;
-          if (liveSummary && liveSummary !== existing.agentSummary) {
-            existing.agentSummary = liveSummary;
+          const nextSummary = liveSummary ?? tabSummary;
+          if (nextSummary !== existing.agentSummary) {
+            existing.agentSummary = nextSummary;
             summaryChanged = true;
-            updateTabClaudeSummary(tab.sessionName, liveSummary).catch(() => {});
+            if (liveSummary && provider) {
+              updateTabAgentSummary(tab.sessionName, provider, liveSummary).catch(() => {});
+            }
           }
         } else {
           if (existing.agentSummary !== tabSummary) {

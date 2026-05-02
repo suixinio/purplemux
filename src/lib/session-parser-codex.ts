@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { createLogger } from '@/lib/logger';
+import { uploadPathToImageUrl } from '@/lib/uploads-store';
 import type {
   IIncrementalResult,
   IParseResult,
@@ -528,13 +529,18 @@ const processEventMsg = (
       if (!text) return [];
       const imagesRaw = Array.isArray(payload.images) ? payload.images : [];
       const localImagesRaw = Array.isArray(payload.local_images) ? payload.local_images : [];
-      const images = [...imagesRaw, ...localImagesRaw].filter((s): s is string => typeof s === 'string');
+      const images = imagesRaw.filter((s): s is string => typeof s === 'string');
+      const localImages = localImagesRaw
+        .filter((s): s is string => typeof s === 'string')
+        .map((s) => uploadPathToImageUrl(s))
+        .filter((s): s is string => !!s);
+      const allImages = [...images, ...localImages];
       const entry: ITimelineUserMessage = {
         id: nanoid(),
         type: 'user-message',
         timestamp,
         text,
-        ...(images.length > 0 ? { images } : {}),
+        ...(allImages.length > 0 ? { images: allImages } : {}),
       };
       return [entry];
     }
