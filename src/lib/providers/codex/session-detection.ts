@@ -11,6 +11,7 @@ import {
   getChildPids,
   getProcessArgs,
   getProcessCwd,
+  getProcessStartTimeMs,
   isProcessRunning,
 } from '@/lib/process-utils';
 
@@ -18,6 +19,12 @@ const CODEX_DIR = path.join(os.homedir(), '.codex');
 const SESSIONS_ROOT = path.join(CODEX_DIR, 'sessions');
 const PID_POLL_INTERVAL = 10_000;
 const SESSION_SCAN_DAYS = 30;
+const SESSION_PROCESS_GRACE_MS = 60_000;
+const CODEX_SESSION_ID_RE = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
+const CODEX_RESUME_ARG_RE = new RegExp(
+  `(?:^|\\s)(?:resume|--resume-session-id)(?:=|\\s+)["']?(${CODEX_SESSION_ID_RE})["']?(?=\\s|$)`,
+  'i',
+);
 
 const NOT_RUNNING: ISessionInfo = {
   status: 'not-running',
@@ -35,7 +42,12 @@ interface ICodexSessionMeta {
   jsonlPath: string;
   cwd: string | null;
   startedAt: number | null;
+  mtimeMs: number | null;
 }
+
+type TCodexDetectedSessionMeta = Omit<ICodexSessionMeta, 'jsonlPath'> & {
+  jsonlPath: string | null;
+};
 
 interface IFindLatestCodexSessionOptions {
   sessionsRoot?: string;
@@ -88,9 +100,19 @@ const readCodexSessionMeta = async (jsonlPath: string): Promise<ICodexSessionMet
       jsonlPath,
       cwd: parsed.payload.cwd ?? null,
       startedAt: startedAt !== null && Number.isFinite(startedAt) ? startedAt : null,
+      mtimeMs: null,
     };
   } catch {
     return null;
+  }
+};
+
+const withJsonlMtime = async (meta: ICodexSessionMeta): Promise<ICodexSessionMeta> => {
+  try {
+    const stat = await fs.stat(meta.jsonlPath);
+    return { ...meta, mtimeMs: stat.mtimeMs };
+  } catch {
+    return meta;
   }
 };
 
@@ -131,7 +153,7 @@ export const findLatestCodexSessionForCwd = async (
 
   for (const candidate of candidates) {
     const meta = await readCodexSessionMeta(candidate.jsonlPath);
-    if (meta?.cwd === cwd) return meta;
+    if (meta?.cwd === cwd) return { ...meta, mtimeMs: candidate.mtimeMs };
   }
 
   return null;
@@ -160,7 +182,7 @@ export const findCodexSessionById = async (
     const matchingNames = names.filter((name) => name.endsWith('.jsonl') && name.includes(sessionId));
     for (const name of matchingNames) {
       const meta = await readCodexSessionMeta(path.join(dir, name));
-      if (meta?.sessionId === sessionId) return meta;
+      if (meta?.sessionId === sessionId) return withJsonlMtime(meta);
     }
   }
 
@@ -179,15 +201,42 @@ const collectDescendants = async (
 
 const findCodexProcess = async (
   pids: number[],
-): Promise<{ pid: number; cwd: string | null } | null> => {
+): Promise<{ pid: number; cwd: string | null; args: string } | null> => {
   for (const pid of pids) {
     const args = await getProcessArgs(pid);
     if (!args || !matchesCodexArgs(args)) continue;
     const cwd = await getProcessCwd(pid);
-    return { pid, cwd };
+    return { pid, cwd, args };
   }
   return null;
 };
+
+const extractResumeSessionId = (args: string): string | null =>
+  args.match(CODEX_RESUME_ARG_RE)?.[1] ?? null;
+
+const isLikelySessionForProcess = async (
+  pid: number,
+  meta: ICodexSessionMeta,
+): Promise<boolean> => {
+  if (meta.startedAt === null) return false;
+  const processStartedAt = await getProcessStartTimeMs(pid, { timeoutMs: 1_000 });
+  if (!processStartedAt) return true;
+
+  const earliestSessionTime = processStartedAt - SESSION_PROCESS_GRACE_MS;
+  return meta.startedAt >= earliestSessionTime;
+};
+
+const toRunningSessionInfo = (
+  found: { pid: number; cwd: string | null },
+  meta?: TCodexDetectedSessionMeta | null,
+): ISessionInfo => ({
+  status: 'running',
+  sessionId: meta?.sessionId ?? null,
+  jsonlPath: meta?.jsonlPath ?? null,
+  pid: found.pid,
+  startedAt: meta?.startedAt ?? null,
+  cwd: meta?.cwd ?? found.cwd,
+});
 
 export const isCodexRunning = async (
   panePid: number,
@@ -219,14 +268,29 @@ export const detectActiveSession = async (
   const found = await findCodexProcess(all);
   if (!found) return NOT_RUNNING;
 
-  return {
-    status: 'running',
-    sessionId: null,
-    jsonlPath: null,
-    pid: found.pid,
-    startedAt: null,
-    cwd: found.cwd,
-  };
+  const resumeSessionId = extractResumeSessionId(found.args);
+  if (resumeSessionId) {
+    const meta = await findCodexSessionById(resumeSessionId);
+    return toRunningSessionInfo(
+      found,
+      meta ?? {
+        sessionId: resumeSessionId,
+        jsonlPath: null,
+        cwd: found.cwd,
+        startedAt: null,
+        mtimeMs: null,
+      },
+    );
+  }
+
+  if (found.cwd) {
+    const meta = await findLatestCodexSessionForCwd(found.cwd);
+    if (meta && await isLikelySessionForProcess(found.pid, meta)) {
+      return toRunningSessionInfo(found, meta);
+    }
+  }
+
+  return toRunningSessionInfo(found);
 };
 
 export const watchSessionsDir = (
@@ -237,11 +301,22 @@ export const watchSessionsDir = (
   let stopped = false;
   let pollTimer: ReturnType<typeof setInterval> | null = null;
   let currentPid: number | null = null;
+  let currentSessionId: string | null = null;
+  let currentJsonlPath: string | null = null;
   const watchedSession = options?.tmuxSession;
+
+  const rememberInfo = (info: ISessionInfo) => {
+    if (info.pid) currentPid = info.pid;
+    currentSessionId = info.sessionId;
+    currentJsonlPath = info.jsonlPath;
+  };
+
+  const hasNewSessionInfo = (info: ISessionInfo): boolean =>
+    info.sessionId !== currentSessionId || info.jsonlPath !== currentJsonlPath;
 
   const handleSessionInfo = (tmuxSession: string, info: ISessionInfo) => {
     if (stopped || !watchedSession || tmuxSession !== watchedSession) return;
-    if (info.pid) currentPid = info.pid;
+    rememberInfo(info);
     onChange(info);
   };
 
@@ -253,14 +328,25 @@ export const watchSessionsDir = (
     if (stopped) return;
     if (!currentPid) {
       const info = await detectActiveSession(panePid);
-      if (info.pid) currentPid = info.pid;
+      rememberInfo(info);
+      if (info.sessionId || info.jsonlPath) onChange(info);
       return;
     }
     const alive = await isProcessRunning(currentPid);
     if (!alive && !stopped) {
       currentPid = null;
       const info = await detectActiveSession(panePid);
+      rememberInfo(info);
       onChange(info);
+      return;
+    }
+
+    if (!currentSessionId && !currentJsonlPath) {
+      const info = await detectActiveSession(panePid);
+      if (hasNewSessionInfo(info)) {
+        rememberInfo(info);
+        onChange(info);
+      }
     }
   };
 
@@ -269,7 +355,7 @@ export const watchSessionsDir = (
   if (!options?.skipInitial) {
     detectActiveSession(panePid).then((info) => {
       if (stopped) return;
-      if (info.pid) currentPid = info.pid;
+      rememberInfo(info);
       onChange(info);
     });
   }
