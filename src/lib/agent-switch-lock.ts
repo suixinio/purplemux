@@ -3,11 +3,21 @@ import { t } from '@/lib/i18n';
 import type { TPanelType } from '@/types/terminal';
 import type { TCliState } from '@/types/timeline';
 
-const isAgentPanel = (panelType: TPanelType | undefined): boolean =>
+type TAgentPanelType = Extract<TPanelType, 'claude-code' | 'codex-cli'>;
+
+export const isAgentPanel = (
+  panelType: TPanelType | undefined,
+): panelType is TAgentPanelType =>
   panelType === 'claude-code' || panelType === 'codex-cli';
 
-const isAgentRunning = (cliState: TCliState | undefined): boolean =>
+export const isAgentRunning = (cliState: TCliState | undefined): boolean =>
   cliState !== undefined && cliState !== 'inactive' && cliState !== 'unknown';
+
+export const getAgentPanelTypeFromProvider = (providerId: string | undefined): TAgentPanelType | undefined => {
+  if (providerId === 'claude') return 'claude-code';
+  if (providerId === 'codex') return 'codex-cli';
+  return undefined;
+};
 
 const agentDisplayName = (panelType: TPanelType | undefined): string => {
   if (panelType === 'claude-code') return 'Claude';
@@ -19,21 +29,27 @@ interface IAgentSwitchInput {
   current: TPanelType | undefined;
   target: TPanelType;
   cliState: TCliState | undefined;
+  runningAgentPanelType?: TAgentPanelType | undefined;
 }
 
 export const isAgentSwitchBlocked = ({
   current,
   target,
   cliState,
+  runningAgentPanelType,
 }: IAgentSwitchInput): boolean => {
   if (!current || current === target) return false;
-  if (!isAgentPanel(current) || !isAgentPanel(target)) return false;
-  return isAgentRunning(cliState);
+  if (!isAgentRunning(cliState)) return false;
+  if (isAgentPanel(current) && isAgentPanel(target)) return true;
+  if (current === 'terminal' && isAgentPanel(target) && runningAgentPanelType) {
+    return target !== runningAgentPanelType;
+  }
+  return false;
 };
 
 export const tryAgentSwitch = (input: IAgentSwitchInput): boolean => {
   if (!isAgentSwitchBlocked(input)) return true;
-  const name = agentDisplayName(input.current);
+  const name = agentDisplayName(isAgentPanel(input.current) ? input.current : input.runningAgentPanelType);
   toast.error(t('terminal', 'switchAgentBlocked').replace('{name}', name), {
     id: 'agent-switch-blocked',
     duration: 5000,

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { FolderCode, GitCompareArrows } from 'lucide-react';
+import { FolderCode, GitCompareArrows, Plus, TerminalSquare } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -12,12 +12,14 @@ import useTabStore from '@/hooks/use-tab-store';
 import useConfigStore from '@/hooks/use-config-store';
 import useIsMac from '@/hooks/use-is-mac';
 import useShortcutHints from '@/hooks/use-shortcut-hints';
-import { tryAgentSwitch } from '@/lib/agent-switch-lock';
+import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import ShortcutKey from '@/components/shortcut-key';
 import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
 import { buildEditorUrl, isSafeEditorTarget, isWebEditorUrl } from '@/lib/editor-url';
 import { EditorIcon } from '@/components/icons/editor-icons';
+import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 const isLocalAccess = typeof window !== 'undefined'
@@ -43,6 +45,14 @@ const SplitHorizontalIcon = ({ className }: { className?: string }) => (
     <line x1="3" y1="12" x2="21" y2="12" />
   </svg>
 );
+
+type TModeButton = {
+  value: TPanelType;
+  label: string;
+  mac: string;
+  other: string;
+  startAction?: boolean;
+};
 
 interface IContentHeaderProps {
   activePaneId: string | null;
@@ -79,6 +89,29 @@ const ContentHeader = ({
   const focusedPane = panes.find((p) => p.id === activePaneId) ?? panes[0];
   const activeTab = focusedPane?.tabs.find((t) => t.id === focusedPane.activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
+  const activeCliState = useTabStore((state) => (activeTab?.id ? state.tabs[activeTab.id]?.cliState : undefined));
+  const activeAgentProviderId = useTabStore((state) => (activeTab?.id ? state.tabs[activeTab.id]?.agentProviderId : undefined));
+  const runtimeAgentPanelType = getAgentPanelTypeFromProvider(activeAgentProviderId);
+  const visibleAgentPanelType = isAgentPanel(activePanelType)
+    ? activePanelType
+    : isAgentRunning(activeCliState)
+      ? runtimeAgentPanelType
+      : undefined;
+
+  const modeButtons: TModeButton[] = [
+    { value: 'terminal', label: 'TERMINAL', mac: '⌘⇧T', other: '^⇧T' },
+    ...(visibleAgentPanelType
+      ? [{
+          value: visibleAgentPanelType,
+          label: visibleAgentPanelType === 'codex-cli' ? 'CODEX' : 'CLAUDE',
+          mac: visibleAgentPanelType === 'codex-cli' ? '⌘⇧X' : '⌘⇧C',
+          other: visibleAgentPanelType === 'codex-cli' ? '^⇧X' : '^⇧C',
+        }]
+      : [
+          { value: 'claude-code' as const, label: 'CLAUDE', mac: '⌘⇧C', other: '^⇧C', startAction: true },
+          { value: 'codex-cli' as const, label: 'CODEX', mac: '⌘⇧X', other: '^⇧X', startAction: true },
+        ]),
+  ];
 
   const activeTabCwd = useTabMetadataStore(
     (state) => (activeTab?.id ? state.metadata[activeTab.id]?.cwd : undefined),
@@ -95,16 +128,63 @@ const ContentHeader = ({
   const editorTargetIsWeb = !!editorTarget && isWebEditorUrl(editorTarget);
   const remoteNotSupported = editorTargetIsSafe && !editorTargetIsWeb && !isLocalAccess;
   const editorTooltipLabel = remoteNotSupported ? t('editorRemoteNotSupported') : t('openEditor');
+  const getModeButtonLabel = (item: TModeButton) =>
+    item.startAction ? `Start ${item.label[0]}${item.label.slice(1).toLowerCase()}` : item.label[0] + item.label.slice(1).toLowerCase();
+
+  const renderModeIcon = (item: TModeButton) => {
+    const icon = item.value === 'terminal' ? (
+      <TerminalSquare className="h-3.5 w-3.5" />
+    ) : item.value === 'claude-code' ? (
+      <ClaudeCodeIcon size={14} />
+    ) : item.value === 'codex-cli' ? (
+      <OpenAIIcon size={14} className="shrink-0" aria-label="Codex" />
+    ) : null;
+
+    if (!item.startAction) return icon;
+    return (
+      <>
+        {icon}
+        <Plus className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-background text-muted-foreground" />
+      </>
+    );
+  };
 
   const handlePanelSwitch = (value: string) => {
     if (isToggling || !focusedPane || !activeTab) return;
     const next = value as TPanelType;
     if (next === activePanelType) return;
-    const cliState = useTabStore.getState().tabs[activeTab.id]?.cliState;
-    if (!tryAgentSwitch({ current: activePanelType, target: next, cliState })) return;
+    if (!tryAgentSwitch({
+      current: activePanelType,
+      target: next,
+      cliState: activeCliState,
+      runningAgentPanelType: runtimeAgentPanelType,
+    })) return;
     setIsToggling(true);
     onUpdateTabPanelType(focusedPane.id, activeTab.id, next);
     setTimeout(() => setIsToggling(false), 150);
+  };
+
+  const handleModeButtonClick = (item: TModeButton) => {
+    if (isToggling || !focusedPane || !activeTab) return;
+    if (item.startAction && (item.value === 'claude-code' || item.value === 'codex-cli')) {
+      if (!tryAgentSwitch({
+        current: activePanelType,
+        target: item.value,
+        cliState: activeCliState,
+        runningAgentPanelType: runtimeAgentPanelType,
+      })) return;
+      setIsToggling(true);
+      window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
+        detail: {
+          paneId: focusedPane.id,
+          tabId: activeTab.id,
+          provider: item.value === 'codex-cli' ? 'codex' : 'claude',
+        },
+      }));
+      setTimeout(() => setIsToggling(false), 150);
+      return;
+    }
+    handlePanelSwitch(item.value);
   };
 
   const paneId = focusedPane?.id;
@@ -124,23 +204,21 @@ const ContentHeader = ({
           {...(isElectron ? { style: { WebkitAppRegion: 'no-drag' } as React.CSSProperties } : {})}
         >
           <div className={cn('flex items-center gap-px border-r border-border pr-2', isToggling && 'pointer-events-none opacity-80')}>
-            {([
-              { value: 'terminal', label: 'TERMINAL', mac: '⌘⇧T', other: '^⇧T' },
-              { value: 'claude-code', label: 'CLAUDE', mac: '⌘⇧C', other: '^⇧C' },
-              { value: 'codex-cli', label: 'CODEX', mac: '⌘⇧X', other: '^⇧X' },
-            ] as const).map((item) => (
+            {modeButtons.map((item) => (
               <div key={item.value} className="relative">
-                <button
-                  className={cn(
-                    'rounded px-1.5 py-0.5 text-[10px] font-medium tracking-wide transition-colors',
-                    activePanelType === item.value
-                      ? 'bg-accent text-foreground'
-                      : 'text-muted-foreground/60 hover:text-muted-foreground',
-                  )}
-                  onClick={() => handlePanelSwitch(item.value)}
-                >
-                  {item.label}
-                </button>
+                <Tooltip>
+                  <TooltipTrigger
+                    className={cn(
+                      'relative inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground/70 transition-colors hover:text-foreground',
+                      activePanelType === item.value && 'bg-accent text-foreground',
+                    )}
+                    onClick={() => handleModeButtonClick(item)}
+                    aria-label={getModeButtonLabel(item)}
+                  >
+                    {renderModeIcon(item)}
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">{getModeButtonLabel(item)}</TooltipContent>
+                </Tooltip>
                 {activePanelType !== item.value && (
                   <ShortcutKey
                     mac={item.mac}

@@ -4,7 +4,7 @@ import { create } from 'zustand';
 import { useShallow } from 'zustand/react/shallow';
 import { toast } from 'sonner';
 import { t } from '@/lib/i18n';
-import type { ILayoutData, ITab, IPaneNode, TPanelType } from '@/types/terminal';
+import type { IDiffSettings, ILayoutData, ITab, IPaneNode, TPanelType } from '@/types/terminal';
 import { clearInputDraft } from '@/hooks/use-web-input';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
@@ -105,6 +105,7 @@ interface ILayoutState {
   reorderTabsInPane: (paneId: string, tabIds: string[]) => void;
   removeTabLocally: (paneId: string, tabId: string) => void;
   equalizeRatios: () => void;
+  updateDiffSettings: (patch: Partial<IDiffSettings>) => void;
   updateTabPanelType: (paneId: string, tabId: string, panelType: TPanelType) => void;
   updateTabTerminalLayout: (paneId: string, tabId: string, patch: { terminalRatio?: number; terminalCollapsed?: boolean }) => void;
   clearLayout: () => void;
@@ -588,6 +589,21 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     });
   },
 
+  updateDiffSettings: (patch) => {
+    const { layout, workspaceId } = get();
+    if (!layout) return;
+    applyLayout(set, get, {
+      ...layout,
+      diffSettings: {
+        ...(layout.diffSettings ?? {}),
+        ...patch,
+      },
+    });
+    patchApi(wsQuery('/api/layout', workspaceId), { diffSettings: patch }).then((data) => {
+      if (data) applyLayoutPreserveFocus(set, get, data);
+    });
+  },
+
   updateTabPanelType: (paneId, tabId, panelType) => {
     applyPaneUpdate(set, get, paneId, (pane) => ({
       ...pane,
@@ -863,6 +879,7 @@ const useLayout = ({ workspaceId, onFetchError }: { workspaceId: string | null; 
     reorderTabsInPane: s.reorderTabsInPane,
     removeTabLocally: s.removeTabLocally,
     equalizeRatios: s.equalizeRatios,
+    updateDiffSettings: s.updateDiffSettings,
     updateTabPanelType: s.updateTabPanelType,
     clearLayout: s.clearLayout,
     fetchLayout: s.fetchLayout,

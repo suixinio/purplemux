@@ -5,7 +5,7 @@ import { findResizeTarget } from '@/lib/layout-tree';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useBoundHotkey from '@/hooks/use-bound-hotkey';
 import useTabStore from '@/hooks/use-tab-store';
-import { tryAgentSwitch } from '@/lib/agent-switch-lock';
+import { getAgentPanelTypeFromProvider, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import type { ILayoutData, IPaneNode, ITab, TPanelType } from '@/types/terminal';
 
 const RESIZE_STEP_PERCENT = 5;
@@ -148,8 +148,13 @@ const useKeyboardShortcuts = ({
     if (!tab) return;
     const current = tab.panelType ?? 'terminal';
     if (current === panelType) return;
-    const cliState = useTabStore.getState().tabs[pane.activeTabId]?.cliState;
-    if (!tryAgentSwitch({ current, target: panelType, cliState })) return;
+    const tabState = useTabStore.getState().tabs[pane.activeTabId];
+    if (!tryAgentSwitch({
+      current,
+      target: panelType,
+      cliState: tabState?.cliState,
+      runningAgentPanelType: getAgentPanelTypeFromProvider(tabState?.agentProviderId),
+    })) return;
     useLayoutStore.getState().updateTabPanelType(pane.id, pane.activeTabId, panelType);
   }, []);
 

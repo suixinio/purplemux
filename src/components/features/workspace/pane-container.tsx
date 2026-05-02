@@ -123,6 +123,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const reorderTabsInPane = useLayoutStore((s) => s.reorderTabsInPane);
   const updateTabPanelType = useLayoutStore((s) => s.updateTabPanelType);
   const updateTabTerminalLayout = useLayoutStore((s) => s.updateTabTerminalLayout);
+  const diffSettings = useLayoutStore((s) => s.layout?.diffSettings);
+  const updateDiffSettings = useLayoutStore((s) => s.updateDiffSettings);
 
   const activeTab = tabs.find((t) => t.id === activeTabId);
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
@@ -868,6 +870,27 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     sendCodexQuitCommand(sendStdin);
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
 
+  useEffect(() => {
+    const handleStartAgentRequest = (event: Event) => {
+      const detail = (event as CustomEvent<{
+        paneId?: string;
+        tabId?: string;
+        provider?: TGitAskProvider;
+      }>).detail;
+      if (detail?.paneId !== paneId || detail.tabId !== activeTabId) return;
+      if (detail.provider !== 'claude' && detail.provider !== 'codex') return;
+      handleSwitchPanelType(detail.provider === 'codex' ? 'codex-cli' : 'claude-code');
+      if (detail.provider === 'codex') {
+        void handleNewCodexSession();
+        return;
+      }
+      handleNewClaudeSession();
+    };
+
+    window.addEventListener('purplemux-start-agent', handleStartAgentRequest);
+    return () => window.removeEventListener('purplemux-start-agent', handleStartAgentRequest);
+  }, [activeTabId, handleNewClaudeSession, handleNewCodexSession, handleSwitchPanelType, paneId]);
+
   const handleSwitchToAgentMode = useCallback(async () => {
     const prompt = agentModePrompt;
     if (!activeTabId || !prompt || prompt.tabId !== activeTabId) return;
@@ -1042,6 +1065,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             key={activeTab.sessionName}
             sessionName={activeTab.sessionName}
             onSendToAgent={handleSendToAgent}
+            settings={diffSettings}
+            onSettingsChange={updateDiffSettings}
           />
         )}
 

@@ -10,6 +10,15 @@ export type TConnectionStatus =
 export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-found' | null;
 
 export type TPanelType = 'terminal' | 'claude-code' | 'codex-cli' | 'web-browser' | 'diff';
+export type TDiffViewMode = 'split' | 'unified';
+export type TDiffTab = 'changes' | 'history';
+
+export interface IDiffSettings {
+  activeTab?: TDiffTab;
+  viewMode?: TDiffViewMode;
+  panelOpen?: boolean;
+  panelSize?: number;
+}
 
 export interface IAgentState {
   providerId: string;
@@ -61,6 +70,7 @@ export type TLayoutNode = ISplitNode | IPaneNode;
 export interface ILayoutData {
   root: TLayoutNode;
   activePaneId: string | null;
+  diffSettings?: IDiffSettings;
   updatedAt: string;
 }
 
