@@ -81,6 +81,8 @@ const WebInputBar = ({
   const isCodex = provider === 'codex';
   const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
     useMessageHistory({ wsId });
+  const isMobileDevice = useIsMobileDevice();
+  const submitDelayMs = isCodex && isMobileDevice ? 250 : 50;
   const handleMessageSent = useCallback(
     (message: string) => {
       addHistory(message);
@@ -97,9 +99,9 @@ const WebInputBar = ({
       onRestartSession,
       onMessageSent: handleMessageSent,
       disabledMessage: isCodex ? t('codexInactiveMessage') : undefined,
+      submitDelayMs,
     },
   );
-  const isMobileDevice = useIsMobileDevice();
 
   const [interruptDialogOpen, setInterruptDialogOpen] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
@@ -242,7 +244,7 @@ const WebInputBar = ({
       if (hasText) {
         const payload = ` ${text}`;
         sendStdin(`\x1b[200~${payload}\x1b[201~`);
-        setTimeout(() => sendStdin('\r'), payload.includes('\n') ? 500 : 50);
+        setTimeout(() => sendStdin('\r'), payload.includes('\n') ? 500 : submitDelayMs);
       } else {
         sendStdin('\r');
       }
@@ -252,7 +254,7 @@ const WebInputBar = ({
     } finally {
       setIsDispatching(false);
     }
-  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, agentSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t]);
+  }, [canSend, isDispatching, value, attachments, send, sendStdin, setValue, onSend, agentSessionId, sessionName, tabId, addHistory, onAddPendingMessage, onRemovePendingMessage, t, submitDelayMs]);
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.nativeEvent.isComposing || e.keyCode === 229) return;

@@ -1,12 +1,13 @@
+import type { SVGProps } from 'react';
 import { cn } from '@/lib/utils';
 
-interface IOpenAIIconProps {
-  className?: string;
-  size?: number;
+interface IOpenAIIconProps extends SVGProps<SVGSVGElement> {
+  size?: number | string;
 }
 
-const OpenAIIcon = ({ className, size }: IOpenAIIconProps) => (
+const OpenAIIcon = ({ className, size, ...props }: IOpenAIIconProps) => (
   <svg
+    {...props}
     height={size ?? '1em'}
     width={size ?? '1em'}
     viewBox="0 0 24 24"

@@ -1015,6 +1015,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   key={activeTab.sessionName}
                   tabId={activeTabId}
                   sessionName={activeTab.sessionName}
+                  cwd={activeTabCwd || activeTab.cwd}
                   onClose={() => handleSwitchPanelType('terminal')}
                   onNewSession={handleNewCodexSession}
                   onRestart={handleRestartCodexSession}

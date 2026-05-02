@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
+import OpenAIIcon from '@/components/icons/openai-icon';
 import { useRouter } from 'next/router';
 import useSidebarItems from '@/hooks/use-sidebar-items';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
@@ -192,6 +193,8 @@ const MobileNavigationSheet = ({
           <span className="mt-0.5 flex w-4 shrink-0 items-center justify-center">
             {panelType === 'claude-code' ? (
               <ClaudeCodeIcon size={16} />
+            ) : panelType === 'codex-cli' ? (
+              <OpenAIIcon size={16} className="text-foreground" />
             ) : panelType === 'web-browser' ? (
               <Globe size={14} className="text-muted-foreground" />
             ) : panelType === 'diff' ? (

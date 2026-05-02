@@ -1,6 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react';
 import { Globe, GitCompareArrows } from 'lucide-react';
-import Spinner from '@/components/ui/spinner';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import { cn } from '@/lib/utils';
 import ProcessIcon from '@/components/icons/process-icon';
@@ -82,7 +81,7 @@ const MobileWorkspaceTabBar = ({
             item.workspaceId === activeWorkspaceId &&
             item.paneId === selectedPaneId &&
             item.tabId === selectedTabId;
-          const isClaude = item.panelType === 'claude-code';
+          const isAgent = item.panelType === 'claude-code' || item.panelType === 'codex-cli';
           const status = selectTabDisplayStatus(statusTabs, item.tabId);
           const termStatus = statusTabs[item.tabId]?.terminalStatus;
           const currentProcess = statusTabs[item.tabId]?.currentProcess;
@@ -100,25 +99,30 @@ const MobileWorkspaceTabBar = ({
               onClick={() => onSelect(item.workspaceId, item.paneId, item.tabId)}
               aria-current={isActive ? 'true' : undefined}
             >
-              {isActive ? (
-                <span className="h-2 w-2 rounded-[2px] bg-foreground" />
-              ) : isClaude && status === 'busy' ? (
-                <Spinner className="h-2 w-2 text-muted-foreground" />
-              ) : isClaude && status === 'ready-for-review' ? (
-                <span className="h-2 w-2 rounded-full bg-claude-active animate-pulse" />
-              ) : isClaude && status === 'needs-input' ? (
-                <span className="h-2 w-2 rounded-full bg-ui-amber animate-pulse" />
-              ) : isClaude && status === 'unknown' ? (
-                <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
-              ) : isClaude ? (
-                <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
-              ) : item.panelType === 'web-browser' ? (
-                <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
-              ) : item.panelType === 'diff' ? (
-                <GitCompareArrows className="h-2.5 w-2.5 text-muted-foreground/50" />
-              ) : (
-                <ProcessIcon process={currentProcess} className={cn('h-3 w-3', iconColorClass)} />
-              )}
+              <span
+                className={cn(
+                  'flex h-4 w-4 items-center justify-center rounded-full',
+                  isActive && 'bg-muted',
+                )}
+              >
+                {isAgent && status === 'busy' ? (
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-ui-blue" />
+                ) : isAgent && status === 'ready-for-review' ? (
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-claude-active" />
+                ) : isAgent && status === 'needs-input' ? (
+                  <span className="h-2 w-2 animate-pulse rounded-full bg-ui-amber" />
+                ) : isAgent && status === 'unknown' ? (
+                  <span className="h-2 w-2 rounded-full bg-muted-foreground/50" />
+                ) : isAgent ? (
+                  <span className="h-2 w-2 rounded-full border border-muted-foreground/40" />
+                ) : item.panelType === 'web-browser' ? (
+                  <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
+                ) : item.panelType === 'diff' ? (
+                  <GitCompareArrows className="h-2.5 w-2.5 text-muted-foreground/50" />
+                ) : (
+                  <ProcessIcon process={currentProcess} className={cn('h-3 w-3', iconColorClass)} />
+                )}
+              </span>
             </button>
           );
         })}

@@ -1,21 +1,27 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Spinner from '@/components/ui/spinner';
+import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import useTabStore, { selectSessionView } from '@/hooks/use-tab-store';
 import useTimeline from '@/hooks/use-timeline';
+import { useCodexSessions } from '@/hooks/use-codex-sessions';
 import { useSessionMetaCompute } from '@/hooks/use-session-meta';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import SessionMetaBar, { SessionMetaBarSkeleton } from '@/components/features/workspace/session-meta-bar';
+import CodexSessionListView from '@/components/features/workspace/codex-session-list-view';
+import type { ICodexSessionEntry } from '@/lib/codex-session-list';
 import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
 
 interface ICodexPanelProps {
   tabId: string;
   sessionName: string;
+  cwd?: string;
   className?: string;
   onClose?: () => void;
   onNewSession?: () => void;
@@ -30,6 +36,7 @@ interface ICodexPanelProps {
 const CodexPanel = ({
   tabId,
   sessionName,
+  cwd,
   className,
   onClose: _onClose,
   onNewSession,
@@ -41,6 +48,7 @@ const CodexPanel = ({
   removePendingMessageRef,
 }: ICodexPanelProps) => {
   const t = useTranslations('terminal');
+  const [resumingSessionId, setResumingSessionId] = useState<string | null>(null);
   const agentProcess = useTabStore((s) => s.tabs[tabId]?.agentProcess ?? null);
   const agentInstalled = useTabStore((s) => s.tabs[tabId]?.agentInstalled ?? true);
   const cliState = useTabStore((s) => s.tabs[tabId]?.cliState ?? 'inactive');
@@ -54,6 +62,27 @@ const CodexPanel = ({
   const handleStart = useCallback(() => {
     onNewSession?.();
   }, [onNewSession]);
+
+  const handleResumeStarted = useCallback(() => {
+    setResumingSessionId(null);
+  }, []);
+
+  const handleResumeBlocked = useCallback(
+    (payload: { reason: string; processName?: string }) => {
+      setResumingSessionId(null);
+      toast.warning(t('resumeBlocked'), {
+        description: payload.processName
+          ? t('resumeBlockedProcess', { name: payload.processName })
+          : undefined,
+      });
+    },
+    [t],
+  );
+
+  const handleResumeError = useCallback(() => {
+    setResumingSessionId(null);
+    toast.error(t('codexResumeFailed'));
+  }, [t]);
 
   const {
     entries,
@@ -70,6 +99,7 @@ const CodexPanel = ({
     loadMore: loadMoreTimeline,
     hasMore: timelineHasMore,
     retrySession,
+    sendResume,
     addPendingUserMessage,
     removePendingUserMessage,
   } = useTimeline({
@@ -77,6 +107,11 @@ const CodexPanel = ({
     claudeSessionId: codexSessionId,
     panelType: 'codex-cli',
     enabled: !!sessionName,
+    resumeCallbacks: {
+      onResumeStarted: handleResumeStarted,
+      onResumeBlocked: handleResumeBlocked,
+      onResumeError: handleResumeError,
+    },
     onSync: (state) => {
       const checkedAt = Date.now();
       if (state.agentProcess !== null) {
@@ -89,6 +124,13 @@ const CodexPanel = ({
     },
     getCliState: () => useTabStore.getState().tabs[tabId]?.cliState,
   });
+
+  const {
+    sessions: codexSessions,
+    isLoading: isCodexSessionListLoading,
+    error: codexSessionListError,
+    refresh: refetchCodexSessions,
+  } = useCodexSessions(cwd, !!cwd && view === 'session-list' && agentProcess !== true);
 
   useEffect(() => {
     if (addPendingMessageRef) addPendingMessageRef.current = addPendingUserMessage;
@@ -129,6 +171,15 @@ const CodexPanel = ({
     }
   }, [isHeaderLoading, freshMeta, sessionId, jsonlPath, tabId]);
 
+  const handleSelectCodexSession = useCallback(
+    (session: ICodexSessionEntry) => {
+      if (resumingSessionId) return;
+      setResumingSessionId(session.sessionId);
+      sendResume(session.sessionId, sessionName);
+    },
+    [resumingSessionId, sendResume, sessionName],
+  );
+
   if (!agentInstalled) {
     return (
       <div
@@ -157,6 +208,30 @@ const CodexPanel = ({
         ) : (
           <CodexBootProgress onRestart={onRestart} />
         )}
+      </div>
+    );
+  }
+
+  if (view === 'session-list') {
+    if (!cwd) {
+      return (
+        <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
+          <Spinner className="h-4 w-4 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    return (
+      <div className={cn('h-full w-full', className)}>
+        <CodexSessionListView
+          sessions={codexSessions}
+          isLoading={isCodexSessionListLoading}
+          error={codexSessionListError ? t('codexSessionsLoadFailed') : null}
+          resumingSessionId={resumingSessionId}
+          onSelectSession={handleSelectCodexSession}
+          onRefresh={refetchCodexSessions}
+          onNewSession={onNewSession}
+        />
       </div>
     );
   }

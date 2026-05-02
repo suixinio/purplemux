@@ -9,15 +9,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { TPanelType } from '@/types/terminal';
 import { useLayoutStore } from '@/hooks/use-layout';
-import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useIsMac from '@/hooks/use-is-mac';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
-import { useCodexSessionsPrefetch } from '@/hooks/use-codex-sessions';
-import CodexSessionListSheet from '@/components/features/workspace/codex-session-list-sheet';
-import { notifyCodexLaunchFailed, notifyCodexResumeFailed } from '@/lib/codex-notifications';
-import type { ICodexSessionEntry } from '@/lib/codex-session-list';
+import { notifyCodexLaunchFailed } from '@/lib/codex-notifications';
 import useConfigStore from '@/hooks/use-config-store';
 
 interface IPaneNewTabMenuProps {
@@ -59,13 +55,8 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
   const isMac = useIsMac();
   const mod = isMac ? '⌘' : 'Ctrl+';
   const [open, setOpen] = useState(false);
-  const [codexSheetOpen, setCodexSheetOpen] = useState(false);
   const isMobile = useIsMobile();
   const wsId = useLayoutStore((s) => s.workspaceId);
-  const workspaceCwd = useWorkspaceStore((s) =>
-    wsId ? s.workspaces.find((w) => w.id === wsId)?.directories[0] ?? null : null,
-  );
-  const prefetchCodexSessions = useCodexSessionsPrefetch();
   const codexI18n = useCodexI18n();
 
   const menuItems = useMemo(() => {
@@ -120,20 +111,6 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
     }
   }, [codexI18n, onCreateTab, wsId]);
 
-  const handleResumeCodexSession = useCallback(
-    (session: ICodexSessionEntry) => {
-      const attempt = () => {
-        try {
-          onCreateTab('codex-cli', { resumeSessionId: session.sessionId });
-        } catch {
-          notifyCodexResumeFailed(codexI18n, attempt);
-        }
-      };
-      attempt();
-    },
-    [onCreateTab, codexI18n],
-  );
-
   const handleSelect = (item: typeof menuItems[number]) => {
     setOpen(false);
     if ('startAgent' in item && item.startAgent === 'claude') {
@@ -149,7 +126,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
       return;
     }
     if (item.key === 'codex') {
-      setCodexSheetOpen(true);
+      onCreateTab(item.type);
       return;
     }
     onCreateTab(item.type);
@@ -203,10 +180,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
                 'flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-xs text-foreground hover:bg-accent focus:outline-none',
                 activeIndex === idx && 'bg-accent',
               )}
-              onMouseEnter={() => {
-                setActiveIndex(idx);
-                if (item.key === 'codex' && workspaceCwd) prefetchCodexSessions(workspaceCwd);
-              }}
+              onMouseEnter={() => setActiveIndex(idx)}
               onClick={() => handleSelect(item)}
             >
               {item.icon}
@@ -216,13 +190,6 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
         </PopoverContent>
       </Popover>
     </div>
-    <CodexSessionListSheet
-      open={codexSheetOpen}
-      onOpenChange={setCodexSheetOpen}
-      cwd={workspaceCwd}
-      onResumeSession={handleResumeCodexSession}
-      onNewConversation={launchCodexNewConversation}
-    />
     </>
   );
 };

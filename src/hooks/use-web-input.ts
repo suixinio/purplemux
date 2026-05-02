@@ -55,6 +55,7 @@ interface IUseWebInputOptions {
   onRestartSession?: () => void;
   onMessageSent?: (message: string) => void;
   disabledMessage?: string;
+  submitDelayMs?: number;
 }
 
 const useWebInput = (
@@ -74,6 +75,7 @@ const useWebInput = (
 
   const onRestartSession = options?.onRestartSession;
   const onMessageSent = options?.onMessageSent;
+  const submitDelayMs = options?.submitDelayMs ?? 50;
 
   const draftTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => {
@@ -110,7 +112,7 @@ const useWebInput = (
       setTimeout(() => sendStdin('\r'), 500);
     } else {
       sendStdin(value);
-      setTimeout(() => sendStdin('\r'), 50);
+      setTimeout(() => sendStdin('\r'), submitDelayMs);
     }
 
     if (!value.trim().startsWith('/')) {
@@ -119,7 +121,7 @@ const useWebInput = (
 
     setValue('');
     if (tabId) clearDraft(tabId);
-  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, onMessageSent, tabId, options?.disabledMessage]);
+  }, [mode, value, sendStdin, terminalWsConnected, onRestartSession, onMessageSent, tabId, options?.disabledMessage, submitDelayMs]);
 
   const interrupt = useCallback(() => {
     if (!terminalWsConnected) {

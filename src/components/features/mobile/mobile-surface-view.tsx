@@ -579,6 +579,7 @@ const MobileSurfaceView = ({
           tabId={activeTabId ?? undefined}
           wsId={layoutWsId ?? undefined}
           sessionName={activeTab.sessionName}
+          cwd={activeTabCwd || activeTab.cwd}
           sendStdin={sendWebStdin}
           terminalWsConnected={status === 'connected'}
           focusTerminal={focus}
