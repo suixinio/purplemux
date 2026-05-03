@@ -904,7 +904,14 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       }>).detail;
       if (detail?.paneId !== paneId || detail.tabId !== activeTabId) return;
       if (detail.provider !== 'claude' && detail.provider !== 'codex') return;
-      handleSwitchPanelType(detail.provider === 'codex' ? 'codex-cli' : 'claude-code');
+      const panelType = detail.provider === 'codex' ? 'codex-cli' : 'claude-code';
+      useTabStore.getState().setDetectedAgent(activeTabId, {
+        running: true,
+        checkedAt: Date.now(),
+        providerId: detail.provider,
+        panelType,
+      });
+      handleSwitchPanelType(panelType);
       if (detail.provider === 'codex') {
         void handleNewCodexSession();
         return;

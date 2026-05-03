@@ -44,6 +44,20 @@ const canSwitchMode = (panelType: TPanelType) =>
 const getButtonLabel = (mode: TModeButton) =>
   mode.startAction ? `Start ${mode.label}` : mode.label;
 
+const getAgentLabel = (panelType: TPanelType): string => {
+  if (panelType === 'claude-code') return 'Claude';
+  if (panelType === 'codex-cli') return 'Codex';
+  return 'Terminal';
+};
+
+const processMatchesAgent = (panelType: TPanelType | undefined, process: string | undefined): boolean => {
+  if (!process) return false;
+  const normalized = process.toLowerCase();
+  if (panelType === 'claude-code') return normalized === 'claude';
+  if (panelType === 'codex-cli') return normalized === 'codex';
+  return false;
+};
+
 interface IMobileTabHeaderProps {
   tabId: string;
   tabName: string;
@@ -73,9 +87,11 @@ const MobileTabHeader = ({
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
   const switchable = canSwitchMode(panelType);
   const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
+  const hasDetectedAgent = !!runtimeAgentPanelType
+    && (tabEntry?.agentProcess === true || processMatchesAgent(runtimeAgentPanelType, tabEntry?.currentProcess));
   const visibleAgentPanelType = isAgentPanel(panelType)
     ? panelType
-    : tabEntry?.agentProcess === true
+    : hasDetectedAgent
       ? runtimeAgentPanelType
       : undefined;
   const modeButtons: TModeButton[] = [
@@ -83,7 +99,7 @@ const MobileTabHeader = ({
     ...(visibleAgentPanelType
       ? [{
           type: visibleAgentPanelType,
-          label: 'Chat',
+          label: getAgentLabel(visibleAgentPanelType),
         }]
       : [
           { type: 'claude-code' as const, label: 'Claude', startAction: true },

@@ -196,6 +196,7 @@ const PaneTabBar = ({
               <AgentModeSwitcher
                 tabId={tab.id}
                 paneId={paneId}
+                sessionName={tab.sessionName}
                 panelType={tab.panelType ?? 'terminal'}
                 onSwitchPanelType={onSwitchPanelType}
               />

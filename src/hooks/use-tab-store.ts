@@ -87,7 +87,7 @@ interface ITabStore {
   setWorkspaceId: (tabId: string, workspaceId: string) => void;
   setPanelType: (tabId: string, panelType: TPanelType) => void;
   setCurrentProcess: (tabId: string, process: string | null) => void;
-  setDetectedAgent: (tabId: string, update: { running: boolean; checkedAt: number; providerId?: string; panelType?: TPanelType; sessionId?: string | null }) => void;
+  setDetectedAgent: (tabId: string, update: { running: boolean; checkedAt?: number; providerId?: string; panelType?: TPanelType; sessionId?: string | null }) => void;
   setTabOrder: (workspaceId: string, tabIds: string[]) => void;
   setStatusWsConnected: (connected: boolean) => void;
   syncAllFromServer: (serverTabs: Record<string, { cliState: TCliState; workspaceId: string; tabName?: string; panelType?: TPanelType; terminalStatus?: TTerminalStatus; listeningPorts?: number[]; currentProcess?: string; agentProviderId?: string; agentSessionId?: string | null; agentSummary?: string | null; lastUserMessage?: string | null; lastAssistantMessage?: string | null; currentAction?: ICurrentAction | null; readyForReviewAt?: number | null; busySince?: number | null; dismissedAt?: number | null; compactingSince?: number | null; permissionRequest?: IPermissionRequest | null; lastEvent?: ILastEvent | null; eventSeq?: number }>) => void;
@@ -261,11 +261,12 @@ const useTabStore = create<ITabStore>((set) => ({
   setDetectedAgent: (tabId, update) =>
     set((state) => {
       const prev = state.tabs[tabId];
-      if (!prev || prev.agentProcessCheckedAt > update.checkedAt) return state;
+      const checkedAt = update.checkedAt ?? Date.now();
+      if (!prev || prev.agentProcessCheckedAt > checkedAt) return state;
 
       const patch: Partial<ITabState> = {
         agentProcess: update.running,
-        agentProcessCheckedAt: update.checkedAt,
+        agentProcessCheckedAt: checkedAt,
       };
 
       if (update.running) {
