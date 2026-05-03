@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Plus, GitCompareArrows, Copy, History } from 'lucide-react';
+import { X, Plus, GitCompareArrows, Copy, History, MessageSquare, TerminalSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
@@ -10,12 +10,11 @@ import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
 import { getAgentPanelTypeFromProvider, isAgentPanel, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+} from '@/components/ui/drawer';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +81,7 @@ const MobileTabHeader = ({
   const tc = useTranslations('common');
   const tt = useTranslations('terminal');
   const [copyOpen, setCopyOpen] = useState(false);
+  const [modeDrawerOpen, setModeDrawerOpen] = useState(false);
   const showCopy = panelType === 'terminal' && !!sessionName;
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
   const switchable = canSwitchMode(panelType);
@@ -124,8 +124,16 @@ const MobileTabHeader = ({
     );
   };
 
+  const renderModeIcon = (mode: TModeButton) => {
+    if (mode.type === 'terminal') return <TerminalSquare className={cn(iconClassName, 'text-muted-foreground')} />;
+    return <MessageSquare className={cn(iconClassName, 'text-muted-foreground')} />;
+  };
+
   const handleSelectMode = (mode: TModeButton) => {
-    if (panelType === mode.type) return;
+    if (panelType === mode.type) {
+      setModeDrawerOpen(false);
+      return;
+    }
     if (!tryAgentSwitch({
       current: panelType,
       target: mode.type,
@@ -133,6 +141,7 @@ const MobileTabHeader = ({
       agentProcess: tabEntry?.agentProcess,
       runningAgentPanelType: runtimeAgentPanelType,
     })) return;
+    setModeDrawerOpen(false);
     if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {
       window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
         detail: {
@@ -153,28 +162,14 @@ const MobileTabHeader = ({
           {renderTabIcon()}
           <span className="min-w-0 flex-1 truncate text-xs text-foreground">{tabName}</span>
           {switchable && (
-            <Select
-              items={modeButtons.map((mode) => ({ value: mode.type, label: getButtonLabel(mode) }))}
-              value={panelType}
-              onValueChange={(value) => {
-                const mode = modeButtons.find((item) => item.type === value);
-                if (mode) handleSelectMode(mode);
-              }}
+            <button
+              type="button"
+              className="h-7 rounded border border-border/70 bg-muted/30 px-2 text-xs text-muted-foreground"
+              onClick={() => setModeDrawerOpen(true)}
+              aria-label="Select tab mode"
             >
-              <SelectTrigger
-                size="sm"
-                className="h-7 rounded border-border/70 bg-muted/30 px-2 text-xs text-muted-foreground"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent align="end" className="min-w-36">
-                {modeButtons.map((mode) => (
-                  <SelectItem key={mode.type} value={mode.type}>
-                    {getButtonLabel(mode)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              {getAgentLabel(panelType)}
+            </button>
           )}
         </div>
       </div>
@@ -242,6 +237,30 @@ const MobileTabHeader = ({
         onOpenChange={setCopyOpen}
         sessionName={sessionName}
       />
+
+      <Drawer open={modeDrawerOpen} onOpenChange={setModeDrawerOpen}>
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>View as</DrawerTitle>
+          </DrawerHeader>
+          <div className="flex flex-col gap-1 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {modeButtons.map((mode) => (
+              <button
+                key={mode.type}
+                type="button"
+                className={cn(
+                  'flex min-h-11 items-center gap-3 rounded-md px-3 text-left text-sm text-foreground hover:bg-accent',
+                  panelType === mode.type && 'bg-accent font-medium',
+                )}
+                onClick={() => handleSelectMode(mode)}
+              >
+                {renderModeIcon(mode)}
+                <span>{getButtonLabel(mode)}</span>
+              </button>
+            ))}
+          </div>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

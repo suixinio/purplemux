@@ -154,7 +154,7 @@ const AgentModeSwitcher = ({
       <PopoverContent
         side="bottom"
         align="end"
-        className="w-28 gap-0 p-0.5"
+        className="w-max min-w-[var(--anchor-width)] max-w-[calc(100vw-1rem)] gap-0 p-0.5"
         onClick={(e) => e.stopPropagation()}
       >
         {modeButtons.map((mode) => {
@@ -164,7 +164,7 @@ const AgentModeSwitcher = ({
               key={mode.type}
               type="button"
               className={cn(
-                'flex w-full items-center rounded-sm px-2 py-1 text-left text-[11px] leading-4 text-foreground hover:bg-accent',
+                'flex w-full items-center rounded-sm px-2 py-1 text-left text-[11px] leading-4 text-foreground whitespace-nowrap hover:bg-accent',
                 active && 'bg-accent font-medium',
               )}
               aria-pressed={active}
@@ -174,7 +174,7 @@ const AgentModeSwitcher = ({
                 handleSelectMode(mode);
               }}
             >
-              <span className="min-w-0 flex-1 truncate">{getButtonLabel(mode)}</span>
+              <span>{getButtonLabel(mode)}</span>
             </button>
           );
         })}
