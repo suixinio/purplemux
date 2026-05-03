@@ -307,7 +307,7 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     }
 
     const nextOrder = pane.tabs.length > 0 ? Math.max(...pane.tabs.map((t) => t.order)) + 1 : 0;
-    const defaultName = isWebBrowser ? 'Web Browser' : '';
+    const defaultName = isWebBrowser ? 'Web Browser' : panelType === 'agent-sessions' ? 'Session List' : '';
     const tabName = name?.trim() || defaultName;
     const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}), ...(panelType ? { panelType: panelType as ITab['panelType'] } : {}) };
 
@@ -644,7 +644,7 @@ export const splitPaneInLayout = async (
     await createSession(sessionName, 80, 24, cwd);
   }
 
-  const defaultName = isWebBrowser ? 'Web Browser' : '';
+  const defaultName = isWebBrowser ? 'Web Browser' : panelType === 'agent-sessions' ? 'Session List' : '';
   const tab: ITab = { id: tabId, sessionName, name: defaultName, order: 0, ...(cwd ? { cwd } : {}) };
   if (panelType) tab.panelType = panelType as ITab['panelType'];
 

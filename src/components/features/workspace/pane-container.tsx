@@ -20,6 +20,7 @@ import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
 import TerminalContainer from '@/components/features/workspace/terminal-container';
 import ClaudeCodePanel from '@/components/features/workspace/claude-code-panel';
 import CodexPanel from '@/components/features/workspace/codex-panel';
+import AgentSessionsPanel from '@/components/features/workspace/agent-sessions-panel';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
 import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
 import ConnectionStatus from '@/components/features/workspace/connection-status';
@@ -38,6 +39,7 @@ import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } fr
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useTabStore, { getInitialTabStateFromLayoutTab, selectSessionView, isCliIdle } from '@/hooks/use-tab-store';
 import { dismissTab as dismissStatusTab } from '@/hooks/use-agent-status';
+import type { IAgentSessionEntry } from '@/hooks/use-agent-sessions';
 
 
 interface ITermActions {
@@ -130,6 +132,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const activePanelType: TPanelType = activeTab?.panelType ?? 'terminal';
   const isClaudeCode = activePanelType === 'claude-code';
   const isCodex = activePanelType === 'codex-cli';
+  const isAgentSessionList = activePanelType === 'agent-sessions';
   const isAgentPanel = isClaudeCode || isCodex;
   const isWebBrowser = activePanelType === 'web-browser';
   const isDiff = activePanelType === 'diff';
@@ -631,7 +634,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const currentTitle = currentTabId
         ? useTabMetadataStore.getState().metadata[currentTabId]?.title
         : null;
-      if (currentTitle && panelType !== 'web-browser') {
+      if (currentTitle && panelType !== 'web-browser' && panelType !== 'agent-sessions') {
         useTabMetadataStore.getState().setTitle(newTab.id, currentTitle);
       }
     }
@@ -836,6 +839,38 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${command}\r`);
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
+
+  const handleNewClaudeFromSessionList = useCallback(() => {
+    handleSwitchPanelType('claude-code');
+    handleNewClaudeSession();
+  }, [handleNewClaudeSession, handleSwitchPanelType]);
+
+  const handleNewCodexFromSessionList = useCallback(() => {
+    handleSwitchPanelType('codex-cli');
+    void handleNewCodexSession();
+  }, [handleNewCodexSession, handleSwitchPanelType]);
+
+  const handleSelectAgentSession = useCallback(async (session: IAgentSessionEntry) => {
+    if (status !== 'connected' || !activeTabId) return;
+    const nextPanelType = session.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    handleSwitchPanelType(nextPanelType);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+
+    if (session.provider === 'codex') {
+      let command: string;
+      try {
+        command = await fetchCodexLaunchCommand(layoutWsId, session.sessionId);
+      } catch {
+        toast.error(t('codexLaunchFailed'));
+        return;
+      }
+      markAgentLaunch(activeTabId, { resetAgentSession: false });
+      sendStdin(`${command}\r`);
+      return;
+    }
+
+    sendStdin(`${buildClaudeCommand(session.sessionId)}\r`);
+  }, [activeTabId, buildClaudeCommand, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, status, t]);
 
   const handleRelaunchCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
@@ -1048,9 +1083,9 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       <div
         role="tabpanel"
         className="relative min-h-0 flex-1 flex flex-col"
-        style={isWebBrowser || isDiff ? undefined : { backgroundColor: terminalTheme.colors.background }}
-        onDragOver={isWebBrowser || isDiff ? undefined : handleTerminalDragOver}
-        onDrop={isWebBrowser || isDiff ? undefined : handleTerminalDrop}
+        style={isWebBrowser || isDiff || isAgentSessionList ? undefined : { backgroundColor: terminalTheme.colors.background }}
+        onDragOver={isWebBrowser || isDiff || isAgentSessionList ? undefined : handleTerminalDragOver}
+        onDrop={isWebBrowser || isDiff || isAgentSessionList ? undefined : handleTerminalDrop}
       >
         {isWebBrowser && activeTabId && (
           <WebBrowserPanel
@@ -1068,6 +1103,17 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             onSendToAgent={handleSendToAgent}
             settings={diffSettings}
             onSettingsChange={updateDiffSettings}
+          />
+        )}
+
+        {isAgentSessionList && activeTab && !showInitialLoading && (
+          <AgentSessionsPanel
+            key={activeTab.sessionName}
+            sessionName={activeTab.sessionName}
+            cwd={activeTabCwd || activeTab.cwd}
+            onSelectSession={handleSelectAgentSession}
+            onNewClaudeSession={handleNewClaudeFromSessionList}
+            onNewCodexSession={handleNewCodexFromSessionList}
           />
         )}
 
@@ -1103,7 +1149,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
               updateTabTerminalLayout(paneId, activeTabId, patch);
             }
           }}
-          className={cn('min-h-0 flex-1', (isWebBrowser || isDiff) && 'invisible absolute inset-0 pointer-events-none', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
+          className={cn('min-h-0 flex-1', (isWebBrowser || isDiff || isAgentSessionList) && 'invisible absolute inset-0 pointer-events-none', isPanelTransitioning && '[&>[data-panel]]:[transition:flex-grow_150ms_ease-out]')}
         >
           <Panel
             id="timeline"

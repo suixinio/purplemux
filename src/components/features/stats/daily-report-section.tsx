@@ -35,6 +35,7 @@ const markdownClass = 'prose prose-sm prose-invert max-w-none text-foreground/80
 const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchRunningChange }: IDailyReportSectionProps) => {
   const t = useTranslations('stats');
   const locale = useConfigStore((s) => s.locale);
+  const noteSummaryProvider = useConfigStore((s) => s.noteSummaryProvider);
   const [generating, setGenerating] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [batchRunning, setBatchRunning] = useState(false);
@@ -44,14 +45,14 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
     const res = await fetch('/api/stats/daily-report/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date, force, locale }),
+      body: JSON.stringify({ date, force, locale, provider: noteSummaryProvider }),
     });
     if (!res.ok) {
       const err = await res.json().catch(() => ({ message: 'unknown error' }));
       throw new Error(err.message ?? `HTTP ${res.status}`);
     }
     return (await res.json()) as IDailyReportDay;
-  }, [locale]);
+  }, [locale, noteSummaryProvider]);
 
   const handleGenerate = useCallback(async (date: string, force = false) => {
     setGenerating(date);
@@ -74,7 +75,13 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
       for (const day of days) {
         if (batchStopRef.current) break;
         const existing = cache?.days[day.date];
-        if (existing && existing.locale === locale) continue;
+        if (
+          existing
+          && existing.locale === locale
+          && (existing.provider ?? 'claude') === noteSummaryProvider
+        ) {
+          continue;
+        }
         setGenerating(day.date);
         try {
           const report = await generateOne(day.date);
@@ -92,7 +99,7 @@ const DailyReportSection = ({ days, cache, onCacheUpdate, batchActions, onBatchR
         toast.success(t('summaryBatchComplete', { count: generated }));
       }
     }
-  }, [days, cache, generateOne, onCacheUpdate, t, locale]);
+  }, [days, cache, generateOne, onCacheUpdate, t, locale, noteSummaryProvider]);
 
   const handleBatchStop = useCallback(() => {
     batchStopRef.current = true;

@@ -77,6 +77,12 @@
     "gitAskProviderOptions": {
       "claude": "Claude",
       "codex": "Codex"
+    },
+    "noteSummaryProvider": "Note Summary Agent",
+    "noteSummaryProviderDescription": "Choose which agent generates note and daily work summaries.",
+    "noteSummaryProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
     }
   },
   "auth": {

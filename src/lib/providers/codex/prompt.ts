@@ -31,7 +31,7 @@ so no environment setup is needed.
 \`\`\`bash
 purplemux workspaces                                # list all workspaces
 purplemux tab list -w ${ws.id}                        # list tabs in this workspace
-purplemux tab create -w ${ws.id} [-n NAME] [-t TYPE]  # create a tab (type: terminal | claude-code | codex-cli | web-browser | diff)
+purplemux tab create -w ${ws.id} [-n NAME] [-t TYPE]  # create a tab (type: terminal | claude-code | codex-cli | agent-sessions | web-browser | diff)
 purplemux tab send -w ${ws.id} TAB_ID CONTENT...      # send input to a tab
 purplemux tab status -w ${ws.id} TAB_ID               # tab status
 purplemux tab result -w ${ws.id} TAB_ID               # capture current pane content

@@ -44,6 +44,7 @@ const defaultKeyForPanelType = (panelType?: TPanelType): string => {
     case 'terminal': return 'terminal';
     case 'web-browser': return 'web-browser';
     case 'codex-cli': return 'codex';
+    case 'agent-sessions': return 'agent-sessions';
     case 'diff':
     case 'claude-code':
     default: return 'claude';
@@ -61,8 +62,9 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const menuItems = useMemo(() => {
     const all = [
-      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: 'Claude', startAgent: 'claude' as const, startLabel: t('claudeNewConversation'), listLabel: t('sessions') },
-      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: 'Codex', startAgent: 'codex' as const, startLabel: t('codexNewConversation'), listLabel: t('sessions') },
+      { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeNewConversation'), startAgent: 'claude' as const },
+      { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: t('codexNewConversation'), startAgent: 'codex' as const },
+      { key: 'agent-sessions', type: 'agent-sessions' as const, icon: <History className="h-3.5 w-3.5 text-muted-foreground" />, label: t('sessionList') },
       { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
       { key: 'diff', type: 'diff' as const, icon: <GitCompareArrows className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Diff' },
       { key: 'web-browser', type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
@@ -188,26 +190,9 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
               >
                 {item.icon}
                 <span className="min-w-0 flex-1 truncate text-left">
-                  {'startLabel' in item ? item.startLabel : item.label}
+                  {item.label}
                 </span>
               </button>
-              {'startAgent' in item && item.startAgent && (
-                <Tooltip>
-                  <TooltipTrigger
-                    className="flex max-w-36 shrink-0 items-center justify-center gap-1 rounded-sm px-1.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground focus:outline-none"
-                    aria-label={item.listLabel}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOpenList(item);
-                    }}
-                    onKeyDown={(e) => e.stopPropagation()}
-                  >
-                    <History className="h-3.5 w-3.5" />
-                    <span className="truncate whitespace-nowrap">{item.listLabel}</span>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{item.listLabel}</TooltipContent>
-                </Tooltip>
-              )}
             </div>
           ))}
         </PopoverContent>

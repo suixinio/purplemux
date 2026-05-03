@@ -7,7 +7,7 @@ import { isValidEditorPreset } from '@/lib/editor-url';
 import { isValidToastPosition } from '@/lib/toast-position';
 
 const ALLOWED_FIELDS: (keyof Omit<IConfigData, 'updatedAt' | 'authSecret'>)[] = [
-  'appTheme', 'terminalTheme', 'customCSS', 'dangerouslySkipPermissions', 'claudeShowTerminal', 'gitAskProvider', 'editorUrl', 'editorPreset', 'authPassword', 'notificationsEnabled', 'toastOnCompleteEnabled', 'toastDuration', 'toastPositionDesktop', 'toastPositionMobile', 'locale', 'fontSize', 'systemResourcesEnabled', 'networkAccess',
+  'appTheme', 'terminalTheme', 'customCSS', 'dangerouslySkipPermissions', 'claudeShowTerminal', 'gitAskProvider', 'noteSummaryProvider', 'editorUrl', 'editorPreset', 'authPassword', 'notificationsEnabled', 'toastOnCompleteEnabled', 'toastDuration', 'toastPositionDesktop', 'toastPositionMobile', 'locale', 'fontSize', 'systemResourcesEnabled', 'networkAccess',
 ];
 
 const NETWORK_ACCESS_VALUES = ['localhost', 'tailscale', 'all'] as const;
@@ -17,6 +17,10 @@ const isValidNetworkAccess = (value: unknown): boolean =>
 const GIT_ASK_PROVIDER_VALUES = ['claude', 'codex'] as const;
 const isValidGitAskProvider = (value: unknown): boolean =>
   typeof value === 'string' && (GIT_ASK_PROVIDER_VALUES as readonly string[]).includes(value);
+
+const NOTE_SUMMARY_PROVIDER_VALUES = ['claude', 'codex'] as const;
+const isValidNoteSummaryProvider = (value: unknown): boolean =>
+  typeof value === 'string' && (NOTE_SUMMARY_PROVIDER_VALUES as readonly string[]).includes(value);
 
 const isValidEditorUrl = (value: unknown): value is string =>
   typeof value === 'string';
@@ -57,6 +61,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
 
     if ('gitAskProvider' in updates && !isValidGitAskProvider(updates.gitAskProvider)) {
       return res.status(400).json({ error: 'gitAskProvider must be one of: claude, codex.' });
+    }
+
+    if ('noteSummaryProvider' in updates && !isValidNoteSummaryProvider(updates.noteSummaryProvider)) {
+      return res.status(400).json({ error: 'noteSummaryProvider must be one of: claude, codex.' });
     }
 
     if ('toastPositionDesktop' in updates && !isValidToastPosition(updates.toastPositionDesktop)) {

@@ -8,7 +8,9 @@ import type { TNetworkAccess } from '@/lib/network-access';
 import type { TEditorPreset } from '@/lib/editor-url';
 import type { TToastPosition } from '@/lib/toast-position';
 
-export type TGitAskProvider = 'claude' | 'codex';
+export type TAgentProvider = 'claude' | 'codex';
+export type TGitAskProvider = TAgentProvider;
+export type TNoteSummaryProvider = TAgentProvider;
 
 const log = createLogger('config');
 
@@ -21,6 +23,7 @@ export interface IConfigData {
   dangerouslySkipPermissions?: boolean;
   claudeShowTerminal?: boolean;
   gitAskProvider?: TGitAskProvider;
+  noteSummaryProvider?: TNoteSummaryProvider;
   editorUrl?: string;
   editorPreset?: TEditorPreset;
   notificationsEnabled?: boolean;

@@ -14,6 +14,7 @@ import TerminalContainer from '@/components/features/workspace/terminal-containe
 import ConnectionStatus from '@/components/features/workspace/connection-status';
 import MobileClaudeCodePanel from '@/components/features/mobile/mobile-claude-code-panel';
 import MobileCodexPanel from '@/components/features/mobile/mobile-codex-panel';
+import AgentSessionsPanel from '@/components/features/workspace/agent-sessions-panel';
 import MobileTerminalToolbar from '@/components/features/mobile/mobile-terminal-toolbar';
 import PaneAgentModePrompt from '@/components/features/workspace/pane-agent-mode-prompt';
 import { formatTabTitle, isShellProcess } from '@/lib/tab-title';
@@ -29,6 +30,7 @@ import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
 import { toast } from 'sonner';
+import type { IAgentSessionEntry } from '@/hooks/use-agent-sessions';
 
 
 interface ITermActions {
@@ -117,7 +119,9 @@ const MobileSurfaceView = ({
   const activeTab = tabs.find((tab) => tab.id === activeTabId);
   const isClaudeCode = panelType === 'claude-code';
   const isCodex = panelType === 'codex-cli';
+  const isAgentSessionList = panelType === 'agent-sessions';
   const isAgentPanel = isClaudeCode || isCodex;
+  const usesHiddenTerminal = isAgentPanel || isAgentSessionList;
   const isWebBrowser = panelType === 'web-browser';
   const isDiff = panelType === 'diff';
 
@@ -504,6 +508,40 @@ const MobileSurfaceView = ({
     sendStdin(`${command}\r`);
   }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
 
+  const handleNewClaudeFromSessionList = useCallback(() => {
+    if (!activeTabId) return;
+    onUpdateTabPanelType(paneId, activeTabId, 'claude-code');
+    handleNewClaudeSession();
+  }, [activeTabId, handleNewClaudeSession, onUpdateTabPanelType, paneId]);
+
+  const handleNewCodexFromSessionList = useCallback(() => {
+    if (!activeTabId) return;
+    onUpdateTabPanelType(paneId, activeTabId, 'codex-cli');
+    void handleNewCodexSession();
+  }, [activeTabId, handleNewCodexSession, onUpdateTabPanelType, paneId]);
+
+  const handleSelectAgentSession = useCallback(async (session: IAgentSessionEntry) => {
+    if (status !== 'connected' || !activeTabId) return;
+    const nextPanelType = session.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    onUpdateTabPanelType(paneId, activeTabId, nextPanelType);
+    useTabStore.getState().setSessionView(activeTabId, 'check');
+
+    if (session.provider === 'codex') {
+      let command: string;
+      try {
+        command = await fetchCodexLaunchCommand(layoutWsId, session.sessionId);
+      } catch {
+        toast.error(tt('codexLaunchFailed'));
+        return;
+      }
+      markAgentLaunch(activeTabId, { resetAgentSession: false });
+      sendStdin(`${command}\r`);
+      return;
+    }
+
+    sendStdin(`${buildClaudeCommand(session.sessionId)}\r`);
+  }, [activeTabId, buildClaudeCommand, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
+
   const handleRelaunchCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
     let command: string;
@@ -667,7 +705,7 @@ const MobileSurfaceView = ({
   }, [activeTabId, paneId, layoutWsId]);
 
   const noTabs = tabs.length === 0;
-  const ready = isWebBrowser || isDiff || (isReady && status === 'connected' && !noTabs);
+  const ready = isWebBrowser || isDiff || isAgentSessionList || (isReady && status === 'connected' && !noTabs);
   const isFirstConnectionForTab =
     activeTabId !== null && attemptedTabId !== activeTabId;
 
@@ -715,6 +753,17 @@ const MobileSurfaceView = ({
         />
       )}
 
+      {isAgentSessionList && activeTab && (
+        <AgentSessionsPanel
+          key={activeTab.sessionName}
+          sessionName={activeTab.sessionName}
+          cwd={activeTabCwd || activeTab.cwd}
+          onSelectSession={handleSelectAgentSession}
+          onNewClaudeSession={handleNewClaudeFromSessionList}
+          onNewCodexSession={handleNewCodexFromSessionList}
+        />
+      )}
+
       {isClaudeCode && activeTab && (
         <MobileClaudeCodePanel
           tabId={activeTabId ?? undefined}
@@ -758,15 +807,15 @@ const MobileSurfaceView = ({
         <TerminalContainer
           ref={terminalRef}
           className={cn(
-            !isAgentPanel && 'transition-opacity duration-150',
-            isAgentPanel ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
-            !isAgentPanel && ready && showTerminal ? 'opacity-100' : '',
-            !isAgentPanel && (!ready || !showTerminal) ? 'opacity-0' : '',
+            !usesHiddenTerminal && 'transition-opacity duration-150',
+            usesHiddenTerminal ? 'absolute inset-0 pointer-events-none opacity-0' : 'min-h-0 flex-1',
+            !usesHiddenTerminal && ready && showTerminal ? 'opacity-100' : '',
+            !usesHiddenTerminal && (!ready || !showTerminal) ? 'opacity-0' : '',
           )}
         />
       )}
 
-      {!isAgentPanel && !isWebBrowser && !isDiff && status === 'connected' && (
+      {!isAgentPanel && !isWebBrowser && !isDiff && !isAgentSessionList && status === 'connected' && (
         <MobileTerminalToolbar sendStdin={sendWebStdin} terminalConnected={status === 'connected'} />
       )}
 

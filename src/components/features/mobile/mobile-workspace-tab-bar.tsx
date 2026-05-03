@@ -1,5 +1,5 @@
 import { useRef, useEffect, useMemo } from 'react';
-import { Globe, GitCompareArrows } from 'lucide-react';
+import { Globe, GitCompareArrows, History } from 'lucide-react';
 import useTabStore, { selectTabDisplayStatus } from '@/hooks/use-tab-store';
 import { cn } from '@/lib/utils';
 import ProcessIcon from '@/components/icons/process-icon';
@@ -102,7 +102,7 @@ const MobileWorkspaceTabBar = ({
               <span
                 className={cn(
                   'flex h-6 w-6 items-center justify-center rounded-full',
-                  isActive && 'bg-foreground/10',
+                  isActive && 'bg-foreground/15',
                 )}
               >
                 {isAgent && status === 'busy' ? (
@@ -119,6 +119,8 @@ const MobileWorkspaceTabBar = ({
                   <Globe className="h-2.5 w-2.5 text-muted-foreground/50" />
                 ) : item.panelType === 'diff' ? (
                   <GitCompareArrows className="h-2.5 w-2.5 text-muted-foreground/50" />
+                ) : item.panelType === 'agent-sessions' ? (
+                  <History className="h-2.5 w-2.5 text-muted-foreground/50" />
                 ) : (
                   <ProcessIcon process={currentProcess} className={cn('h-3 w-3', iconColorClass)} />
                 )}

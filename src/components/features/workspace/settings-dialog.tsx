@@ -35,7 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import useTerminalTheme from '@/hooks/use-terminal-theme';
 import useConfigStore from '@/hooks/use-config-store';
-import type { TGitAskProvider } from '@/hooks/use-config-store';
+import type { TGitAskProvider, TNoteSummaryProvider } from '@/hooks/use-config-store';
 import { TOAST_POSITIONS, type TToastPosition } from '@/lib/toast-position';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import { TERMINAL_THEMES } from '@/lib/terminal-themes';
@@ -562,6 +562,8 @@ const AgentTab = () => {
   const setClaudeShowTerminal = useConfigStore((state) => state.setClaudeShowTerminal);
   const gitAskProvider = useConfigStore((state) => state.gitAskProvider);
   const setGitAskProvider = useConfigStore((state) => state.setGitAskProvider);
+  const noteSummaryProvider = useConfigStore((state) => state.noteSummaryProvider);
+  const setNoteSummaryProvider = useConfigStore((state) => state.setNoteSummaryProvider);
 
   return (
     <div className="space-y-4">
@@ -624,6 +626,31 @@ const AgentTab = () => {
             >
               <RadioGroupItem id={`git-ask-provider-${provider}`} value={provider} />
               {t(`gitAskProviderOptions.${provider}`)}
+            </Label>
+          ))}
+        </RadioGroup>
+      </div>
+      <div className="space-y-3">
+        <div className="space-y-0.5">
+          <p className="text-sm font-medium">{t('noteSummaryProvider')}</p>
+          <p className="text-sm text-muted-foreground">{t('noteSummaryProviderDescription')}</p>
+        </div>
+        <RadioGroup
+          value={noteSummaryProvider}
+          onValueChange={(value) => setNoteSummaryProvider(value as TNoteSummaryProvider)}
+          className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+        >
+          {(['claude', 'codex'] as const).map((provider) => (
+            <Label
+              key={provider}
+              htmlFor={`note-summary-provider-${provider}`}
+              className={cn(
+                'flex cursor-pointer items-center gap-2 rounded-md border border-border px-3 py-2 text-sm font-normal',
+                noteSummaryProvider === provider && 'border-foreground/30 bg-accent',
+              )}
+            >
+              <RadioGroupItem id={`note-summary-provider-${provider}`} value={provider} />
+              {t(`noteSummaryProviderOptions.${provider}`)}
             </Label>
           ))}
         </RadioGroup>

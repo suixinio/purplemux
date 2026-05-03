@@ -24,8 +24,9 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
   const [creatingKey, setCreatingKey] = useState<string | null>(null);
 
   const MENU_ITEMS = [
-    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: 'Claude', startCommand: 'claude-new' as const, startLabel: tt('claudeNewConversation'), listLabel: tt('sessions') },
-    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: 'Codex', startCommand: 'codex-new' as const, startLabel: tt('codexNewConversation'), listLabel: tt('sessions') },
+    { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-5 w-5" />, label: tt('claudeNewConversation'), startCommand: 'claude-new' as const },
+    { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-5 w-5" />, label: tt('codexNewConversation'), startCommand: 'codex-new' as const },
+    { key: 'agent-sessions', type: 'agent-sessions' as const, icon: <History className="h-5 w-5 text-muted-foreground" />, label: tt('sessionList') },
     { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-5 w-5 text-muted-foreground" />, label: 'Terminal' },
   ] as const;
 
@@ -73,20 +74,9 @@ const MobileNewTabDialog = ({ open, onOpenChange, onCreateTab }: IMobileNewTabDi
                   {creatingKey === `${item.key}-new` ? <Spinner className="h-4 w-4" /> : item.icon}
                 </span>
                 <span className="line-clamp-2 max-w-full px-1 text-center text-xs leading-tight">
-                  {'startLabel' in item ? item.startLabel : item.label}
+                  {item.label}
                 </span>
               </button>
-              {'startCommand' in item && (
-                <button
-                  className="absolute right-2 top-2 flex h-7 items-center justify-center gap-1 rounded-full border border-border bg-background px-2 text-[11px] text-muted-foreground shadow-sm active:bg-accent disabled:pointer-events-none disabled:opacity-50"
-                  aria-label={item.listLabel}
-                  disabled={creatingKey !== null}
-                  onClick={() => handleOpenList(item)}
-                >
-                  {creatingKey === item.key ? <Spinner className="h-3.5 w-3.5" /> : <History className="h-3.5 w-3.5" />}
-                  <span className="whitespace-nowrap leading-none">{item.listLabel}</span>
-                </button>
-              )}
             </div>
           ))}
         </div>

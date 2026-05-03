@@ -5,10 +5,12 @@ import { createReadStream } from 'fs';
 import readline from 'readline';
 import { execFile } from 'child_process';
 import { getShellPath } from '@/lib/preflight';
+import { getConfig, type TNoteSummaryProvider } from '@/lib/config-store';
 import { collectJsonlFiles } from './stats-cache';
 import type { IDailyReportDay } from '@/types/stats';
 
 const CACHE_DIR = path.join(os.homedir(), '.purplemux', 'stats', 'daily-reports');
+const CODEX_SESSIONS_ROOT = path.join(os.homedir(), '.codex', 'sessions');
 
 // --- Cache read/write ---
 
@@ -46,6 +48,7 @@ const writeCachedReport = async (report: IDailyReportDay): Promise<void> => {
 // --- Session data extraction ---
 
 interface ISessionData {
+  provider: TNoteSummaryProvider;
   project: string;
   start: string;
   msgCount: number;
@@ -142,6 +145,7 @@ const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[
     if (timestamps.length > 0 && userMessages.length > 0) {
       const project = cwd ? shortenCwd(cwd) : path.basename(path.dirname(filePath));
       sessions.push({
+        provider: 'claude',
         project,
         start: Math.min(...timestamps.map((t) => new Date(t).getTime())).toString(),
         msgCount: userMessages.length,
@@ -155,13 +159,114 @@ const extractSessionsForDate = async (targetDate: string): Promise<ISessionData[
   return sessions;
 };
 
-// --- Claude CLI summary generation ---
+const collectCodexJsonlFiles = async (dir = CODEX_SESSIONS_ROOT): Promise<string[]> => {
+  let names: string[];
+  try {
+    names = await fs.readdir(dir);
+  } catch {
+    return [];
+  }
+  const files: string[] = [];
+  for (const name of names) {
+    const entryPath = path.join(dir, name);
+    const stat = await fs.stat(entryPath).catch(() => null);
+    if (stat?.isDirectory()) {
+      files.push(...await collectCodexJsonlFiles(entryPath));
+    } else if (stat?.isFile() && name.endsWith('.jsonl')) {
+      files.push(entryPath);
+    }
+  }
+  return files;
+};
+
+const extractCodexSessionsForDate = async (targetDate: string): Promise<ISessionData[]> => {
+  const files = await collectCodexJsonlFiles();
+  const sessions: ISessionData[] = [];
+
+  for (const filePath of files) {
+    const userMessages: { time: string; text: string }[] = [];
+    const timestamps: string[] = [];
+    let toolCount = 0;
+    let cwd = '';
+
+    try {
+      const stream = createReadStream(filePath, { encoding: 'utf-8' });
+      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
+
+      for await (const line of rl) {
+        if (!line.trim()) continue;
+        try {
+          const entry = JSON.parse(line) as {
+            timestamp?: string;
+            type?: string;
+            payload?: {
+              type?: string;
+              cwd?: string;
+              message?: string;
+            };
+          };
+          const ts = String(entry.timestamp ?? '');
+          if (!ts.startsWith(targetDate)) continue;
+          timestamps.push(ts);
+
+          if (entry.type === 'session_meta' && typeof entry.payload?.cwd === 'string') {
+            cwd = entry.payload.cwd;
+            continue;
+          }
+
+          if (entry.type === 'event_msg' && entry.payload?.type === 'user_message') {
+            const text = String(entry.payload.message ?? '').trim();
+            if (text && !text.startsWith('<') && !text.startsWith('# AGENTS.md')) {
+              userMessages.push({ time: ts.slice(11, 16), text: text.slice(0, 200) });
+            }
+            continue;
+          }
+
+          if (entry.type === 'response_item') {
+            const itemType = entry.payload?.type;
+            if (itemType === 'function_call' || itemType === 'custom_tool_call') {
+              toolCount++;
+            }
+          }
+        } catch {
+          // skip malformed lines
+        }
+      }
+    } catch {
+      // file read error
+    }
+
+    if (timestamps.length > 0 && userMessages.length > 0) {
+      sessions.push({
+        provider: 'codex',
+        project: cwd ? shortenCwd(cwd) : path.basename(path.dirname(filePath)),
+        start: Math.min(...timestamps.map((t) => new Date(t).getTime())).toString(),
+        msgCount: userMessages.length,
+        toolCount,
+        firstMessage: userMessages[0].text,
+      });
+    }
+  }
+
+  return sessions;
+};
+
+const extractAllSessionsForDate = async (targetDate: string): Promise<ISessionData[]> => {
+  const [claudeSessions, codexSessions] = await Promise.all([
+    extractSessionsForDate(targetDate),
+    extractCodexSessionsForDate(targetDate),
+  ]);
+  return [...claudeSessions, ...codexSessions]
+    .sort((a, b) => Number(a.start) - Number(b.start));
+};
+
+// --- CLI summary generation ---
 
 const buildPromptData = (sessions: ISessionData[]): string => {
   return sessions
     .map((s) => {
       const time = new Date(Number(s.start)).toTimeString().slice(0, 5);
-      return `[${time}] [${s.project}] msgs=${s.msgCount}, tools=${s.toolCount} | ${s.firstMessage}`;
+      return `[${time}] [${s.provider}] [${s.project}] msgs=${s.msgCount}, tools=${s.toolCount} | ${s.firstMessage}`;
     })
     .join('\n');
 };
@@ -186,6 +291,53 @@ const callClaudeCli = async (input: string, systemPrompt: string): Promise<strin
   });
 };
 
+const callCodexCli = async (input: string, systemPrompt: string): Promise<string> => {
+  const resolvedPath = await getShellPath();
+  const prompt = `${systemPrompt}\n\n${input}`;
+  const outputPath = path.join(
+    os.tmpdir(),
+    `purplemux-daily-report-${Date.now()}-${Math.random().toString(36).slice(2)}.txt`,
+  );
+  return new Promise((resolve, reject) => {
+    const child = execFile(
+      'codex',
+      [
+        'exec',
+        '--skip-git-repo-check',
+        '--ephemeral',
+        '--sandbox',
+        'read-only',
+        '-c',
+        'approval_policy="never"',
+        '-o',
+        outputPath,
+        prompt,
+      ],
+      { timeout: 120_000, maxBuffer: 1024 * 1024, env: { ...process.env, PATH: resolvedPath } },
+      async (error, stdout, stderr) => {
+        if (error) {
+          await fs.unlink(outputPath).catch(() => {});
+          reject(new Error(`codex exec failed: ${error.message}${stderr ? `: ${stderr.trim()}` : ''}`));
+          return;
+        }
+        const output = await fs.readFile(outputPath, 'utf-8').catch(() => stdout);
+        await fs.unlink(outputPath).catch(() => {});
+        resolve(output.trim());
+      },
+    );
+    child.stdin?.end();
+  });
+};
+
+const callSummaryCli = (
+  provider: TNoteSummaryProvider,
+  input: string,
+  systemPrompt: string,
+): Promise<string> =>
+  provider === 'codex'
+    ? callCodexCli(input, systemPrompt)
+    : callClaudeCli(input, systemPrompt);
+
 const LOCALE_LANGUAGE_NAMES: Record<string, string> = {
   en: 'English',
   ko: 'Korean (한국어)',
@@ -205,7 +357,7 @@ const resolveLanguageName = (locale: string): string =>
 
 const SUMMARY_PROMPT = (date: string, locale: string) => {
   const languageName = resolveLanguageName(locale);
-  return `Summarize the Claude session history for ${date}.
+  return `Summarize the Claude and Codex session history for ${date}.
 
 Output format (use exactly this structure):
 
@@ -252,13 +404,17 @@ export const generateDailyReport = async (
   date: string,
   force = false,
   locale = 'en',
+  provider?: TNoteSummaryProvider,
 ): Promise<IDailyReportDay> => {
+  const config = await getConfig();
+  const summaryProvider = provider ?? (config.noteSummaryProvider === 'codex' ? 'codex' : 'claude');
+
   if (!force) {
     const existing = await readCachedReport(date);
-    if (existing && existing.locale === locale) return existing;
+    if (existing && existing.locale === locale && (existing.provider ?? 'claude') === summaryProvider) return existing;
   }
 
-  const sessions = await extractSessionsForDate(date);
+  const sessions = await extractAllSessionsForDate(date);
   if (sessions.length === 0) {
     const empty: IDailyReportDay = {
       date,
@@ -266,13 +422,14 @@ export const generateDailyReport = async (
       detail: '',
       generatedAt: new Date().toISOString(),
       locale,
+      provider: summaryProvider,
     };
     await writeCachedReport(empty);
     return empty;
   }
 
   const promptData = buildPromptData(sessions);
-  const response = await callClaudeCli(promptData, SUMMARY_PROMPT(date, locale));
+  const response = await callSummaryCli(summaryProvider, promptData, SUMMARY_PROMPT(date, locale));
   const { brief, detail } = parseSummaryResponse(response);
 
   const report: IDailyReportDay = {
@@ -281,6 +438,7 @@ export const generateDailyReport = async (
     detail,
     generatedAt: new Date().toISOString(),
     locale,
+    provider: summaryProvider,
   };
 
   await writeCachedReport(report);

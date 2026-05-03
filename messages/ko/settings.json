@@ -77,6 +77,12 @@
     "gitAskProviderOptions": {
       "claude": "Claude",
       "codex": "Codex"
+    },
+    "noteSummaryProvider": "노트 요약 에이전트",
+    "noteSummaryProviderDescription": "노트와 일일 작업 요약을 생성할 에이전트를 선택합니다.",
+    "noteSummaryProviderOptions": {
+      "claude": "Claude",
+      "codex": "Codex"
     }
   },
   "auth": {

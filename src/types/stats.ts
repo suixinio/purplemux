@@ -243,6 +243,7 @@ export interface IDailyReportDay {
   detail: string;
   generatedAt: string;
   locale?: string;
+  provider?: 'claude' | 'codex';
 }
 
 export interface IDailyReportCacheResponse {
