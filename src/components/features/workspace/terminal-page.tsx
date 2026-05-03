@@ -255,7 +255,6 @@ const TerminalPage = () => {
           isSplitting={layout.isSplitting}
           onSplitPane={layout.splitPane}
           onEqualizeRatios={() => equalizeRef.current?.()}
-          onUpdateTabPanelType={layout.updateTabPanelType}
           isGitPanelOpen={gitPanelOpen}
           onToggleGitPanel={() => setGitPanelOpenPersisted(!gitPanelOpen)}
         />

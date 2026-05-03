@@ -8,6 +8,7 @@ import type { ITab, TPanelType } from '@/types/terminal';
 import useTabDrag from '@/hooks/use-tab-drag';
 import PaneTabItem from '@/components/features/workspace/pane-tab-item';
 import PaneNewTabMenu from '@/components/features/workspace/pane-new-tab-menu';
+import AgentModeSwitcher from '@/components/features/workspace/agent-mode-switcher';
 
 interface IPaneTabBarProps {
   paneId: string;
@@ -24,6 +25,7 @@ interface IPaneTabBarProps {
   onCreateTab: (panelType?: TPanelType, options?: { command?: string; resumeSessionId?: string }) => void;
   onDeleteTab: (tabId: string) => void;
   onRenameTab: (tabId: string, name: string) => void;
+  onSwitchPanelType: (panelType: TPanelType) => void;
   onReorderTabs: (tabIds: string[]) => void;
   onClosePane: () => void;
   onMoveTab: (tabId: string, fromPaneId: string, toIndex: number) => void;
@@ -46,6 +48,7 @@ const PaneTabBar = ({
   onCreateTab,
   onDeleteTab,
   onRenameTab,
+  onSwitchPanelType,
   onReorderTabs,
   onClosePane,
   onMoveTab,
@@ -56,6 +59,8 @@ const PaneTabBar = ({
   const tc = useTranslations('common');
   const scrollRef = useRef<HTMLDivElement>(null);
   const sortedTabs = useMemo(() => [...tabs].sort((a, b) => a.order - b.order), [tabs]);
+  const canSwitchMode = (panelType: TPanelType | undefined) =>
+    !panelType || panelType === 'terminal' || panelType === 'claude-code' || panelType === 'codex-cli';
 
   const {
     draggedTabId,
@@ -187,6 +192,14 @@ const PaneTabBar = ({
             dropSide={dropTarget?.id === tab.id ? dropTarget.side : null}
             displayTitle={tabTitles?.[tab.id]}
             currentProcess={tabProcesses?.[tab.id]}
+            modeSwitcher={tab.id === activeTabId && canSwitchMode(tab.panelType) ? (
+              <AgentModeSwitcher
+                tabId={tab.id}
+                paneId={paneId}
+                panelType={tab.panelType ?? 'terminal'}
+                onSwitchPanelType={onSwitchPanelType}
+              />
+            ) : undefined}
             onSwitch={() => onSwitchTab(tab.id)}
             onDelete={() => onDeleteTab(tab.id)}
             onRename={(name) => handleRenameTab(tab.id, name)}

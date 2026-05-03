@@ -1,14 +1,21 @@
 import { useState } from 'react';
-import { X, Plus, GitCompareArrows, Copy, TerminalSquare } from 'lucide-react';
+import { X, Plus, GitCompareArrows, Copy, History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
 import TabStatusIndicator from '@/components/features/workspace/tab-status-indicator';
-import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import CopyPaneDrawer from '@/components/features/workspace/copy-pane-drawer';
 import useTabStore from '@/hooks/use-tab-store';
 import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
+import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,15 +29,20 @@ import {
 } from '@/components/ui/alert-dialog';
 import type { TPanelType } from '@/types/terminal';
 
+const iconButtonClassName = 'relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
+const iconClassName = 'h-4 w-4 shrink-0';
+
 type TModeButton = {
-  type: TPanelType;
+  type: Extract<TPanelType, 'terminal' | 'claude-code' | 'codex-cli'>;
   label: string;
   startAction?: boolean;
 };
 
-const iconButtonClassName = 'relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
-const activeIconButtonClassName = 'bg-accent text-foreground';
-const iconClassName = 'h-4 w-4 shrink-0';
+const canSwitchMode = (panelType: TPanelType) =>
+  panelType === 'terminal' || panelType === 'claude-code' || panelType === 'codex-cli';
+
+const getButtonLabel = (mode: TModeButton) =>
+  mode.startAction ? `Start ${mode.label}` : mode.label;
 
 interface IMobileTabHeaderProps {
   tabId: string;
@@ -59,6 +71,7 @@ const MobileTabHeader = ({
   const [copyOpen, setCopyOpen] = useState(false);
   const showCopy = panelType === 'terminal' && !!sessionName;
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
+  const switchable = canSwitchMode(panelType);
   const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
   const visibleAgentPanelType = isAgentPanel(panelType)
     ? panelType
@@ -66,99 +79,91 @@ const MobileTabHeader = ({
       ? runtimeAgentPanelType
       : undefined;
   const modeButtons: TModeButton[] = [
-    { type: 'terminal', label: 'TERMINAL' },
+    { type: 'terminal', label: 'Terminal' },
     ...(visibleAgentPanelType
       ? [{
           type: visibleAgentPanelType,
-          label: visibleAgentPanelType === 'codex-cli' ? 'CODEX' : 'CLAUDE',
+          label: visibleAgentPanelType === 'codex-cli' ? 'Codex' : 'Claude',
         }]
       : [
-          { type: 'claude-code' as const, label: 'CLAUDE', startAction: true },
-          { type: 'codex-cli' as const, label: 'CODEX', startAction: true },
+          { type: 'claude-code' as const, label: 'Claude', startAction: true },
+          { type: 'codex-cli' as const, label: 'Codex', startAction: true },
         ]),
   ];
-  const getModeButtonLabel = (mode: TModeButton) =>
-    mode.startAction ? `Start ${mode.label[0]}${mode.label.slice(1).toLowerCase()}` : mode.label[0] + mode.label.slice(1).toLowerCase();
-  const renderModeIcon = (mode: TModeButton) => {
-    const icon = mode.type === 'terminal' ? (
-      <TerminalSquare className={iconClassName} />
-    ) : mode.type === 'claude-code' ? (
-      <ClaudeCodeIcon size={16} />
-    ) : mode.type === 'codex-cli' ? (
-      <OpenAIIcon size={16} className="shrink-0" aria-label="Codex" />
-    ) : null;
-
-    if (!mode.startAction) return icon;
-    return (
-      <>
-        {icon}
-        <span className="absolute right-1 top-1 flex h-3 w-3 items-center justify-center rounded-full bg-background ring-1 ring-border">
-          <Plus className="h-2 w-2 text-muted-foreground" />
-        </span>
-      </>
-    );
-  };
   const processColor = tabEntry?.terminalStatus === 'server'
     ? 'text-ui-green'
     : tabEntry?.terminalStatus === 'running'
       ? 'text-ui-blue'
       : 'text-muted-foreground/50';
 
+  const renderTabIcon = () => {
+    if (panelType === 'claude-code') return <ClaudeCodeIcon size={16} />;
+    if (panelType === 'codex-cli') return <OpenAIIcon size={16} className="shrink-0 text-foreground" aria-label="Codex" />;
+    if (panelType === 'diff') return <GitCompareArrows className={cn(iconClassName, 'text-muted-foreground')} />;
+    if (panelType === 'agent-sessions') return <History className={cn(iconClassName, 'text-muted-foreground')} />;
+    return (
+      <ProcessIcon
+        process={tabEntry?.currentProcess}
+        className={cn(iconClassName, processColor)}
+      />
+    );
+  };
+
+  const handleSelectMode = (mode: TModeButton) => {
+    if (panelType === mode.type) return;
+    if (!tryAgentSwitch({
+      current: panelType,
+      target: mode.type,
+      cliState: tabEntry?.cliState,
+      runningAgentPanelType: runtimeAgentPanelType,
+    })) return;
+    if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {
+      window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
+        detail: {
+          tabId,
+          provider: mode.type === 'codex-cli' ? 'codex' : 'claude',
+        },
+      }));
+      return;
+    }
+    onSwitchPanelType(mode.type);
+  };
+
   return (
-    <div className="flex h-10 shrink-0 items-center border-b border-border/50 bg-background">
-      <div className="flex min-w-0 flex-1 items-center gap-2 px-3">
-        <TabStatusIndicator tabId={tabId} panelType={panelType} />
-        {panelType === 'claude-code' ? (
-          <ClaudeCodeIcon size={16} />
-        ) : panelType === 'codex-cli' ? (
-          <OpenAIIcon size={16} className="shrink-0 text-foreground" aria-label="Codex" />
-        ) : panelType === 'diff' ? (
-          <GitCompareArrows className={cn(iconClassName, 'text-muted-foreground')} />
-        ) : (
-          <ProcessIcon
-            process={tabEntry?.currentProcess}
-            className={cn(iconClassName, processColor)}
-          />
-        )}
-        <span className="truncate text-xs text-foreground">{tabName}</span>
+    <div className="flex h-11 shrink-0 items-center border-b border-border/50 bg-background">
+      <div className="flex min-w-0 flex-1 items-center gap-2 px-2">
+        <div className="flex min-w-0 flex-1 items-center gap-2 px-1.5 py-1">
+          <TabStatusIndicator tabId={tabId} panelType={panelType} />
+          {renderTabIcon()}
+          <span className="min-w-0 flex-1 truncate text-xs text-foreground">{tabName}</span>
+          {switchable && (
+            <Select
+              items={modeButtons.map((mode) => ({ value: mode.type, label: getButtonLabel(mode) }))}
+              value={panelType}
+              onValueChange={(value) => {
+                const mode = modeButtons.find((item) => item.type === value);
+                if (mode) handleSelectMode(mode);
+              }}
+            >
+              <SelectTrigger
+                size="sm"
+                className="h-7 rounded border-border/70 bg-muted/30 px-2 text-xs text-muted-foreground"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent align="end" className="min-w-36">
+                {modeButtons.map((mode) => (
+                  <SelectItem key={mode.type} value={mode.type}>
+                    {getButtonLabel(mode)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5 pr-0.5">
-        <div className="flex items-center gap-px">
-          {modeButtons.map((mode) => (
-            <button
-              key={mode.type}
-              className={cn(
-                iconButtonClassName,
-                panelType === mode.type && activeIconButtonClassName,
-              )}
-              aria-label={getModeButtonLabel(mode)}
-              title={getModeButtonLabel(mode)}
-              onClick={() => {
-                if (panelType === mode.type) return;
-                if (!tryAgentSwitch({
-                  current: panelType,
-                  target: mode.type,
-                  cliState: tabEntry?.cliState,
-                  runningAgentPanelType: runtimeAgentPanelType,
-                })) return;
-                if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {
-                  window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
-                    detail: {
-                      tabId,
-                      provider: mode.type === 'codex-cli' ? 'codex' : 'claude',
-                    },
-                  }));
-                  return;
-                }
-                onSwitchPanelType(mode.type);
-              }}
-            >
-              {renderModeIcon(mode)}
-            </button>
-          ))}
-        </div>
-
         {showCopy && (
           <button
             className={iconButtonClassName}

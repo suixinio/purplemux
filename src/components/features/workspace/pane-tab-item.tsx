@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { X, Globe, GitCompareArrows } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { X, Globe, GitCompareArrows, History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
@@ -15,6 +16,7 @@ interface IPaneTabItemProps {
   dropSide: 'left' | 'right' | null;
   displayTitle?: string;
   currentProcess?: string;
+  modeSwitcher?: ReactNode;
   onSwitch: () => void;
   onDelete: () => void;
   onRename: (name: string) => void;
@@ -32,6 +34,7 @@ const PaneTabItem = ({
   dropSide,
   displayTitle,
   currentProcess,
+  modeSwitcher,
   onSwitch,
   onDelete,
   onRename,
@@ -75,6 +78,7 @@ const PaneTabItem = ({
       tabIndex={isActive ? 0 : -1}
       className={cn(
         'group relative flex min-w-[120px] max-w-[180px] cursor-pointer items-center gap-1.5 border-b-2 px-3 text-xs select-none',
+        isActive && modeSwitcher && 'min-w-[220px] max-w-[300px] pr-1.5',
         isActive
           ? 'border-b-accent-color bg-secondary text-foreground'
           : 'border-b-transparent text-muted-foreground hover:bg-accent hover:text-foreground',
@@ -119,6 +123,8 @@ const PaneTabItem = ({
             <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'diff' ? (
             <GitCompareArrows className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          ) : tab.panelType === 'agent-sessions' ? (
+            <History className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           ) : (
             <ProcessIcon
               process={currentProcess ?? displayTitle}
@@ -127,12 +133,13 @@ const PaneTabItem = ({
           )}
           <span
             className={cn(
-              'truncate',
+              'min-w-0 truncate',
               displayName ? 'opacity-100' : 'opacity-0',
             )}
           >
             {displayName}
           </span>
+          {isActive && modeSwitcher}
         </>
       )}
 

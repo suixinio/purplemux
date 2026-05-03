@@ -1037,6 +1037,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         onCreateTab={handleCreateTab}
         onDeleteTab={handleDeleteTab}
         onRenameTab={handleRenameTab}
+        onSwitchPanelType={handleSwitchPanelType}
         onReorderTabs={handleReorderTabs}
         onClosePane={() => closePane(paneId)}
         onMoveTab={handleMoveTab}
