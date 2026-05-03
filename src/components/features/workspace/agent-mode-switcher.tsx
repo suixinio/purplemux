@@ -24,8 +24,7 @@ const getButtonLabel = (mode: TModeButton) =>
   mode.startAction ? `Start ${mode.label}` : mode.label;
 
 const getAgentLabel = (panelType: TPanelType): string => {
-  if (panelType === 'claude-code') return 'Claude';
-  if (panelType === 'codex-cli') return 'Codex';
+  if (panelType === 'claude-code' || panelType === 'codex-cli') return 'Chat';
   return 'Terminal';
 };
 
