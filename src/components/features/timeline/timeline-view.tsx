@@ -37,6 +37,7 @@ import McpToolCallItem from '@/components/features/timeline/mcp-tool-call-item';
 import PatchApplyItem from '@/components/features/timeline/patch-apply-item';
 import ContextCompactedItem from '@/components/features/timeline/context-compacted-item';
 import ErrorNoticeItem from '@/components/features/timeline/error-notice-item';
+import { reloadForReconnectRecovery, shouldPromptMobileReloadRecovery } from '@/lib/ws-reload-recovery';
 
 interface ITimelineViewProps {
   entries: ITimelineEntry[];
@@ -480,7 +481,7 @@ const SkeletonLoader = () => (
   </div>
 );
 
-const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) => {
+const ErrorState = ({ error, onRetry, showRefresh }: { error: string; onRetry: () => void; showRefresh?: boolean }) => {
   const t = useTranslations('timeline');
   const tc = useTranslations('common');
   return (
@@ -494,6 +495,12 @@ const ErrorState = ({ error, onRetry }: { error: string; onRetry: () => void }) 
         <RefreshCw size={12} />
         {tc('retry')}
       </Button>
+      {showRefresh && (
+        <Button variant="ghost" size="xs" onClick={() => reloadForReconnectRecovery('timeline')}>
+          <RefreshCw size={12} />
+          {tc('refresh')}
+        </Button>
+      )}
     </div>
   );
 };
@@ -836,6 +843,16 @@ const TimelineView = ({
     observer.observe(sentinel);
     return () => observer.disconnect();
   }, [scrollRef, triggerLoadMore]);
+
+  if (isLoading && wsStatus === 'disconnected') {
+    return (
+      <ErrorState
+        error={t('connectionFailed')}
+        onRetry={onRetry}
+        showRefresh={shouldPromptMobileReloadRecovery()}
+      />
+    );
+  }
 
   if (isLoading) {
     return <SkeletonLoader />;

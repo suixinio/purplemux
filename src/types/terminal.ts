@@ -7,7 +7,7 @@ export type TConnectionStatus =
   | 'disconnected'
   | 'session-ended';
 
-export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-found' | null;
+export type TDisconnectReason = 'max-connections' | 'pty-error' | 'session-not-found' | 'reconnect-exhausted' | null;
 
 export type TPanelType = 'terminal' | 'claude-code' | 'codex-cli' | 'agent-sessions' | 'web-browser' | 'diff';
 export type TDiffViewMode = 'split' | 'unified';

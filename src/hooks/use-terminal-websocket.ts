@@ -10,6 +10,7 @@ import {
   encodeHeartbeat,
   decodeMessage,
 } from '@/lib/terminal-protocol';
+import { shouldPromptMobileReloadRecovery } from '@/lib/ws-reload-recovery';
 
 const RECONNECT_DELAYS = [1000, 2000, 4000, 8000, 16000];
 const MAX_RETRIES = 5;
@@ -150,6 +151,9 @@ const useTerminalWebSocket = ({
             doConnectRef.current(sessionNameRef.current, connectId);
           }, delay);
         } else {
+          if (shouldPromptMobileReloadRecovery()) {
+            setDisconnectReason('reconnect-exhausted');
+          }
           setStatus('disconnected');
         }
       };

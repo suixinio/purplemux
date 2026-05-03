@@ -3,6 +3,7 @@ import { WifiOff, RefreshCw } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { reloadForReconnectRecovery } from '@/lib/ws-reload-recovery';
 import type { TConnectionStatus, TDisconnectReason } from '@/types/terminal';
 
 interface IConnectionStatusProps {
@@ -19,7 +20,9 @@ const ConnectionStatus = ({
   onReconnect,
 }: IConnectionStatusProps) => {
   const t = useTranslations('connection');
+  const tc = useTranslations('common');
   const isVisible = status !== 'connected' && status !== 'session-ended';
+  const shouldReload = disconnectReason === 'reconnect-exhausted';
 
   return (
     <div
@@ -58,10 +61,10 @@ const ConnectionStatus = ({
             variant="ghost"
             size="sm"
             className="ml-1 h-7 gap-1 px-2 text-foreground hover:text-foreground"
-            onClick={onReconnect}
+            onClick={shouldReload ? () => reloadForReconnectRecovery('terminal') : onReconnect}
           >
             <RefreshCw className="h-3 w-3" />
-            {t('reconnect')}
+            {shouldReload ? tc('refresh') : t('reconnect')}
           </Button>
         </>
       )}

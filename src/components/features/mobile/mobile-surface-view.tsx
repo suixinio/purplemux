@@ -37,6 +37,7 @@ import {
   type IAgentCheckResponse,
   type TAgentPanelType,
 } from '@/lib/agent-check';
+import { reloadForReconnectRecovery } from '@/lib/ws-reload-recovery';
 
 
 interface ITermActions {
@@ -862,6 +863,10 @@ const MobileSurfaceView = ({
                 {tt('closeTabLabel')}
               </Button>
             </div>
+          ) : disconnectReason === 'reconnect-exhausted' ? (
+            <Button variant="outline" size="sm" onClick={() => reloadForReconnectRecovery('terminal')}>
+              {t('restart')}
+            </Button>
           ) : (
             <Button variant="outline" size="sm" onClick={reconnect}>
               {t('reconnect')}
