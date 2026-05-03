@@ -8,7 +8,7 @@ import CopyPaneDrawer from '@/components/features/workspace/copy-pane-drawer';
 import useTabStore from '@/hooks/use-tab-store';
 import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
-import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
+import { getAgentPanelTypeFromProvider, isAgentPanel, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import {
   Select,
   SelectContent,
@@ -42,7 +42,7 @@ const canSwitchMode = (panelType: TPanelType) =>
   panelType === 'terminal' || panelType === 'claude-code' || panelType === 'codex-cli';
 
 const getButtonLabel = (mode: TModeButton) =>
-  mode.startAction ? `Start ${mode.label} Chat` : mode.label;
+  mode.startAction ? `Start ${mode.label}` : mode.label;
 
 interface IMobileTabHeaderProps {
   tabId: string;
@@ -75,7 +75,7 @@ const MobileTabHeader = ({
   const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
   const visibleAgentPanelType = isAgentPanel(panelType)
     ? panelType
-    : isAgentRunning(tabEntry?.cliState)
+    : tabEntry?.agentProcess === true
       ? runtimeAgentPanelType
       : undefined;
   const modeButtons: TModeButton[] = [
@@ -115,6 +115,7 @@ const MobileTabHeader = ({
       current: panelType,
       target: mode.type,
       cliState: tabEntry?.cliState,
+      agentProcess: tabEntry?.agentProcess,
       runningAgentPanelType: runtimeAgentPanelType,
     })) return;
     if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {

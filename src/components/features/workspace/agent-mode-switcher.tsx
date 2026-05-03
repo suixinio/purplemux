@@ -1,10 +1,7 @@
-import { Check, ChevronDown, Plus, TerminalSquare } from 'lucide-react';
 import { useState } from 'react';
-import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
-import OpenAIIcon from '@/components/icons/openai-icon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import useTabStore from '@/hooks/use-tab-store';
-import { getAgentPanelTypeFromProvider, isAgentPanel, isAgentRunning, tryAgentSwitch } from '@/lib/agent-switch-lock';
+import { getAgentPanelTypeFromProvider, isAgentPanel, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import { cn } from '@/lib/utils';
 import type { TPanelType } from '@/types/terminal';
 
@@ -22,9 +19,7 @@ interface IAgentModeSwitcherProps {
 }
 
 const getButtonLabel = (mode: TModeButton) =>
-  mode.startAction ? `Start ${mode.label} Chat` : mode.label;
-
-const iconClassName = 'h-3.5 w-3.5 shrink-0';
+  mode.startAction ? `Start ${mode.label}` : mode.label;
 
 const getCurrentMode = (panelType: TPanelType): TModeButton => {
   if (panelType === 'claude-code' || panelType === 'codex-cli') {
@@ -44,7 +39,7 @@ const AgentModeSwitcher = ({
   const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
   const visibleAgentPanelType = isAgentPanel(panelType)
     ? panelType
-    : isAgentRunning(tabEntry?.cliState)
+    : tabEntry?.agentProcess === true
       ? runtimeAgentPanelType
       : undefined;
   const currentMode = getCurrentMode(panelType);
@@ -61,12 +56,6 @@ const AgentModeSwitcher = ({
         ]),
   ];
 
-  const renderIcon = (mode: TModeButton) => {
-    if (mode.type === 'terminal') return <TerminalSquare className={iconClassName} />;
-    if (mode.type === 'claude-code') return <ClaudeCodeIcon size={14} />;
-    return <OpenAIIcon size={14} className="shrink-0" aria-label="Codex" />;
-  };
-
   const handleSelectMode = (mode: TModeButton) => {
     if (panelType === mode.type) {
       setOpen(false);
@@ -76,6 +65,7 @@ const AgentModeSwitcher = ({
       current: panelType,
       target: mode.type,
       cliState: tabEntry?.cliState,
+      agentProcess: tabEntry?.agentProcess,
       runningAgentPanelType: runtimeAgentPanelType,
     })) return;
     setOpen(false);
@@ -95,24 +85,19 @@ const AgentModeSwitcher = ({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="ml-auto flex h-6 shrink-0 items-center gap-1.5 rounded border border-border/80 bg-background/70 px-1.5 text-[10px] text-foreground hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
+        className="flex h-5 shrink-0 items-center rounded border border-border/70 bg-background/70 px-1.5 text-[10px] leading-none text-foreground hover:bg-accent focus:outline-none focus:ring-1 focus:ring-ring"
         aria-label="Select tab mode"
         title="Select tab mode"
         onClick={(e) => e.stopPropagation()}
       >
-        {renderIcon(currentMode)}
         <span>{currentMode.label}</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground" />
       </PopoverTrigger>
       <PopoverContent
         side="bottom"
         align="end"
-        className="w-44 gap-0 p-1"
+        className="w-28 gap-0 p-0.5"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="px-2 py-1.5 text-[10px] font-medium uppercase text-muted-foreground">
-          View as
-        </div>
         {modeButtons.map((mode) => {
           const active = panelType === mode.type;
           return (
@@ -120,8 +105,8 @@ const AgentModeSwitcher = ({
               key={mode.type}
               type="button"
               className={cn(
-                'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs text-foreground hover:bg-accent',
-                active && 'bg-accent',
+                'flex w-full items-center rounded-sm px-2 py-1 text-left text-[11px] leading-4 text-foreground hover:bg-accent',
+                active && 'bg-accent font-medium',
               )}
               aria-pressed={active}
               aria-label={getButtonLabel(mode)}
@@ -130,14 +115,7 @@ const AgentModeSwitcher = ({
                 handleSelectMode(mode);
               }}
             >
-              {renderIcon(mode)}
               <span className="min-w-0 flex-1 truncate">{getButtonLabel(mode)}</span>
-              {mode.startAction && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                  <Plus className="h-2.5 w-2.5" />
-                </span>
-              )}
-              {active && <Check className="h-3.5 w-3.5 text-muted-foreground" />}
             </button>
           );
         })}

@@ -31,6 +31,12 @@ import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
 import { toast } from 'sonner';
 import type { IAgentSessionEntry } from '@/hooks/use-agent-sessions';
+import {
+  applyAgentCheckResult,
+  isAgentPanelType,
+  type IAgentCheckResponse,
+  type TAgentPanelType,
+} from '@/lib/agent-check';
 
 
 interface ITermActions {
@@ -44,18 +50,6 @@ interface ITermActions {
 interface IWsActions {
   sendStdin: (data: string) => void;
   sendResize: (cols: number, rows: number) => void;
-}
-
-type TAgentPanelType = Extract<TPanelType, 'claude-code' | 'codex-cli'>;
-
-interface IAgentCheckResponse {
-  running?: boolean;
-  checkedAt?: number;
-  sessionId?: unknown;
-  resumable?: unknown;
-  providerId?: unknown;
-  providerDisplayName?: unknown;
-  providerPanelType?: unknown;
 }
 
 interface IAgentModePrompt {
@@ -96,9 +90,6 @@ interface IMobileSurfaceViewProps {
 }
 
 const MOBILE_FONT_SIZE = 11;
-
-const isAgentPanelType = (value: unknown): value is TAgentPanelType =>
-  value === 'claude-code' || value === 'codex-cli';
 
 const MobileSurfaceView = ({
   paneId,
@@ -280,8 +271,7 @@ const MobileSurfaceView = ({
           .then((res) => res.json())
           .then((data: IAgentCheckResponse) => {
             if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, data);
-            const running = data.running === true;
-            const checkedAt = typeof data.checkedAt === 'number' ? data.checkedAt : Date.now();
+            const running = data.running === true && isAgentPanelType(data.providerPanelType);
             const current = useTabStore.getState().tabs[tabId];
             if (current && current.agentProcessCheckedAt !== prevCheckedAt) {
               if (current.agentProcess !== running) {
@@ -290,16 +280,14 @@ const MobileSurfaceView = ({
                     .then((r) => r.json())
                     .then((retryData: IAgentCheckResponse) => {
                       if (activeTab?.panelType === 'terminal') handleAgentCheckResult(tabId, retryData);
-                      const retryRunning = retryData.running === true;
-                      const retryCheckedAt = typeof retryData.checkedAt === 'number' ? retryData.checkedAt : Date.now();
-                      useTabStore.getState().setAgentProcess(tabId, retryRunning, retryCheckedAt);
+                      applyAgentCheckResult(tabId, retryData);
                     })
                     .catch(() => {});
                 }, 500);
               }
               return;
             }
-            useTabStore.getState().setAgentProcess(tabId, running, checkedAt);
+            applyAgentCheckResult(tabId, data);
           })
           .catch(() => {});
       }
