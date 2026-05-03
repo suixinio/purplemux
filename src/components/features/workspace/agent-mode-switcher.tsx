@@ -22,13 +22,13 @@ interface IAgentModeSwitcherProps {
 }
 
 const getButtonLabel = (mode: TModeButton) =>
-  mode.startAction ? `Start ${mode.label} Agent` : mode.label;
+  mode.startAction ? `Start ${mode.label} Chat` : mode.label;
 
 const iconClassName = 'h-3.5 w-3.5 shrink-0';
 
 const getCurrentMode = (panelType: TPanelType): TModeButton => {
   if (panelType === 'claude-code' || panelType === 'codex-cli') {
-    return { type: panelType, label: 'Agent' };
+    return { type: panelType, label: 'Chat' };
   }
   return { type: 'terminal', label: 'Terminal' };
 };
@@ -53,7 +53,7 @@ const AgentModeSwitcher = ({
     ...(visibleAgentPanelType
       ? [{
           type: visibleAgentPanelType,
-          label: 'Agent',
+          label: 'Chat',
         }]
       : [
           { type: 'claude-code' as const, label: 'Claude', startAction: true },
