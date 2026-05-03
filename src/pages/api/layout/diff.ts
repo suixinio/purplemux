@@ -149,12 +149,13 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     }
 
-    const [{ stdout: diff }, { stdout: statusOut }, hash, aheadBehind, meta] = await Promise.all([
+    const [{ stdout: diff }, { stdout: statusOut }, hash, aheadBehind, meta, { stdout: repoRootOut }] = await Promise.all([
       execFile('git', ['diff', 'HEAD'], { cwd, timeout: CMD_TIMEOUT, maxBuffer: 5 * 1024 * 1024 }),
       execFile('git', ['status', '--porcelain', '-uall'], { cwd, timeout: CMD_TIMEOUT }),
       computeDiffHash(cwd),
       getAheadBehind(cwd),
       getRepoMeta(cwd),
+      execFile('git', ['rev-parse', '--show-toplevel'], { cwd, timeout: CMD_TIMEOUT }),
     ]);
 
     const untrackedFiles = statusOut
@@ -185,6 +186,7 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       isDetached: meta.isDetached,
       stash: meta.stash,
       headCommit: meta.headCommit,
+      repoRoot: repoRootOut.trim(),
       fetched,
     });
   } catch (err) {

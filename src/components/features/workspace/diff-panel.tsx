@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { toast } from 'sonner';
-import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive, X } from 'lucide-react';
+import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive, X, Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { copyToClipboard } from '@/lib/clipboard';
 import useIsMobile from '@/hooks/use-is-mobile';
 import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import DiffHistoryView from '@/components/features/workspace/diff-history-view';
@@ -42,6 +43,7 @@ const POLL_INTERVAL = 10_000;
 const FETCH_INTERVAL = 3 * 60_000;
 const ERROR_TOAST_DURATION = 15_000;
 const MAX_STDERR_LENGTH = 800;
+const HOME_PATH_RE = /^\/Users\/[^/]+(?=\/|$)/;
 
 const ERROR_MESSAGE_KEYS = {
   'no-upstream': 'syncErrorNoUpstream',
@@ -63,8 +65,32 @@ const AGENT_PROMPT_KEYS = {
   unknown: 'agentPromptGeneric',
 } as const;
 
+const shortenHomePath = (value: string) => value.replace(HOME_PATH_RE, '~');
+
+const getPathBaseName = (value: string) => {
+  const parts = value.split('/').filter(Boolean);
+  return parts[parts.length - 1] || value;
+};
+
+const getCompactRepoPath = (value: string) => {
+  const shortened = shortenHomePath(value);
+  const parts = shortened.split('/').filter(Boolean);
+  const hasHomePrefix = shortened.startsWith('~/');
+  const hasRootPrefix = shortened.startsWith('/');
+
+  if (parts.length <= 4) return shortened;
+
+  const prefix = hasHomePrefix
+    ? parts.slice(0, 2).join('/')
+    : hasRootPrefix
+      ? `/${parts[0]}`
+      : parts[0];
+  return `${prefix}/.../${parts.slice(-2).join('/')}`;
+};
+
 const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsChange }: IDiffPanelProps) => {
   const t = useTranslations('diff');
+  const tt = useTranslations('terminal');
   const isMobile = useIsMobile();
   const gitAskProvider = useConfigStore((s) => s.gitAskProvider);
 
@@ -79,6 +105,7 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
   const [isDetached, setIsDetached] = useState(false);
   const [stash, setStash] = useState(0);
   const [headCommit, setHeadCommit] = useState<IHeadCommit | null>(null);
+  const [repoRoot, setRepoRoot] = useState('');
   const viewMode: TDiffViewMode = settings?.viewMode ?? 'split';
   const activeTab: TDiffTab = settings?.activeTab ?? 'changes';
   const [historyRefreshToken, setHistoryRefreshToken] = useState(0);
@@ -107,6 +134,7 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
         setIsDetached(Boolean(data.isDetached));
         setStash(data.stash ?? 0);
         setHeadCommit(data.headCommit ?? null);
+        setRepoRoot(data.repoRoot ?? '');
         currentHashRef.current = data.hash ?? '';
         if (data.fetched) lastFetchAtRef.current = Date.now();
       }
@@ -203,6 +231,16 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
     }
   }, [sessionName, syncing, t, fetchDiff, onSendToAgent, gitAskProvider, branch]);
 
+  const handleCopyRepoRoot = useCallback(async () => {
+    if (!repoRoot) return;
+    const ok = await copyToClipboard(repoRoot);
+    if (ok) {
+      toast.success(tt('copyPaneSuccess'), { duration: 1500 });
+    } else {
+      toast.error(tt('copyPaneCopyFailed'));
+    }
+  }, [repoRoot, tt]);
+
   useEffect(() => {
     fetchDiff().then(() => pollForChanges());
   }, [fetchDiff, pollForChanges]);
@@ -258,6 +296,8 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
   const syncTitle = syncing
     ? t('syncing')
     : hasSyncWork ? `${t('sync')} · ${syncCountLabel}` : t('sync');
+  const repoBaseName = repoRoot ? getPathBaseName(repoRoot) : '';
+  const repoDisplayPath = repoRoot ? getCompactRepoPath(repoRoot) : '';
 
   return (
     <div className="flex h-full flex-col bg-card">
@@ -350,6 +390,25 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
             </div>
           </TooltipProvider>
         </div>
+
+        {isMobile && repoRoot && (
+          <button
+            type="button"
+            className="flex min-h-8 min-w-0 items-center gap-2 border-b border-border/60 px-3 py-1.5 text-left text-xs text-muted-foreground active:bg-accent/60"
+            onClick={handleCopyRepoRoot}
+            title={repoRoot}
+            aria-label={repoRoot}
+          >
+            <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 truncate font-medium text-foreground">
+              {repoBaseName}
+            </span>
+            <span className="shrink-0 text-muted-foreground/50">·</span>
+            <span className="min-w-0 flex-1 truncate font-mono text-[11px]">
+              {repoDisplayPath}
+            </span>
+          </button>
+        )}
 
         <div className="flex min-h-9 min-w-0 items-center gap-2 px-3 py-2 text-xs">
           <GitBranch className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
