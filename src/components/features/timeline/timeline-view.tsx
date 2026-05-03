@@ -685,6 +685,15 @@ const TimelineView = ({
     setSpacerHeight(current - shrinkBy);
   }, [scrollRef]);
 
+  const scheduleShrinkSpacerSafely = useCallback(() => {
+    if (!anchorUserId || cliState === 'busy') return;
+    pendingShrinkRef.current = true;
+    requestAnimationFrame(() => {
+      shrinkSpacerSafely();
+      setTimeout(shrinkSpacerSafely, ANCHOR_SETTLE_DELAY_MS);
+    });
+  }, [anchorUserId, cliState, shrinkSpacerSafely]);
+
   useLayoutEffect(() => {
     wasBusyRef.current = false;
     pendingShrinkRef.current = false;
@@ -733,6 +742,22 @@ const TimelineView = ({
       shrinkSpacerSafely();
     }
   }, [cliState, anchorUserId, entries, shrinkSpacerSafely]);
+
+  useEffect(() => {
+    const handleVisible = () => {
+      if (document.visibilityState === 'hidden') return;
+      scheduleShrinkSpacerSafely();
+    };
+
+    document.addEventListener('visibilitychange', handleVisible);
+    window.addEventListener('focus', handleVisible);
+    window.addEventListener('pageshow', handleVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisible);
+      window.removeEventListener('focus', handleVisible);
+      window.removeEventListener('pageshow', handleVisible);
+    };
+  }, [scheduleShrinkSpacerSafely]);
 
   const canObserveOverflow = !isLoading && !error && hasDisplayItems && !skipAnimation;
   useEffect(() => {
