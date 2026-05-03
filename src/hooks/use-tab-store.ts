@@ -4,6 +4,7 @@ import type { ICurrentAction, ILastEvent, TTabDisplayStatus, TTerminalStatus } f
 import type { ITab, TPanelType } from '@/types/terminal';
 import type { IPermissionRequest } from '@/types/codex-permission';
 import type { ISessionMetaData } from '@/hooks/use-session-meta';
+import { deriveAgentCliState } from '@/lib/agent-state-transition';
 
 export type TSessionView = 'session-list' | 'check' | 'timeline';
 
@@ -55,17 +56,6 @@ const DEFAULT_TAB_STATE: ITabState = {
   cliState: 'inactive',
   isTimelineLoading: true,
   workspaceId: '',
-};
-
-const deriveCliStateFromHookEvent = (event: ILastEvent, fallback: TCliState): TCliState => {
-  if (fallback === 'cancelled') return fallback;
-  switch (event.name) {
-    case 'session-start': return 'idle';
-    case 'prompt-submit': return 'busy';
-    case 'notification': return 'needs-input';
-    case 'stop': return 'ready-for-review';
-    case 'interrupt': return 'idle';
-  }
 };
 
 interface ITabStore {
@@ -363,7 +353,7 @@ const useTabStore = create<ITabStore>((set) => ({
       const prev = state.tabs[tabId];
       if (!prev) return state;
       if (prev.eventSeq !== undefined && event.seq <= prev.eventSeq) return state;
-      const cliState = deriveCliStateFromHookEvent(event, prev.cliState);
+      const cliState = deriveAgentCliState(event, prev.cliState);
       return {
         tabs: updateTab(state.tabs, tabId, {
           cliState,

@@ -6,6 +6,8 @@ import { createLogger } from '@/lib/logger';
 import { buildCodexHookFlags } from '@/lib/providers/codex/hook-config';
 import { runCodexPreflight } from '@/lib/providers/codex/preflight';
 import { getCodexPromptPath, toTomlBasicString, writeCodexPromptFile } from '@/lib/providers/codex/prompt';
+import { readCodexRuntimeSnapshot } from '@/lib/providers/codex/runtime-snapshot';
+import { readCodexSessionHistoryStats } from '@/lib/providers/codex/session-history-stats';
 import {
   detectActiveSession as detectCodexSession,
   isCodexRunning,
@@ -249,6 +251,8 @@ export const codexProvider: IAgentProvider = {
 
   parsePaneTitle,
   sessionIdFromJsonlPath,
+  readRuntimeSnapshot: readCodexRuntimeSnapshot,
+  readSessionHistoryStats: readCodexSessionHistoryStats,
   preflight: codexAgentPreflight,
   writeWorkspacePrompt: writeCodexPromptFile,
 };

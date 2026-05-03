@@ -1,32 +1,27 @@
-import { getStatusManager } from '@/lib/status-manager';
-import { codexHookEvents } from '@/lib/providers/codex/hook-events';
 import {
   isCodexSessionSource,
   parseCodexPermissionRequest,
   translateCodexHookEvent,
   type ICodexHookPayload,
 } from '@/lib/providers/codex/hook-payload';
-import type { TAgentWorkStateEvent } from '@/lib/providers/types';
-import type { ISessionInfo } from '@/types/timeline';
+import type { IAgentHookTranslation } from '@/lib/providers/types';
+import type { TCliState } from '@/types/timeline';
 
 const SUMMARY_LIMIT = 80;
 
 export interface IHandleCodexHookResult {
   ok: boolean;
-  reason?: 'unknown-session' | 'unknown-event';
+  reason?: 'unknown-event';
 }
 
 /**
- * Applies codex-specific meta side effects (sessionId, jsonlPath, lastUserMessage,
- * agentSummary, permissionRequest, clearMessages) and returns the standardized
- * work-state event for StatusManager's central provider-event dispatcher.
+ * Converts Codex's hook payload shape into purplemux's provider-neutral hook
+ * translation. The caller owns applying metadata and dispatching state events.
  */
 export const processCodexHookPayload = (
-  tmuxSession: string,
   payload: ICodexHookPayload,
-): { result: IHandleCodexHookResult; event: TAgentWorkStateEvent | null } => {
-  const statusManager = getStatusManager();
-  const meta: Parameters<typeof statusManager.applyCodexHookMeta>[1] = {
+): { result: IHandleCodexHookResult; translation: IAgentHookTranslation } => {
+  const meta: NonNullable<IAgentHookTranslation['meta']> = {
     sessionId: payload.session_id ?? null,
   };
   if (payload.transcript_path) meta.jsonlPath = payload.transcript_path;
@@ -45,13 +40,10 @@ export const processCodexHookPayload = (
   const isClear = payload.hook_event_name === 'SessionStart' && payload.source === 'clear';
   if (isClear) meta.clearMessages = true;
 
-  const applied = statusManager.applyCodexHookMeta(tmuxSession, meta);
-  if (!applied) {
-    return { result: { ok: false, reason: 'unknown-session' }, event: null };
-  }
+  const translation: IAgentHookTranslation = { meta };
 
   if (payload.hook_event_name === 'SessionStart') {
-    const info: ISessionInfo = {
+    translation.sessionInfo = {
       status: 'running',
       sessionId: payload.session_id ?? null,
       jsonlPath: payload.transcript_path ?? null,
@@ -59,20 +51,25 @@ export const processCodexHookPayload = (
       startedAt: null,
       cwd: payload.cwd ?? null,
     };
-    codexHookEvents.emit('session-info', tmuxSession, info);
-    if (isClear) codexHookEvents.emit('session-clear', tmuxSession);
+    translation.clearSession = isClear;
   }
 
   const event = translateCodexHookEvent(payload);
-  if (!event) return { result: { ok: false, reason: 'unknown-event' }, event: null };
+  translation.event = event;
+  if (!event) return { result: { ok: false, reason: 'unknown-event' }, translation };
 
+  return { result: { ok: true }, translation };
+};
+
+export const shouldEmitCodexHookEvent = (
+  payload: ICodexHookPayload,
+  cliState: TCliState,
+): boolean => {
+  const event = translateCodexHookEvent(payload);
+  if (!event) return false;
   if (event.kind === 'session-start') {
     const source = isCodexSessionSource(payload.source) ? payload.source : 'startup';
-    const shouldEmit = source === 'clear'
-      || applied.cliState === 'inactive'
-      || applied.cliState === 'unknown';
-    if (!shouldEmit) return { result: { ok: true }, event: null };
+    return source === 'clear' || cliState === 'inactive' || cliState === 'unknown';
   }
-
-  return { result: { ok: true }, event };
+  return true;
 };

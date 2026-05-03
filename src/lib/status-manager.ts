@@ -3,13 +3,13 @@ import { getWorkspaces } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabCliStatus, updateTabAgentSummary, updateTabAgentState, parseSessionName, setLayoutReconciler } from '@/lib/layout-store';
 import { getAllPanesInfo, getListeningPorts, SAFE_SHELLS, getPaneTitle, getSessionCwd, getSessionPanePid } from '@/lib/tmux';
 import { getChildPids } from '@/lib/process-utils';
-import { getProviderByPanelType } from '@/lib/providers/registry';
+import { getProvider, getProviderByPanelType } from '@/lib/providers/registry';
 import { detectAnyActiveSession } from '@/lib/providers/session-scan';
 import type { IAgentProvider } from '@/lib/providers/types';
-import type { TAgentWorkStateEvent } from '@/lib/providers/types';
+import type { IAgentHookMetaPatch, TAgentWorkStateEvent } from '@/lib/providers/types';
+import { deriveAgentCliState } from '@/lib/agent-state-transition';
 import { cwdToProjectPath } from '@/lib/session-list';
 import { formatTabTitle } from '@/lib/tab-title';
-import { INTERRUPT_PREFIX, summarizeToolCall } from '@/lib/session-parser';
 import { createRateLimitsWatcher } from '@/lib/rate-limits-watcher';
 import { createLogger } from '@/lib/logger';
 import { capturePaneAtWidth } from '@/lib/capture-at-width';
@@ -20,9 +20,8 @@ import { cacheCodexRateLimitsFromJsonl } from '@/lib/codex-rate-limits-cache';
 import { parsePermissionOptions } from '@/lib/permission-prompt';
 import type { IPaneInfo } from '@/lib/tmux';
 import type { ITab } from '@/types/terminal';
-import type { TCliState, TToolName } from '@/types/timeline';
+import type { TCliState } from '@/types/timeline';
 import type { ICurrentAction, TTerminalStatus, ITabStatusEntry, IClientTabStatusEntry, IStatusUpdateMessage, IRateLimitsCache, TEventName, ILastEvent } from '@/types/status';
-import type { IPermissionRequest } from '@/types/codex-permission';
 import type { ISessionHistoryEntry } from '@/types/session-history';
 import { addSessionHistoryEntry, updateSessionHistoryDismissedAt } from '@/lib/session-history';
 import webpush from 'web-push';
@@ -53,17 +52,6 @@ const INPUT_REQUESTING_NOTIFICATION_TYPES = new Set(['permission_prompt', 'worke
 
 const COMPACT_STALE_MS = 60_000;
 
-export const deriveStateFromEvent = (event: ILastEvent | null, fallback: TCliState): TCliState => {
-  if (!event) return fallback;
-  switch (event.name) {
-    case 'session-start': return 'idle';
-    case 'prompt-submit': return 'busy';
-    case 'notification':  return 'needs-input';
-    case 'stop':          return 'ready-for-review';
-    case 'interrupt':     return 'idle';
-  }
-};
-
 const POLL_INTERVAL_SMALL = 30_000;
 const POLL_INTERVAL_MEDIUM = 45_000;
 const POLL_INTERVAL_LARGE = 60_000;
@@ -76,297 +64,9 @@ const AGENT_GUARDED_STATES: Set<TCliState> = new Set(['busy', 'idle', 'needs-inp
 // An agent CLI normally writes its own title (no pipe), so this regex
 // distinguishes "agent gone" from "agent rewrote title" without a process call.
 const SHELL_TITLE_RE = /^[^|]+\|[^|]+$/;
-const JSONL_TAIL_SIZE = 8192;
-const JSONL_EXTENDED_TAIL_SIZE = 131_072;
-const STALE_MS_INTERRUPTED = 20_000;
-const STALE_MS_AWAITING_API = 90_000;
 const PROCESS_RETRY_COUNT = 3;
 const JSONL_WATCH_DEBOUNCE_MS = 100;
 const LAUNCH_READY_POLL_DELAYS_MS = [700, 1_500, 3_000, 5_000, 8_000] as const;
-
-interface IJsonlIdleCache {
-  mtimeMs: number;
-  idle: boolean;
-  stale: boolean;
-  needsStaleRecheck: boolean;
-  staleMs: number;
-  lastAssistantSnippet: string | null;
-  currentAction: ICurrentAction | null;
-  reset: boolean;
-  lastEntryTs: number | null;
-  interrupted: boolean;
-}
-
-const MAX_JSONL_CACHE = 256;
-const jsonlIdleCache = new Map<string, IJsonlIdleCache>();
-
-const MAX_SNIPPET_LENGTH = 200;
-
-const toCurrentAction = (block: { name?: string; input?: Record<string, unknown> }): ICurrentAction => {
-  const toolName = (block.name ?? 'Tool') as TToolName;
-  const input = (block.input ?? {}) as Record<string, unknown>;
-  return { toolName, summary: summarizeToolCall(toolName, input) };
-};
-
-interface IAssistantExtract {
-  lastAssistantSnippet: string | null;
-  currentAction: ICurrentAction | null;
-  reset: boolean;
-}
-
-const extractAssistantInfo = (lines: string[]): IAssistantExtract => {
-  let userMessageSeen = false;
-
-  for (let i = lines.length - 1; i >= 0; i--) {
-    try {
-      const entry = JSON.parse(lines[i]);
-      if (entry.isSidechain) continue;
-
-      if (entry.type === 'user') {
-        const c = entry.message?.content;
-        const isToolResult = Array.isArray(c) && c.some((b: unknown) => (b as { type?: string }).type === 'tool_result');
-        if (!isToolResult) userMessageSeen = true;
-        continue;
-      }
-
-      if (entry.type !== 'assistant' || !entry.message?.content) continue;
-
-      if (userMessageSeen) return { lastAssistantSnippet: null, currentAction: null, reset: true };
-
-      const content = entry.message.content;
-      if (!Array.isArray(content)) continue;
-
-      let lastAssistantSnippet: string | null = null;
-      let currentAction: ICurrentAction | null = null;
-
-      for (let j = content.length - 1; j >= 0; j--) {
-        const block = content[j];
-        if (block.type === 'tool_use') {
-          currentAction = toCurrentAction(block);
-          break;
-        }
-        if (block.type === 'text' && block.text?.trim()) {
-          const text = block.text.trim();
-          currentAction = {
-            toolName: null,
-            summary: text.length > MAX_SNIPPET_LENGTH ? text.slice(0, MAX_SNIPPET_LENGTH) + '…' : text,
-          };
-          break;
-        }
-      }
-
-      for (let j = content.length - 1; j >= 0; j--) {
-        if (content[j].type === 'text' && content[j].text?.trim()) {
-          const text = content[j].text.trim();
-          lastAssistantSnippet = text.length > MAX_SNIPPET_LENGTH
-            ? text.slice(0, MAX_SNIPPET_LENGTH) + '…'
-            : text;
-          break;
-        }
-      }
-
-      return { lastAssistantSnippet, currentAction, reset: false };
-    } catch { continue; }
-  }
-  return { lastAssistantSnippet: null, currentAction: null, reset: false };
-};
-
-interface IScanResult {
-  matched: boolean;
-  idle: boolean;
-  stale: boolean;
-  needsStaleRecheck: boolean;
-  staleMs: number;
-  lastEntryTs: number | null;
-  interrupted: boolean;
-}
-
-const scanLines = (lines: string[], elapsed: number): IScanResult => {
-  for (let i = lines.length - 1; i >= 0; i--) {
-    try {
-      const entry = JSON.parse(lines[i]);
-
-      if (entry.isSidechain) continue;
-
-      const entryTs: number | null = entry.timestamp ? new Date(entry.timestamp).getTime() : null;
-
-      if (entry.type === 'system' && (entry.subtype === 'stop_hook_summary' || entry.subtype === 'turn_duration')) {
-        return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs, interrupted: false };
-      }
-
-      if (entry.type === 'assistant') {
-        const stopReason = entry.message?.stop_reason;
-        if (!stopReason) {
-          const idle = elapsed > STALE_MS_INTERRUPTED;
-          return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_INTERRUPTED, lastEntryTs: entryTs, interrupted: false };
-        }
-        return { matched: true, idle: stopReason !== 'tool_use', stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs, interrupted: false };
-      }
-
-      if (entry.type === 'user') {
-        const content = entry.message?.content;
-        if (Array.isArray(content) && content.length === 1 && typeof content[0]?.text === 'string' && content[0].text.startsWith(INTERRUPT_PREFIX)) {
-          return { matched: true, idle: true, stale: false, needsStaleRecheck: false, staleMs: 0, lastEntryTs: entryTs, interrupted: true };
-        }
-        const idle = elapsed > STALE_MS_AWAITING_API;
-        return { matched: true, idle, stale: true, needsStaleRecheck: !idle, staleMs: STALE_MS_AWAITING_API, lastEntryTs: entryTs, interrupted: false };
-      }
-    } catch {
-      continue;
-    }
-  }
-
-  return { matched: false, idle: elapsed > STALE_MS_AWAITING_API, stale: true, needsStaleRecheck: elapsed <= STALE_MS_AWAITING_API, staleMs: STALE_MS_AWAITING_API, lastEntryTs: null, interrupted: false };
-};
-
-interface IJsonlCheckResult {
-  idle: boolean;
-  stale: boolean;
-  lastAssistantSnippet: string | null;
-  currentAction: ICurrentAction | null;
-  reset: boolean;
-  lastEntryTs: number | null;
-  staleMs: number;
-  interrupted: boolean;
-}
-
-const checkJsonlIdle = async (jsonlPath: string): Promise<IJsonlCheckResult> => {
-  try {
-    const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return { idle: true, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false, lastEntryTs: null, staleMs: 0, interrupted: false };
-
-    const cached = jsonlIdleCache.get(jsonlPath);
-    if (cached && cached.mtimeMs === stat.mtimeMs) {
-      jsonlIdleCache.delete(jsonlPath);
-      jsonlIdleCache.set(jsonlPath, cached);
-      if (cached.idle) return { idle: true, stale: cached.stale, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs, interrupted: cached.interrupted };
-      if (cached.needsStaleRecheck) {
-        const idle = Date.now() - stat.mtimeMs > cached.staleMs;
-        return { idle, stale: true, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs, interrupted: cached.interrupted };
-      }
-      return { idle: false, stale: false, lastAssistantSnippet: cached.lastAssistantSnippet, currentAction: cached.currentAction, reset: cached.reset, lastEntryTs: cached.lastEntryTs, staleMs: cached.staleMs, interrupted: cached.interrupted };
-    }
-
-    const handle = await fs.open(jsonlPath, 'r');
-    try {
-      const elapsed = Date.now() - stat.mtimeMs;
-
-      const readSize = Math.min(stat.size, JSONL_TAIL_SIZE);
-      const buffer = Buffer.alloc(readSize);
-      await handle.read(buffer, 0, readSize, stat.size - readSize);
-      const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
-
-      let scan = scanLines(lines, elapsed);
-      let extracted = extractAssistantInfo(lines);
-
-      if (!scan.matched && stat.size > JSONL_TAIL_SIZE) {
-        const extSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
-        const extBuffer = Buffer.alloc(extSize);
-        await handle.read(extBuffer, 0, extSize, stat.size - extSize);
-        const extLines = extBuffer.toString('utf-8').split('\n').filter((l) => l.trim());
-        scan = scanLines(extLines, elapsed);
-        if (!extracted.lastAssistantSnippet && !extracted.currentAction) extracted = extractAssistantInfo(extLines);
-      }
-
-      if (jsonlIdleCache.size >= MAX_JSONL_CACHE) {
-        jsonlIdleCache.delete(jsonlIdleCache.keys().next().value!);
-      }
-      jsonlIdleCache.set(jsonlPath, { mtimeMs: stat.mtimeMs, idle: scan.idle, stale: scan.stale, needsStaleRecheck: scan.needsStaleRecheck, staleMs: scan.staleMs, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset, lastEntryTs: scan.lastEntryTs, interrupted: scan.interrupted });
-      return { idle: scan.idle, stale: scan.stale, lastAssistantSnippet: extracted.lastAssistantSnippet, currentAction: extracted.currentAction, reset: extracted.reset, lastEntryTs: scan.lastEntryTs, staleMs: scan.staleMs, interrupted: scan.interrupted };
-    } finally {
-      await handle.close();
-    }
-  } catch {
-    return { idle: false, stale: false, lastAssistantSnippet: null, currentAction: null, reset: false, lastEntryTs: null, staleMs: 0, interrupted: false };
-  }
-};
-
-interface IJsonlStats {
-  toolUsage: Record<string, number>;
-  touchedFiles: string[];
-  lastAssistantText: string | null;
-  lastUserText: string | null;
-  firstUserTs: number | null;
-  lastAssistantTs: number | null;
-  turnDurationMs: number | null;
-}
-
-const parseJsonlStats = async (jsonlPath: string): Promise<IJsonlStats> => {
-  const empty: IJsonlStats = { toolUsage: {}, touchedFiles: [], lastAssistantText: null, lastUserText: null, firstUserTs: null, lastAssistantTs: null, turnDurationMs: null };
-  try {
-    const stat = await fs.stat(jsonlPath);
-    if (stat.size === 0) return empty;
-
-    const handle = await fs.open(jsonlPath, 'r');
-    try {
-      const readSize = Math.min(stat.size, JSONL_EXTENDED_TAIL_SIZE);
-      const buffer = Buffer.alloc(readSize);
-      await handle.read(buffer, 0, readSize, stat.size - readSize);
-      const lines = buffer.toString('utf-8').split('\n').filter((l) => l.trim());
-
-      const toolUsage: Record<string, number> = {};
-      const touchedFiles = new Set<string>();
-      let lastAssistantText: string | null = null;
-      let lastUserText: string | null = null;
-      let lastAssistantTs: number | null = null;
-      let firstUserTs: number | null = null;
-      let turnDurationMs: number | null = null;
-
-      for (let i = lines.length - 1; i >= 0; i--) {
-        try {
-          const entry = JSON.parse(lines[i]);
-          if (entry.type === 'file-history-snapshot') break;
-          if (entry.isSidechain) continue;
-
-          if (entry.type === 'system' && entry.subtype === 'turn_duration' && typeof entry.durationMs === 'number' && !turnDurationMs) {
-            turnDurationMs = entry.durationMs;
-          }
-
-          const ts = entry.timestamp ? new Date(entry.timestamp).getTime() : null;
-
-          if (entry.type === 'user') {
-            if (ts) firstUserTs = ts;
-            if (!lastUserText && Array.isArray(entry.message?.content)) {
-              for (const block of entry.message.content) {
-                if (block.type === 'text' && block.text) {
-                  lastUserText = block.text;
-                  break;
-                }
-              }
-            }
-          }
-
-          if (entry.type === 'assistant') {
-            if (ts && !lastAssistantTs) lastAssistantTs = ts;
-            if (Array.isArray(entry.message?.content)) {
-              let msgLastText: string | null = null;
-              for (const block of entry.message.content) {
-                if (block.type === 'tool_use' && block.name) {
-                  toolUsage[block.name] = (toolUsage[block.name] ?? 0) + 1;
-                  if ((block.name === 'Edit' || block.name === 'Write') && block.input?.file_path) {
-                    touchedFiles.add(String(block.input.file_path));
-                  }
-                }
-                if (block.type === 'text' && block.text) {
-                  msgLastText = block.text;
-                }
-              }
-              if (!lastAssistantText && msgLastText) {
-                lastAssistantText = msgLastText;
-              }
-            }
-          }
-        } catch { continue; }
-      }
-
-      return { toolUsage, touchedFiles: [...touchedFiles], lastAssistantText, lastUserText, firstUserTs, lastAssistantTs, turnDurationMs };
-    } finally {
-      await handle.close();
-    }
-  } catch {
-    return empty;
-  }
-};
 
 const g = globalThis as unknown as { __ptStatusManager?: StatusManager };
 
@@ -474,8 +174,8 @@ class StatusManager {
       return;
     }
 
-    if (entry.jsonlPath) {
-      const { idle, stale, lastAssistantSnippet } = await checkJsonlIdle(entry.jsonlPath);
+    if (provider && entry.jsonlPath) {
+      const { idle, stale, lastAssistantSnippet } = await provider.readRuntimeSnapshot(entry.jsonlPath);
       if (idle && !stale && lastAssistantSnippet) {
         this.applyCliState(tabId, entry, 'ready-for-review', { silent: true });
         this.persistToLayout(entry);
@@ -502,7 +202,7 @@ class StatusManager {
       if (persistedJsonlPath) {
         try {
           await fs.access(persistedJsonlPath);
-          const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(persistedJsonlPath);
+          const { lastAssistantSnippet, currentAction } = await provider.readRuntimeSnapshot(persistedJsonlPath);
           return { lastAssistantSnippet, currentAction, jsonlPath: persistedJsonlPath };
         } catch { /* fall through */ }
       }
@@ -511,7 +211,7 @@ class StatusManager {
       if (persistedSessionId && provider.id === CODEX_PROVIDER_ID) {
         const codexSession = await findCodexSessionById(persistedSessionId);
         if (codexSession?.jsonlPath) {
-          const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(codexSession.jsonlPath);
+          const { lastAssistantSnippet, currentAction } = await provider.readRuntimeSnapshot(codexSession.jsonlPath);
           return { lastAssistantSnippet, currentAction, jsonlPath: codexSession.jsonlPath };
         }
       }
@@ -522,7 +222,7 @@ class StatusManager {
       return { lastAssistantSnippet: null, currentAction: null, jsonlPath: session.jsonlPath ?? null };
     }
 
-    const { lastAssistantSnippet, currentAction } = await checkJsonlIdle(session.jsonlPath);
+    const { lastAssistantSnippet, currentAction } = await provider.readRuntimeSnapshot(session.jsonlPath);
     return { lastAssistantSnippet, currentAction, jsonlPath: session.jsonlPath };
   }
 
@@ -819,7 +519,10 @@ class StatusManager {
   private async saveSessionHistory(tabId: string, entry: ITabStatusEntry, prevBusySince: number | null | undefined, cancelled: boolean): Promise<void> {
     if (!entry.lastUserMessage) return;
 
-    const stats = entry.jsonlPath ? await parseJsonlStats(entry.jsonlPath) : null;
+    const provider = entry.agentProviderId ? getProvider(entry.agentProviderId) : getProviderByPanelType(entry.panelType);
+    const stats = entry.jsonlPath && provider
+      ? await provider.readSessionHistoryStats(entry.jsonlPath)
+      : null;
     const { workspaces } = await getWorkspaces();
     const ws = workspaces.find((w) => w.id === entry.workspaceId);
     const now = Date.now();
@@ -970,9 +673,7 @@ class StatusManager {
     this.broadcast({ type: 'status:hook-event', tabId, event: entry.lastEvent });
 
     const prevState = entry.cliState;
-    const newState = prevState === 'cancelled'
-      ? prevState
-      : deriveStateFromEvent(entry.lastEvent, prevState);
+    const newState = deriveAgentCliState(entry.lastEvent, prevState);
 
     hookLog.debug(
       { tabId, event: eventName, notificationType, seq, prevState, newState, transition: prevState !== newState },
@@ -990,8 +691,10 @@ class StatusManager {
     }
 
     if (eventName === 'stop' && entry.jsonlPath) {
-      const refreshSnippet = () => {
-        checkJsonlIdle(entry.jsonlPath!).then(({ currentAction, lastAssistantSnippet, reset }) => {
+      const refreshSnippet = (force = false) => {
+        const provider = getProviderByPanelType(entry.panelType);
+        if (!provider) return;
+        provider.readRuntimeSnapshot(entry.jsonlPath!, { force }).then(({ currentAction, lastAssistantSnippet, reset }) => {
           let updated = false;
           if (reset) {
             if (entry.currentAction !== null) { entry.currentAction = null; updated = true; }
@@ -1011,8 +714,7 @@ class StatusManager {
       };
       refreshSnippet();
       setTimeout(() => {
-        jsonlIdleCache.delete(entry.jsonlPath!);
-        refreshSnippet();
+        refreshSnippet(true);
       }, 500);
     }
   }
@@ -1040,26 +742,28 @@ class StatusManager {
     return true;
   }
 
-  applyCodexHookMeta(
+  applyAgentHookMeta(
+    providerId: string,
     tmuxSession: string,
-    meta: {
-      sessionId?: string | null;
-      jsonlPath?: string | null;
-      lastUserMessage?: string | null;
-      agentSummary?: string | null;
-      clearMessages?: boolean;
-      permissionRequest?: IPermissionRequest | null;
-    },
+    meta: IAgentHookMetaPatch,
   ): { tabId: string; cliState: TCliState } | null {
     const tabId = this.findTabIdBySession(tmuxSession);
     if (!tabId) return null;
     const entry = this.tabs.get(tabId);
     if (!entry) return null;
+    const expectedProvider = getProviderByPanelType(entry.panelType);
+    if (expectedProvider && expectedProvider.id !== providerId) {
+      hookLog.debug(
+        { providerId, expectedProviderId: expectedProvider.id, tabId },
+        'provider hook meta panel mismatch',
+      );
+      return null;
+    }
 
     let changed = false;
 
-    if (entry.agentProviderId !== 'codex') {
-      entry.agentProviderId = 'codex';
+    if (entry.agentProviderId !== providerId) {
+      entry.agentProviderId = providerId;
       changed = true;
     }
     if (meta.sessionId !== undefined && entry.agentSessionId !== meta.sessionId) {
@@ -1089,7 +793,7 @@ class StatusManager {
     }
 
     if (changed) {
-      const provider = getProviderByPanelType(entry.panelType);
+      const provider = expectedProvider ?? getProvider(providerId);
       if (provider) {
         updateTabAgentState(entry.tmuxSession, provider, {
           ...(meta.sessionId !== undefined ? { sessionId: meta.sessionId } : {}),
@@ -1409,7 +1113,9 @@ class StatusManager {
       return;
     }
 
-    const { currentAction, lastAssistantSnippet, reset, interrupted, lastEntryTs } = await checkJsonlIdle(jsonlPath);
+    const provider = getProviderByPanelType(entry.panelType);
+    if (!provider) return;
+    const { currentAction, lastAssistantSnippet, reset, interrupted, lastEntryTs } = await provider.readRuntimeSnapshot(jsonlPath);
     if (entry.agentProviderId === CODEX_PROVIDER_ID || entry.panelType === 'codex-cli') {
       cacheCodexRateLimitsFromJsonl(jsonlPath).catch(() => {});
     }

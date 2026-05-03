@@ -11,6 +11,8 @@ import {
 } from '@/lib/claude-command';
 import { writeClaudePromptFile } from '@/lib/claude-prompt';
 import { runClaudePreflight } from '@/lib/providers/claude/preflight';
+import { readClaudeRuntimeSnapshot } from '@/lib/providers/claude/runtime-snapshot';
+import { readClaudeSessionHistoryStats } from '@/lib/providers/claude/session-history-stats';
 import type { IAgentProvider } from '@/lib/providers/types';
 import type { ITab, IAgentState } from '@/types/terminal';
 
@@ -96,6 +98,8 @@ export const claudeProvider: IAgentProvider = {
 
   parsePaneTitle,
   sessionIdFromJsonlPath,
+  readRuntimeSnapshot: readClaudeRuntimeSnapshot,
+  readSessionHistoryStats: readClaudeSessionHistoryStats,
   preflight: runClaudePreflight,
   writeWorkspacePrompt: writeClaudePromptFile,
 };

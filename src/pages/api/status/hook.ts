@@ -4,7 +4,8 @@ import { getStatusManager } from '@/lib/status-manager';
 import { createLogger } from '@/lib/logger';
 import { isRequestAllowed } from '@/lib/access-filter';
 import { translateClaudeHookEvent } from '@/lib/providers/claude/hook-handler';
-import { processCodexHookPayload } from '@/lib/providers/codex/hook-handler';
+import { processCodexHookPayload, shouldEmitCodexHookEvent } from '@/lib/providers/codex/hook-handler';
+import { codexHookEvents } from '@/lib/providers/codex/hook-events';
 
 const log = createLogger('hooks');
 
@@ -39,12 +40,24 @@ const handleCodexHook = (req: NextApiRequest, res: NextApiResponse) => {
     { tmuxSession, event: payload.hook_event_name, source: payload.source },
     `codex ${payload.hook_event_name ?? 'unknown'}`,
   );
-  const { result, event } = processCodexHookPayload(tmuxSession, payload);
+  const statusManager = getStatusManager();
+  const { result, translation } = processCodexHookPayload(payload);
+  const applied = translation.meta
+    ? statusManager.applyAgentHookMeta('codex', tmuxSession, translation.meta)
+    : null;
+  if (!applied) {
+    log.debug({ tmuxSession, event: payload.hook_event_name, reason: 'unknown-session' }, 'codex hook skipped');
+    return res.status(204).end();
+  }
+  if (translation.sessionInfo) {
+    codexHookEvents.emit('session-info', tmuxSession, translation.sessionInfo);
+    if (translation.clearSession) codexHookEvents.emit('session-clear', tmuxSession);
+  }
   if (!result.ok) {
     log.debug({ tmuxSession, event: payload.hook_event_name, reason: result.reason }, 'codex hook skipped');
   }
-  if (event) {
-    getStatusManager().handleProviderEvent('codex', tmuxSession, event);
+  if (translation.event && shouldEmitCodexHookEvent(payload, applied.cliState)) {
+    statusManager.handleProviderEvent('codex', tmuxSession, translation.event);
   }
   return res.status(204).end();
 };

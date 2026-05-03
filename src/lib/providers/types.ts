@@ -1,5 +1,7 @@
 import type { ISessionInfo } from '@/types/timeline';
 import type { ITab, TPanelType, IWorkspace } from '@/types/terminal';
+import type { ICurrentAction } from '@/types/status';
+import type { IPermissionRequest } from '@/types/codex-permission';
 
 export interface IAgentResumeCommandOptions {
   workspaceId?: string;
@@ -29,6 +31,43 @@ export interface IAgentPreflight {
   version: string | null;
   binaryPath: string | null;
   loggedIn: boolean;
+}
+
+export interface IAgentRuntimeSnapshot {
+  idle: boolean;
+  stale: boolean;
+  lastAssistantSnippet: string | null;
+  currentAction: ICurrentAction | null;
+  reset: boolean;
+  lastEntryTs: number | null;
+  staleMs: number;
+  interrupted: boolean;
+}
+
+export interface IAgentSessionHistoryStats {
+  toolUsage: Record<string, number>;
+  touchedFiles: string[];
+  lastAssistantText: string | null;
+  lastUserText: string | null;
+  firstUserTs: number | null;
+  lastAssistantTs: number | null;
+  turnDurationMs: number | null;
+}
+
+export interface IAgentHookMetaPatch {
+  sessionId?: string | null;
+  jsonlPath?: string | null;
+  lastUserMessage?: string | null;
+  agentSummary?: string | null;
+  clearMessages?: boolean;
+  permissionRequest?: IPermissionRequest | null;
+}
+
+export interface IAgentHookTranslation {
+  meta?: IAgentHookMetaPatch;
+  event?: TAgentWorkStateEvent | null;
+  sessionInfo?: ISessionInfo | null;
+  clearSession?: boolean;
 }
 
 /**
@@ -97,6 +136,8 @@ export interface IAgentProvider {
 
   parsePaneTitle(paneTitle: string | null): string | null;
   sessionIdFromJsonlPath(jsonlPath: string | null | undefined): string | null;
+  readRuntimeSnapshot(jsonlPath: string, options?: { force?: boolean }): Promise<IAgentRuntimeSnapshot>;
+  readSessionHistoryStats(jsonlPath: string): Promise<IAgentSessionHistoryStats>;
   preflight(): Promise<IAgentPreflight>;
   writeWorkspacePrompt?(ws: IWorkspace): Promise<void>;
 
