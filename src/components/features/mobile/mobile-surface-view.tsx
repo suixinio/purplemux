@@ -775,6 +775,7 @@ const MobileSurfaceView = ({
           modeName={agentModePrompt.displayName}
           onSwitch={handleSwitchToAgentMode}
           onDismiss={() => setAgentModePrompt(null)}
+          className="bottom-28"
         />
       )}
 

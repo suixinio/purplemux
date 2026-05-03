@@ -1,19 +1,26 @@
 import { X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface IPaneAgentModePromptProps {
   modeName: string;
   onSwitch: () => void;
   onDismiss: () => void;
+  className?: string;
 }
 
-const PaneAgentModePrompt = ({ modeName, onSwitch, onDismiss }: IPaneAgentModePromptProps) => {
+const PaneAgentModePrompt = ({ modeName, onSwitch, onDismiss, className }: IPaneAgentModePromptProps) => {
   const t = useTranslations('terminal');
   const tc = useTranslations('common');
 
   return (
-    <div className="absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-lg animate-[fadeIn_200ms_ease-out]">
+    <div
+      className={cn(
+        'absolute right-3 bottom-3 z-20 flex items-center gap-2 rounded-lg border border-border bg-card px-3 py-2 shadow-lg animate-[fadeIn_200ms_ease-out]',
+        className,
+      )}
+    >
       <span className="text-xs text-muted-foreground">{t('switchToAgentMode', { name: modeName })}</span>
       <Button
         variant="default"
