@@ -42,7 +42,7 @@ const canSwitchMode = (panelType: TPanelType) =>
   panelType === 'terminal' || panelType === 'claude-code' || panelType === 'codex-cli';
 
 const getButtonLabel = (mode: TModeButton) =>
-  mode.startAction ? `Start ${mode.label}` : mode.label;
+  mode.startAction ? `Start ${mode.label} Agent` : mode.label;
 
 interface IMobileTabHeaderProps {
   tabId: string;
@@ -83,7 +83,7 @@ const MobileTabHeader = ({
     ...(visibleAgentPanelType
       ? [{
           type: visibleAgentPanelType,
-          label: visibleAgentPanelType === 'codex-cli' ? 'Codex' : 'Claude',
+          label: 'Agent',
         }]
       : [
           { type: 'claude-code' as const, label: 'Claude', startAction: true },
