@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslations } from 'next-intl';
 import { FolderCode, GitCompareArrows } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
@@ -16,10 +16,16 @@ import isElectron from '@/hooks/use-is-electron';
 import SystemResources from '@/components/layout/system-resources';
 import { buildEditorUrl, isSafeEditorTarget, isWebEditorUrl } from '@/lib/editor-url';
 import { EditorIcon } from '@/components/icons/editor-icons';
+import useGitStatusStore, {
+  formatGitStatusSummary,
+  getGitStatusIndicators,
+} from '@/hooks/use-git-status-store';
+import type { TGitStatusIndicatorTone } from '@/hooks/use-git-status-store';
 
 const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '::1']);
 const isLocalAccess = typeof window !== 'undefined'
   && LOCAL_HOSTNAMES.has(window.location.hostname);
+const GIT_STATUS_REFRESH_MS = 15_000;
 
 const EqualizeIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,6 +60,12 @@ interface IContentHeaderProps {
   onToggleGitPanel: () => void;
 }
 
+const gitIndicatorToneClass: Record<TGitStatusIndicatorTone, string> = {
+  dirty: 'rounded-sm bg-muted/70 px-1 text-foreground/80',
+  sync: 'text-muted-foreground/75',
+  stash: 'text-muted-foreground/65',
+};
+
 const ContentHeader = ({
   activePaneId,
   root,
@@ -77,6 +89,31 @@ const ContentHeader = ({
   const activeTabCwd = useTabMetadataStore(
     (state) => (activeTab?.id ? state.metadata[activeTab.id]?.cwd : undefined),
   );
+  const gitPhase = useGitStatusStore((state) => state.phase);
+  const gitStatus = useGitStatusStore((state) => state.status);
+  const gitBranch = useGitStatusStore((state) => state.branch);
+  const resetGitStatusForTarget = useGitStatusStore((state) => state.resetForTarget);
+  const fetchGitStatusForTarget = useGitStatusStore((state) => state.fetchForTarget);
+
+  const gitCwdKey = activeTabCwd || activeTab?.cwd || activeTab?.sessionName || null;
+  const gitTmuxSession = activeTab?.sessionName ?? null;
+  const gitShortcut = `${mod}⇧F`;
+  const gitIndicators = getGitStatusIndicators(gitStatus);
+  const gitTooltipLabel = `${formatGitStatusSummary(gitPhase, gitBranch, gitStatus, 'Git panel')} (${gitShortcut})`;
+  const hasGitInlineStatus = gitIndicators.length > 0 || gitPhase === 'error';
+
+  useEffect(() => {
+    const target = { cwdKey: gitCwdKey, tmuxSession: gitTmuxSession };
+    resetGitStatusForTarget(target);
+    void fetchGitStatusForTarget(target);
+
+    if (!gitCwdKey || !gitTmuxSession) return undefined;
+
+    const timer = window.setInterval(() => {
+      void fetchGitStatusForTarget(target);
+    }, GIT_STATUS_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [fetchGitStatusForTarget, gitCwdKey, gitTmuxSession, resetGitStatusForTarget]);
 
   const editorUrl = useConfigStore((state) => state.editorUrl);
   const editorPreset = useConfigStore((state) => state.editorPreset);
@@ -243,7 +280,8 @@ const ContentHeader = ({
             <Tooltip>
               <TooltipTrigger
                 className={cn(
-                  'flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors',
+                  'flex h-7 min-w-7 items-center justify-center rounded text-muted-foreground transition-colors',
+                  hasGitInlineStatus && 'gap-1 px-1.5',
                   isGitPanelOpen
                     ? 'bg-accent text-foreground'
                     : 'hover:bg-accent hover:text-foreground',
@@ -253,8 +291,23 @@ const ContentHeader = ({
                 aria-label="Toggle Git panel"
               >
                 <GitCompareArrows className="h-3.5 w-3.5" />
+                {gitPhase === 'error' && (
+                  <span className="text-[10px] font-semibold leading-none text-negative/70" aria-hidden="true">!</span>
+                )}
+                {gitIndicators.map((indicator) => (
+                  <span
+                    key={indicator.key}
+                    className={cn(
+                      'flex h-4 min-w-0 items-center justify-center text-[10px] font-medium leading-none',
+                      gitIndicatorToneClass[indicator.tone],
+                    )}
+                    aria-hidden="true"
+                  >
+                    {indicator.label}
+                  </span>
+                ))}
               </TooltipTrigger>
-              <TooltipContent side="bottom">Git panel ({mod}⇧F)</TooltipContent>
+              <TooltipContent side="bottom">{gitTooltipLabel}</TooltipContent>
             </Tooltip>
             <ShortcutKey
               mac="⌘⇧F"

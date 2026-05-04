@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Plus, GitCompareArrows, Copy, History, MessageSquare, TerminalSquare } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
@@ -8,6 +8,11 @@ import CopyPaneDrawer from '@/components/features/workspace/copy-pane-drawer';
 import useTabStore from '@/hooks/use-tab-store';
 import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
+import useGitStatusStore, {
+  formatGitStatusSummary,
+  getGitStatusIndicators,
+} from '@/hooks/use-git-status-store';
+import type { TGitStatusIndicatorTone } from '@/hooks/use-git-status-store';
 import { getAgentPanelTypeFromProvider, isAgentPanel, tryAgentSwitch } from '@/lib/agent-switch-lock';
 import {
   Drawer,
@@ -30,6 +35,13 @@ import type { TPanelType } from '@/types/terminal';
 
 const iconButtonClassName = 'relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground';
 const iconClassName = 'h-4 w-4 shrink-0';
+const GIT_STATUS_REFRESH_MS = 15_000;
+
+const gitIndicatorToneClass: Record<TGitStatusIndicatorTone, string> = {
+  dirty: 'rounded-sm bg-muted/70 px-1 text-foreground/80',
+  sync: 'text-muted-foreground/75',
+  stash: 'text-muted-foreground/65',
+};
 
 type TModeButton = {
   type: Extract<TPanelType, 'terminal' | 'claude-code' | 'codex-cli'>;
@@ -60,6 +72,7 @@ interface IMobileTabHeaderProps {
   tabId: string;
   tabName: string;
   sessionName: string | null;
+  cwdKey: string | null;
   panelType: TPanelType;
   onSwitchPanelType: (type: TPanelType) => void;
   onCreateTab: () => void;
@@ -71,6 +84,7 @@ const MobileTabHeader = ({
   tabId,
   tabName,
   sessionName,
+  cwdKey,
   panelType,
   onSwitchPanelType,
   onCreateTab,
@@ -84,6 +98,27 @@ const MobileTabHeader = ({
   const [modeDrawerOpen, setModeDrawerOpen] = useState(false);
   const showCopy = panelType === 'terminal' && !!sessionName;
   const tabEntry = useTabStore((s) => s.tabs[tabId]);
+  const gitPhase = useGitStatusStore((state) => state.phase);
+  const gitStatus = useGitStatusStore((state) => state.status);
+  const gitBranch = useGitStatusStore((state) => state.branch);
+  const resetGitStatusForTarget = useGitStatusStore((state) => state.resetForTarget);
+  const fetchGitStatusForTarget = useGitStatusStore((state) => state.fetchForTarget);
+  const gitIndicators = getGitStatusIndicators(gitStatus);
+  const gitTitle = formatGitStatusSummary(gitPhase, gitBranch, gitStatus, 'Open Git');
+  const hasGitInlineStatus = gitIndicators.length > 0 || gitPhase === 'error';
+
+  useEffect(() => {
+    const target = { cwdKey, tmuxSession: sessionName };
+    resetGitStatusForTarget(target);
+    void fetchGitStatusForTarget(target);
+
+    if (!cwdKey || !sessionName) return undefined;
+
+    const timer = window.setInterval(() => {
+      void fetchGitStatusForTarget(target);
+    }, GIT_STATUS_REFRESH_MS);
+    return () => window.clearInterval(timer);
+  }, [cwdKey, fetchGitStatusForTarget, resetGitStatusForTarget, sessionName]);
   const switchable = canSwitchMode(panelType);
   const runtimeAgentPanelType = getAgentPanelTypeFromProvider(tabEntry?.agentProviderId);
   const hasDetectedAgent = !!runtimeAgentPanelType
@@ -187,12 +222,30 @@ const MobileTabHeader = ({
         )}
 
         <button
-          className={iconButtonClassName}
+          className={cn(
+            iconButtonClassName,
+            hasGitInlineStatus && 'w-auto gap-1 px-2',
+          )}
           onClick={onOpenGit}
           aria-label="Open Git"
-          title="Open Git"
+          title={gitTitle}
         >
           <GitCompareArrows className={iconClassName} />
+          {gitPhase === 'error' && (
+            <span className="text-[10px] font-semibold leading-none text-negative/70" aria-hidden="true">!</span>
+          )}
+          {gitIndicators.map((indicator) => (
+            <span
+              key={indicator.key}
+              className={cn(
+                'flex h-4 min-w-0 items-center justify-center text-[10px] font-medium leading-none',
+                gitIndicatorToneClass[indicator.tone],
+              )}
+              aria-hidden="true"
+            >
+              {indicator.label}
+            </span>
+          ))}
         </button>
 
         <button

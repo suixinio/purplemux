@@ -297,6 +297,7 @@ const MobileTerminalPage = () => {
           tabId={selectedTabId}
           tabName={currentTabName}
           sessionName={currentTab?.sessionName ?? null}
+          cwdKey={tabMetadata?.cwd || currentTab?.cwd || currentTab?.sessionName || null}
           panelType={currentPanelType}
           onSwitchPanelType={handleSwitchPanelType}
           onCreateTab={handleOpenNewTabDialog}
