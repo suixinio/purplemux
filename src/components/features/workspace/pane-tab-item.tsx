@@ -116,15 +116,15 @@ const PaneTabItem = ({
         <>
           <TabStatusIndicator tabId={tab.id} panelType={tab.panelType} />
           {tab.panelType === 'claude-code' ? (
-            <ClaudeCodeIcon className="h-3.5 w-3.5" />
+            <ClaudeCodeIcon className="h-3 w-3" />
           ) : tab.panelType === 'codex-cli' ? (
-            <OpenAIIcon className="h-3.5 w-3.5 shrink-0 text-foreground" aria-label="Codex" />
+            <OpenAIIcon className="h-3 w-3 shrink-0 text-foreground" aria-label="Codex" />
           ) : tab.panelType === 'web-browser' ? (
-            <Globe className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'diff' ? (
-            <GitCompareArrows className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <GitCompareArrows className="h-3 w-3 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'agent-sessions' ? (
-            <History className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <History className="h-3 w-3 shrink-0 text-muted-foreground" />
           ) : (
             <ProcessIcon
               process={currentProcess ?? displayTitle}

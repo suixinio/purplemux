@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { History, Plus, Terminal, Globe } from 'lucide-react';
+import { History, Plus, Globe } from 'lucide-react';
 import Spinner from '@/components/ui/spinner';
 import ClaudeCodeIcon from '@/components/icons/claude-code-icon';
 import OpenAIIcon from '@/components/icons/openai-icon';
+import ProcessIcon from '@/components/icons/process-icon';
 import { cn } from '@/lib/utils';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -67,7 +68,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
       { key: 'claude', type: 'claude-code' as const, icon: <ClaudeCodeIcon className="h-3.5 w-3.5" />, label: t('claudeNewConversation'), startAgent: 'claude' as const },
       { key: 'codex', type: 'codex-cli' as const, icon: <OpenAIIcon className="h-3.5 w-3.5" />, label: t('codexNewConversation'), startAgent: 'codex' as const },
       { key: 'agent-sessions', type: 'agent-sessions' as const, icon: <History className="h-3.5 w-3.5 text-muted-foreground" />, label: t('sessionList') },
-      { key: 'terminal', type: 'terminal' as const, icon: <Terminal className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
+      { key: 'terminal', type: 'terminal' as const, icon: <ProcessIcon className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Terminal' },
       { key: 'web-browser', type: 'web-browser' as const, icon: <Globe className="h-3.5 w-3.5 text-muted-foreground" />, label: 'Web Browser' },
     ];
     return isMobile ? all.filter((item) => item.key !== 'web-browser') : all;
