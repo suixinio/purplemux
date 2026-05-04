@@ -7,7 +7,7 @@ export default defineConfig({
   outDir: 'dist',
   clean: true,
   external: ['next', 'react', 'react-dom', 'pino', 'pino-roll', 'pino-pretty'],
-  noExternal: ['web-push', 'jose', 'ws', 'nanoid', 'zod', 'diff'],
+  noExternal: ['web-push', 'jose', 'ws', 'nanoid', 'zod', 'diff', 'smol-toml'],
   esbuildOptions(options) {
     options.alias = {
       '@': './src',
