@@ -9,6 +9,7 @@ import { clearInputDraft } from '@/hooks/use-web-input';
 import useTabStore from '@/hooks/use-tab-store';
 import useWorkspaceStore from '@/hooks/use-workspace-store';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
+import { resolveTabNameForPanelTypeChange } from '@/lib/tab-name';
 import {
   collectPanes,
   collectAllTabs,
@@ -605,11 +606,14 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
   },
 
   updateTabPanelType: (paneId, tabId, panelType) => {
+    let resolvedName: string | undefined;
     applyPaneUpdate(set, get, paneId, (pane) => ({
       ...pane,
       tabs: pane.tabs.map((t) => {
         if (t.id !== tabId) return t;
-        const updated: ITab = { ...t, panelType };
+        const nextName = resolveTabNameForPanelTypeChange(t.name, t.panelType, panelType);
+        const updated: ITab = { ...t, panelType, name: nextName };
+        if (nextName !== t.name) resolvedName = nextName;
         if (panelType === 'codex-cli' && t.panelType === 'claude-code') {
           updated.claudeSessionId = null;
           updated.agentState = undefined;
@@ -621,7 +625,10 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     useTabStore.getState().setPanelType(tabId, panelType);
 
     const { workspaceId } = get();
-    patchApi(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), { panelType }).then((data) => {
+    patchApi(wsQuery(`/api/layout/pane/${paneId}/tabs/${tabId}`, workspaceId), {
+      panelType,
+      ...(resolvedName !== undefined ? { name: resolvedName } : {}),
+    }).then((data) => {
       if (data) applyLayoutPreserveFocus(set, get, data);
     });
   },

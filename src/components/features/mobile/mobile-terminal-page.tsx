@@ -69,6 +69,7 @@ const MobileTerminalPage = () => {
     const metadata: Record<string, ITabMetadata> = {};
     for (const pane of collectPanes(layout.layout.root)) {
       for (const tab of pane.tabs) {
+        if (tab.panelType === 'agent-sessions') continue;
         if (tab.title || tab.cwd) {
           metadata[tab.id] = { title: tab.title, cwd: tab.cwd };
         }
@@ -172,11 +173,12 @@ const MobileTerminalPage = () => {
   const currentTabName = useMemo(() => {
     if (!currentTab) return '';
     if (currentTab.name) return currentTab.name;
+    if (currentTab.panelType === 'agent-sessions') return t('sessionList');
     const rawTitle = tabMetadata?.title || currentTab.title;
     const formatted = rawTitle ? formatTabTitle(rawTitle, currentTab.panelType) : '';
     if (formatted) return formatted;
-    return `Tab ${currentTab.order + 1}`;
-  }, [currentTab, tabMetadata]);
+    return '';
+  }, [currentTab, tabMetadata, t]);
 
   const handleSwitchPanelType = useCallback((next: TPanelType) => {
     if (!currentPane || !selectedTabId) return;

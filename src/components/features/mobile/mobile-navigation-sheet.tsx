@@ -70,6 +70,7 @@ const MobileNavigationSheet = ({
   onOpenSettings,
 }: IMobileNavigationSheetProps) => {
   const t = useTranslations('mobile');
+  const tt = useTranslations('terminal');
   const tc = useTranslations('common');
   const ts = useTranslations('sidebar');
   const router = useRouter();
@@ -141,11 +142,12 @@ const MobileNavigationSheet = ({
 
   const getTabDisplayName = (tab: ITab) => {
     if (tab.name) return tab.name;
+    if (tab.panelType === 'agent-sessions') return tt('sessionList');
     const meta = metadata[tab.id];
     const rawTitle = meta?.title || tab.title;
     const formatted = rawTitle ? formatTabTitle(rawTitle, tab.panelType) : '';
     if (formatted) return formatted;
-    return `Tab ${tab.order + 1}`;
+    return '';
   };
 
   const tabs = useTabStore((s) => s.tabs);

@@ -167,6 +167,7 @@ const TerminalPage = () => {
     const metadata: Record<string, ITabMetadata> = {};
     for (const pane of collectPanes(layout.layout.root)) {
       for (const tab of pane.tabs) {
+        if (tab.panelType === 'agent-sessions') continue;
         if (tab.title || tab.cwd) {
           metadata[tab.id] = { title: tab.title, cwd: tab.cwd };
         }

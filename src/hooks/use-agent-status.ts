@@ -60,6 +60,7 @@ const useAgentStatus = () => {
             case 'status:sync': {
               useTabStore.getState().syncAllFromServer(msg.tabs);
               for (const [tabId, entry] of Object.entries(msg.tabs)) {
+                if (entry.panelType === 'agent-sessions') continue;
                 if (entry.paneTitle && !useTabMetadataStore.getState().metadata[tabId]?.title) {
                   useTabMetadataStore.getState().setTitle(tabId, formatTabTitle(entry.paneTitle, entry.panelType));
                 }
@@ -90,7 +91,7 @@ const useAgentStatus = () => {
                 lastEvent: msg.lastEvent,
                 eventSeq: msg.eventSeq,
               });
-              if (msg.paneTitle) {
+              if (msg.paneTitle && msg.panelType !== 'agent-sessions') {
                 useTabMetadataStore.getState().setTitle(msg.tabId, formatTabTitle(msg.paneTitle, msg.panelType));
               }
               break;

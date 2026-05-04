@@ -19,6 +19,7 @@ import type { ITab, TLayoutNode, IPaneNode, ILayoutData, TPanelType, IDiffSettin
 import type { TCliState } from '@/types/timeline';
 import type { IAgentProvider } from '@/lib/providers/types';
 import { claudeProvider } from '@/lib/providers/claude';
+import { defaultTabNameForPanelType, resolveTabNameForPanelTypeChange } from '@/lib/tab-name';
 
 const log = createLogger('layout');
 
@@ -307,7 +308,7 @@ export const addTabToPane = async (wsId: string, paneId: string, name?: string, 
     }
 
     const nextOrder = pane.tabs.length > 0 ? Math.max(...pane.tabs.map((t) => t.order)) + 1 : 0;
-    const defaultName = isWebBrowser ? 'Web Browser' : panelType === 'agent-sessions' ? 'Session List' : '';
+    const defaultName = defaultTabNameForPanelType(panelType as ITab['panelType']);
     const tabName = name?.trim() || defaultName;
     const tab: ITab = { id: tabId, sessionName, name: tabName, order: nextOrder, ...(cwd ? { cwd } : {}), ...(panelType ? { panelType: panelType as ITab['panelType'] } : {}) };
 
@@ -644,7 +645,7 @@ export const splitPaneInLayout = async (
     await createSession(sessionName, 80, 24, cwd);
   }
 
-  const defaultName = isWebBrowser ? 'Web Browser' : panelType === 'agent-sessions' ? 'Session List' : '';
+  const defaultName = defaultTabNameForPanelType(panelType as ITab['panelType']);
   const tab: ITab = { id: tabId, sessionName, name: defaultName, order: 0, ...(cwd ? { cwd } : {}) };
   if (panelType) tab.panelType = panelType as ITab['panelType'];
 
@@ -803,7 +804,12 @@ export const patchTab = async (
     if (!tab) return null;
     const resolvedTitle = patch.title !== undefined ? (authoritativeTitle ?? patch.title) : undefined;
     if (patch.name !== undefined) tab.name = patch.name;
-    if (patch.panelType !== undefined) tab.panelType = patch.panelType;
+    if (patch.panelType !== undefined) {
+      if (patch.name === undefined) {
+        tab.name = resolveTabNameForPanelTypeChange(tab.name, tab.panelType, patch.panelType);
+      }
+      tab.panelType = patch.panelType;
+    }
     if (resolvedTitle !== undefined) tab.title = resolvedTitle;
     if (patch.cwd !== undefined) tab.cwd = authoritativeCwd ?? patch.cwd;
     if (patch.lastCommand !== undefined) tab.lastCommand = patch.lastCommand;

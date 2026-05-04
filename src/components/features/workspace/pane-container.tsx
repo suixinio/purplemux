@@ -145,9 +145,10 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const tabTitles = useTabMetadataStore(
     useShallow((state) => {
       const result: Record<string, string> = {};
-      for (const id of tabIds) {
-        const t = state.metadata[id]?.title;
-        if (t) result[id] = t;
+      for (const tab of tabs) {
+        if (tab.panelType === 'agent-sessions') continue;
+        const title = state.metadata[tab.id]?.title;
+        if (title) result[tab.id] = title;
       }
       return result;
     }),
@@ -388,7 +389,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       const tabId = activeTabIdRef.current;
       if (!tabId) return;
       const activeTab = tabsRef.current.find((t) => t.id === tabId);
-      if (activeTab?.panelType === 'web-browser') return;
+      if (!activeTab) return;
+      if (activeTab?.panelType === 'web-browser' || activeTab?.panelType === 'agent-sessions') return;
       if (title === lastTitleRef.current) return;
       lastTitleRef.current = title;
 

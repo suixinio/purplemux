@@ -68,7 +68,8 @@ const PaneTabItem = ({
     }
   };
 
-  const displayName = tab.name || displayTitle || '';
+  const typeDisplayName = tab.panelType === 'agent-sessions' ? t('sessionList') : '';
+  const displayName = tab.name || typeDisplayName || displayTitle || '';
 
   return (
     <div
