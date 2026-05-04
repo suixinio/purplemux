@@ -153,7 +153,9 @@ const useGitStatusStore = create<IGitStatusState>((set, get) => ({
     });
 
     try {
-      const statusRes = await fetch(`/api/git/status?tmuxSession=${encodeURIComponent(tmuxSession)}`, {
+      const statusParams = new URLSearchParams({ tmuxSession });
+      if (opts?.force) statusParams.set('force', 'true');
+      const statusRes = await fetch(`/api/git/status?${statusParams.toString()}`, {
         cache: 'no-store',
       });
 
@@ -177,7 +179,9 @@ const useGitStatusStore = create<IGitStatusState>((set, get) => ({
 
       let branch: string | null = null;
       try {
-        const branchRes = await fetch(`/api/git/branch?tmuxSession=${encodeURIComponent(tmuxSession)}`, {
+        const branchParams = new URLSearchParams({ tmuxSession });
+        if (opts?.force) branchParams.set('force', 'true');
+        const branchRes = await fetch(`/api/git/branch?${branchParams.toString()}`, {
           cache: 'no-store',
         });
         if (branchRes.ok) {

@@ -3,8 +3,11 @@ import useTabStore from '@/hooks/use-tab-store';
 import useTabMetadataStore from '@/hooks/use-tab-metadata-store';
 import useRateLimitsStore from '@/hooks/use-rate-limits-store';
 import useSessionHistoryStore from '@/hooks/use-session-history-store';
+import useGitStatusStore from '@/hooks/use-git-status-store';
+import { useLayoutStore } from '@/hooks/use-layout';
 import { formatTabTitle } from '@/lib/tab-title';
-import type { TStatusServerMessage } from '@/types/status';
+import { collectAllTabs } from '@/lib/layout-tree';
+import type { ILastEvent, TStatusServerMessage } from '@/types/status';
 
 const RECONNECT_BASE = 1_000;
 const RECONNECT_MAX = 30_000;
@@ -28,6 +31,24 @@ export const ackNotificationInput = (tabId: string, seq: number) => {
   if (sharedWs?.readyState === WebSocket.OPEN) {
     sharedWs.send(JSON.stringify({ type: 'status:ack-notification', tabId, seq }));
   }
+};
+
+const refreshGitStatusAfterStop = (tabId: string, event: ILastEvent) => {
+  if (event.name !== 'stop') return;
+
+  const gitState = useGitStatusStore.getState();
+  if (!gitState.cwdKey || !gitState.tmuxSession) return;
+
+  const layout = useLayoutStore.getState().layout;
+  if (!layout) return;
+
+  const tab = collectAllTabs(layout.root).find((item) => item.id === tabId);
+  if (!tab || tab.sessionName !== gitState.tmuxSession) return;
+
+  void gitState.fetchForTarget(
+    { cwdKey: gitState.cwdKey, tmuxSession: gitState.tmuxSession },
+    { force: true },
+  );
 };
 
 const useAgentStatus = () => {
@@ -98,6 +119,7 @@ const useAgentStatus = () => {
 
             case 'status:hook-event':
               useTabStore.getState().applyHookEvent(msg.tabId, msg.event);
+              refreshGitStatusAfterStop(msg.tabId, msg.event);
               break;
 
             case 'rate-limits:update':

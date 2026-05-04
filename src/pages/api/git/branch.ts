@@ -14,9 +14,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (!tmuxSession) {
     return res.status(400).json({ error: 'missing-param', message: 'tmuxSession parameter required' });
   }
+  const force = req.query.force === 'true' || req.query.force === '1';
 
   try {
-    const branch = await getGitBranch(tmuxSession);
+    const branch = await getGitBranch(tmuxSession, { force });
     return res.status(200).json({ branch });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
