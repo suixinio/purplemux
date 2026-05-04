@@ -38,7 +38,7 @@ const iconClassName = 'h-4 w-4 shrink-0';
 const GIT_STATUS_REFRESH_MS = 15_000;
 
 const gitIndicatorToneClass: Record<TGitStatusIndicatorTone, string> = {
-  dirty: 'rounded-sm bg-muted/70 px-1 text-foreground/80',
+  dirty: 'text-muted-foreground/75',
   sync: 'text-muted-foreground/75',
   stash: 'text-muted-foreground/65',
 };
