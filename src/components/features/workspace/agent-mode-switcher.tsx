@@ -124,11 +124,6 @@ const AgentModeSwitcher = ({
       });
     }
     if (mode.startAction && (mode.type === 'claude-code' || mode.type === 'codex-cli')) {
-      useTabStore.getState().setDetectedAgent(tabId, {
-        running: true,
-        providerId: providerForPanelType(mode.type),
-        panelType: mode.type,
-      });
       window.dispatchEvent(new CustomEvent('purplemux-start-agent', {
         detail: {
           paneId,

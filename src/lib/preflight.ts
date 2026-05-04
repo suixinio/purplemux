@@ -100,7 +100,7 @@ export const getPreflightStatus = async (): Promise<IPreflightResult> => {
     runCodexPreflight(),
   ]);
 
-  const coreReady = isTmuxCompatible(tmux) && git.installed && claude.installed;
+  const coreReady = isTmuxCompatible(tmux) && git.installed;
 
   const result: IPreflightResult = {
     tmux: { ...tmux, compatible: isTmuxCompatible(tmux) },

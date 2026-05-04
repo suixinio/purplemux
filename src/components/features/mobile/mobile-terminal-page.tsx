@@ -20,6 +20,7 @@ import type { TCliState } from '@/types/timeline';
 import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import useMobileLayoutActions from '@/hooks/use-mobile-layout-actions';
 import { useAutoDeleteEmptyWorkspace } from '@/hooks/use-auto-delete-empty-workspace';
+import { useAgentInstallCheck } from '@/hooks/use-agent-install-check';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 
@@ -27,6 +28,7 @@ const MobileTerminalPage = () => {
   const t = useTranslations('terminal');
   const tm = useTranslations('mobile');
   const tc = useTranslations('common');
+  const { ensureAgentInstalled, installDialogs } = useAgentInstallCheck();
   const isLoading = useWorkspaceStore((s) => s.isLoading);
   const error = useWorkspaceStore((s) => s.error);
   const activeWorkspaceId = useWorkspaceStore((s) => s.activeWorkspaceId);
@@ -189,11 +191,13 @@ const MobileTerminalPage = () => {
     if (!currentPane) return;
     let cmd: string | undefined;
     if (options?.command === 'claude-new') {
+      if (!await ensureAgentInstalled('claude')) return;
       cmd = buildClaudeLaunchCommand({
         workspaceId: activeWorkspaceId,
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
       });
     } else if (options?.command === 'codex-new') {
+      if (!await ensureAgentInstalled('codex')) return;
       try {
         cmd = await fetchCodexLaunchCommand(activeWorkspaceId);
       } catch {
@@ -208,7 +212,7 @@ const MobileTerminalPage = () => {
         useTabStore.getState().setSessionView(newTab.id, 'check');
       }
     }
-  }, [currentPane, layout, activeWorkspaceId, t]);
+  }, [currentPane, ensureAgentInstalled, layout, activeWorkspaceId, t]);
 
   const handleCloseTab = useCallback(() => {
     if (!currentPane || !selectedTabId) return;
@@ -338,6 +342,7 @@ const MobileTerminalPage = () => {
         settings={layout.layout?.diffSettings}
         onSettingsChange={layout.updateDiffSettings}
       />
+      {installDialogs}
     </>
   );
 };

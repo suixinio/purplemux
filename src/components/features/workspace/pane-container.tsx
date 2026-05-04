@@ -33,6 +33,7 @@ import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
 import useQuickPrompts from '@/hooks/use-quick-prompts';
 import useFileDrop from '@/hooks/use-file-drop';
+import { useAgentInstallCheck } from '@/hooks/use-agent-install-check';
 import PaneTabBar from '@/components/features/workspace/pane-tab-bar';
 import { formatTabTitle, parseCurrentCommand, isShellProcess } from '@/lib/tab-title';
 import { isAppShortcut, isClearShortcut, isFocusInputShortcut, isShiftEnter } from '@/lib/keyboard-shortcuts';
@@ -127,6 +128,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   const isAgentPanel = isClaudeCode || isCodex;
   const isWebBrowser = activePanelType === 'web-browser';
   const isDiff = activePanelType === 'diff';
+  const { ensureAgentInstalled, installDialogs } = useAgentInstallCheck();
 
   const { theme: terminalTheme } = useTerminalTheme();
   const configFontSize = useConfigStore((s) => s.fontSize);
@@ -701,10 +703,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     updateTabPanelType(paneId, activeTabId, next);
   }, [paneId, activeTabId, updateTabPanelType]);
 
-  const handleSendToAgent = useCallback((text: string, provider: TGitAskProvider) => {
+  const handleSendToAgent = useCallback(async (text: string, provider: TGitAskProvider) => {
+    if (!await ensureAgentInstalled(provider)) return;
     pendingAgentInputRef.current = { text, provider };
     handleSwitchPanelType(provider === 'codex' ? 'codex-cli' : 'claude-code');
-  }, [handleSwitchPanelType]);
+  }, [ensureAgentInstalled, handleSwitchPanelType]);
 
   useEffect(() => {
     const handleSidePanelAgentRequest = (event: Event) => {
@@ -714,7 +717,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
         provider?: TGitAskProvider;
       }>).detail;
       if (detail?.paneId !== paneId || !detail.text || !detail.provider) return;
-      handleSendToAgent(detail.text, detail.provider);
+      void handleSendToAgent(detail.text, detail.provider);
     };
 
     window.addEventListener('purplemux-send-to-agent', handleSidePanelAgentRequest);
@@ -790,18 +793,20 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       resumeSessionId: sessionId,
     }), [layoutWsId]);
 
-  const handleNewClaudeSession = useCallback(() => {
+  const handleNewClaudeSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('claude')) return;
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${buildClaudeCommand(null)}\r`);
-  }, [status, sendStdin, activeTabId, buildClaudeCommand]);
+  }, [status, sendStdin, activeTabId, buildClaudeCommand, ensureAgentInstalled]);
 
-  const handleRestartClaudeSession = useCallback(() => {
+  const handleRestartClaudeSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('claude')) return;
     pendingRestartRef.current = buildClaudeCommand(null);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
-  }, [status, sendStdin, activeTabId, buildClaudeCommand]);
+  }, [status, sendStdin, activeTabId, buildClaudeCommand, ensureAgentInstalled]);
 
   const buildCodexCommand = useCallback(
     () => fetchCodexLaunchCommand(layoutWsId),
@@ -818,6 +823,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const handleNewCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -828,21 +834,24 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${command}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, t]);
 
-  const handleNewClaudeFromSessionList = useCallback(() => {
+  const handleNewClaudeFromSessionList = useCallback(async () => {
+    if (!await ensureAgentInstalled('claude')) return;
     handleSwitchPanelType('claude-code');
-    handleNewClaudeSession();
-  }, [handleNewClaudeSession, handleSwitchPanelType]);
+    void handleNewClaudeSession();
+  }, [ensureAgentInstalled, handleNewClaudeSession, handleSwitchPanelType]);
 
-  const handleNewCodexFromSessionList = useCallback(() => {
+  const handleNewCodexFromSessionList = useCallback(async () => {
+    if (!await ensureAgentInstalled('codex')) return;
     handleSwitchPanelType('codex-cli');
     void handleNewCodexSession();
-  }, [handleNewCodexSession, handleSwitchPanelType]);
+  }, [ensureAgentInstalled, handleNewCodexSession, handleSwitchPanelType]);
 
   const handleSelectAgentSession = useCallback(async (session: IAgentSessionEntry) => {
     if (status !== 'connected' || !activeTabId) return;
     const nextPanelType = session.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    if (!await ensureAgentInstalled(session.provider)) return;
     handleSwitchPanelType(nextPanelType);
     useTabStore.getState().setSessionView(activeTabId, 'check');
 
@@ -860,10 +869,11 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     }
 
     sendStdin(`${buildClaudeCommand(session.sessionId)}\r`);
-  }, [activeTabId, buildClaudeCommand, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, status, t]);
+  }, [activeTabId, buildClaudeCommand, ensureAgentInstalled, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, status, t]);
 
   const handleRelaunchCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -874,7 +884,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${command}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, t]);
 
   useEffect(() => {
     codexRelaunchRef.current = handleRelaunchCodexSession;
@@ -882,6 +892,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
 
   const handleRestartCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -893,7 +904,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendCodexQuitCommand(sendStdin);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, t]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, t]);
 
   useEffect(() => {
     const handleStartAgentRequest = (event: Event) => {
@@ -904,24 +915,28 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       }>).detail;
       if (detail?.paneId !== paneId || detail.tabId !== activeTabId) return;
       if (detail.provider !== 'claude' && detail.provider !== 'codex') return;
-      const panelType = detail.provider === 'codex' ? 'codex-cli' : 'claude-code';
-      useTabStore.getState().setDetectedAgent(activeTabId, {
-        running: true,
-        checkedAt: Date.now(),
-        providerId: detail.provider,
-        panelType,
-      });
-      handleSwitchPanelType(panelType);
-      if (detail.provider === 'codex') {
-        void handleNewCodexSession();
-        return;
-      }
-      handleNewClaudeSession();
+      const provider = detail.provider;
+      void (async () => {
+        if (!await ensureAgentInstalled(provider)) return;
+        const panelType = provider === 'codex' ? 'codex-cli' : 'claude-code';
+        useTabStore.getState().setDetectedAgent(activeTabId, {
+          running: true,
+          checkedAt: Date.now(),
+          providerId: provider,
+          panelType,
+        });
+        handleSwitchPanelType(panelType);
+        if (provider === 'codex') {
+          void handleNewCodexSession();
+          return;
+        }
+        void handleNewClaudeSession();
+      })();
     };
 
     window.addEventListener('purplemux-start-agent', handleStartAgentRequest);
     return () => window.removeEventListener('purplemux-start-agent', handleStartAgentRequest);
-  }, [activeTabId, handleNewClaudeSession, handleNewCodexSession, handleSwitchPanelType, paneId]);
+  }, [activeTabId, ensureAgentInstalled, handleNewClaudeSession, handleNewCodexSession, handleSwitchPanelType, paneId]);
 
   const handleSwitchToAgentMode = useCallback(async () => {
     const prompt = agentModePrompt;
@@ -933,6 +948,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
     const resumeSessionId = prompt.resumable ? prompt.sessionId : null;
 
     if (prompt.panelType === 'codex-cli') {
+      if (!await ensureAgentInstalled('codex')) return;
       let command: string;
       try {
         command = await fetchCodexLaunchCommand(layoutWsId, resumeSessionId);
@@ -947,11 +963,12 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
       return;
     }
 
+    if (!await ensureAgentInstalled('claude')) return;
     pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('\x03');
     setTimeout(() => sendStdin('\x03'), 300);
-  }, [activeTabId, agentModePrompt, status, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, t, buildClaudeCommand]);
+  }, [activeTabId, agentModePrompt, status, ensureAgentInstalled, handleSwitchPanelType, layoutWsId, markAgentLaunch, sendStdin, t, buildClaudeCommand]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
@@ -1315,6 +1332,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
             onReconnect={reconnect}
           />
         )}
+        {installDialogs}
       </div>
     </div>
   );

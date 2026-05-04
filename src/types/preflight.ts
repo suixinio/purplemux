@@ -24,4 +24,4 @@ export interface IRuntimePreflightResult {
 }
 
 export const isRuntimeOk = (status: IRuntimePreflightResult): boolean =>
-  status.tmux.installed && status.tmux.compatible && status.git.installed && status.claude.installed;
+  status.tmux.installed && status.tmux.compatible && status.git.installed;

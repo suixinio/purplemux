@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useTheme } from 'next-themes';
-import { AlertTriangle, ArrowLeft, ArrowRight, Check, Download, Eye, EyeOff, Globe, ListChecks, Lock, Loader2, LogIn, Network, RefreshCcw, Terminal, Bot, Sun, Moon, Monitor, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, ArrowRight, Check, Download, Eye, EyeOff, Globe, ListChecks, Lock, Loader2, Network, RefreshCcw, Terminal, Bot, Sun, Moon, Monitor, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,7 +132,7 @@ const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWiza
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { status: preflightStatus, checking: preflightChecking } = usePreflight({
     onReady: (data) => {
-      if (data.tmux.installed && data.tmux.compatible && data.git.installed && data.claude.installed && data.claude.loggedIn) {
+      if (data.tmux.installed && data.tmux.compatible && data.git.installed) {
         setStep('password');
       }
     },
@@ -263,45 +263,10 @@ const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWiza
               <Loader2 className="h-5 w-5 animate-spin" />
               <span className="text-sm">{t('checking')}</span>
             </div>
-          ) : preflightStatus && preflightStatus.tmux.installed && preflightStatus.tmux.compatible &&
-            preflightStatus.git.installed && preflightStatus.claude.installed &&
-            !preflightStatus.claude.loggedIn ? (
-            <div className="flex flex-col gap-4">
-              <p className="text-sm text-muted-foreground">{t('claudeLoginDescription')}</p>
-              <div className="flex flex-col gap-2">
-                <Button
-                  size="lg"
-                  className="h-12 w-full"
-                  onClick={() => setInstallTarget({ command: 'claude-login', label: t('claudeLogin') })}
-                >
-                  <LogIn className="mr-1 h-4 w-4" />
-                  {t('claudeLogin')}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="lg"
-                  className="h-12 w-full"
-                  onClick={() => window.location.reload()}
-                >
-                  <RefreshCcw className="mr-1 h-4 w-4" />
-                  {tc('refresh')}
-                </Button>
-              </div>
-              {installTarget && (
-                <InstallDialog
-                  open
-                  onOpenChange={() => setInstallTarget(null)}
-                  command={installTarget.command}
-                  label={installTarget.label}
-                />
-              )}
-            </div>
           ) : preflightStatus && !(
             preflightStatus.tmux.installed && preflightStatus.tmux.compatible &&
-            preflightStatus.git.installed &&
-            preflightStatus.claude.installed
+            preflightStatus.git.installed
           ) ? (() => {
-            const claudeNeedsPath = !preflightStatus.claude.installed && !!preflightStatus.claude.binaryPath;
             const brewInstalled = preflightStatus.brew?.installed ?? true;
             const cltInstalled = preflightStatus.clt?.installed ?? true;
             const missingTools: { name: string; show: boolean }[] = [
@@ -309,7 +274,6 @@ const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWiza
               { name: 'Homebrew', show: !brewInstalled },
               { name: 'tmux', show: !(preflightStatus.tmux.installed && preflightStatus.tmux.compatible) },
               { name: 'Git', show: !preflightStatus.git.installed },
-              { name: claudeNeedsPath ? t('claudePathMissing') : 'Claude Code', show: !preflightStatus.claude.installed },
             ];
 
             const needsUpgrade = preflightStatus.tmux.installed && !preflightStatus.tmux.compatible;
@@ -322,9 +286,8 @@ const OnboardingWizard = ({ onComplete, hostEnvLocked = false }: IOnboardingWiza
                 ? { command: needsUpgrade ? 'tmux-upgrade' : 'tmux-install', label: needsUpgrade ? t('upgradeTmux') : t('installTmux') }
               : !preflightStatus.git.installed
                 ? { command: 'git', label: t('installGit') }
-              : claudeNeedsPath
-                ? { command: 'claude-path', label: t('fixClaudePath') }
-              : { command: 'claude', label: t('installClaude') };
+              : null;
+            if (!nextInstall) return null;
 
             return (
             <div className="flex flex-col gap-4">

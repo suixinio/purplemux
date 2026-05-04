@@ -15,6 +15,7 @@ import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { notifyCodexLaunchFailed } from '@/lib/codex-notifications';
 import useConfigStore from '@/hooks/use-config-store';
+import { useAgentInstallCheck } from '@/hooks/use-agent-install-check';
 
 interface IPaneNewTabMenuProps {
   paneId: string;
@@ -59,6 +60,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
   const isMobile = useIsMobile();
   const wsId = useLayoutStore((s) => s.workspaceId);
   const codexI18n = useCodexI18n();
+  const { ensureAgentInstalled, installDialogs } = useAgentInstallCheck();
 
   const menuItems = useMemo(() => {
     const all = [
@@ -102,17 +104,19 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
   }, [open, activeIndex]);
 
   const launchCodexNewConversation = useCallback(async () => {
+    if (!await ensureAgentInstalled('codex')) return;
     try {
       const cmd = await fetchCodexLaunchCommand(wsId);
       onCreateTab('codex-cli', { command: cmd });
     } catch {
       notifyCodexLaunchFailed(codexI18n);
     }
-  }, [codexI18n, onCreateTab, wsId]);
+  }, [codexI18n, ensureAgentInstalled, onCreateTab, wsId]);
 
-  const handleStartAgent = useCallback((agent: 'claude' | 'codex') => {
+  const handleStartAgent = useCallback(async (agent: 'claude' | 'codex') => {
     setOpen(false);
     if (agent === 'claude') {
+      if (!await ensureAgentInstalled('claude')) return;
       const cmd = buildClaudeLaunchCommand({
         workspaceId: wsId,
         dangerouslySkipPermissions: useConfigStore.getState().dangerouslySkipPermissions,
@@ -121,7 +125,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
       return;
     }
     void launchCodexNewConversation();
-  }, [launchCodexNewConversation, onCreateTab, wsId]);
+  }, [ensureAgentInstalled, launchCodexNewConversation, onCreateTab, wsId]);
 
   const handleOpenList = (item: typeof menuItems[number]) => {
     setOpen(false);
@@ -130,7 +134,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
 
   const handleSelect = (item: typeof menuItems[number]) => {
     if ('startAgent' in item && item.startAgent) {
-      handleStartAgent(item.startAgent);
+      void handleStartAgent(item.startAgent);
       return;
     }
     handleOpenList(item);
@@ -185,7 +189,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
               <button
                 ref={(el) => { itemRefs.current[idx] = el; }}
                 className="flex min-w-0 flex-1 items-center gap-2 rounded-sm px-2.5 py-2 text-xs text-foreground hover:bg-accent focus:outline-none"
-                onClick={() => handleSelect(item)}
+                onClick={() => void handleSelect(item)}
               >
                 {item.icon}
                 <span className="min-w-0 flex-1 truncate text-left">
@@ -197,6 +201,7 @@ const PaneNewTabMenu = ({ paneId, isCreating, activePanelType, onCreateTab }: IP
         </PopoverContent>
       </Popover>
     </div>
+    {installDialogs}
     </>
   );
 };

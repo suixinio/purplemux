@@ -27,9 +27,6 @@ const getNextInstall = (
   if (!status.git.installed) {
     return { command: 'git', label: t('installGit') };
   }
-  if (!status.claude.installed) {
-    return { command: 'claude', label: t('installClaude') };
-  }
   return null;
 };
 
@@ -52,7 +49,6 @@ const ToolsRequiredPage = () => {
     ? [
         { name: 'tmux', ok: status.tmux.installed && status.tmux.compatible, version: status.tmux.version },
         { name: 'Git', ok: status.git.installed, version: status.git.version },
-        { name: 'Claude CLI', ok: status.claude.installed, version: status.claude.version },
       ]
     : [];
 

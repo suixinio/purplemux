@@ -26,6 +26,7 @@ import { useLayoutStore } from '@/hooks/use-layout';
 import useConfigStore, { type TGitAskProvider } from '@/hooks/use-config-store';
 import useTrustPromptDetector from '@/hooks/use-trust-prompt-detector';
 import useCodexUpdatePromptDetector from '@/hooks/use-codex-update-prompt-detector';
+import { useAgentInstallCheck } from '@/hooks/use-agent-install-check';
 import { buildClaudeLaunchCommand } from '@/lib/providers/claude/client';
 import { fetchCodexLaunchCommand } from '@/lib/providers/codex/client';
 import { sendCodexQuitCommand } from '@/lib/agent-terminal-commands';
@@ -116,6 +117,7 @@ const MobileSurfaceView = ({
   const usesHiddenTerminal = isAgentPanel || isAgentSessionList;
   const isWebBrowser = panelType === 'web-browser';
   const isDiff = panelType === 'diff';
+  const { ensureAgentInstalled, installDialogs } = useAgentInstallCheck();
 
   const activeTabCwd = useTabMetadataStore(
     (state) => (activeTabId ? state.metadata[activeTabId]?.cwd : undefined),
@@ -457,18 +459,20 @@ const MobileSurfaceView = ({
       resumeSessionId,
     }), [layoutWsId]);
 
-  const handleNewClaudeSession = useCallback(() => {
+  const handleNewClaudeSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('claude')) return;
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${buildClaudeCommand(null)}\r`);
-  }, [status, sendStdin, activeTabId, buildClaudeCommand]);
+  }, [status, sendStdin, activeTabId, buildClaudeCommand, ensureAgentInstalled]);
 
-  const handleRestartClaudeSession = useCallback(() => {
+  const handleRestartClaudeSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('claude')) return;
     pendingRestartRef.current = buildClaudeCommand(null);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('/exit\r');
-  }, [status, sendStdin, activeTabId, buildClaudeCommand]);
+  }, [status, sendStdin, activeTabId, buildClaudeCommand, ensureAgentInstalled]);
 
   const buildCodexCommand = useCallback(
     () => fetchCodexLaunchCommand(layoutWsId),
@@ -485,6 +489,7 @@ const MobileSurfaceView = ({
 
   const handleNewCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -495,23 +500,26 @@ const MobileSurfaceView = ({
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${command}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, tt]);
 
-  const handleNewClaudeFromSessionList = useCallback(() => {
+  const handleNewClaudeFromSessionList = useCallback(async () => {
     if (!activeTabId) return;
+    if (!await ensureAgentInstalled('claude')) return;
     onUpdateTabPanelType(paneId, activeTabId, 'claude-code');
-    handleNewClaudeSession();
-  }, [activeTabId, handleNewClaudeSession, onUpdateTabPanelType, paneId]);
+    void handleNewClaudeSession();
+  }, [activeTabId, ensureAgentInstalled, handleNewClaudeSession, onUpdateTabPanelType, paneId]);
 
-  const handleNewCodexFromSessionList = useCallback(() => {
+  const handleNewCodexFromSessionList = useCallback(async () => {
     if (!activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     onUpdateTabPanelType(paneId, activeTabId, 'codex-cli');
     void handleNewCodexSession();
-  }, [activeTabId, handleNewCodexSession, onUpdateTabPanelType, paneId]);
+  }, [activeTabId, ensureAgentInstalled, handleNewCodexSession, onUpdateTabPanelType, paneId]);
 
   const handleSelectAgentSession = useCallback(async (session: IAgentSessionEntry) => {
     if (status !== 'connected' || !activeTabId) return;
     const nextPanelType = session.provider === 'codex' ? 'codex-cli' : 'claude-code';
+    if (!await ensureAgentInstalled(session.provider)) return;
     onUpdateTabPanelType(paneId, activeTabId, nextPanelType);
     useTabStore.getState().setSessionView(activeTabId, 'check');
 
@@ -529,10 +537,11 @@ const MobileSurfaceView = ({
     }
 
     sendStdin(`${buildClaudeCommand(session.sessionId)}\r`);
-  }, [activeTabId, buildClaudeCommand, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
+  }, [activeTabId, buildClaudeCommand, ensureAgentInstalled, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
 
   const handleRelaunchCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -543,7 +552,7 @@ const MobileSurfaceView = ({
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin(`${command}\r`);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, tt]);
 
   useEffect(() => {
     codexRelaunchRef.current = handleRelaunchCodexSession;
@@ -551,6 +560,7 @@ const MobileSurfaceView = ({
 
   const handleRestartCodexSession = useCallback(async () => {
     if (status !== 'connected' || !activeTabId) return;
+    if (!await ensureAgentInstalled('codex')) return;
     let command: string;
     try {
       command = await buildCodexCommand();
@@ -562,7 +572,7 @@ const MobileSurfaceView = ({
     markAgentLaunch(activeTabId, { resetAgentSession: true });
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendCodexQuitCommand(sendStdin);
-  }, [status, sendStdin, activeTabId, buildCodexCommand, markAgentLaunch, tt]);
+  }, [status, sendStdin, activeTabId, buildCodexCommand, ensureAgentInstalled, markAgentLaunch, tt]);
 
   useEffect(() => {
     const handleStartAgentRequest = (event: Event) => {
@@ -572,17 +582,21 @@ const MobileSurfaceView = ({
       }>).detail;
       if (detail?.tabId !== activeTabId) return;
       if (detail.provider !== 'claude' && detail.provider !== 'codex') return;
-      onUpdateTabPanelType(paneId, activeTabId, detail.provider === 'codex' ? 'codex-cli' : 'claude-code');
-      if (detail.provider === 'codex') {
-        void handleNewCodexSession();
-        return;
-      }
-      handleNewClaudeSession();
+      const provider = detail.provider;
+      void (async () => {
+        if (!await ensureAgentInstalled(provider)) return;
+        onUpdateTabPanelType(paneId, activeTabId, provider === 'codex' ? 'codex-cli' : 'claude-code');
+        if (provider === 'codex') {
+          void handleNewCodexSession();
+          return;
+        }
+        void handleNewClaudeSession();
+      })();
     };
 
     window.addEventListener('purplemux-start-agent', handleStartAgentRequest);
     return () => window.removeEventListener('purplemux-start-agent', handleStartAgentRequest);
-  }, [activeTabId, handleNewClaudeSession, handleNewCodexSession, onUpdateTabPanelType, paneId]);
+  }, [activeTabId, ensureAgentInstalled, handleNewClaudeSession, handleNewCodexSession, onUpdateTabPanelType, paneId]);
 
   useEffect(() => {
     if (!pendingRestartRef.current || agentProcess === true) return;
@@ -630,6 +644,7 @@ const MobileSurfaceView = ({
 
     const resumeSessionId = prompt.resumable ? prompt.sessionId : null;
     if (prompt.panelType === 'codex-cli') {
+      if (!await ensureAgentInstalled('codex')) return;
       let command: string;
       try {
         command = await fetchCodexLaunchCommand(layoutWsId, resumeSessionId);
@@ -644,17 +659,19 @@ const MobileSurfaceView = ({
       return;
     }
 
+    if (!await ensureAgentInstalled('claude')) return;
     pendingRestartRef.current = buildClaudeCommand(resumeSessionId);
     useTabStore.getState().setSessionView(activeTabId, 'check');
     sendStdin('\x03');
     setTimeout(() => sendStdin('\x03'), 300);
-  }, [activeTabId, agentModePrompt, buildClaudeCommand, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
+  }, [activeTabId, agentModePrompt, buildClaudeCommand, ensureAgentInstalled, layoutWsId, markAgentLaunch, onUpdateTabPanelType, paneId, sendStdin, status, tt]);
 
-  const handleSendToAgent = useCallback((text: string, provider: TGitAskProvider) => {
+  const handleSendToAgent = useCallback(async (text: string, provider: TGitAskProvider) => {
     if (!activeTabId) return;
+    if (!await ensureAgentInstalled(provider)) return;
     pendingAgentInputRef.current = { text, provider };
     onUpdateTabPanelType(paneId, activeTabId, provider === 'codex' ? 'codex-cli' : 'claude-code');
-  }, [activeTabId, paneId, onUpdateTabPanelType]);
+  }, [activeTabId, ensureAgentInstalled, paneId, onUpdateTabPanelType]);
 
   useEffect(() => {
     const handleGitAgentRequest = (event: Event) => {
@@ -664,7 +681,7 @@ const MobileSurfaceView = ({
         provider?: TGitAskProvider;
       }>).detail;
       if (detail?.paneId !== paneId || !detail.text || !detail.provider) return;
-      handleSendToAgent(detail.text, detail.provider);
+      void handleSendToAgent(detail.text, detail.provider);
     };
 
     window.addEventListener('purplemux-send-to-agent', handleGitAgentRequest);
@@ -883,6 +900,7 @@ const MobileSurfaceView = ({
           onReconnect={reconnect}
         />
       )}
+      {installDialogs}
     </div>
   );
 };
