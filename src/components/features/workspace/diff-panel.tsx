@@ -327,7 +327,7 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
                     render={
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon-sm"
                         className="h-7 w-7 text-muted-foreground"
                       />
@@ -346,13 +346,13 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
                   render={
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size={hasSyncWork ? 'sm' : 'icon-sm'}
                       className={cn(
                         'h-7',
                         hasSyncWork ? 'px-2' : 'w-7 px-0',
                         hasSyncWork && !syncing
-                          ? 'border-ui-blue/40 bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
+                          ? 'bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
                           : 'text-muted-foreground',
                       )}
                     />
@@ -379,12 +379,12 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
                   render={
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="ghost"
                       size="icon-sm"
                       className={cn(
                         'h-7 w-7',
                         hasUpdate && activeTab === 'changes'
-                          ? 'border-ui-blue/40 bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
+                          ? 'bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
                           : 'text-muted-foreground',
                       )}
                     />
@@ -412,7 +412,7 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
                     render={
                       <Button
                         type="button"
-                        variant="outline"
+                        variant="ghost"
                         size="icon-sm"
                         className="h-7 w-7 text-muted-foreground"
                       />
