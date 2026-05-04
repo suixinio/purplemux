@@ -100,12 +100,14 @@ const syncSessionView = (
   agentSessionId: string | null | undefined,
   cliState?: TCliState | null,
 ): TSessionView => {
+  if (cliState === 'inactive') {
+    return current === 'timeline' ? 'session-list' : current;
+  }
   if (agentSessionId && (current === 'session-list' || current === 'check')) return 'timeline';
   const agentReadyWithoutSession =
     current === 'check'
     && cliState !== undefined
     && cliState !== null
-    && cliState !== 'inactive'
     && cliState !== 'unknown'
     && cliState !== 'cancelled';
   return agentReadyWithoutSession ? 'timeline' : current;
@@ -271,7 +273,7 @@ const useTabStore = create<ITabStore>((set) => ({
         if (prev.agentProcess === true && prev.sessionView === 'timeline') {
           patch.sessionView = 'session-list';
         }
-      } else if (prev.agentProcess === true && prev.sessionView === 'timeline') {
+      } else if (prev.sessionView === 'timeline') {
         patch.sessionView = 'session-list';
       }
 
@@ -304,7 +306,7 @@ const useTabStore = create<ITabStore>((set) => ({
         } else if (existing) {
           next[tabId] = { ...existing, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType ?? existing.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, agentProviderId: entry.agentProviderId, agentSessionId: entry.agentSessionId, ...preserveDetectedAgentFields(existing, entry), agentSummary: entry.agentSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, compactingSince: entry.compactingSince, permissionRequest: entry.permissionRequest, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq, sessionView: syncSessionView(existing.sessionView, entry.agentSessionId, entry.cliState) };
         } else {
-          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, agentProviderId: entry.agentProviderId, agentSessionId: entry.agentSessionId, agentSummary: entry.agentSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, compactingSince: entry.compactingSince, permissionRequest: entry.permissionRequest, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq, ...(entry.agentSessionId ? { sessionView: 'timeline' as const } : {}) };
+          next[tabId] = { ...DEFAULT_TAB_STATE, cliState: entry.cliState, workspaceId: entry.workspaceId, tabName: entry.tabName, panelType: entry.panelType, terminalStatus: entry.terminalStatus, listeningPorts: entry.listeningPorts, currentProcess: entry.currentProcess, agentProviderId: entry.agentProviderId, agentSessionId: entry.agentSessionId, agentSummary: entry.agentSummary, lastUserMessage: entry.lastUserMessage, lastAssistantMessage: entry.lastAssistantMessage, currentAction: entry.currentAction, readyForReviewAt: entry.readyForReviewAt, busySince: entry.busySince, dismissedAt: entry.dismissedAt, compactingSince: entry.compactingSince, permissionRequest: entry.permissionRequest, lastEvent: entry.lastEvent, eventSeq: entry.eventSeq, sessionView: syncSessionView(DEFAULT_TAB_STATE.sessionView, entry.agentSessionId, entry.cliState) };
         }
       }
       // 서버에 아직 반영되지 않은 로컬 탭 보존 (split 직후 레이스 컨디션 방지)
@@ -343,7 +345,7 @@ const useTabStore = create<ITabStore>((set) => ({
       return {
         tabs: {
           ...state.tabs,
-          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, agentProviderId: update.agentProviderId, agentSessionId: update.agentSessionId, agentSummary: update.agentSummary, lastUserMessage: update.lastUserMessage, lastAssistantMessage: update.lastAssistantMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, dismissedAt: update.dismissedAt, compactingSince: update.compactingSince, permissionRequest: update.permissionRequest, lastEvent: update.lastEvent, eventSeq: update.eventSeq, ...(update.agentSessionId ? { sessionView: 'timeline' as const } : {}) },
+          [tabId]: { ...DEFAULT_TAB_STATE, cliState: update.cliState, workspaceId: update.workspaceId, tabName: update.tabName, panelType: update.panelType, terminalStatus: update.terminalStatus, listeningPorts: update.listeningPorts, currentProcess: update.currentProcess, agentProviderId: update.agentProviderId, agentSessionId: update.agentSessionId, agentSummary: update.agentSummary, lastUserMessage: update.lastUserMessage, lastAssistantMessage: update.lastAssistantMessage, readyForReviewAt: update.readyForReviewAt, busySince: update.busySince, dismissedAt: update.dismissedAt, compactingSince: update.compactingSince, permissionRequest: update.permissionRequest, lastEvent: update.lastEvent, eventSeq: update.eventSeq, sessionView: syncSessionView(DEFAULT_TAB_STATE.sessionView, update.agentSessionId, update.cliState) },
         },
       };
     }),
