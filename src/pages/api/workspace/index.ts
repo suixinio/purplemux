@@ -3,6 +3,7 @@ import type { NextApiRequest, NextApiResponse } from 'next';
 import { getWorkspaces, createWorkspace } from '@/lib/workspace-store';
 import { readLayoutFile, resolveLayoutFile, collectAllTabs, updateTabAgentSessionId } from '@/lib/layout-store';
 import { getProviderByPanelType } from '@/lib/providers';
+import { checkAgentAvailabilityForPanelType, toAgentAvailabilityError } from '@/lib/agent-availability';
 import { sendKeys } from '@/lib/tmux';
 import { getStatusManager } from '@/lib/status-manager';
 import { createLogger } from '@/lib/logger';
@@ -26,6 +27,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       }
       if (!provider.isValidSessionId(resumeSessionId)) {
         return res.status(400).json({ error: 'Invalid session ID format' });
+      }
+      const availability = await checkAgentAvailabilityForPanelType(provider.panelType);
+      if (!availability.ok) {
+        return res.status(availability.status).json(toAgentAvailabilityError(availability));
       }
     }
     const resolvedDirectory =

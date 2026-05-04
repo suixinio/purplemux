@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { codexProvider } from '@/lib/providers/codex';
+import { checkAgentAvailabilityForPanelType, toAgentAvailabilityError } from '@/lib/agent-availability';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
 import { createLogger } from '@/lib/logger';
 
@@ -21,6 +22,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   const workspaceId = bodyWorkspaceId ?? await getActiveWorkspaceId();
 
   try {
+    const availability = await checkAgentAvailabilityForPanelType(codexProvider.panelType);
+    if (!availability.ok) {
+      return res.status(availability.status).json(toAgentAvailabilityError(availability));
+    }
     const command = resumeSessionId
       ? await codexProvider.buildResumeCommand(resumeSessionId, { workspaceId: workspaceId ?? undefined })
       : await codexProvider.buildLaunchCommand({ workspaceId: workspaceId ?? undefined });

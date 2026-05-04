@@ -7,11 +7,14 @@ export interface ICodexStatus extends IToolStatus {
   binaryPath: string | null;
 }
 
+export interface IAgentRuntimeToolStatus extends IToolStatus {
+  binaryPath: string | null;
+  loggedIn?: boolean;
+}
+
 export interface IPreflightResult {
   tmux: IToolStatus & { compatible: boolean };
   git: IToolStatus;
-  claude: IToolStatus & { binaryPath: string | null; loggedIn: boolean };
-  codex: ICodexStatus;
   brew?: IToolStatus;
   clt?: { installed: boolean };
 }
@@ -19,8 +22,8 @@ export interface IPreflightResult {
 export interface IRuntimePreflightResult {
   tmux: IToolStatus & { compatible: boolean };
   git: IToolStatus;
-  claude: IToolStatus;
-  codex: IToolStatus;
+  claude: IAgentRuntimeToolStatus;
+  codex: IAgentRuntimeToolStatus;
 }
 
 export const isRuntimeOk = (status: IRuntimePreflightResult): boolean =>

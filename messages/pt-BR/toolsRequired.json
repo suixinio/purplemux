@@ -19,5 +19,13 @@
   "codexInstallGuide": "Guia de instalação",
   "codexInstallGuideTitle": "Como instalar o Codex CLI",
   "codexInstallNpm": "npm i -g @openai/codex",
-  "codexInstallBrew": "brew install --cask codex"
+  "codexInstallBrew": "brew install --cask codex",
+  "agentInstallPromptTitle": "Claude CLI is not installed",
+  "agentInstallPromptDescription": "Install Claude CLI now, or cancel and install it manually before starting a Claude tab.",
+  "agentPathPromptTitle": "Claude CLI PATH is not configured",
+  "agentPathPromptDescription": "Claude CLI was found in ~/.local/bin, but it is not available on PATH. Add it to your shell profile now, or cancel and update PATH manually.",
+  "codexMissingTitle": "Codex CLI is not installed",
+  "codexMissingDescription": "Open the Codex CLI install guide, or cancel and install it manually before starting a Codex tab.",
+  "preflightFailedTitle": "Could not check agent tools",
+  "preflightFailedDescription": "purplemux could not verify the agent CLI installation. The current action was canceled."
 }

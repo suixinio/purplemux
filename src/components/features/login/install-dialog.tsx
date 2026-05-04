@@ -10,9 +10,10 @@ interface IInstallDialogProps {
   onOpenChange: (open: boolean) => void;
   command: string;
   label: string;
+  reloadOnClose?: boolean;
 }
 
-const InstallDialog = ({ open, onOpenChange, command, label }: IInstallDialogProps) => {
+const InstallDialog = ({ open, onOpenChange, command, label, reloadOnClose = true }: IInstallDialogProps) => {
   const tc = useTranslations('common');
   const connectedRef = useRef(false);
   const writeRef = useRef<(data: Uint8Array) => void>(() => {});
@@ -41,8 +42,10 @@ const InstallDialog = ({ open, onOpenChange, command, label }: IInstallDialogPro
     disconnect();
     connectedRef.current = false;
     onOpenChange(false);
-    window.location.reload();
-  }, [disconnect, onOpenChange]);
+    if (reloadOnClose) {
+      window.location.reload();
+    }
+  }, [disconnect, onOpenChange, reloadOnClose]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) handleClose(); }}>

@@ -19,5 +19,13 @@
   "codexInstallGuide": "설치 가이드",
   "codexInstallGuideTitle": "Codex CLI 설치 방법",
   "codexInstallNpm": "npm i -g @openai/codex",
-  "codexInstallBrew": "brew install --cask codex"
+  "codexInstallBrew": "brew install --cask codex",
+  "agentInstallPromptTitle": "Claude CLI가 설치되어 있지 않습니다",
+  "agentInstallPromptDescription": "지금 Claude CLI를 설치하거나, 취소한 뒤 직접 설치한 다음 Claude 탭을 시작하세요.",
+  "agentPathPromptTitle": "Claude CLI PATH가 설정되어 있지 않습니다",
+  "agentPathPromptDescription": "Claude CLI는 ~/.local/bin에서 발견됐지만 PATH에서 실행할 수 없습니다. 지금 셸 프로필에 추가하거나, 취소한 뒤 직접 PATH를 설정하세요.",
+  "codexMissingTitle": "Codex CLI가 설치되어 있지 않습니다",
+  "codexMissingDescription": "Codex CLI 설치 가이드를 열거나, 취소한 뒤 직접 설치한 다음 Codex 탭을 시작하세요.",
+  "preflightFailedTitle": "에이전트 도구를 확인할 수 없습니다",
+  "preflightFailedDescription": "에이전트 CLI 설치 여부를 확인하지 못했습니다. 현재 작업은 취소되었습니다."
 }

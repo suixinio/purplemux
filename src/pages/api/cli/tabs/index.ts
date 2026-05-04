@@ -5,6 +5,7 @@ import { collectPanes } from '@/lib/layout-tree';
 import { getWorkspaceById, getWorkspaces } from '@/lib/workspace-store';
 import { resolveFirstPaneId } from '@/lib/cli-utils';
 import { getProviderByPanelType } from '@/lib/providers';
+import { checkAgentAvailabilityForPanelType, toAgentAvailabilityError } from '@/lib/agent-availability';
 import { createLogger } from '@/lib/logger';
 import type { TPanelType } from '@/types/terminal';
 
@@ -77,6 +78,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
       });
     }
     const resolvedType: TPanelType = panelType ? (panelType as TPanelType) : 'terminal';
+    const availability = await checkAgentAvailabilityForPanelType(resolvedType);
+    if (!availability.ok) {
+      return res.status(availability.status).json(toAgentAvailabilityError(availability));
+    }
 
     try {
       const tab = await addTabToPane(workspaceId, paneId, name, ws.directories[0], resolvedType);

@@ -3,6 +3,7 @@ import { addTabToPane, updateTabAgentSessionId } from '@/lib/layout-store';
 import { getActiveWorkspaceId } from '@/lib/workspace-store';
 import { getStatusManager } from '@/lib/status-manager';
 import { getProviderByPanelType } from '@/lib/providers';
+import { checkAgentAvailabilityForPanelType, toAgentAvailabilityError } from '@/lib/agent-availability';
 import { sendKeys } from '@/lib/tmux';
 import { createLogger } from '@/lib/logger';
 
@@ -32,6 +33,10 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
     if (!provider.isValidSessionId(resumeSessionId)) {
       return res.status(400).json({ error: 'Invalid session ID format' });
     }
+  }
+  const availability = await checkAgentAvailabilityForPanelType(provider?.panelType ?? panelType);
+  if (!availability.ok) {
+    return res.status(availability.status).json(toAgentAvailabilityError(availability));
   }
 
   try {

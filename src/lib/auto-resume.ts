@@ -2,9 +2,8 @@ import { readLayoutFile, resolveLayoutFile, collectAllTabs } from '@/lib/layout-
 import { hasSession, createSession, getPaneCurrentCommand, getSessionPanePid, sendKeysSeparated } from '@/lib/tmux';
 import { getWorkspaces } from '@/lib/workspace-store';
 import { getProviderByPanelType, getProviderByProcessName } from '@/lib/providers';
-import type { IAgentProvider } from '@/lib/providers';
+import type { IAgentPreflight, IAgentProvider } from '@/lib/providers/types';
 import { getStatusManager } from '@/lib/status-manager';
-import { runCodexPreflight } from '@/lib/providers/codex/preflight';
 import { getChildPids, getProcessArgs } from '@/lib/process-utils';
 import { createLogger } from '@/lib/logger';
 
@@ -24,7 +23,15 @@ interface IAutoResumeTarget {
 const findAutoResumeTargets = async (): Promise<IAutoResumeTarget[]> => {
   const { workspaces } = await getWorkspaces();
   const targets: IAutoResumeTarget[] = [];
-  const codexPreflight = await runCodexPreflight();
+  const preflightByProvider = new Map<string, IAgentPreflight>();
+
+  const getProviderPreflight = async (provider: IAgentProvider): Promise<IAgentPreflight> => {
+    const cached = preflightByProvider.get(provider.id);
+    if (cached) return cached;
+    const status = await provider.preflight();
+    preflightByProvider.set(provider.id, status);
+    return status;
+  };
 
   for (const ws of workspaces) {
     const layout = await readLayoutFile(resolveLayoutFile(ws.id));
@@ -34,8 +41,10 @@ const findAutoResumeTargets = async (): Promise<IAutoResumeTarget[]> => {
     for (const tab of tabs) {
       const provider = getProviderByPanelType(tab.panelType);
       if (!provider) continue;
-      if (provider.id === 'codex' && !codexPreflight.installed) {
-        log.info(`Skip resume for codex tab ${tab.id}: codex not installed`);
+      const preflight = await getProviderPreflight(provider);
+      if (!preflight.installed) {
+        const reason = provider.id === 'claude' && preflight.binaryPath ? 'PATH not configured' : 'not installed';
+        log.info(`Skip resume for ${provider.id} tab ${tab.id}: ${reason}`);
         continue;
       }
       const sessionId = provider.readSessionId(tab);

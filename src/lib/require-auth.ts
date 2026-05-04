@@ -1,7 +1,6 @@
 import type { GetServerSidePropsContext, GetServerSidePropsResult } from 'next';
 import { verifySessionToken, SESSION_COOKIE } from '@/lib/auth';
-import { getCachedRuntimePreflight } from '@/lib/preflight';
-import { isRuntimeOk } from '@/types/preflight';
+import { getCachedPreflightStatus } from '@/lib/preflight';
 
 interface IRequireAuthOptions {
   skipPreflight?: boolean;
@@ -18,8 +17,8 @@ export const requireAuth = async <T extends Record<string, unknown>>(
   }
 
   if (!options?.skipPreflight) {
-    const runtime = await getCachedRuntimePreflight();
-    if (!isRuntimeOk(runtime)) {
+    const runtime = await getCachedPreflightStatus();
+    if (!(runtime.tmux.installed && runtime.tmux.compatible && runtime.git.installed)) {
       const from = context.resolvedUrl || '/';
       return { redirect: { destination: `/tools-required?from=${encodeURIComponent(from)}`, permanent: false } };
     }
