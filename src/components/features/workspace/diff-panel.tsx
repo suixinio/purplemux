@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { RefreshCw, GitBranch, Columns2, Rows2, ArrowUp, ArrowDown, ArrowDownUp, Archive, X, Folder } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Spinner from '@/components/ui/spinner';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { copyToClipboard } from '@/lib/clipboard';
@@ -323,7 +324,14 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
               {activeTab === 'changes' && !isMobile && (
                 <Tooltip>
                   <TooltipTrigger
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        className="h-7 w-7 text-muted-foreground"
+                      />
+                    }
                     onClick={() => onSettingsChange?.({ viewMode: viewMode === 'split' ? 'unified' : 'split' })}
                     aria-label={viewMode === 'split' ? t('lineByLine') : t('sideBySide')}
                   >
@@ -335,11 +343,22 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
 
               <Tooltip>
                 <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size={hasSyncWork ? 'sm' : 'icon-sm'}
+                      className={cn(
+                        'h-7',
+                        hasSyncWork ? 'px-2' : 'w-7 px-0',
+                        hasSyncWork && !syncing
+                          ? 'border-ui-blue/40 bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
+                          : 'text-muted-foreground',
+                      )}
+                    />
+                  }
                   className={cn(
-                    'flex h-7 w-7 items-center justify-center rounded hover:bg-accent disabled:opacity-50',
-                    hasSyncWork && !syncing
-                      ? 'text-ui-blue'
-                      : 'text-muted-foreground hover:text-foreground',
+                    'disabled:opacity-50',
                   )}
                   onClick={handleSync}
                   disabled={syncing || loading}
@@ -348,24 +367,36 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
                   {syncing
                     ? <Spinner className="h-3.5 w-3.5" />
                     : <SyncIcon className="h-3.5 w-3.5" />}
+                  {hasSyncWork && !syncing && (
+                    <span className="font-mono text-[11px] leading-none">{syncCountLabel}</span>
+                  )}
                 </TooltipTrigger>
                 <TooltipContent side="bottom">{syncTitle}</TooltipContent>
               </Tooltip>
 
               <Tooltip>
                 <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon-sm"
+                      className={cn(
+                        'h-7 w-7',
+                        hasUpdate && activeTab === 'changes'
+                          ? 'border-ui-blue/40 bg-ui-blue/10 text-ui-blue hover:bg-ui-blue/15 hover:text-ui-blue'
+                          : 'text-muted-foreground',
+                      )}
+                    />
+                  }
                   className={cn(
-                    'relative flex h-7 w-7 items-center justify-center rounded',
-                    hasUpdate && activeTab === 'changes'
-                      ? 'text-ui-blue hover:bg-accent'
-                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
-                    loading && 'animate-spin',
+                    'relative disabled:opacity-50',
                   )}
                   onClick={handleRefresh}
                   disabled={loading}
                   aria-label={t('refresh')}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
+                  <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
                   {hasUpdate && activeTab === 'changes' && (
                     <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-ui-blue" />
                   )}
@@ -378,7 +409,14 @@ const DiffPanel = ({ sessionName, onSendToAgent, onClose, settings, onSettingsCh
               {onClose && (
                 <Tooltip>
                   <TooltipTrigger
-                    className="flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground"
+                    render={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="icon-sm"
+                        className="h-7 w-7 text-muted-foreground"
+                      />
+                    }
                     onClick={onClose}
                     aria-label="Close Git"
                   >
