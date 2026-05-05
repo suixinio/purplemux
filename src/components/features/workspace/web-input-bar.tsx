@@ -82,7 +82,7 @@ const WebInputBar = ({
   const { entries, isLoading, isError, fetchHistory, addHistory, deleteHistory } =
     useMessageHistory({ wsId });
   const isMobileDevice = useIsMobileDevice();
-  const submitDelayMs = isCodex ? 250 : 50;
+  const submitDelayMs = 250;
   const handleMessageSent = useCallback(
     (message: string) => {
       addHistory(message);
@@ -245,7 +245,7 @@ const WebInputBar = ({
       if (hasText) {
         const payload = ` ${text}`;
         sendStdin(`\x1b[200~${payload}\x1b[201~`);
-        setTimeout(() => sendStdin('\r'), payload.includes('\n') ? 500 : submitDelayMs);
+        setTimeout(() => sendStdin('\r'), submitDelayMs);
       } else {
         sendStdin('\r');
       }

@@ -75,7 +75,7 @@ const useWebInput = (
 
   const onRestartSession = options?.onRestartSession;
   const onMessageSent = options?.onMessageSent;
-  const submitDelayMs = options?.submitDelayMs ?? 50;
+  const submitDelayMs = options?.submitDelayMs ?? 250;
 
   const draftTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
   useEffect(() => {
@@ -108,12 +108,11 @@ const useWebInput = (
     }
 
     if (value.includes('\n')) {
-      sendStdin(`\x1b[200~${value}\x1b[201~\r`);
-      setTimeout(() => sendStdin('\r'), 500);
+      sendStdin(`\x1b[200~${value}\x1b[201~`);
     } else {
       sendStdin(value);
-      setTimeout(() => sendStdin('\r'), submitDelayMs);
     }
+    setTimeout(() => sendStdin('\r'), submitDelayMs);
 
     if (!value.trim().startsWith('/')) {
       onMessageSent?.(value.trim());
