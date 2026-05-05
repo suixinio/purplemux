@@ -117,24 +117,24 @@ const PaneTabItem = ({
         <>
           <TabStatusIndicator tabId={tab.id} panelType={tab.panelType} />
           {tab.panelType === 'claude-code' ? (
-            <ClaudeCodeIcon className="h-3 w-3" />
+            <ClaudeCodeIcon className="mx-0.5 h-3 w-3 shrink-0" />
           ) : tab.panelType === 'codex-cli' ? (
-            <OpenAIIcon className="h-3 w-3 shrink-0 text-foreground" aria-label="Codex" />
+            <OpenAIIcon className="mx-0.5 h-3 w-3 shrink-0 text-foreground" aria-label="Codex" />
           ) : tab.panelType === 'web-browser' ? (
-            <Globe className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <Globe className="mx-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'diff' ? (
-            <GitCompareArrows className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <GitCompareArrows className="mx-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
           ) : tab.panelType === 'agent-sessions' ? (
-            <History className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <History className="mx-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
           ) : (
             <ProcessIcon
               process={currentProcess ?? displayTitle}
-              className="h-3 w-3 shrink-0 text-muted-foreground"
+              className="mx-0.5 h-3 w-3 shrink-0 text-muted-foreground"
             />
           )}
           <span
             className={cn(
-              'min-w-0 truncate',
+              'mr-1 min-w-0 truncate',
               displayName ? 'opacity-100' : 'opacity-0',
             )}
           >
