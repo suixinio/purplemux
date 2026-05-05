@@ -30,7 +30,7 @@ El mínimo es corto (4 caracteres) para que las configuraciones solo-localhost n
 rm ~/.purplemux/config.json
 ```
 
-Reinicia purplemux (`pnpm start`, `npx purplemux`, o como lo hayas lanzado) y la pantalla de onboarding reaparece para que elijas una nueva contraseña.
+Reinicia purplemux (`pnpm start`, `npx purplemux@latest`, o como lo hayas lanzado) y la pantalla de onboarding reaparece para que elijas una nueva contraseña.
 
 Esto borra otros ajustes guardados en el mismo archivo (tema, locale, tamaño de fuente, interruptor de notificaciones, etc.). Tus espacios de trabajo y pestañas viven en `workspaces.json` y el directorio `workspaces/`, así que las disposiciones no se ven afectadas.
 

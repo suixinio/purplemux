@@ -24,7 +24,7 @@ Windows официально не поддерживается. purplemux опи
 Одна команда. Глобальная установка не требуется.
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 purplemux запустится на порту `8022`. Откройте браузер:

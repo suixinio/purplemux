@@ -38,7 +38,7 @@ purplemux 倚賴若干現代瀏覽器 API。如果缺少其中任何一項，App
 | API | 用途 | 降級行為 |
 |---|---|---|
 | WebSocket | 終端機 I/O、狀態同步、時間軸 | 硬性需求 — 無替代方案。 |
-| Clipboard API | `npx purplemux` 複製、程式碼區塊複製 | 若不支援則隱藏按鈕。 |
+| Clipboard API | `npx purplemux@latest` 複製、程式碼區塊複製 | 若不支援則隱藏按鈕。 |
 | Notifications API | 桌面 / 行動推播 | 略過 — 仍會在應用程式內看到狀態。 |
 | Service Workers | PWA + Web Push | 僅作為一般網頁應用程式提供。 |
 | IntersectionObserver | 即時工作階段時間軸、導覽顯示 | 元素呈現但無動畫。 |

@@ -13,7 +13,7 @@
 ## 설치
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 브라우저에서 [http://localhost:8022](http://localhost:8022)으로 접속합니다. 끝.
@@ -93,7 +93,7 @@ npx purplemux
 ### npx (가장 빠름)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### 글로벌 설치

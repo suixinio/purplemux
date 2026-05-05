@@ -24,7 +24,7 @@ Windows は公式にはサポートしていません。purplemux は `node-pty`
 コマンド 1 つ。グローバルインストールも不要です。
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 `8022` ポートで purplemux が起動します。ブラウザで開いてください。

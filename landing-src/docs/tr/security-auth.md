@@ -30,7 +30,7 @@ Unuttunuz mu? Yalnızca host'a shell erişiminiz olması yeterli:
 rm ~/.purplemux/config.json
 ```
 
-purplemux'ı yeniden başlatın (`pnpm start`, `npx purplemux` veya nasıl başlattıysanız) — onboarding ekranı yeniden gelir, böylece yeni bir parola seçebilirsiniz.
+purplemux'ı yeniden başlatın (`pnpm start`, `npx purplemux@latest` veya nasıl başlattıysanız) — onboarding ekranı yeniden gelir, böylece yeni bir parola seçebilirsiniz.
 
 Bu, aynı dosyada saklanan diğer ayarları (tema, yerel, font boyutu, bildirim anahtarı, vb.) da siler. Çalışma alanlarınız ve sekmeleriniz `workspaces.json` ve `workspaces/` dizininde yaşar, dolayısıyla düzenler etkilenmez.
 

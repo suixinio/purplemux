@@ -38,7 +38,7 @@ purplemux birkaç modern tarayıcı API'sine yaslanır. Eksik olduklarında uygu
 | API | Kullanıldığı yer | Yedek |
 |---|---|---|
 | WebSocket | Terminal G/Ç, durum senkronizasyonu, zaman tüneli | Zorunlu — yedek yok. |
-| Clipboard API | `npx purplemux` kopyala, kod bloğu kopyala | Mevcut değilse düğme gizlenir. |
+| Clipboard API | `npx purplemux@latest` kopyala, kod bloğu kopyala | Mevcut değilse düğme gizlenir. |
 | Notifications API | Masaüstü / mobil push | Atlanır — uygulama içi durum yine görünür. |
 | Service Workers | PWA + Web Push | Yalnızca normal web uygulaması olarak sunulur. |
 | IntersectionObserver | Canlı oturum zaman tüneli, gezinti açılışları | Öğeler animasyonsuz çizilir. |

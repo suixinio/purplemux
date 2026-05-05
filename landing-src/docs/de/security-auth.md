@@ -30,7 +30,7 @@ Vergessen? Du brauchst nur Shell-Zugriff auf den Host:
 rm ~/.purplemux/config.json
 ```
 
-Starte purplemux neu (`pnpm start`, `npx purplemux` oder wie auch immer du es gestartet hast), und der Onboarding-Screen erscheint, damit du ein neues Passwort wählen kannst.
+Starte purplemux neu (`pnpm start`, `npx purplemux@latest` oder wie auch immer du es gestartet hast), und der Onboarding-Screen erscheint, damit du ein neues Passwort wählen kannst.
 
 Das löscht andere Einstellungen aus derselben Datei (Theme, Locale, Schriftgröße, Notifications-Toggle usw.). Deine Workspaces und Tabs leben in `workspaces.json` und dem `workspaces/`-Verzeichnis, Layouts bleiben also unberührt.
 

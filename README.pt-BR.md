@@ -13,7 +13,7 @@ Português (Brasil) | <a href="README.md">English</a> | <a href="README.ko.md">�
 ## Instalação
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Abra [http://localhost:8022](http://localhost:8022) no navegador. Pronto.
@@ -93,7 +93,7 @@ E ainda
 ### npx (mais rápido)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### Instalação global

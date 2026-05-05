@@ -13,7 +13,7 @@
 ## Установка
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Откройте [http://localhost:8022](http://localhost:8022) в браузере. Готово.
@@ -93,7 +93,7 @@ npx purplemux
 ### npx (самый быстрый способ)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### Глобальная установка

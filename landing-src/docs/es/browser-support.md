@@ -38,7 +38,7 @@ purplemux se apoya en un puñado de APIs modernas del navegador. Si falta alguna
 | API | Para qué se usa | Comportamiento de respaldo |
 |---|---|---|
 | WebSocket | E/S de terminal, sincronización de estado, línea de tiempo | Requisito obligatorio — sin alternativa. |
-| Clipboard API | Copiar `npx purplemux`, copiar bloques de código | El botón se oculta si no está disponible. |
+| Clipboard API | Copiar `npx purplemux@latest`, copiar bloques de código | El botón se oculta si no está disponible. |
 | Notifications API | Push de escritorio/móvil | Se omite — verás el estado dentro de la app. |
 | Service Workers | PWA + Web Push | Se sirve solo como app web normal. |
 | IntersectionObserver | Línea de tiempo en directo, animaciones de la barra de navegación | Los elementos aparecen sin animación. |

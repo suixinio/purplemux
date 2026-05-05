@@ -13,7 +13,7 @@
 ## インストール
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ブラウザで [http://localhost:8022](http://localhost:8022) を開いてください。以上。
@@ -93,7 +93,7 @@ npx purplemux
 ### npx (最速)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### グローバルインストール

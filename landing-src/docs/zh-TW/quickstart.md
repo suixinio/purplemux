@@ -24,7 +24,7 @@ Windows 並不在官方支援之列。purplemux 倚賴 `node-pty` 與 tmux，這
 只要一行指令，無需全域安裝。
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 purplemux 會在 `8022` 連接埠上啟動。打開瀏覽器：

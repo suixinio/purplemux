@@ -24,7 +24,7 @@ O Windows não é oficialmente suportado. O purplemux depende de `node-pty` e tm
 Um comando. Sem necessidade de instalação global.
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 O purplemux vai subir na porta `8022`. Abra no navegador:

@@ -6,7 +6,7 @@ permalink: /es/docs/installation/index.html
 ---
 {% from "docs/callouts.njk" import callout %}
 
-Si ejecutaste `npx purplemux` en [Inicio rápido](/purplemux/es/docs/quickstart/) y con eso te bastó, ya está. Esta página es para quien quiera una instalación persistente, una app de escritorio, o ejecutarlo desde el código fuente.
+Si ejecutaste `npx purplemux@latest` en [Inicio rápido](/purplemux/es/docs/quickstart/) y con eso te bastó, ya está. Esta página es para quien quiera una instalación persistente, una app de escritorio, o ejecutarlo desde el código fuente.
 
 ## Requisitos
 
@@ -19,7 +19,7 @@ Si ejecutaste `npx purplemux` en [Inicio rápido](/purplemux/es/docs/quickstart/
 ### npx (sin instalar)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Descarga purplemux en la primera ejecución y lo cachea bajo `~/.npm/_npx/`. Ideal para probarlo o para ejecutarlo de forma puntual en una máquina remota. Cada ejecución usa la última versión publicada.

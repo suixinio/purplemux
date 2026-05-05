@@ -30,7 +30,7 @@ Oublié ? Il vous suffit d'un accès shell sur l'hôte :
 rm ~/.purplemux/config.json
 ```
 
-Redémarrez purplemux (`pnpm start`, `npx purplemux`, ou la méthode que vous avez utilisée) et l'écran d'onboarding réapparaît pour que vous puissiez choisir un nouveau mot de passe.
+Redémarrez purplemux (`pnpm start`, `npx purplemux@latest`, ou la méthode que vous avez utilisée) et l'écran d'onboarding réapparaît pour que vous puissiez choisir un nouveau mot de passe.
 
 Cela efface les autres paramètres stockés dans le même fichier (thème, locale, taille de police, toggle notifications, etc.). Vos espaces de travail et onglets vivent dans `workspaces.json` et le répertoire `workspaces/`, donc les mises en page sont préservées.
 

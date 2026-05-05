@@ -6,7 +6,7 @@ permalink: /zh-CN/docs/installation/index.html
 ---
 {% from "docs/callouts.njk" import callout %}
 
-如果你按 [快速开始](/purplemux/zh-CN/docs/quickstart/) 跑了 `npx purplemux` 就够用了,本页可以跳过。这页面是给那些想要永久安装、桌面应用,或者从源码运行的人看的。
+如果你按 [快速开始](/purplemux/zh-CN/docs/quickstart/) 跑了 `npx purplemux@latest` 就够用了,本页可以跳过。这页面是给那些想要永久安装、桌面应用,或者从源码运行的人看的。
 
 ## 系统要求
 
@@ -19,7 +19,7 @@ permalink: /zh-CN/docs/installation/index.html
 ### npx(无需安装)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 首次运行时下载 purplemux 并缓存到 `~/.npm/_npx/`。最适合用来体验,或在远程机器上临时运行。每次运行都使用最新发布的版本。

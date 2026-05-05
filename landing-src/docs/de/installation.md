@@ -6,7 +6,7 @@ permalink: /de/docs/installation/index.html
 ---
 {% from "docs/callouts.njk" import callout %}
 
-Wenn dir `npx purplemux` aus dem [Schnellstart](/purplemux/de/docs/quickstart/) gereicht hat, bist du fertig. Diese Seite ist für alle, die persistent installieren, eine Desktop-App haben oder aus dem Quellcode bauen wollen.
+Wenn dir `npx purplemux@latest` aus dem [Schnellstart](/purplemux/de/docs/quickstart/) gereicht hat, bist du fertig. Diese Seite ist für alle, die persistent installieren, eine Desktop-App haben oder aus dem Quellcode bauen wollen.
 
 ## Voraussetzungen
 
@@ -19,7 +19,7 @@ Wenn dir `npx purplemux` aus dem [Schnellstart](/purplemux/de/docs/quickstart/) 
 ### npx (ohne Installation)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Lädt purplemux beim ersten Lauf herunter und cached es unter `~/.npm/_npx/`. Am besten zum Ausprobieren oder für ad-hoc-Läufe auf Remote-Maschinen geeignet. Jeder Lauf nutzt die neueste veröffentlichte Version.

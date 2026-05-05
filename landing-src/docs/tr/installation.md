@@ -6,7 +6,7 @@ permalink: /tr/docs/installation/index.html
 ---
 {% from "docs/callouts.njk" import callout %}
 
-[Hızlı başlangıç](/purplemux/tr/docs/quickstart/)'ta `npx purplemux` çalıştırdıysanız ve bu yeterli olduysa işiniz bitti. Bu sayfa kalıcı bir kurulum, masaüstü uygulaması veya kaynaktan çalıştırma isteyenler için.
+[Hızlı başlangıç](/purplemux/tr/docs/quickstart/)'ta `npx purplemux@latest` çalıştırdıysanız ve bu yeterli olduysa işiniz bitti. Bu sayfa kalıcı bir kurulum, masaüstü uygulaması veya kaynaktan çalıştırma isteyenler için.
 
 ## Gereksinimler
 
@@ -19,7 +19,7 @@ permalink: /tr/docs/installation/index.html
 ### npx (kurulumsuz)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 İlk çalıştırmada purplemux'ı indirir ve `~/.npm/_npx/` altına önbelleğe alır. Hızlıca denemek veya uzak bir makinede ad-hoc çalıştırmak için en uygunu. Her çalıştırmada en güncel sürüm kullanılır.

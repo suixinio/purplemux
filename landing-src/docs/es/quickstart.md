@@ -24,7 +24,7 @@ Windows no está soportado oficialmente. purplemux depende de `node-pty` y tmux,
 Un solo comando. Sin instalación global.
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Verás que purplemux arranca en el puerto `8022`. Abre el navegador:

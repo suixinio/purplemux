@@ -13,7 +13,7 @@
 ## 安装
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 在浏览器中打开 [http://localhost:8022](http://localhost:8022)。完成。
@@ -93,7 +93,7 @@ npx purplemux
 ### npx (最快)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### 全局安装

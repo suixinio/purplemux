@@ -13,7 +13,7 @@ Türkçe | <a href="README.md">English</a> | <a href="README.ko.md">한국어</a
 ## Kurulum
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 Tarayıcınızda [http://localhost:8022](http://localhost:8022) adresini açın. Hepsi bu.
@@ -93,7 +93,7 @@ Ayrıca
 ### npx (en hızlısı)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 ### Global kurulum

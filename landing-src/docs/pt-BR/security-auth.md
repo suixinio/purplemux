@@ -30,7 +30,7 @@ Esqueceu? Você só precisa de acesso de shell ao host:
 rm ~/.purplemux/config.json
 ```
 
-Reinicie o purplemux (`pnpm start`, `npx purplemux`, ou como você o iniciou) e a tela de onboarding reaparece para você escolher uma nova senha.
+Reinicie o purplemux (`pnpm start`, `npx purplemux@latest`, ou como você o iniciou) e a tela de onboarding reaparece para você escolher uma nova senha.
 
 Isso apaga outras configurações guardadas no mesmo arquivo (tema, locale, tamanho de fonte, toggle de notificações etc.). Seus workspaces e abas vivem em `workspaces.json` e no diretório `workspaces/`, então os layouts ficam intactos.
 

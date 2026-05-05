@@ -24,7 +24,7 @@ Windows resmi olarak desteklenmez. purplemux, Windows'ta yerel olarak çalışma
 Tek komut. Global kuruluma gerek yok.
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 purplemux'ın `8022` portunda başladığını göreceksiniz. Tarayıcıyı açın:

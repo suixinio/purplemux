@@ -38,7 +38,7 @@ purplemux s'appuie sur quelques API navigateur modernes. Si l'une d'elles manque
 | API | Utilisée pour | Repli |
 |---|---|---|
 | WebSocket | E/S terminal, sync de statut, timeline | Requis — pas de repli. |
-| Clipboard API | Copie de `npx purplemux`, copie de blocs de code | Bouton masqué si indisponible. |
+| Clipboard API | Copie de `npx purplemux@latest`, copie de blocs de code | Bouton masqué si indisponible. |
 | Notifications API | Push desktop / mobile | Ignoré — le statut intégré reste affiché. |
 | Service Workers | PWA + Web Push | Servi uniquement comme app web classique. |
 | IntersectionObserver | Timeline en direct, apparition de la nav | Éléments rendus sans animation. |

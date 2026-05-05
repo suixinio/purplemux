@@ -38,7 +38,7 @@ purplemux setzt auf eine Handvoll moderner Browser-APIs. Fehlt eine davon, fäll
 | API | Wofür | Fallback |
 |---|---|---|
 | WebSocket | Terminal-I/O, Status-Sync, Timeline | Harte Anforderung — kein Fallback. |
-| Clipboard API | `npx purplemux`-Kopie, Code-Block-Kopie | Button wird ausgeblendet, wenn nicht verfügbar. |
+| Clipboard API | `npx purplemux@latest`-Kopie, Code-Block-Kopie | Button wird ausgeblendet, wenn nicht verfügbar. |
 | Notifications API | Desktop- / Mobile-Push | Übersprungen — In-App-Status bleibt sichtbar. |
 | Service Workers | PWA + Web Push | Wird nur als normale Web-App ausgeliefert. |
 | IntersectionObserver | Live-Session-Timeline, Nav-Reveal | Elemente werden ohne Animation gerendert. |

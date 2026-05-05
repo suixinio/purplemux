@@ -6,7 +6,7 @@ permalink: /ja/docs/installation/index.html
 ---
 {% from "docs/callouts.njk" import callout %}
 
-[クイックスタート](/purplemux/ja/docs/quickstart/) で `npx purplemux` を実行してそれで十分なら、もう終わりです。このページは、永続的なインストール、デスクトップアプリ、ソースからの実行をしたい人向けです。
+[クイックスタート](/purplemux/ja/docs/quickstart/) で `npx purplemux@latest` を実行してそれで十分なら、もう終わりです。このページは、永続的なインストール、デスクトップアプリ、ソースからの実行をしたい人向けです。
 
 ## 必要要件
 
@@ -19,7 +19,7 @@ permalink: /ja/docs/installation/index.html
 ### npx (インストールなし)
 
 ```bash
-npx purplemux
+npx purplemux@latest
 ```
 
 初回実行時に purplemux をダウンロードし、`~/.npm/_npx/` の下にキャッシュします。試用やリモートマシンでのアドホック実行に最適です。実行のたびに最新版が使われます。

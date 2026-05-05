@@ -30,7 +30,7 @@ purplemux 是自托管的,完全留在你的机器上。没有外部服务、没
 rm ~/.purplemux/config.json
 ```
 
-重启 purplemux(`pnpm start`、`npx purplemux`,或者你启动的方式),引导界面再次出现,可以选新密码。
+重启 purplemux(`pnpm start`、`npx purplemux@latest`,或者你启动的方式),引导界面再次出现,可以选新密码。
 
 这会清掉同一文件中存放的其他设置(主题、语言、字体大小、通知开关等)。工作区和标签页存放在 `workspaces.json` 和 `workspaces/` 目录下,布局不受影响。
 
