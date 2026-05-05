@@ -96,7 +96,9 @@ Plus
 Required for Claude tabs. Install Claude Code and sign in before starting a Claude tab:
 
 ```bash
-npm install -g @anthropic-ai/claude-code
+curl -fsSL https://claude.ai/install.sh | bash
+# or, with Homebrew latest channel
+brew install --cask claude-code@latest
 ```
 
 Optional for Codex tabs. Install Codex CLI and sign in before starting a Codex tab:
