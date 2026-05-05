@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "Just a moment",
   "checkTerminal": "Check the terminal",
   "trustPromptTitle": "Trust this folder?",
-  "trustPromptDescription": "Claude needs your permission to read, edit, and execute files in this folder.",
+  "trustPromptDescription": "{agentName} needs your permission to read, edit, and execute files in this folder.",
   "trustPromptYes": "Yes, I trust this folder",
   "trustPromptNo": "No, exit",
   "resumeBlocked": "Another process is running in the terminal",

@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "請稍候",
   "checkTerminal": "請檢查終端機",
   "trustPromptTitle": "信任此資料夾？",
-  "trustPromptDescription": "Claude 需要您的許可才能讀取、編輯和執行此資料夾中的檔案。",
+  "trustPromptDescription": "{agentName} 需要您的許可才能讀取、編輯和執行此資料夾中的檔案。",
   "trustPromptYes": "是，我信任此資料夾",
   "trustPromptNo": "否，結束",
   "resumeBlocked": "終端機中有其他處理程序正在執行",

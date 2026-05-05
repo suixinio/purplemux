@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "少々お待ちください",
   "checkTerminal": "ターミナルを確認してください",
   "trustPromptTitle": "このフォルダを信頼しますか？",
-  "trustPromptDescription": "Claude がこのフォルダのファイルを読み取り、編集、実行するための許可が必要です。",
+  "trustPromptDescription": "{agentName} がこのフォルダのファイルを読み取り、編集、実行するための許可が必要です。",
   "trustPromptYes": "はい、このフォルダを信頼します",
   "trustPromptNo": "いいえ、終了",
   "resumeBlocked": "ターミナルで別のプロセスが実行中です",

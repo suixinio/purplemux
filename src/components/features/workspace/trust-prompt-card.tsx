@@ -1,14 +1,20 @@
 import { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import type { TTrustAnswer } from '@/lib/trust-prompt-detector';
+import type { TTrustAgent, TTrustAnswer } from '@/lib/trust-prompt-detector';
 
 interface ITrustPromptCardProps {
   folderPath: string;
+  agent?: TTrustAgent;
   onRespond: (answer: TTrustAnswer) => void;
 }
 
-const TrustPromptCard = ({ folderPath, onRespond }: ITrustPromptCardProps) => {
+const AGENT_LABEL: Record<TTrustAgent, string> = {
+  claude: 'Claude',
+  codex: 'Codex',
+};
+
+const TrustPromptCard = ({ folderPath, agent = 'claude', onRespond }: ITrustPromptCardProps) => {
   const t = useTranslations('terminal');
   const [sending, setSending] = useState<TTrustAnswer | null>(null);
 
@@ -27,7 +33,9 @@ const TrustPromptCard = ({ folderPath, onRespond }: ITrustPromptCardProps) => {
       <div className="mb-3 break-all rounded bg-background/50 px-2 py-1.5 text-xs font-mono text-foreground">
         {folderPath}
       </div>
-      <p className="mb-3 text-xs text-muted-foreground">{t('trustPromptDescription')}</p>
+      <p className="mb-3 text-xs text-muted-foreground">
+        {t('trustPromptDescription', { agentName: AGENT_LABEL[agent] })}
+      </p>
       <div className="flex flex-col gap-1.5">
         <button
           disabled={sending !== null}

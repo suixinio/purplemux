@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "Un instant",
   "checkTerminal": "Vérifiez le terminal",
   "trustPromptTitle": "Faire confiance à ce dossier ?",
-  "trustPromptDescription": "Claude a besoin de votre permission pour lire, modifier et exécuter des fichiers dans ce dossier.",
+  "trustPromptDescription": "{agentName} a besoin de votre permission pour lire, modifier et exécuter des fichiers dans ce dossier.",
   "trustPromptYes": "Oui, je fais confiance à ce dossier",
   "trustPromptNo": "Non, quitter",
   "resumeBlocked": "Un autre processus est en cours dans le terminal",

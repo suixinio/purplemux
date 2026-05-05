@@ -202,7 +202,7 @@ const MobileSurfaceView = ({
   }, []);
 
   const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
-    enabled: isClaudeCode && claudeCliState === 'inactive',
+    enabled: (isClaudeCode || isCodex) && claudeCliState === 'inactive',
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
   });
@@ -808,6 +808,8 @@ const MobileSurfaceView = ({
           onRestart={handleRestartCodexSession}
           updatePrompt={codexUpdatePrompt}
           onUpdatePromptResponse={onCodexUpdateResponse}
+          trustPrompt={trustPrompt}
+          onTrustResponse={onTrustResponse}
         />
       )}
 

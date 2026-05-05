@@ -15,6 +15,7 @@ import useTmuxInfo from '@/hooks/use-tmux-info';
 import useMessageCounts from '@/hooks/use-message-counts';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
+import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import WebInputBar from '@/components/features/workspace/web-input-bar';
 import QuickPromptBar from '@/components/features/workspace/quick-prompt-bar';
@@ -24,6 +25,7 @@ import MobileMetaSheet from './mobile-meta-sheet';
 import CodexSessionListView from '@/components/features/workspace/codex-session-list-view';
 import type { ICodexSessionEntry } from '@/lib/codex-session-list';
 import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
+import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 
 const CODEX_BOOT_CHECK_INTERVAL_MS = 800;
 
@@ -41,6 +43,8 @@ interface IMobileCodexPanelProps {
   onRestart?: () => void;
   updatePrompt?: ICodexUpdatePromptInfo | null;
   onUpdatePromptResponse?: (answer: TCodexUpdateAnswer) => void;
+  trustPrompt?: ITrustPromptInfo | null;
+  onTrustResponse?: (answer: TTrustAnswer) => void;
 }
 
 const MobileCodexPanel = ({
@@ -57,6 +61,8 @@ const MobileCodexPanel = ({
   onRestart,
   updatePrompt,
   onUpdatePromptResponse,
+  trustPrompt,
+  onTrustResponse,
 }: IMobileCodexPanelProps) => {
   const t = useTranslations('terminal');
   const agentProcess = useTabStore((s) => (tabId ? s.tabs[tabId]?.agentProcess ?? null : null));
@@ -238,6 +244,18 @@ const MobileCodexPanel = ({
     return (
       <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
         <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+      </div>
+    );
+  }
+
+  if (trustPrompt && onTrustResponse) {
+    return (
+      <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
+        <TrustPromptCard
+          folderPath={trustPrompt.folderPath}
+          agent={trustPrompt.agent}
+          onRespond={onTrustResponse}
+        />
       </div>
     );
   }

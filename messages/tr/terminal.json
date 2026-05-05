@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "Bir dakika",
   "checkTerminal": "Terminali kontrol edin",
   "trustPromptTitle": "Bu klasöre güvenilsin mi?",
-  "trustPromptDescription": "Claude'un bu klasördeki dosyaları okuması, düzenlemesi ve çalıştırması için izniniz gerekiyor.",
+  "trustPromptDescription": "{agentName} adlı uygulamanın bu klasördeki dosyaları okuması, düzenlemesi ve çalıştırması için izniniz gerekiyor.",
   "trustPromptYes": "Evet, bu klasöre güveniyorum",
   "trustPromptNo": "Hayır, çık",
   "resumeBlocked": "Terminalde başka bir işlem çalışıyor",

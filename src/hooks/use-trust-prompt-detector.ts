@@ -21,9 +21,14 @@ const useTrustPromptDetector = ({
   sendStdin,
 }: IUseTrustPromptDetectorOptions): IUseTrustPromptDetectorReturn => {
   const [trustPrompt, setTrustPrompt] = useState<ITrustPromptInfo | null>(null);
+  const trustPromptRef = useRef<ITrustPromptInfo | null>(null);
   const enabledRef = useRef(enabled);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const getBufferTextRef = useRef(getBufferText);
+
+  useEffect(() => {
+    trustPromptRef.current = trustPrompt;
+  }, [trustPrompt]);
 
   useEffect(() => {
     getBufferTextRef.current = getBufferText;
@@ -53,16 +58,17 @@ const useTrustPromptDetector = ({
       if (!enabledRef.current) return;
       const matched = matchTrustPrompt(getBufferTextRef.current());
       setTrustPrompt((prev) => {
-        const prevPath = prev?.folderPath ?? null;
-        const nextPath = matched?.folderPath ?? null;
-        return prevPath === nextPath ? prev : matched;
+        const same = prev?.folderPath === matched?.folderPath && prev?.agent === matched?.agent;
+        return same ? prev : matched;
       });
     }, DEBOUNCE_MS);
   }, []);
 
   const onTrustResponse = useCallback((answer: TTrustAnswer) => {
+    const agent = trustPromptRef.current?.agent ?? 'claude';
     setTrustPrompt(null);
-    sendStdin(answer === 'yes' ? '1\r' : '2\r');
+    const digit = answer === 'yes' ? '1' : '2';
+    sendStdin(agent === 'codex' ? digit : `${digit}\r`);
   }, [sendStdin]);
 
   return { trustPrompt: effectiveTrustPrompt, onTerminalData, onTrustResponse };

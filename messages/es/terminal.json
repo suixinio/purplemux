@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "Un momento",
   "checkTerminal": "Comprueba el terminal",
   "trustPromptTitle": "¿Confiar en esta carpeta?",
-  "trustPromptDescription": "Claude necesita tu permiso para leer, editar y ejecutar archivos en esta carpeta.",
+  "trustPromptDescription": "{agentName} necesita tu permiso para leer, editar y ejecutar archivos en esta carpeta.",
   "trustPromptYes": "Sí, confío en esta carpeta",
   "trustPromptNo": "No, salir",
   "resumeBlocked": "Hay otro proceso ejecutándose en el terminal",

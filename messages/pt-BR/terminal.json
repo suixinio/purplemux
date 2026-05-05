@@ -15,7 +15,7 @@
   "claudeBootSubtitle": "Só um momento",
   "checkTerminal": "Verifique o terminal",
   "trustPromptTitle": "Confiar nesta pasta?",
-  "trustPromptDescription": "Claude precisa da sua permissão para ler, editar e executar arquivos nesta pasta.",
+  "trustPromptDescription": "{agentName} precisa da sua permissão para ler, editar e executar arquivos nesta pasta.",
   "trustPromptYes": "Sim, eu confio nesta pasta",
   "trustPromptNo": "Não, sair",
   "resumeBlocked": "Outro processo esta em execucao no terminal",

@@ -199,7 +199,11 @@ const ClaudeCodePanel = ({
   if (trustPrompt && onTrustResponse) {
     return (
       <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
-        <TrustPromptCard folderPath={trustPrompt.folderPath} onRespond={onTrustResponse} />
+        <TrustPromptCard
+          folderPath={trustPrompt.folderPath}
+          agent={trustPrompt.agent}
+          onRespond={onTrustResponse}
+        />
         <button
           className="mt-3 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
           onClick={onClose}

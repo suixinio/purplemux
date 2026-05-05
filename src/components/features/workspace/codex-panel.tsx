@@ -12,11 +12,13 @@ import { useCodexSessions } from '@/hooks/use-codex-sessions';
 import { useSessionMetaCompute } from '@/hooks/use-session-meta';
 import CodexBootProgress from '@/components/features/workspace/codex-boot-progress';
 import CodexUpdatePromptCard from '@/components/features/workspace/codex-update-prompt-card';
+import TrustPromptCard from '@/components/features/workspace/trust-prompt-card';
 import TimelineView from '@/components/features/timeline/timeline-view';
 import SessionMetaBar, { SessionMetaBarSkeleton } from '@/components/features/workspace/session-meta-bar';
 import CodexSessionListView from '@/components/features/workspace/codex-session-list-view';
 import type { ICodexSessionEntry } from '@/lib/codex-session-list';
 import type { ICodexUpdatePromptInfo, TCodexUpdateAnswer } from '@/lib/codex-update-prompt-detector';
+import type { ITrustPromptInfo, TTrustAnswer } from '@/lib/trust-prompt-detector';
 
 const CODEX_BOOT_CHECK_INTERVAL_MS = 800;
 
@@ -30,6 +32,8 @@ interface ICodexPanelProps {
   onRestart?: () => void;
   updatePrompt?: ICodexUpdatePromptInfo | null;
   onUpdatePromptResponse?: (answer: TCodexUpdateAnswer) => void;
+  trustPrompt?: ITrustPromptInfo | null;
+  onTrustResponse?: (answer: TTrustAnswer) => void;
   scrollToBottomRef?: React.MutableRefObject<(() => void) | undefined>;
   addPendingMessageRef?: React.MutableRefObject<((text: string, options?: { autoHide?: boolean; attachmentPlaceholder?: boolean }) => string) | undefined>;
   removePendingMessageRef?: React.MutableRefObject<((id: string) => void) | undefined>;
@@ -45,6 +49,8 @@ const CodexPanel = ({
   onRestart,
   updatePrompt,
   onUpdatePromptResponse,
+  trustPrompt,
+  onTrustResponse,
   scrollToBottomRef,
   addPendingMessageRef,
   removePendingMessageRef,
@@ -241,6 +247,18 @@ const CodexPanel = ({
         )}
       >
         <CodexUpdatePromptCard prompt={updatePrompt} onRespond={onUpdatePromptResponse} />
+      </div>
+    );
+  }
+
+  if (trustPrompt && onTrustResponse) {
+    return (
+      <div className={cn('flex h-full w-full flex-col items-center justify-center animate-delayed-fade-in', className)}>
+        <TrustPromptCard
+          folderPath={trustPrompt.folderPath}
+          agent={trustPrompt.agent}
+          onRespond={onTrustResponse}
+        />
       </div>
     );
   }

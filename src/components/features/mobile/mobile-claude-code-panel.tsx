@@ -217,7 +217,11 @@ const MobileClaudeCodePanel = ({
   if (trustPrompt && onTrustResponse) {
     return (
       <div className="animate-delayed-fade-in flex min-h-0 flex-1 flex-col items-center justify-center bg-muted px-4">
-        <TrustPromptCard folderPath={trustPrompt.folderPath} onRespond={onTrustResponse} />
+        <TrustPromptCard
+          folderPath={trustPrompt.folderPath}
+          agent={trustPrompt.agent}
+          onRespond={onTrustResponse}
+        />
       </div>
     );
   }

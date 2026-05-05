@@ -294,7 +294,7 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
   }, []);
 
   const { trustPrompt, onTerminalData: onTrustData, onTrustResponse } = useTrustPromptDetector({
-    enabled: isClaudeCode && claudeCliState === 'inactive',
+    enabled: (isClaudeCode || isCodex) && claudeCliState === 'inactive',
     getBufferText: () => termActionsRef.current.getBufferText(),
     sendStdin: (data) => wsActionsRef.current.sendStdin(data),
   });
@@ -1206,6 +1206,8 @@ const PaneContainer = memo(({ paneId, paneNumber }: IPaneContainerProps) => {
                   onRestart={handleRestartCodexSession}
                   updatePrompt={codexUpdatePrompt}
                   onUpdatePromptResponse={onCodexUpdateResponse}
+                  trustPrompt={trustPrompt}
+                  onTrustResponse={onTrustResponse}
                   scrollToBottomRef={scrollToBottomRef}
                   addPendingMessageRef={addPendingMessageRef}
                   removePendingMessageRef={removePendingMessageRef}
