@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code, plusieurs tâches en même temps. En plus rapide.**
+**Claude Code et Codex, plusieurs tâches en même temps. En plus rapide.**
 
 Toutes vos sessions sur un seul écran. Sans coupure, même depuis le téléphone.
 
@@ -24,7 +24,7 @@ Vous préférez une app native ? Récupérez la build Electron macOS depuis la [
 
 ## Pourquoi purplemux
 
-- **Tableau de bord multi-session** — Visualisez d'un coup d'œil l'état « en cours / en attente d'entrée » de toutes vos sessions Claude Code
+- **Tableau de bord multi-session** — Visualisez d'un coup d'œil l'état « en cours / en attente d'entrée » de toutes vos sessions Claude Code et Codex
 - **Suivi des limites** — Solde 5 heures / 7 jours avec compte à rebours de réinitialisation
 - **Notifications push** — Alertes desktop et mobiles lorsqu'une tâche se termine ou attend une entrée
 - **Mobile et multi-appareil** — Accédez à la même session depuis un téléphone, une tablette ou un autre poste
@@ -49,20 +49,23 @@ Et aussi
 - **Raccourcis clavier** — Découpe, changement d'onglet, déplacement du focus
 - **Thèmes du terminal** — Mode sombre / clair, plusieurs palettes de couleurs
 - **Workspaces et groupes** — Sauvegardez et restaurez la disposition des panneaux, onglets et répertoires par workspace. Organisez les workspaces en groupes par glisser-déposer
-- **Flux de travail Git** — Side-by-side / Line-by-line avec coloration syntaxique, expansion des hunks en ligne et un onglet d'historique paginé. Fetch / pull / push depuis le panneau, avec indicateurs ahead/behind — si la synchronisation échoue (dirty worktree, conflits), Ask Claude en un clic
+- **Flux de travail Git** — Side-by-side / Line-by-line avec coloration syntaxique, expansion des hunks en ligne et un onglet d'historique paginé. Fetch / pull / push depuis le panneau, avec indicateurs ahead/behind — si la synchronisation échoue (dirty worktree, conflits), Ask Claude ou Codex en un clic
 - **Panneau navigateur web** — Navigateur intégré à côté du terminal pour vérifier le rendu du développement (Electron). Pilotable depuis la CLI `purplemux` et changement de viewport via un émulateur d'appareil intégré
+- **Onglets d'agents** — Lancez Claude, Codex ou une liste de sessions combinée depuis le menu nouvel onglet
 
-### Intégration Claude Code
+### Intégration Claude Code et Codex
 
 - **État en temps réel** — Indicateurs en cours / en attente d'entrée, bascule entre sessions
 - **Vue de session en direct** — Messages, appels d'outils, tâches, demandes de permission, blocs thinking
-- **Reprise en un clic** — Reprenez une session suspendue directement depuis le navigateur
+- **Onglets Codex** — Lancez des sessions Codex CLI avec la même persistance basée sur tmux que Claude
+- **Liste de sessions** — Parcourez et reprenez les sessions Claude et Codex récentes depuis une vue combinée
+- **Reprise en un clic** — Reprenez une session Claude ou Codex suspendue directement depuis le navigateur
 - **Reprise automatique** — Restauration automatique des sessions Claude au démarrage du serveur
 - **Prompts rapides** — Enregistrez vos prompts récurrents et envoyez-les en un clic
 - **Pièces jointes** — Déposez des images dans le champ de chat, ou attachez des fichiers pour insérer leur chemin. Fonctionne aussi sur mobile
 - **Historique des messages** — Réutilisez vos anciens messages
-- **Statistiques d'usage** — Tokens (input / output / cache read / cache write), coût, ventilation par projet, rapports IA quotidiens
-- **Rate limits** — Solde 5 heures / 7 jours, compte à rebours de réinitialisation
+- **Statistiques d'usage** — Tokens Claude + Codex, coût, ventilation par projet, rapports IA quotidiens
+- **Rate limits** — Solde 5 heures / 7 jours avec compte à rebours de réinitialisation pour les fournisseurs pris en charge
 
 ### Mobile et accessibilité
 
@@ -90,6 +93,22 @@ Et aussi
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Requis pour les onglets Claude. Installez Claude Code et connectez-vous avant de démarrer un onglet Claude :
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# ou avec le canal latest de Homebrew
+brew install --cask claude-code@latest
+```
+
+Optionnel pour les onglets Codex. Installez Codex CLI et connectez-vous avant de démarrer un onglet Codex :
+
+```bash
+npm i -g @openai/codex
+# ou
+brew install --cask codex
+```
+
 ### npx (le plus rapide)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### Exemples CLI
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### Depuis les sources
@@ -199,24 +225,25 @@ Par défaut, le protocole est HTTP. Utilisez impérativement HTTPS en exposition
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **E/S du terminal** — xterm.js se connecte à node-pty via WebSocket, puis node-pty s'attache aux sessions tmux. Un protocole binaire gère stdin/stdout/resize avec contrôle de backpressure.
 
-**Détection d'état** — Les hooks d'événements Claude Code (`SessionStart`, `Stop`, `Notification`) envoient des mises à jour immédiates en HTTP POST. Toutes les 5–15 s, l'arbre de processus est inspecté et les 8 derniers Ko des fichiers JSONL sont analysés.
+**Détection d'état** — Les hooks d'événements des agents envoient des mises à jour immédiates en HTTP POST. Claude Code utilise `SessionStart`, `Stop` et `Notification`; Codex utilise `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` et `PermissionRequest`. Toutes les 5–15 s, l'arbre de processus est inspecté et les 8 derniers Ko des fichiers JSONL sont analysés.
 
-**Chronologie** — Surveille les logs de session JSONL sous `~/.claude/projects/`, parse les nouvelles lignes à chaque changement et diffuse des entrées structurées vers le navigateur.
+**Chronologie** — Surveille les logs de session JSONL sous `~/.claude/projects/` et `~/.codex/sessions/`, parse les nouvelles lignes à chaque changement et diffuse des entrées structurées vers le navigateur.
 
 **Isolation tmux** — Utilise un socket `purple` dédié, totalement séparé de votre tmux existant. Pas de touche préfixe ni de barre d'état.
 
-**Reprise automatique** — Au démarrage du serveur, les sessions Claude précédentes sont restaurées via `claude --resume {sessionId}`.
+**Reprise automatique** — Au démarrage du serveur, les sessions Claude précédentes sont restaurées via `claude --resume {sessionId}`. Les sessions Codex peuvent être reprises depuis la liste des sessions ou avec `codex resume {sessionId}`.
 
 ## License
 

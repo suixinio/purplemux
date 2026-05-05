@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code,多項任務同時進行。更快速。**
+**Claude Code 與 Codex,多項任務同時進行。更快速。**
 
 一個畫面縱覽所有工作階段,在手機上也毫無中斷。
 
@@ -24,7 +24,7 @@ npx purplemux@latest
 
 ## 為什麼選擇 purplemux
 
-- **多工作階段儀表板** — 一眼掌握所有 Claude Code 工作階段的「執行中 / 等待輸入」狀態
+- **多工作階段儀表板** — 一眼掌握所有 Claude Code 與 Codex 工作階段的「執行中 / 等待輸入」狀態
 - **速率限制監控** — 顯示 5 小時 / 7 天剩餘額度與重置倒數
 - **推播通知** — 任務完成或需要輸入時,透過桌面與行動裝置推播提醒
 - **行動裝置 & 多裝置** — 在手機、平板或其他桌面都能存取同一工作階段
@@ -49,20 +49,23 @@ npx purplemux@latest
 - **鍵盤快速鍵** — 分割、切換分頁、移動焦點
 - **終端機佈景主題** — 深色 / 淺色模式,多種配色佈景主題
 - **工作區 & 群組** — 以工作區為單位儲存 / 還原窗格配置、分頁與工作目錄。可透過拖曳將工作區組織為群組進行管理
-- **Git 工作流程** — 支援 Side-by-side / Line-by-line 切換與語法高亮,並可行內展開 hunk、分頁瀏覽歷史紀錄分頁。可從窗格直接 fetch / pull / push (含 ahead/behind 指示) — 同步失敗時 (dirty worktree、衝突) 一鍵 Ask Claude
+- **Git 工作流程** — 支援 Side-by-side / Line-by-line 切換與語法高亮,並可行內展開 hunk、分頁瀏覽歷史紀錄分頁。可從窗格直接 fetch / pull / push (含 ahead/behind 指示) — 同步失敗時 (dirty worktree、衝突) 一鍵 Ask Claude 或 Codex
 - **內建瀏覽器窗格** — 在終端機旁嵌入瀏覽器檢視開發結果 (Electron)。可透過 `purplemux` CLI 控制,並以內建裝置模擬器切換視口
+- **代理分頁** — 從新增分頁選單啟動 Claude、Codex 或整合工作階段列表
 
-### Claude Code 整合
+### Claude Code 與 Codex 整合
 
 - **即時狀態** — 執行中 / 等待輸入指示,可於工作階段間切換
 - **即時工作階段檢視** — 訊息、工具呼叫、任務、權限請求、thinking 區塊
-- **一鍵 Resume** — 直接從瀏覽器恢復已中斷的工作階段
+- **Codex 分頁** — 以與 Claude 相同的 tmux 持久化能力啟動 Codex CLI 工作階段
+- **工作階段列表** — 在單一整合檢視中瀏覽並恢復最近的 Claude 與 Codex 工作階段
+- **一鍵 Resume** — 直接從瀏覽器恢復已中斷的 Claude 或 Codex 工作階段
 - **自動 Resume** — 伺服器啟動時自動還原先前的 Claude 工作階段
 - **快速提示** — 註冊常用提示,一鍵送出
 - **附件** — 在聊天輸入中拖放圖片,或附加檔案以自動插入路徑。行動裝置同樣可用
 - **訊息紀錄** — 重複使用先前的訊息
-- **使用量統計** — Token (input / output / cache read / cache write)、成本、依專案分析、每日 AI 報告
-- **速率限制** — 5 小時 / 7 天剩餘額度,重置倒數
+- **使用量統計** — Claude + Codex Token、成本、依專案分析、每日 AI 報告
+- **速率限制** — 支援的提供方的 5 小時 / 7 天剩餘額度,重置倒數
 
 ### 行動裝置 & 易用性
 
@@ -90,6 +93,22 @@ npx purplemux@latest
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Claude 分頁需要。安裝 Claude Code,並在啟動 Claude 分頁前登入:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# 或使用 Homebrew latest 頻道
+brew install --cask claude-code@latest
+```
+
+Codex 分頁為選用。安裝 Codex CLI,並在啟動 Codex 分頁前登入:
+
+```bash
+npm i -g @openai/codex
+# 或
+brew install --cask codex
+```
+
 ### npx (最快速)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### CLI 範例
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### 從原始碼執行
@@ -199,24 +225,25 @@ tailscale serve --bg off 8022
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **終端機 I/O** — xterm.js 透過 WebSocket 連線至 node-pty,node-pty 再接上 tmux 工作階段。使用二進位協定處理 stdin / stdout / resize 並控制背壓。
 
-**狀態偵測** — Claude Code 事件 hook (`SessionStart`、`Stop`、`Notification`) 透過 HTTP POST 立即推送更新。每 5–15 秒輪詢一次行程樹,並分析 JSONL 檔案末尾 8KB。
+**狀態偵測** — 代理事件 hook 透過 HTTP POST 立即推送更新。Claude Code 使用 `SessionStart`、`Stop`、`Notification`;Codex 使用 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PostToolUse`、`Stop`、`PermissionRequest`。每 5–15 秒輪詢一次行程樹,並分析 JSONL 檔案末尾 8KB。
 
-**時間軸** — 監聽 `~/.claude/projects/` 下的 JSONL 工作階段記錄,檔案變動時解析新行並將結構化項目串流至瀏覽器。
+**時間軸** — 監聽 `~/.claude/projects/` 與 `~/.codex/sessions/` 下的 JSONL 工作階段記錄,檔案變動時解析新行並將結構化項目串流至瀏覽器。
 
 **tmux 隔離** — 使用專屬的 `purple` socket,與現有 tmux 完全隔離。無前置鍵,無狀態列。
 
-**自動還原** — 伺服器啟動時以 `claude --resume {sessionId}` 還原先前的 Claude 工作階段。
+**自動還原** — 伺服器啟動時以 `claude --resume {sessionId}` 還原先前的 Claude 工作階段。Codex 工作階段可從工作階段列表恢復,也可使用 `codex resume {sessionId}`。
 
 ## License
 

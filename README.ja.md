@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code、複数のタスクを同時に。もっと速く。**
+**Claude Code と Codex、複数のタスクを同時に。もっと速く。**
 
 1 つの画面ですべてのセッションを、スマホでも途切れることなく。
 
@@ -24,7 +24,7 @@ npx purplemux@latest
 
 ## purplemux を選ぶ理由
 
-- **マルチセッションダッシュボード** — すべての Claude Code セッションの「作業中 / 入力待ち」ステータスを一目で把握
+- **マルチセッションダッシュボード** — すべての Claude Code と Codex セッションの「作業中 / 入力待ち」ステータスを一目で把握
 - **レート制限モニタリング** — 5 時間 / 7 日の残量とリセットまでのカウントダウンを表示
 - **プッシュ通知** — タスク完了や入力要求をデスクトップ / モバイルへ通知
 - **モバイル & マルチデバイス** — スマホ、タブレット、別のデスクトップからも同じセッションへ
@@ -49,20 +49,23 @@ npx purplemux@latest
 - **キーボードショートカット** — 分割、タブ切り替え、フォーカス移動
 - **ターミナルテーマ** — ダーク / ライトモード、多彩なカラーテーマ
 - **ワークスペース & グループ** — ペインレイアウト、タブ、作業ディレクトリをワークスペース単位で保存 / 復元。ドラッグ & ドロップでワークスペースをグループ化して管理
-- **Git ワークフロー** — Side-by-side / Line-by-line 切り替えとシンタックスハイライトに加え、インライン hunk 展開、ページネーション付き履歴タブ。パネルから直接 fetch / pull / push (ahead/behind 表示) — 同期失敗 (dirty worktree、コンフリクト) はワンクリックで Claude に質問
+- **Git ワークフロー** — Side-by-side / Line-by-line 切り替えとシンタックスハイライトに加え、インライン hunk 展開、ページネーション付き履歴タブ。パネルから直接 fetch / pull / push (ahead/behind 表示) — 同期失敗 (dirty worktree、コンフリクト) はワンクリックで Claude または Codex に質問
 - **Web ブラウザペイン** — ターミナル隣の組み込みブラウザで開発結果を確認 (Electron)。`purplemux` CLI から操作でき、内蔵のデバイスエミュレータでビューポートを切り替え
+- **エージェントタブ** — 新規タブメニューから Claude、Codex、または統合セッション一覧を開始
 
-### Claude Code 連携
+### Claude Code と Codex 連携
 
 - **リアルタイムステータス** — 作業中 / 入力待ちインジケーター、セッション間の切り替え
 - **ライブセッションビュー** — メッセージ、ツール呼び出し、タスク、権限リクエスト、thinking ブロック
-- **ワンクリック Resume** — 中断したセッションをブラウザからそのまま再開
+- **Codex タブ** — Claude と同じ tmux ベースの永続性で Codex CLI セッションを起動
+- **セッション一覧** — 最近の Claude と Codex セッションを 1 つの統合ビューで参照・再開
+- **ワンクリック Resume** — 中断した Claude または Codex セッションをブラウザからそのまま再開
 - **自動 Resume** — サーバー起動時に以前の Claude セッションを自動復元
 - **クイックプロンプト** — よく使うプロンプトを登録してワンクリック送信
 - **添付** — チャット入力に画像をドロップ、またはファイル添付でパスを自動挿入。モバイルでも動作
 - **メッセージ履歴** — 過去のメッセージを再利用
-- **使用量分析** — トークン (input / output / cache read / cache write)、コスト、プロジェクト別分析、日次 AI レポート
-- **レート制限** — 5 時間 / 7 日の残量、リセットまでのカウントダウン
+- **使用量分析** — Claude + Codex のトークン、コスト、プロジェクト別分析、日次 AI レポート
+- **レート制限** — 対応プロバイダーの 5 時間 / 7 日の残量、リセットまでのカウントダウン
 
 ### モバイル & アクセシビリティ
 
@@ -90,6 +93,22 @@ npx purplemux@latest
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Claude タブに必要です。Claude Code をインストールし、Claude タブを開始する前にログインしてください:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# または Homebrew latest チャンネル
+brew install --cask claude-code@latest
+```
+
+Codex タブは任意です。Codex CLI をインストールし、Codex タブを開始する前にログインしてください:
+
+```bash
+npm i -g @openai/codex
+# または
+brew install --cask codex
+```
+
 ### npx (最速)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### CLI 例
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### ソースから実行
@@ -199,24 +225,25 @@ tailscale serve --bg off 8022
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **ターミナル I/O** — xterm.js は WebSocket 経由で node-pty に接続し、node-pty は tmux セッションにアタッチされます。バイナリプロトコルで stdin / stdout / resize を処理し、バックプレッシャーを制御します。
 
-**ステータス検出** — Claude Code イベントフック (`SessionStart`, `Stop`, `Notification`) が HTTP POST で即時更新を配信します。5〜15 秒ごとにプロセスツリーを確認し、JSONL ファイル末尾 8KB を解析します。
+**ステータス検出** — エージェントイベントフックが HTTP POST で即時更新を配信します。Claude Code は `SessionStart`、`Stop`、`Notification` を使用し、Codex は `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PostToolUse`、`Stop`、`PermissionRequest` を使用します。5〜15 秒ごとにプロセスツリーを確認し、JSONL ファイル末尾 8KB を解析します。
 
-**タイムライン** — `~/.claude/projects/` 配下の JSONL セッションログを監視し、変更時に新しい行をパースして構造化エントリをブラウザへストリーミングします。
+**タイムライン** — `~/.claude/projects/` と `~/.codex/sessions/` 配下の JSONL セッションログを監視し、変更時に新しい行をパースして構造化エントリをブラウザへストリーミングします。
 
 **tmux 分離** — 専用の `purple` ソケットを使用し、既存の tmux と完全に分離されています。prefix キーなし、ステータスバーなし。
 
-**自動復旧** — サーバー起動時に `claude --resume {sessionId}` で以前の Claude セッションを復元します。
+**自動復旧** — サーバー起動時に `claude --resume {sessionId}` で以前の Claude セッションを復元します。Codex セッションはセッション一覧または `codex resume {sessionId}` で再開できます。
 
 ## License
 

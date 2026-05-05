@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code, muchas tareas a la vez. Más rápido.**
+**Claude Code y Codex, muchas tareas a la vez. Más rápido.**
 
 Todas tus sesiones en una sola pantalla. Sin interrupciones, incluso desde el móvil.
 
@@ -24,7 +24,7 @@ Abre [http://localhost:8022](http://localhost:8022) en tu navegador. Listo.
 
 ## Por qué purplemux
 
-- **Panel multisesión** — Consulta de un vistazo el estado «trabajando / requiere entrada» de todas tus sesiones de Claude Code
+- **Panel multisesión** — Consulta de un vistazo el estado «trabajando / requiere entrada» de todas tus sesiones de Claude Code y Codex
 - **Monitor de límites** — Saldo de 5 horas / 7 días y cuenta atrás para el reinicio
 - **Notificaciones push** — Avisos de escritorio y móvil cuando una tarea termina o requiere entrada
 - **Móvil y multi-dispositivo** — Accede a la misma sesión desde el teléfono, la tablet u otro escritorio
@@ -49,20 +49,23 @@ Además
 - **Atajos de teclado** — División, cambio de pestaña, movimiento de foco
 - **Temas de terminal** — Modo oscuro / claro y varios esquemas de color
 - **Workspaces y grupos** — Guarda y restaura diseños de paneles, pestañas y directorios de trabajo por workspace. Organiza los workspaces en grupos con arrastrar y soltar
-- **Flujo de trabajo Git** — Side-by-side / Line-by-line con resaltado de sintaxis, expansión de hunks en línea y una pestaña de historial paginada. Fetch / pull / push desde el panel con indicadores ahead/behind — si la sincronización falla (dirty worktree, conflictos), Ask Claude con un clic
+- **Flujo de trabajo Git** — Side-by-side / Line-by-line con resaltado de sintaxis, expansión de hunks en línea y una pestaña de historial paginada. Fetch / pull / push desde el panel con indicadores ahead/behind — si la sincronización falla (dirty worktree, conflictos), Ask Claude o Codex con un clic
 - **Panel de navegador web** — Navegador integrado junto al terminal para comprobar la salida de desarrollo (Electron). Contrólalo desde la CLI `purplemux` y cambia el viewport con un emulador de dispositivo integrado
+- **Pestañas de agentes** — Inicia Claude, Codex o una lista de sesiones combinada desde el menú de nueva pestaña
 
-### Integración con Claude Code
+### Integración con Claude Code y Codex
 
 - **Estado en tiempo real** — Indicadores de trabajando / requiere entrada y cambio entre sesiones
 - **Vista en vivo de la sesión** — Mensajes, llamadas a herramientas, tareas, solicitudes de permisos y bloques de thinking
-- **Reanudación en un clic** — Retoma una sesión pausada directamente desde el navegador
+- **Pestañas Codex** — Inicia sesiones de Codex CLI con la misma persistencia basada en tmux que Claude
+- **Lista de sesiones** — Explora y reanuda sesiones recientes de Claude y Codex desde una vista combinada
+- **Reanudación en un clic** — Retoma una sesión pausada de Claude o Codex directamente desde el navegador
 - **Reanudación automática** — Recupera sesiones previas de Claude al arrancar el servidor
 - **Prompts rápidos** — Registra prompts frecuentes y envíalos con un clic
 - **Adjuntos** — Suelta imágenes en el cuadro de chat o adjunta archivos para insertar su ruta. También funciona en móvil
 - **Historial de mensajes** — Reutiliza mensajes anteriores
-- **Estadísticas de uso** — Tokens (input / output / cache read / cache write), coste, desglose por proyecto e informes diarios de IA
-- **Rate limits** — Saldo de 5 horas / 7 días y cuenta atrás para el reinicio
+- **Estadísticas de uso** — Tokens de Claude + Codex, coste, desglose por proyecto e informes diarios de IA
+- **Rate limits** — Saldo de 5 horas / 7 días y cuenta atrás para el reinicio en proveedores compatibles
 
 ### Móvil y accesibilidad
 
@@ -90,6 +93,22 @@ Además
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Requerido para pestañas de Claude. Instala Claude Code e inicia sesión antes de abrir una pestaña de Claude:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# o con el canal latest de Homebrew
+brew install --cask claude-code@latest
+```
+
+Opcional para pestañas de Codex. Instala Codex CLI e inicia sesión antes de abrir una pestaña de Codex:
+
+```bash
+npm i -g @openai/codex
+# o
+brew install --cask codex
+```
+
 ### npx (el más rápido)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### Ejemplos de CLI
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### Desde el código fuente
@@ -199,24 +225,25 @@ Por defecto usa HTTP. Aplica siempre HTTPS al exponer la aplicación al exterior
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **E/S del terminal** — xterm.js se conecta a node-pty mediante WebSocket y node-pty se acopla a las sesiones de tmux. Un protocolo binario gestiona stdin/stdout/resize con control de backpressure.
 
-**Detección de estado** — Los hooks de eventos de Claude Code (`SessionStart`, `Stop`, `Notification`) envían actualizaciones inmediatas por HTTP POST. Cada 5–15 s se inspeccionan los árboles de procesos y se analizan los últimos 8 KB de los archivos JSONL.
+**Detección de estado** — Los hooks de eventos de los agentes envían actualizaciones inmediatas por HTTP POST. Claude Code usa `SessionStart`, `Stop` y `Notification`; Codex usa `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` y `PermissionRequest`. Cada 5–15 s se inspeccionan los árboles de procesos y se analizan los últimos 8 KB de los archivos JSONL.
 
-**Timeline** — Observa los logs JSONL de sesiones bajo `~/.claude/projects/`, parsea las nuevas líneas al cambiar el archivo y envía entradas estructuradas al navegador.
+**Timeline** — Observa los logs JSONL de sesiones bajo `~/.claude/projects/` y `~/.codex/sessions/`, parsea las nuevas líneas al cambiar el archivo y envía entradas estructuradas al navegador.
 
 **Aislamiento tmux** — Usa un socket `purple` dedicado, totalmente separado de tu tmux actual. Sin tecla prefix ni barra de estado.
 
-**Recuperación automática** — Al iniciar el servidor, restaura las sesiones previas de Claude con `claude --resume {sessionId}`.
+**Recuperación automática** — Al iniciar el servidor, restaura las sesiones previas de Claude con `claude --resume {sessionId}`. Las sesiones de Codex pueden reanudarse desde la lista de sesiones o con `codex resume {sessionId}`.
 
 ## License
 

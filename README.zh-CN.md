@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code,多任务同时进行。更快。**
+**Claude Code 与 Codex,多任务同时进行。更快。**
 
 一屏纵览所有会话,在手机上也毫无中断。
 
@@ -24,7 +24,7 @@ npx purplemux@latest
 
 ## 为什么选择 purplemux
 
-- **多会话仪表盘** — 一眼掌握所有 Claude Code 会话的「运行中 / 等待输入」状态
+- **多会话仪表盘** — 一眼掌握所有 Claude Code 与 Codex 会话的「运行中 / 等待输入」状态
 - **速率限制监控** — 显示 5 小时 / 7 天剩余额度及重置倒计时
 - **推送通知** — 任务完成或需要输入时,桌面与移动端推送提醒
 - **移动端 & 多设备** — 在手机、平板或其他桌面都能访问同一会话
@@ -49,20 +49,23 @@ npx purplemux@latest
 - **键盘快捷键** — 分割、切换标签、焦点移动
 - **终端主题** — 深色 / 浅色模式,多种配色主题
 - **工作区 & 分组** — 以工作区为单位保存 / 恢复面板布局、标签与工作目录。通过拖拽将工作区组织为分组进行管理
-- **Git 工作流** — 支持 Side-by-side / Line-by-line 切换与语法高亮,以及行内 hunk 展开、分页历史标签。可从面板直接 fetch / pull / push (含 ahead/behind 指示) — 同步失败时 (dirty worktree、冲突) 一键 Ask Claude
+- **Git 工作流** — 支持 Side-by-side / Line-by-line 切换与语法高亮,以及行内 hunk 展开、分页历史标签。可从面板直接 fetch / pull / push (含 ahead/behind 指示) — 同步失败时 (dirty worktree、冲突) 一键 Ask Claude 或 Codex
 - **内置浏览器面板** — 在终端旁嵌入浏览器查看开发结果 (Electron)。可通过 `purplemux` CLI 控制,并内置设备模拟器切换视口
+- **智能体标签** — 从新建标签菜单启动 Claude、Codex 或统一会话列表
 
-### Claude Code 集成
+### Claude Code 与 Codex 集成
 
 - **实时状态** — 运行中 / 等待输入指示,支持在会话间切换
 - **实时会话视图** — 消息、工具调用、任务、权限请求、thinking 区块
-- **一键 Resume** — 直接从浏览器恢复已中断的会话
+- **Codex 标签** — 使用与 Claude 相同的 tmux 持久化能力启动 Codex CLI 会话
+- **会话列表** — 在统一视图中浏览并恢复最近的 Claude 与 Codex 会话
+- **一键 Resume** — 直接从浏览器恢复已中断的 Claude 或 Codex 会话
 - **自动 Resume** — 服务器启动时自动恢复之前的 Claude 会话
 - **快速提示** — 注册常用提示,一键发送
 - **附件** — 在聊天输入中拖入图片,或附加文件以自动插入路径。移动端同样可用
 - **消息历史** — 复用之前的消息
-- **用量统计** — Token (input / output / cache read / cache write)、成本、按项目拆分、每日 AI 报告
-- **速率限制** — 5 小时 / 7 天剩余额度,重置倒计时
+- **用量统计** — Claude + Codex Token、成本、按项目拆分、每日 AI 报告
+- **速率限制** — 支持的提供方的 5 小时 / 7 天剩余额度,重置倒计时
 
 ### 移动端 & 易用性
 
@@ -90,6 +93,22 @@ npx purplemux@latest
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Claude 标签需要。安装 Claude Code,并在启动 Claude 标签前登录:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# 或使用 Homebrew latest 频道
+brew install --cask claude-code@latest
+```
+
+Codex 标签为可选。安装 Codex CLI,并在启动 Codex 标签前登录:
+
+```bash
+npm i -g @openai/codex
+# 或
+brew install --cask codex
+```
+
 ### npx (最快)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### CLI 示例
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### 从源码运行
@@ -199,24 +225,25 @@ tailscale serve --bg off 8022
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **终端 I/O** — xterm.js 通过 WebSocket 连接 node-pty,node-pty 再接入 tmux 会话。使用二进制协议处理 stdin / stdout / resize 并进行背压控制。
 
-**状态检测** — Claude Code 事件 hook (`SessionStart`、`Stop`、`Notification`) 通过 HTTP POST 立即推送更新。每 5–15 秒轮询一次进程树,并分析 JSONL 文件末尾 8KB。
+**状态检测** — 智能体事件 hook 通过 HTTP POST 立即推送更新。Claude Code 使用 `SessionStart`、`Stop`、`Notification`;Codex 使用 `SessionStart`、`UserPromptSubmit`、`PreToolUse`、`PostToolUse`、`Stop`、`PermissionRequest`。每 5–15 秒轮询一次进程树,并分析 JSONL 文件末尾 8KB。
 
-**时间线** — 监听 `~/.claude/projects/` 下的 JSONL 会话日志,文件变化时解析新行并将结构化条目流式传送到浏览器。
+**时间线** — 监听 `~/.claude/projects/` 与 `~/.codex/sessions/` 下的 JSONL 会话日志,文件变化时解析新行并将结构化条目流式传送到浏览器。
 
 **tmux 隔离** — 使用专用的 `purple` socket,与现有 tmux 完全隔离。无前缀键,无状态栏。
 
-**自动恢复** — 服务器启动时通过 `claude --resume {sessionId}` 恢复之前的 Claude 会话。
+**自动恢复** — 服务器启动时通过 `claude --resume {sessionId}` 恢复之前的 Claude 会话。Codex 会话可从会话列表恢复,也可使用 `codex resume {sessionId}`。
 
 ## License
 

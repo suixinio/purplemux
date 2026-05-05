@@ -1,6 +1,6 @@
 # purplemux
 
-**Claude Code, birden çok işi aynı anda. Daha hızlı.**
+**Claude Code ve Codex, birden çok işi aynı anda. Daha hızlı.**
 
 Tüm oturumlarınız tek bir ekranda. Telefonda bile kopuksuz.
 
@@ -24,7 +24,7 @@ Yerel bir uygulama mı tercih edersiniz? macOS Electron sürümünü [en son sü
 
 ## Neden purplemux
 
-- **Çoklu oturum panosu** — Tüm Claude Code oturumlarının «çalışıyor / giriş bekliyor» durumunu tek bakışta görün
+- **Çoklu oturum panosu** — Tüm Claude Code ve Codex oturumlarının «çalışıyor / giriş bekliyor» durumunu tek bakışta görün
 - **Rate limit takibi** — 5 saat / 7 gün kalan kullanım ve sıfırlama geri sayımı
 - **Push bildirimleri** — Görev bitince veya giriş gerektiğinde masaüstü ve mobil uyarılar
 - **Mobil ve çoklu cihaz** — Aynı oturuma telefonunuzdan, tabletinizden veya başka bir masaüstünden erişin
@@ -49,20 +49,23 @@ Ayrıca
 - **Klavye kısayolları** — Bölme, sekme değiştirme, odak hareketi
 - **Terminal temaları** — Koyu / açık mod, çeşitli renk temaları
 - **Çalışma alanları & gruplar** — Panel düzenini, sekmeleri ve çalışma dizinlerini çalışma alanı bazında kaydedin ve geri yükleyin. Çalışma alanlarını sürükle-bırak ile gruplara ayırarak yönetin
-- **Git iş akışı** — Side-by-side / Line-by-line geçişi ve sözdizimi vurgulamasıyla birlikte satır içi hunk genişletme ve sayfalandırılmış geçmiş sekmesi. Panelden doğrudan fetch / pull / push (ahead/behind göstergeleriyle) — sync başarısız olursa (dirty worktree, çakışma) tek tıkla Ask Claude
+- **Git iş akışı** — Side-by-side / Line-by-line geçişi ve sözdizimi vurgulamasıyla birlikte satır içi hunk genişletme ve sayfalandırılmış geçmiş sekmesi. Panelden doğrudan fetch / pull / push (ahead/behind göstergeleriyle) — sync başarısız olursa (dirty worktree, çakışma) tek tıkla Ask Claude veya Codex
 - **Web tarayıcı paneli** — Geliştirme çıktısını kontrol etmek için terminalin yanında gömülü tarayıcı (Electron). `purplemux` CLI'dan kontrol edin ve dahili cihaz öykünücüsüyle viewport'u değiştirin
+- **Ajan sekmeleri** — Yeni sekme menüsünden Claude, Codex veya birleşik oturum listesini başlatın
 
-### Claude Code entegrasyonu
+### Claude Code ve Codex entegrasyonu
 
 - **Gerçek zamanlı durum** — Çalışıyor / giriş bekliyor göstergeleri ve oturumlar arası geçiş
 - **Canlı oturum görünümü** — Mesajlar, araç çağrıları, görevler, izin istekleri ve thinking blokları
-- **Tek tıkla Resume** — Duraklatılmış oturumu doğrudan tarayıcıdan devam ettirin
+- **Codex sekmeleri** — Claude ile aynı tmux tabanlı kalıcılıkla Codex CLI oturumları başlatın
+- **Oturum listesi** — Yakın tarihli Claude ve Codex oturumlarını tek birleşik görünümden inceleyin ve devam ettirin
+- **Tek tıkla Resume** — Duraklatılmış Claude veya Codex oturumunu doğrudan tarayıcıdan devam ettirin
 - **Otomatik Resume** — Sunucu başlatıldığında önceki Claude oturumlarını otomatik olarak kurtarır
 - **Hızlı prompt'lar** — Sık kullanılan prompt'ları kaydedin ve tek tıkla gönderin
 - **Ekler** — Sohbet alanına görseller bırakın veya dosya ekleyerek yolunu otomatik ekletin. Mobilde de çalışır
 - **Mesaj geçmişi** — Önceki mesajları tekrar kullanın
-- **Kullanım istatistikleri** — Token'lar (input / output / cache read / cache write), maliyet, proje bazlı kırılım, günlük AI raporları
-- **Rate limit** — 5 saat / 7 gün kalan kullanım ve sıfırlama geri sayımı
+- **Kullanım istatistikleri** — Claude + Codex token'ları, maliyet, proje bazlı kırılım, günlük AI raporları
+- **Rate limit** — Desteklenen sağlayıcılar için 5 saat / 7 gün kalan kullanım ve sıfırlama geri sayımı
 
 ### Mobil ve erişilebilirlik
 
@@ -90,6 +93,22 @@ Ayrıca
 - [Node.js](https://nodejs.org/) 20+
 - [tmux](https://github.com/tmux/tmux)
 
+Claude sekmeleri için gereklidir. Claude Code'u kurun ve Claude sekmesi başlatmadan önce giriş yapın:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+# veya Homebrew latest kanalıyla
+brew install --cask claude-code@latest
+```
+
+Codex sekmeleri için isteğe bağlıdır. Codex CLI'ı kurun ve Codex sekmesi başlatmadan önce giriş yapın:
+
+```bash
+npm i -g @openai/codex
+# veya
+brew install --cask codex
+```
+
 ### npx (en hızlısı)
 
 ```bash
@@ -101,6 +120,13 @@ npx purplemux@latest
 ```bash
 npm install -g purplemux
 purplemux
+```
+
+### CLI örnekleri
+
+```bash
+purplemux tab create -w WS -t codex-cli -n "fix auth"
+purplemux tab create -w WS -t agent-sessions
 ```
 
 ### Kaynaktan çalıştırma
@@ -199,24 +225,25 @@ Varsayılan protokol HTTP'dir. Dışarı açarken mutlaka HTTPS kullanın:
         ▼                ▼                     ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  System                                                     │
-│  tmux (purple socket)         Claude Code                   │
+│  tmux (purple socket)         Agent CLIs                    │
 │  ┌────────┐ ┌────────┐       ┌────────────────────────────┐ │
-│  │Session1│ │Session2│  ...  │ ~/.claude/sessions/        │ │
-│  │ (shell)│ │ (shell)│       │ ~/.claude/projects/        │ │
-│  └────────┘ └────────┘       │   └─ {project}/{sid}.jsonl │ │
+│  │Session1│ │Session2│  ...  │ Claude Code                │ │
+│  │ (shell)│ │ (shell)│       │   ~/.claude/projects/*.jsonl │ │
+│  └────────┘ └────────┘       │ Codex                      │ │
+│                              │   ~/.codex/sessions/*.jsonl │ │
 │                              └────────────────────────────┘ │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 **Terminal G/Ç** — xterm.js, node-pty'ye WebSocket üzerinden bağlanır; node-pty ise tmux oturumlarına iliştirilir. İkili bir protokol stdin/stdout/resize işlemlerini backpressure kontrolüyle yürütür.
 
-**Durum algılama** — Claude Code olay hook'ları (`SessionStart`, `Stop`, `Notification`) HTTP POST ile anında güncelleme gönderir. Her 5–15 sn'de bir süreç ağacı kontrol edilir ve JSONL dosyalarının son 8 KB'si analiz edilir.
+**Durum algılama** — Ajan olay hook'ları HTTP POST ile anında güncelleme gönderir. Claude Code `SessionStart`, `Stop` ve `Notification` kullanır; Codex `SessionStart`, `UserPromptSubmit`, `PreToolUse`, `PostToolUse`, `Stop` ve `PermissionRequest` kullanır. Her 5–15 sn'de bir süreç ağacı kontrol edilir ve JSONL dosyalarının son 8 KB'si analiz edilir.
 
-**Zaman tüneli** — `~/.claude/projects/` altındaki JSONL oturum loglarını izler, değişiklikte yeni satırları ayrıştırır ve yapılandırılmış girişleri tarayıcıya akıtır.
+**Zaman tüneli** — `~/.claude/projects/` ve `~/.codex/sessions/` altındaki JSONL oturum loglarını izler, değişiklikte yeni satırları ayrıştırır ve yapılandırılmış girişleri tarayıcıya akıtır.
 
 **tmux izolasyonu** — Mevcut tmux'unuzdan tamamen ayrı, özel bir `purple` soketi kullanır. Prefix tuşu yok, durum çubuğu yok.
 
-**Otomatik kurtarma** — Sunucu başlatıldığında önceki Claude oturumları `claude --resume {sessionId}` ile geri yüklenir.
+**Otomatik kurtarma** — Sunucu başlatıldığında önceki Claude oturumları `claude --resume {sessionId}` ile geri yüklenir. Codex oturumları oturum listesinden veya `codex resume {sessionId}` ile devam ettirilebilir.
 
 ## License
 
