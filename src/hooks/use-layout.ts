@@ -680,42 +680,40 @@ const useLayoutStore = create<ILayoutState>((set, get) => ({
     const { layout } = get();
     if (!layout) return;
     const panes = collectPanes(layout.root);
-    const pane = panes.find((p) => p.id === layout.activePaneId);
-    if (!pane) return;
+    const paneIdx = panes.findIndex((p) => p.id === layout.activePaneId);
+    if (paneIdx === -1) return;
+    const pane = panes[paneIdx];
     const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
     const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
     if (idx > 0) {
       get().switchTabInPane(pane.id, sorted[idx - 1].id);
-    } else {
-      const paneIdx = panes.indexOf(pane);
-      if (paneIdx > 0) {
-        const prevPane = panes[paneIdx - 1];
-        const prevSorted = [...prevPane.tabs].sort((a, b) => a.order - b.order);
-        get().focusPane(prevPane.id);
-        get().switchTabInPane(prevPane.id, prevSorted[prevSorted.length - 1].id);
-      }
+      return;
     }
+    const prevPane = panes[(paneIdx - 1 + panes.length) % panes.length];
+    const prevSorted = [...prevPane.tabs].sort((a, b) => a.order - b.order);
+    if (prevSorted.length === 0) return;
+    if (prevPane.id !== pane.id) get().focusPane(prevPane.id);
+    get().switchTabInPane(prevPane.id, prevSorted[prevSorted.length - 1].id);
   },
 
   focusNextTab: () => {
     const { layout } = get();
     if (!layout) return;
     const panes = collectPanes(layout.root);
-    const pane = panes.find((p) => p.id === layout.activePaneId);
-    if (!pane) return;
+    const paneIdx = panes.findIndex((p) => p.id === layout.activePaneId);
+    if (paneIdx === -1) return;
+    const pane = panes[paneIdx];
     const sorted = [...pane.tabs].sort((a, b) => a.order - b.order);
     const idx = sorted.findIndex((t) => t.id === pane.activeTabId);
-    if (idx < sorted.length - 1) {
+    if (idx !== -1 && idx < sorted.length - 1) {
       get().switchTabInPane(pane.id, sorted[idx + 1].id);
-    } else {
-      const paneIdx = panes.indexOf(pane);
-      if (paneIdx < panes.length - 1) {
-        const nextPane = panes[paneIdx + 1];
-        const nextSorted = [...nextPane.tabs].sort((a, b) => a.order - b.order);
-        get().focusPane(nextPane.id);
-        get().switchTabInPane(nextPane.id, nextSorted[0].id);
-      }
+      return;
     }
+    const nextPane = panes[(paneIdx + 1) % panes.length];
+    const nextSorted = [...nextPane.tabs].sort((a, b) => a.order - b.order);
+    if (nextSorted.length === 0) return;
+    if (nextPane.id !== pane.id) get().focusPane(nextPane.id);
+    get().switchTabInPane(nextPane.id, nextSorted[0].id);
   },
 
   focusTabByIndex: (index) => {
