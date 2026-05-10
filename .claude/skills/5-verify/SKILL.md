@@ -1,143 +1,143 @@
-# spec-verify — 스펙 대비 구현 검증
+# spec-verify — Verify Implementation Against the Spec
 
-feature에 대해 스펙 문서와 실제 코드를 비교하여 누락/불일치를 찾아냅니다.
-누락된 항목이 있으면 바로 코드를 보완합니다.
-"v1 visit-planning 검증해줘" 요청 시 사용합니다.
+For a given feature, compares the spec documents with the actual code and finds gaps and mismatches.
+If items are missing, the code is patched immediately.
+Use when the user asks to "verify v1 visit-planning".
 
 ## Instructions
 
-다음 단계를 순서대로 수행하세요.
+Perform the following steps in order.
 
-### 1. 인자 확인
+### 1. Argument Check
 
-- 첫 번째 인자: 버전 (예: v1, v2)
-- 두 번째 인자: feature명 (예: visit-planning)
-- feature명이 없으면 "feature명을 지정해주세요. 예: `/5-verify v1 visit-planning`" 안내 후 종료
+- First argument: version (e.g., v1, v2)
+- Second argument: feature name (e.g., visit-planning)
+- If the feature name is missing, print "Please specify a feature name. Example: `/5-verify v1 visit-planning`" and exit
 
-### 2. CLAUDE.md 로드
+### 2. Load CLAUDE.md
 
-- `CLAUDE.md`를 읽어 기술 스택, 코드 규칙, 참고 문서 링크 파악
+- Read `CLAUDE.md` to identify the tech stack, coding rules, and reference-document links
 
-### 3. 스펙 문서 전체 로드
+### 3. Load All Spec Documents
 
-다음 4개 스펙 문서를 모두 읽습니다:
+Read all four spec documents:
 
-- `.specs/v{N}/features/{feature-name}/spec.md` — 페이지 개요, 주요 기능
-- `.specs/v{N}/features/{feature-name}/detail/ui.md` — 화면 구성, 컴포넌트 매핑
-- `.specs/v{N}/features/{feature-name}/detail/flow.md` — 사용자 흐름, 상태 전이
-- `.specs/v{N}/features/{feature-name}/detail/api.md` — API 연동, 쿼리/뮤테이션
+- `.specs/v{N}/features/{feature-name}/spec.md` — page overview, major features
+- `.specs/v{N}/features/{feature-name}/detail/ui.md` — screen composition, component mapping
+- `.specs/v{N}/features/{feature-name}/detail/flow.md` — user flow, state transitions
+- `.specs/v{N}/features/{feature-name}/detail/api.md` — API integration, queries / mutations
 
-### 4. 이전 빌드/검증 결과 로드
+### 4. Load Previous Build / Verify Results
 
-- `.specs/v{N}/features/{feature-name}/result/` 디렉토리를 glob 패턴 `*.md`로 탐색하여 존재하는 모든 결과 파일을 읽습니다:
-  - `build.md` — 빌드 시 생성/수정/삭제된 파일 목록
-  - `verify-*.md` — 이전 검증 라운드별 결과 (verify-1.md, verify-2.md, …)
+- Glob the `.specs/v{N}/features/{feature-name}/result/` directory with `*.md` and read every result file present:
+  - `build.md` — list of files created / modified / deleted at build time
+  - `verify-*.md` — results of previous verification rounds (`verify-1.md`, `verify-2.md`, …)
 
-- 이전 결과에서 다음 정보를 파악합니다:
-  - **이미 보완 완료된 항목** → 재검증 시 통과 확인만 하고 중복 수정하지 않음
-  - **미보완 항목과 사유** (예: 별도 feature 필요, 인프라 수준 작업) → 동일 사유의 항목은 이번 라운드에서도 미보완으로 유지
-  - **보완 전후 수치 변화** → 개선 추이 파악
+- From the prior results, identify the following:
+  - **Items already patched** → on re-verification, just confirm the pass without making duplicate edits
+  - **Unpatched items and the reason** (e.g., requires a separate feature, infrastructure-level work) → keep items with the same reason as unpatched in this round as well
+  - **Numerical change before / after the fix** → understand the improvement trend
 
-- result 디렉토리가 없거나 파일이 없으면 (첫 검증) 이 단계를 건너뜁니다.
+- If the `result/` directory does not exist or there are no files (first verification), skip this step.
 
-### 5. 구현 코드 전체 탐색
+### 5. Survey the Implementation Code
 
-- 프로젝트 루트 하위에서 해당 feature와 관련된 모든 파일을 탐색
-- 라우트, 페이지 컴포넌트, 하위 컴포넌트, 훅, API 연동, 타입 정의 등 전체 파악
+- Within the project root, find every file related to the feature
+- Identify the full picture: routes, page components, sub-components, hooks, API integrations, type definitions, etc.
 
-### 6. 스펙 vs 구현 대조 검증
+### 6. Spec vs. Implementation Cross-Check
 
-아래 체크리스트를 기준으로 스펙 문서와 실제 코드를 **항목 단위로** 대조합니다:
+Use the checklist below to cross-check the spec documents against the actual code **item by item**:
 
-#### spec.md 대조
+#### spec.md Cross-Check
 
-- [ ] 주요 기능 목록의 각 항목이 코드에 구현되어 있는가
-- [ ] 라우트 경로가 spec에 정의된 대로인가
+- [ ] Is each item in the major-features list implemented in the code?
+- [ ] Is the route path as defined in the spec?
 
-#### ui.md 대조
+#### ui.md Cross-Check
 
-- [ ] 레이아웃 구조가 명세와 일치하는가
-- [ ] 테이블 컬럼 / 카드 구성이 명세대로인가
-- [ ] 폼 필드(필드명, 컴포넌트 타입, 필수 여부, 검증 규칙)가 일치하는가
-- [ ] 로딩 상태(스켈레톤/스피너)가 구현되어 있는가
-- [ ] 빈 상태(안내 메시지 + 액션)가 구현되어 있는가
-- [ ] 에러 상태(재시도 옵션)가 구현되어 있는가
-- [ ] 인터랙션 피드백(버튼 클릭, 폼 제출, 삭제 등)이 구현되어 있는가
+- [ ] Does the layout structure match the spec?
+- [ ] Are the table columns / card composition as specified?
+- [ ] Do the form fields (field name, component type, required flag, validation rules) match?
+- [ ] Is the loading state (skeleton / spinner) implemented?
+- [ ] Is the empty state (guidance message + action) implemented?
+- [ ] Is the error state (retry option) implemented?
+- [ ] Is interaction feedback (button click, form submit, delete, etc.) implemented?
 
-#### flow.md 대조
+#### flow.md Cross-Check
 
-- [ ] 기본 흐름의 각 단계가 코드에 반영되어 있는가
-- [ ] 상태 전이(mermaid에 정의된 상태/트리거)가 구현되어 있는가
-- [ ] 엣지 케이스 처리가 구현되어 있는가
-- [ ] Optimistic UI가 명세된 곳에 적용되어 있는가
+- [ ] Is each step of the default flow reflected in the code?
+- [ ] Are the state transitions (states / triggers defined in the mermaid diagram) implemented?
+- [ ] Is edge-case handling implemented?
+- [ ] Is Optimistic UI applied where it was specified?
 
-#### api.md 대조
+#### api.md Cross-Check
 
-- [ ] 명세된 조회 API(엔드포인트, 파라미터)가 코드에 연결되어 있는가
-- [ ] 명세된 변경 API(엔드포인트, 부수효과)가 코드에 연결되어 있는가
-- [ ] 필터/정렬 매핑이 명세대로 구현되어 있는가
-- [ ] 캐시 전략이 명세대로 적용되어 있는가
-- [ ] 페이지네이션이 명세대로 구현되어 있는가
+- [ ] Are the specified read APIs (endpoint, parameters) wired up in the code?
+- [ ] Are the specified mutation APIs (endpoint, side effects) wired up in the code?
+- [ ] Is the filter / sort mapping implemented as specified?
+- [ ] Is the caching strategy applied as specified?
+- [ ] Is pagination implemented as specified?
 
-### 7. 검증 결과 리포트 출력
+### 7. Output the Verification Report
 
-검증 결과를 다음 형식으로 출력합니다:
-
-```
-## 검증 결과: {feature-name}
-
-### 구현 완료 항목
-- [x] (구현 확인된 항목들)
-
-### 누락/불일치 항목
-- [ ] (누락된 항목 — 스펙 출처, 기대 동작, 현재 상태)
-
-### 품질 미달 항목
-- [ ] (구현은 되었으나 스펙 수준에 미달하는 항목)
-
-### 요약
-- 전체 항목: N개
-- 구현 완료: N개
-- 누락/불일치: N개
-- 품질 미달: N개
-```
-
-### 8. 누락 항목 즉시 보완
-
-- **누락/불일치 항목이 있으면** → 스펙 문서를 기준으로 해당 코드를 즉시 보완
-- **품질 미달 항목이 있으면** → 4-build의 품질 기준(빠르다, 토스급 완성도, 포브스 TOP 10 수준)에 맞게 코드를 개선
-- 보완 후 변경된 파일 목록과 수정 내용을 요약 출력
-
-### 9. 완료 안내
-
-- **모든 항목이 통과**한 경우 → 검증 완료 메시지 출력
-
-- **보완을 수행한 경우** → 다음 안내 메시지를 반드시 출력:
+Print the verification result in the following format:
 
 ```
-보완이 완료되었습니다.
-재검증하려면 `/new` 후 `/5-verify`를 다시 실행하세요.
-(컨텍스트를 정리하고 새로운 세션에서 더 정확한 검증을 수행합니다)
+## Verification Result: {feature-name}
+
+### Implemented Items
+- [x] (Items confirmed implemented)
+
+### Missing / Mismatching Items
+- [ ] (Missing items — spec source, expected behavior, current state)
+
+### Quality Gaps
+- [ ] (Items that are implemented but fall short of the spec level)
+
+### Summary
+- Total items: N
+- Implemented: N
+- Missing / mismatching: N
+- Quality gaps: N
 ```
 
-### 10. 품질 기준 (4-build와 동일)
+### 8. Patch Missing Items Immediately
 
-검증 시 아래 기준을 충족하지 못하는 코드는 **품질 미달**로 분류합니다:
+- **If there are missing / mismatching items** → patch the code immediately, using the spec documents as the reference
+- **If there are quality-gap items** → improve the code to meet the 4-build quality bar (Fast, Toss-grade completeness, Forbes TOP 10 caliber)
+- After patching, print a summary of the changed files and the contents of the modifications
 
-#### 빠르다
+### 9. Completion Notice
 
-- Optimistic UI 패턴 적용 여부
-- 스켈레톤 로딩 / 스피너가 모든 비동기 구간에 적용되었는가
-- SWR/캐시 전략, prefetch, 지연 로딩 활용 여부
-- 대량 목록의 가상 스크롤 또는 무한 스크롤 적용 여부
+- **If all items pass** → print a verification-complete message
 
-#### 토스급 완성도
+- **If patching was performed** → always print the following message:
 
-- 모든 비동기 UI에 로딩/빈/에러/성공 4가지 상태 구현 여부
-- 폼 유효성 실시간 검증, 토스트/알림 피드백 존재 여부
-- 접근성: 키보드 내비게이션, 포커스 관리, ARIA 속성 적용 여부
+```
+Patching is complete.
+To re-verify, run `/new` and then `/5-verify` again.
+(This clears context and produces a more accurate verification in a fresh session)
+```
 
-#### 포브스 TOP 10 기업 수준
+### 10. Quality Bar (Same as 4-build)
 
-- 스펙에 명시된 기능이 빠짐없이 실무에서 바로 쓸 수 있는 깊이로 구현되었는가
-- 기능과 관련된 맥락 정보가 화면에 함께 제공되는가
+During verification, code that does not meet the criteria below is classified as a **quality gap**:
+
+#### Fast
+
+- Whether the Optimistic UI pattern is applied
+- Whether skeleton loading / spinners are applied to all asynchronous sections
+- Whether SWR / caching strategy, prefetch, and lazy loading are used
+- Whether virtual scrolling or infinite scrolling is applied to large lists
+
+#### Toss-grade Completeness
+
+- Whether all four states (loading / empty / error / success) are implemented for every async UI
+- Whether real-time form validation and toast / notification feedback are present
+- Accessibility: whether keyboard navigation, focus management, and ARIA attributes are applied
+
+#### Forbes TOP 10 Caliber
+
+- Whether every feature in the spec is implemented at a depth ready for real-world use, leaving nothing out
+- Whether feature-related context information is provided on the same screen

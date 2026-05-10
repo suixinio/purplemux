@@ -1,93 +1,93 @@
-# spec-draft — 스펙 초안 작성
+# spec-draft — Spec Draft
 
-기능 스펙 초안(spec.md)을 작성합니다.
-페이지명 지정 시 해당 페이지만, 미지정 시 전체 일괄 생성합니다.
-"v1 스펙 초안", "v1 전체 스펙 초안" 요청 시 사용합니다.
+Writes a feature-spec draft (`spec.md`).
+If a page name is given, only that page is generated; if not, all pages are generated in bulk.
+Use when the user asks for "v1 spec draft" or "v1 full spec draft".
 
 ## Instructions
 
-다음 단계를 순서대로 수행하세요.
+Perform the following steps in order.
 
-### 1. 버전 확인
+### 1. Version Check
 
-- 사용자가 버전을 지정한 경우 해당 버전 사용 (예: v1, v2)
-- 미지정 시 현재 진행 중인 버전 사용
+- If the user specified a version, use it (e.g., v1, v2)
+- If unspecified, use the version currently in progress
 
-### 2. 요구사항 파악
+### 2. Understand the Requirements
 
-- `.specs/v{N}/PRD.md`를 읽어 요구사항 파악
+- Read `.specs/v{N}/PRD.md` to understand the requirements
 
-### 3. 프로젝트 가이드 파악
+### 3. Identify the Project Guides
 
-- `CLAUDE.md`의 "참고 문서" 섹션에서 `docs/` 가이드 목록 파악
+- Read the "Reference Documents" section in `CLAUDE.md` to identify the `docs/` guide list
 
-### 4. 대상 결정
+### 4. Determine the Target
 
-- **페이지명 지정** → 해당 페이지만 생성
-- **미지정** → `PRD.md`의 페이지 목록 기반으로 전체 일괄 생성
+- **Page name specified** → generate only that page
+- **Unspecified** → generate all pages in bulk based on the page list in `PRD.md`
 
-### 5. spec.md 생성
+### 5. Create spec.md
 
-`.specs/v{N}/features/{feature-name}/spec.md`를 다음 구조로 생성합니다:
+Create `.specs/v{N}/features/{feature-name}/spec.md` with the following structure:
 
 ```markdown
 ---
 page: { page-name }
-title: { 페이지 제목 }
-route: { 라우트 경로 }
+title: { Page Title }
+route: { Route Path }
 status: DRAFT
 complexity: Low | Medium | High
 depends_on:
-  - docs/{관련 가이드}.md
-created: { 날짜 }
-updated: { 날짜 }
+  - docs/{related guide}.md
+created: { date }
+updated: { date }
 assignee: ''
 ---
 
-# {페이지 제목}
+# {Page Title}
 
-## 개요
+## Overview
 
-(페이지 목적과 범위)
+(Page purpose and scope)
 
-## 주요 기능
+## Major Features
 
-- 기능 항목들
+- Feature items
 
-## 하위 문서
+## Sub-documents
 
-- [화면 구성](./detail/ui.md)
-- [사용자 흐름](./detail/flow.md)
-- [API 연동](./detail/api.md)
+- [Screen Composition](./detail/ui.md)
+- [User Flow](./detail/flow.md)
+- [API Integration](./detail/api.md)
 
-## 변경 이력
+## Change History
 
-| 날짜   | 변경 내용 | 상태  |
-| ------ | --------- | ----- |
-| {날짜} | 초안 작성 | DRAFT |
+| Date   | Change   | Status |
+| ------ | -------- | ------ |
+| {date} | Drafted  | DRAFT  |
 ```
 
-### 6. depends_on 연결
+### 6. Wire Up depends_on
 
-- 페이지와 관련된 프로젝트 가이드(`docs/`)를 `depends_on`에 연결
+- Link the project guides (`docs/`) related to the page in `depends_on`
 
-### 7. 일관성 유지
+### 7. Maintain Consistency
 
-- 기존에 작성된 페이지 스펙이 있으면 스타일을 참고하여 일관성 유지
+- If page specs already exist, follow their style for consistency
 
-### 8. 품질 기준 적용
+### 8. Apply the Quality Bar
 
-각 페이지의 주요 기능을 아래 세 축으로 검증하고, 부족한 부분을 spec.md에 반영합니다:
+Validate each page's major features along the three axes below, and reflect any gaps in `spec.md`:
 
-- **빠르다** — 주요 기능 중 성능 전략이 필요한 항목을 식별하고 기능 목록에 포함 (prefetch, 캐싱, 지연 로딩 등)
-- **토스급 완성도** — 로딩·빈·에러 상태 처리, 인터랙션 피드백, 전환 애니메이션 등 UX 완성도 항목을 기능에 포함. "동작만 하는" 수준의 기능 정의는 허용하지 않음
-- **포브스 TOP 10 기업 수준** — 기능 하나하나가 실무에서 바로 쓸 수 있는 깊이인지 검증. "되긴 되는" 수준이 아닌 "이 정도면 감탄한다" 수준을 목표로 기능 정의
+- **Fast** — Identify items among the major features that need a performance strategy and include them in the feature list (prefetch, caching, lazy loading, etc.)
+- **Toss-grade completeness** — Include UX-completeness items in the features: loading / empty / error states, interaction feedback, transition animations, etc. Feature definitions that are merely "it works" are not allowed
+- **Forbes TOP 10 caliber** — Verify that each feature has the depth to be used in real-world operations. The goal is not "it kind of works" but "this is impressive"
 
-### 9. 다음 단계 안내
+### 9. Next-Step Guidance
 
-작성 완료 후 다음 안내 메시지를 반드시 출력:
+After completion, always print the following message:
 
 ```
-각 feature의 spec.md를 검토한 뒤, frontmatter의 status를 CONFIRMED로 변경하세요.
-CONFIRMED된 feature만 `/3-detail`과 `/4-build`에서 처리됩니다.
+After reviewing each feature's spec.md, change the frontmatter's status to CONFIRMED.
+Only CONFIRMED features are processed by `/3-detail` and `/4-build`.
 ```
